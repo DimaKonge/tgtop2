@@ -14,3 +14,5 @@
 - [x] Add 0.1 GRAM reward for group addition and referral program with multi-tier commission support
 - [x] Implement direct project/group sales with 50% platform commission rule
 - [x] Successfully build and test project with checkpoint saved
+- [x] Configure tiered ranking placement weights: #1 = 50%, #2-#3 = 25%, #4-#7 = 10%, general list = 1%
+- [x] Keep direct project sales commission rule (50%) distinct from ranking placement weights
