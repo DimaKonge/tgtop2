@@ -1,28 +1,90 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { z } from "zod";
+import * as db from "./db";
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
+      return { success: true } as const;
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  tgTop: router({
+    getSlots: publicProcedure
+      .input(z.object({ category: z.string().optional(), country: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getAuctionSlots(input?.category, input?.country);
+      }),
+
+    placeBid: protectedProcedure
+      .input(z.object({
+        slotId: z.number(),
+        bidAmount: z.number(),
+        currentBid: z.string(),
+        leaderUsername: z.string(),
+        groupId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.placeBid(
+          input.slotId,
+          input.bidAmount,
+          input.currentBid,
+          input.leaderUsername,
+          ctx.user.openId,
+          input.groupId
+        );
+        return { success: true };
+      }),
+
+    getGroups: publicProcedure
+      .input(z.object({ category: z.string().optional(), country: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getGroupsCatalog(input?.category, input?.country);
+      }),
+
+    getNfts: publicProcedure.query(async () => {
+      return await db.getNftUsernames();
+    }),
+
+    createNft: protectedProcedure
+      .input(z.object({
+        username: z.string(),
+        price: z.string(),
+        priceAmount: z.number(),
+        rentalPricePerDay: z.string(),
+        rentalAmountPerDay: z.number(),
+        minRentalDays: z.number(),
+        maxRentalDays: z.number(),
+        listingType: z.enum(["sale", "rent", "both"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.createNftListing({
+          ...input,
+          ownerOpenId: ctx.user.openId,
+          ownerUsername: ctx.user.name || ctx.user.openId.slice(0, 8),
+          status: "available",
+        });
+        return { success: true };
+      }),
+
+    rentNft: protectedProcedure
+      .input(z.object({ nftId: z.number(), rentalDays: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.rentNft(input.nftId, ctx.user.openId, input.rentalDays);
+        return { success: true };
+      }),
+
+    myDeals: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getUserDeals(ctx.user.openId);
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

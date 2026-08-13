@@ -1,11 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, auctionSlots, nftUsernames, deals, InsertGroupCatalog, InsertAuctionSlot, InsertNftUsername, InsertDeal } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -19,34 +18,22 @@ export async function getDb() {
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+  if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
+  if (!db) return;
 
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
+    const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
 
     const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
+    textFields.forEach((field) => {
+      const val = user[field];
+      if (val !== undefined) {
+        values[field] = val ?? null;
+        updateSet[field] = val ?? null;
+      }
+    });
 
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
@@ -60,17 +47,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.role = 'admin';
     }
 
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
+    if (!values.lastSignedIn) values.lastSignedIn = new Date();
 
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
+    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -79,14 +58,77 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
+  if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
 }
 
-// TODO: add feature queries here as your schema grows.
+// TG TOP specific queries
+export async function getAuctionSlots(category?: string, country?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  let query = db.select().from(auctionSlots);
+  const conditions = [];
+  if (category && category !== "Все") {
+    conditions.push(eq(auctionSlots.category, category as any));
+  }
+  if (country && country !== "Global") {
+    conditions.push(eq(auctionSlots.country, country));
+  }
+  
+  if (conditions.length > 0) {
+    return await db.select().from(auctionSlots).where(and(...conditions));
+  }
+  return await db.select().from(auctionSlots);
+}
+
+export async function placeBid(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(auctionSlots).set({
+    bidAmount,
+    currentBid: currentBidStr,
+    leaderUsername,
+    leaderUserId,
+    groupId: groupId ?? null,
+    updatedAt: new Date()
+  }).where(eq(auctionSlots.id, slotId));
+}
+
+export async function getGroupsCatalog(category?: string, country?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(groupsCatalog).orderBy(desc(groupsCatalog.membersCount));
+}
+
+export async function getNftUsernames() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(nftUsernames).orderBy(desc(nftUsernames.createdAt));
+}
+
+export async function createNftListing(data: InsertNftUsername) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(nftUsernames).values(data);
+}
+
+export async function rentNft(nftId: number, renterOpenId: string, rentalDays: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const expiresAt = new Date(Date.now() + rentalDays * 24 * 60 * 60 * 1000);
+  
+  await db.update(nftUsernames).set({
+    status: "rented",
+    currentRenterOpenId: renterOpenId,
+    rentalExpiresAt: expiresAt
+  }).where(eq(nftUsernames.id, nftId));
+}
+
+export async function getUserDeals(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(deals).where(eq(deals.buyerOpenId, openId));
+}
