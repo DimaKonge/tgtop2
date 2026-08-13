@@ -16,3 +16,6 @@
 - [x] Successfully build and test project with checkpoint saved
 - [x] Configure tiered ranking placement weights: #1 = 50%, #2-#3 = 25%, #4-#7 = 10%, general list = 1%
 - [x] Keep direct project sales commission rule (50%) distinct from ranking placement weights
+- [ ] Add referral links generator with configurable 0-50% commission share of TG TOP platform fees
+- [ ] Implement completed-deal payout calculation deducting the set referral share from platform fees
+- [ ] Verify referral dashboard in profile with earnings breakdown
