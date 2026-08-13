@@ -7,6 +7,9 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  referralCode: varchar("referralCode", { length: 32 }).unique(),
+  referredBy: varchar("referredBy", { length: 32 }),
+  referralEarnings: varchar("referralEarnings", { length: 64 }).default("0 TON").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -35,7 +38,7 @@ export type InsertGroupCatalog = typeof groupsCatalog.$inferInsert;
 
 export const auctionSlots = mysqlTable("auction_slots", {
   id: int("id").autoincrement().primaryKey(),
-  slotNumber: int("slotNumber").notNull(), // 1 for King Pedestal, 4-7 for Premier Lots
+  slotNumber: int("slotNumber").notNull(),
   category: mysqlEnum("category", ["Все", "Каналы", "Чаты"]).default("Все").notNull(),
   country: varchar("country", { length: 64 }).default("Global").notNull(),
   title: varchar("title", { length: 255 }).default("Свободное место").notNull(),
@@ -51,13 +54,12 @@ export const auctionSlots = mysqlTable("auction_slots", {
 export type AuctionSlot = typeof auctionSlots.$inferSelect;
 export type InsertAuctionSlot = typeof auctionSlots.$inferInsert;
 
-// NFT Usernames & Channels table with MarketApp rental mechanics
 export const nftUsernames = mysqlTable("nft_usernames", {
   id: int("id").autoincrement().primaryKey(),
   username: varchar("username", { length: 128 }).notNull().unique(),
-  price: varchar("price", { length: 64 }).notNull(), // e.g. "150 TON"
+  price: varchar("price", { length: 64 }).notNull(),
   priceAmount: int("priceAmount").default(0).notNull(),
-  rentalPricePerDay: varchar("rentalPricePerDay", { length: 64 }).notNull(), // e.g. "2 TON/day"
+  rentalPricePerDay: varchar("rentalPricePerDay", { length: 64 }).notNull(),
   rentalAmountPerDay: int("rentalAmountPerDay").default(0).notNull(),
   minRentalDays: int("minRentalDays").default(7).notNull(),
   maxRentalDays: int("maxRentalDays").default(365).notNull(),
@@ -73,7 +75,6 @@ export const nftUsernames = mysqlTable("nft_usernames", {
 export type NftUsername = typeof nftUsernames.$inferSelect;
 export type InsertNftUsername = typeof nftUsernames.$inferInsert;
 
-// Deals and Escrow Rentals table (MarketApp style)
 export const deals = mysqlTable("deals", {
   id: int("id").autoincrement().primaryKey(),
   groupId: int("groupId"),
@@ -82,7 +83,7 @@ export const deals = mysqlTable("deals", {
   sellerOpenId: varchar("sellerOpenId", { length: 64 }).notNull(),
   price: varchar("price", { length: 64 }).notNull(),
   dealType: mysqlEnum("dealType", ["group_buy", "nft_buy", "nft_rent"]).default("group_buy").notNull(),
-  rentalDays: int("rentalDays"), // for rentals
+  rentalDays: int("rentalDays"),
   status: mysqlEnum("status", ["open", "escrow_funded", "active", "completed", "disputed"]).default("open").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
