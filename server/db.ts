@@ -1,10 +1,12 @@
-import { eq, and, asc, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, or, asc, desc, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, nftUsernames, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { cascadeRankedOccupants } from "./auctionCascade";
+import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, getTransferDeadline } from "./protectedDeals";
+import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -31,7 +33,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "avatarUrl", "loginMethod"] as const;
+    const textFields = ["name", "email", "avatarUrl", "telegramUsername", "loginMethod"] as const;
     textFields.forEach((field) => {
       const val = user[field];
       if (val !== undefined) {
@@ -275,7 +277,10 @@ export async function getGroupDetail(id: number) {
   const group = await getGroupById(id);
   if (!group) return undefined;
   const snapshots = await db.select().from(groupStatsSnapshots).where(eq(groupStatsSnapshots.groupId, id)).orderBy(desc(groupStatsSnapshots.recordedAt)).limit(30);
-  return { group, snapshots: snapshots.reverse() };
+  const ownerNfts = await db.select().from(nftUsernames)
+    .where(and(eq(nftUsernames.showcaseGroupId, group.id), eq(nftUsernames.status, "available")))
+    .orderBy(desc(nftUsernames.createdAt));
+  return { group, snapshots: snapshots.reverse(), ownerNfts };
 }
 
 export async function recordGroupSnapshot(groupId: number, membersCount: number, messagesCount: number, joinedCount: number) {
@@ -433,9 +438,12 @@ export async function unlistGroups(ownerOpenId: string, groupIds: number[]) {
   });
 }
 
-export async function getNftUsernames() {
+export async function getNftUsernames(ownerOpenId?: string) {
   const db = await getDb();
   if (!db) return [];
+  if (ownerOpenId) {
+    return await db.select().from(nftUsernames).where(eq(nftUsernames.ownerOpenId, ownerOpenId)).orderBy(desc(nftUsernames.createdAt));
+  }
   return await db.select().from(nftUsernames).orderBy(desc(nftUsernames.createdAt));
 }
 
@@ -443,6 +451,26 @@ export async function createNftListing(data: InsertNftUsername) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.insert(nftUsernames).values(data);
+}
+
+export async function setNftShowcaseGroup(nftId: number, ownerOpenId: string, groupId: number | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [nft] = await db.select().from(nftUsernames).where(and(
+    eq(nftUsernames.id, nftId),
+    eq(nftUsernames.ownerOpenId, ownerOpenId)
+  )).limit(1);
+  if (!nft) throw new Error("NFT недоступен для управления");
+  if (groupId !== null) {
+    const group = await getGroupById(groupId);
+    if (!group || group.ownerOpenId !== ownerOpenId) {
+      throw new Error("Выберите свою подключенную площадку");
+    }
+  }
+  await db.update(nftUsernames).set({ showcaseGroupId: groupId }).where(and(
+    eq(nftUsernames.id, nftId),
+    eq(nftUsernames.ownerOpenId, ownerOpenId)
+  ));
 }
 
 export async function rentNft(nftId: number, renterOpenId: string, rentalDays: number) {
@@ -457,8 +485,226 @@ export async function rentNft(nftId: number, renterOpenId: string, rentalDays: n
   }).where(eq(nftUsernames.id, nftId));
 }
 
+export async function resolveNftTransferRecipient(recipientInput: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const normalized = normalizeTelegramRecipient(recipientInput);
+  const [recipient] = await db.select({
+    openId: users.openId,
+    name: users.name,
+    telegramUsername: users.telegramUsername,
+    avatarUrl: users.avatarUrl,
+  }).from(users).where(
+    normalized.kind === "openId"
+      ? eq(users.openId, normalized.value)
+      : eq(users.telegramUsername, normalized.value)
+  ).limit(1);
+
+  if (!recipient) throw new Error("Получатель не найден в TG TOP. Попросите его открыть приложение через @TGTOP_robot.");
+  return recipient;
+}
+
+export async function prepareNftTransfer(nftId: number, senderOpenId: string, recipientInput: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [nft] = await db.select().from(nftUsernames).where(and(
+    eq(nftUsernames.id, nftId),
+    eq(nftUsernames.ownerOpenId, senderOpenId),
+    eq(nftUsernames.status, "available")
+  )).limit(1);
+  if (!nft) throw new Error("NFT недоступен для передачи");
+
+  const recipient = await resolveNftTransferRecipient(recipientInput);
+  if (recipient.openId === senderOpenId) throw new Error("Нельзя передать NFT самому себе");
+
+  const requirements = getNftTransferRequirements(nft.assetClass);
+  if (nft.assetClass === "onchain" && !nft.nftItemAddress) {
+    throw new Error("Для On-chain NFT нужен подтвержденный адрес NFT-элемента");
+  }
+
+  const reference = `${getNftTransferReference()}_${randomBytes(5).toString("hex")}`;
+  await db.insert(nftTransfers).values({
+    nftId: nft.id,
+    assetClass: nft.assetClass,
+    status: nft.assetClass === "onchain" ? "awaiting_signature" : "draft",
+    senderOpenId,
+    recipientOpenId: recipient.openId,
+    recipientInput: recipientInput.trim(),
+    sourceWalletAddress: nft.ownerWalletAddress,
+    transferReference: reference,
+    expiresAt: nft.assetClass === "onchain" ? new Date(Date.now() + 10 * 60 * 1000) : null,
+  });
+
+  const [transfer] = await db.select().from(nftTransfers).where(eq(nftTransfers.transferReference, reference)).limit(1);
+  if (!transfer) throw new Error("Не удалось создать передачу NFT");
+  return { transfer, nft, recipient, requirements };
+}
+
+export async function completeOffchainNftTransfer(transferId: number, senderOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const now = new Date();
+
+  await db.transaction(async tx => {
+    const [transfer] = await tx.select().from(nftTransfers).where(and(
+      eq(nftTransfers.id, transferId),
+      eq(nftTransfers.senderOpenId, senderOpenId)
+    )).limit(1);
+    if (!transfer) throw new Error("Передача NFT не найдена");
+    if (transfer.assetClass !== "offchain" || transfer.status !== "draft") {
+      throw new Error("Эту передачу нельзя подтвердить как Off-chain NFT");
+    }
+
+    const [nft] = await tx.select().from(nftUsernames).where(and(
+      eq(nftUsernames.id, transfer.nftId),
+      eq(nftUsernames.ownerOpenId, senderOpenId),
+      eq(nftUsernames.assetClass, "offchain"),
+      eq(nftUsernames.status, "available")
+    )).limit(1);
+    if (!nft) throw new Error("NFT больше недоступен для передачи");
+
+    const [recipient] = await tx.select({
+      name: users.name,
+      telegramUsername: users.telegramUsername,
+    }).from(users).where(eq(users.openId, transfer.recipientOpenId)).limit(1);
+    if (!recipient) throw new Error("Получатель больше недоступен в TG TOP");
+
+    await tx.update(nftUsernames).set({
+      ownerOpenId: transfer.recipientOpenId,
+      ownerUsername: recipient.telegramUsername ?? recipient.name ?? transfer.recipientOpenId.slice(0, 12),
+      showcaseGroupId: null,
+      currentRenterOpenId: null,
+      rentalExpiresAt: null,
+    }).where(eq(nftUsernames.id, nft.id));
+    await tx.update(nftTransfers).set({ status: "completed", confirmedAt: now }).where(eq(nftTransfers.id, transfer.id));
+  });
+
+  return { success: true, platformFeePercent: 0 };
+}
+
+export async function getNftTransferHistory(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    id: nftTransfers.id,
+    nftId: nftTransfers.nftId,
+    assetClass: nftTransfers.assetClass,
+    status: nftTransfers.status,
+    senderOpenId: nftTransfers.senderOpenId,
+    recipientOpenId: nftTransfers.recipientOpenId,
+    recipientInput: nftTransfers.recipientInput,
+    transferReference: nftTransfers.transferReference,
+    expiresAt: nftTransfers.expiresAt,
+    createdAt: nftTransfers.createdAt,
+    confirmedAt: nftTransfers.confirmedAt,
+    username: nftUsernames.username,
+  }).from(nftTransfers)
+    .leftJoin(nftUsernames, eq(nftTransfers.nftId, nftUsernames.id))
+    .where(or(eq(nftTransfers.senderOpenId, openId), eq(nftTransfers.recipientOpenId, openId)))
+    .orderBy(desc(nftTransfers.createdAt));
+}
+
 export async function getUserDeals(openId: string) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(deals).where(eq(deals.buyerOpenId, openId));
+  return await db.select({
+    id: deals.id,
+    groupId: deals.groupId,
+    buyerOpenId: deals.buyerOpenId,
+    sellerOpenId: deals.sellerOpenId,
+    price: deals.price,
+    dealType: deals.dealType,
+    status: deals.status,
+    fundedAt: deals.fundedAt,
+    transferObservedAt: deals.transferObservedAt,
+    expiresAt: deals.expiresAt,
+    cancelledAt: deals.cancelledAt,
+    createdAt: deals.createdAt,
+    groupTitle: groupsCatalog.title,
+    groupUsername: groupsCatalog.username,
+  }).from(deals)
+    .leftJoin(groupsCatalog, eq(deals.groupId, groupsCatalog.id))
+    .where(or(eq(deals.buyerOpenId, openId), eq(deals.sellerOpenId, openId)))
+    .orderBy(desc(deals.createdAt));
+}
+
+export async function createProtectedGroupDeal(groupId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const group = await getGroupById(groupId);
+  if (!group || group.status !== "listed" || (group.listingType !== "sale" && group.listingType !== "both") || !group.salePriceTon) {
+    throw new Error("Группа недоступна для безопасной покупки");
+  }
+  if (group.ownerOpenId === buyerOpenId) throw new Error("Нельзя купить собственную группу");
+  const [existing] = await db.select().from(deals).where(and(
+    eq(deals.groupId, groupId),
+    eq(deals.buyerOpenId, buyerOpenId),
+    eq(deals.status, "open")
+  )).limit(1);
+  if (existing) return existing;
+  await db.insert(deals).values({
+    groupId,
+    buyerOpenId,
+    sellerOpenId: group.ownerOpenId,
+    price: group.salePriceTon,
+    dealType: "group_buy",
+    status: "open",
+  });
+  const [created] = await db.select().from(deals).where(and(
+    eq(deals.groupId, groupId),
+    eq(deals.buyerOpenId, buyerOpenId),
+    eq(deals.status, "open")
+  )).orderBy(desc(deals.id)).limit(1);
+  return created;
+}
+
+/** Internal-only: call only after independent on-chain escrow funding verification. */
+export async function markProtectedDealFunded(dealId: number, fundingReference: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const fundedAt = new Date();
+  const expiresAt = getTransferDeadline(fundedAt);
+  await db.update(deals).set({
+    status: "escrow_funded",
+    fundedAt,
+    expiresAt,
+    fundingReference,
+  }).where(and(eq(deals.id, dealId), eq(deals.status, "open")));
+}
+
+export async function observeProtectedGroupTransfer(chatId: string, newOwnerOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const group = await getGroupByChatId(chatId);
+  if (!group) return [];
+  const now = new Date();
+  const eligible = await db.select().from(deals).where(and(
+    eq(deals.groupId, group.id),
+    eq(deals.buyerOpenId, newOwnerOpenId),
+    eq(deals.status, "escrow_funded")
+  ));
+  for (const deal of eligible) {
+    if (!deal.expiresAt || deal.expiresAt.getTime() < now.getTime()) continue;
+    await db.update(deals).set({
+      status: "active",
+      transferObservedAt: now,
+      transferEvidence: `telegram_owner:${newOwnerOpenId}`,
+    }).where(and(eq(deals.id, deal.id), eq(deals.status, "escrow_funded")));
+  }
+  return eligible;
+}
+
+export async function cancelProtectedGroupDeal(dealId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId))).limit(1);
+  if (!deal || deal.dealType !== "group_buy" || !canBuyerCancel(deal.status)) {
+    throw new Error("Эту сделку уже нельзя отменить");
+  }
+  await db.update(deals).set({ status: "cancelled", cancelledAt: new Date() }).where(and(
+    eq(deals.id, dealId),
+    eq(deals.buyerOpenId, buyerOpenId),
+    eq(deals.status, deal.status)
+  ));
+  return { requiresEscrowRefund: deal.status === "escrow_funded", transferWindowMs: GROUP_TRANSFER_WINDOW_MS };
 }

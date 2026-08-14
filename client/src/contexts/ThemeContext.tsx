@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-export type Appearance = "system" | "dark" | "light";
+export type Appearance = "dark" | "light";
 export type ResolvedTheme = "dark" | "light";
 
 interface ThemeContextType {
@@ -17,18 +17,10 @@ const APPEARANCE_STORAGE_KEY = "tg-top-appearance";
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [appearance, setAppearance] = useState<Appearance>(() => {
     const stored = localStorage.getItem(APPEARANCE_STORAGE_KEY);
-    return stored === "dark" || stored === "light" || stored === "system" ? stored : "system";
+    return stored === "light" ? "light" : "dark";
   });
-  const [systemPrefersDark, setSystemPrefersDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-color-scheme: dark)");
-    const updateSystemTheme = () => setSystemPrefersDark(query.matches);
-    query.addEventListener("change", updateSystemTheme);
-    return () => query.removeEventListener("change", updateSystemTheme);
-  }, []);
-
-  const resolvedTheme: ResolvedTheme = appearance === "system" ? (systemPrefersDark ? "dark" : "light") : appearance;
+  const resolvedTheme: ResolvedTheme = appearance;
 
   useEffect(() => {
     document.documentElement.dataset.theme = resolvedTheme;

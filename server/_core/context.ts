@@ -28,6 +28,7 @@ export async function createContext(
         openId,
         name: telegramUser.username ?? [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(" "),
         avatarUrl: telegramUser.photo_url ?? null,
+        telegramUsername: telegramUser.username ?? null,
         loginMethod: "telegram-mini-app",
         lastSignedIn: new Date(),
       });

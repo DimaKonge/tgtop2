@@ -6,12 +6,14 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import { TonConnectUIProvider } from "@tonconnect/ui-react";
+import { useState } from "react";
+import { TgTopLaunchScreen } from "./components/TgTopLaunchScreen";
 
-function Router() {
+function Router({ onHomeReady }: { onHomeReady: () => void }) {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"}>{() => <Home onReady={onHomeReady} />}</Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -25,13 +27,17 @@ function Router() {
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
+  const [isLaunching, setIsLaunching] = useState(true);
+  const [appReady, setAppReady] = useState(false);
+
   return (
     <ErrorBoundary>
       <TonConnectUIProvider manifestUrl="https://tgtop.xyz/tonconnect-manifest.json">
         <ThemeProvider>
           <TooltipProvider>
             <Toaster />
-            <Router />
+            <Router onHomeReady={() => setAppReady(true)} />
+            {isLaunching && <TgTopLaunchScreen ready={appReady} onComplete={() => setIsLaunching(false)} />}
           </TooltipProvider>
         </ThemeProvider>
       </TonConnectUIProvider>

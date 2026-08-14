@@ -1,0 +1,1 @@
+ALTER TABLE `nft_usernames` ADD `showcaseGroupId` int;

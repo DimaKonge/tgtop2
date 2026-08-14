@@ -101,3 +101,38 @@ html[data-theme="light"] .tg-shell .bg-\[\#0b0f14\] { background-color: #f5f7fb 
 html[data-theme="light"] .bg-\[\#10161f\] { background-color: #ffffff !important; color: #1e293b !important; }
 html[data-theme="light"] .brand-mark { border-color: rgba(37, 99, 235, 0.22) !important; box-shadow: 0 6px 16px rgba(63, 140, 255, 0.18) !important; }
 html[data-theme="dark"] .brand-mark-symbol { transform: rotate(180deg); }
+
+.tg-launch {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  background: #05070a;
+  color: #f8fafc;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
+}
+.tg-launch-glow { position: absolute; inset: 20% -20% auto; height: 44%; background: radial-gradient(ellipse, rgba(63, 140, 255, 0.14), transparent 68%); pointer-events: none; }
+.tg-launch-brand { position: relative; display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; letter-spacing: -0.02em; }
+.tg-launch-mark { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; background: #000; font-size: 14px; font-weight: 900; }
+.tg-launch-center { position: relative; display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; margin-top: -4vh; }
+.tg-launch-pyramid { position: relative; width: 208px; height: 154px; transform: perspective(520px) rotateX(7deg); }
+.tg-launch-cube { position: absolute; width: 48px; height: 48px; border: 1px solid rgba(115, 169, 255, 0.75); border-radius: 10px; background: linear-gradient(145deg, #4e91f8 0%, #255bb9 55%, #102d63 100%); box-shadow: 0 12px 32px rgba(31, 104, 224, 0.28), inset 0 1px 0 rgba(255,255,255,0.3); opacity: 0; transform: translateY(54px) scale(0.76) rotate(-8deg); animation: tg-cube-rise 460ms cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+.cube-1 { left: 80px; top: 0; animation-delay: 300ms; }
+.cube-2 { left: 52px; top: 52px; animation-delay: 215ms; }
+.cube-3 { left: 108px; top: 52px; animation-delay: 245ms; }
+.cube-4 { left: 0; top: 104px; animation-delay: 0ms; }
+.cube-5 { left: 52px; top: 104px; animation-delay: 70ms; }
+.cube-6 { left: 108px; top: 104px; animation-delay: 110ms; }
+.cube-7 { left: 160px; top: 104px; animation-delay: 150ms; }
+.tg-launch-center p { margin: 34px 0 15px; color: rgba(226, 232, 240, 0.7); font-size: 13px; font-weight: 500; }
+.tg-launch-progress { width: min(240px, 72vw); height: 3px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,0.12); }
+.tg-launch-progress span { display: block; height: 100%; border-radius: inherit; background: #6aa5ff; }
+.tg-launch[data-ready="true"] .tg-launch-progress span { animation: tg-progress 260ms cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+.tg-launch > small { position: relative; text-align: center; color: rgba(148,163,184,0.52); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+@keyframes tg-cube-rise { to { opacity: 1; transform: translateY(0) scale(1) rotate(0); } }
+@keyframes tg-progress { from { width: 0; } to { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .tg-launch-cube, .tg-launch-progress span { animation: none; opacity: 1; transform: none; width: 100%; } }

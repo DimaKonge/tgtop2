@@ -100,7 +100,7 @@
 - [x] Reduce Global control sizes and move action buttons higher on mobile
 - [x] Resize the mobile 1 → 2 → 4 ranking pyramid so the complete top fits within one screen
 - [x] Integrate TON Connect for wallet connection and address display without enabling payment or transaction signing
-- [ ] Add NFT as a separate quick-filter direction alongside channels and chats without mixing NFT cards into the group catalog
+- [x] Add NFT as a separate quick-filter direction alongside channels and chats without mixing NFT cards into the group catalog
 - [x] Remove the redundant Catalog tab from the bottom navigation and route catalog access through Global
 - [x] Add an owner-facing «Выставить на листинг» control for connected groups in My Groups
 - [x] Let the owner choose a normal catalog listing with no price or a sale listing with an optional TON price
@@ -113,3 +113,45 @@
 - [ ] Complete light-theme treatment for every TG TOP owner-management and listing surface
 - [ ] Reduce and verify the 390×844 mobile vertical footprint of the Global 1 → 2 → 4 pyramid
 - [ ] Accrue and persist referral earnings from completed TG TOP fee-bearing deals with backend regression coverage
+- [x] Add NFT as a fourth primary Global toggle with a dedicated discovery state outside the group catalog
+- [ ] Configure tgtop.ton as TG TOP’s verified Web3 identity while retaining tgtop.xyz as the HTTPS Mini App origin
+- [ ] Deploy an ADNL-backed TON Site for tgtop.ton on the TG TOP VPS without changing the HTTPS Mini App origin
+- [ ] Verify tgtop.ton through a TON Proxy-compatible client and document that conventional browser DNS is not supported
+- [ ] Complete the tgtop.ton site record through Tonkeeper’s manual ADNL field and wallet confirmation
+- [ ] Evaluate a TON Storage static brand mirror for tgtop.ton without moving the live Mini App or backend from tgtop.xyz
+- [ ] Add secure Telegram-account website sign-in that maps to the same TG TOP profile as the Mini App
+- [ ] Build a staged protected group-sale workflow with verified seller control, transfer confirmations, and no automatic funds movement before payment safeguards exist
+- [ ] Release escrowed TON only after bot-observed ownership-transfer evidence, buyer confirmation, expiry handling, and dispute safeguards are implemented
+- [ ] Notify a seller after verified buyer funding and release escrowed TON automatically only after owner-rights transfer is verified
+- [ ] Enforce a twenty-one-day seller ownership-transfer deadline before protected refund or dispute handling
+- [ ] Allow buyer cancellation and escrow refund only before bot-observed owner-rights transfer is verified
+- [ ] Display a subtle “Комісія TG TOP · 0%” disclosure beside sale prices and protected-deal summaries
+- [ ] Design a separate NFT deposit bot that verifies received assets before enabling NFT sale or rental listings
+- [ ] Add Fragment-inspired NFT showcase panels to user profiles and listed community detail pages
+- [ ] Let a verified NFT owner assign or remove an NFT showcase from their connected TG TOP channel or chat
+- [ ] Support a distinct verified wallet reference per NFT for rental source, payout, and return routing
+- [ ] Automatically discover eligible NFT assets after wallet connection while requiring owner approval before public display or assignment
+- [ ] Let a renter select a connected community for a leased username, show renewal timing, and prepare safe asset return at expiry
+- [ ] Simplify the My Groups mobile layout by removing duplicated placement inputs and separating ranking placement from listing controls
+- [x] Move Connect Wallet into the compact top brand row above Global controls
+- [x] Give the TG TOP logo mark a black background treatment in the header
+- [x] Remove System appearance mode and retain only explicit black and white TG TOP themes
+- [ ] Automatically place an eligible newly listed group into the highest free ranking slot; require bids only to displace occupied slots
+- [ ] Require at least 0.2 TON to overtake the first premium slot while allowing a 0.1 TON entry bid for lower vacant slots
+- [ ] Remove every free ranking-listing path so each TG TOP placement requires a qualifying TON bid
+- [ ] Add scalable catalog, analytics, offers, and NFT query safeguards through indexes, pagination, and request controls
+- [x] Add a short black TG TOP launch screen with a real readiness indicator and reduced-motion support
+- [x] Animate rising cubes into the TG TOP 1→2→4 pyramid during launch
+- [x] Replace the launch screen’s fixed delay with a real readiness signal while retaining reduced-motion behavior
+- [x] Animate rising cubes into the TG TOP 1→2→4 pyramid during launch
+- [x] Move Connect Wallet into the compact top brand row and pull the Global panel upward
+- [ ] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
+- [ ] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
+- [ ] Add persisted channel and chat subcategories that synchronize across Global ranking cards, catalog listings, and detailed filters
+- [ ] Audit and correct every visible UI string so Russian has no Ukrainian or English remnants and English is complete and natural
+- [ ] Add transparent offer history with price, state, role, creation time, transfer deadline, and pre-transfer cancellation control
+- [ ] Add a non-custodial peer-to-peer NFT transfer flow with @username or Telegram ID recipient verification, 0% TG TOP commission, and clear TON network-fee disclosure
+- [ ] Split NFT discovery, ownership proof, and transfer controls into separate On-chain and Off-chain asset categories
+- [x] Add an audited Off-chain NFT transfer sheet with recipient lookup, explicit confirmation, 0% TG TOP commission, and immutable transfer history records
+- [x] Add On-chain and Off-chain NFT category labels and discovery filters while reserving On-chain transfer signing for cryptographically verified wallets
+- [ ] Display a subtle “Комісія TG TOP · 0% на старті” disclosure beside sale prices and protected-deal summaries

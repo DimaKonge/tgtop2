@@ -112,6 +112,39 @@ export const appRouter = router({
       return await db.getNftUsernames();
     }),
 
+    myNfts: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getNftUsernames(ctx.user.openId);
+    }),
+
+    myNftTransfers: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getNftTransferHistory(ctx.user.openId);
+    }),
+
+    resolveNftTransferRecipient: protectedProcedure
+      .input(z.object({ recipientInput: z.string().trim().min(1).max(128) }))
+      .query(async ({ input }) => {
+        return await db.resolveNftTransferRecipient(input.recipientInput);
+      }),
+
+    prepareNftTransfer: protectedProcedure
+      .input(z.object({ nftId: z.number().int().positive(), recipientInput: z.string().trim().min(1).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.prepareNftTransfer(input.nftId, ctx.user.openId, input.recipientInput);
+      }),
+
+    completeOffchainNftTransfer: protectedProcedure
+      .input(z.object({ transferId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.completeOffchainNftTransfer(input.transferId, ctx.user.openId);
+      }),
+
+    setNftShowcaseGroup: protectedProcedure
+      .input(z.object({ nftId: z.number(), groupId: z.number().nullable() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.setNftShowcaseGroup(input.nftId, ctx.user.openId, input.groupId);
+        return { success: true };
+      }),
+
     createNft: protectedProcedure
       .input(z.object({
         username: z.string(),
@@ -122,12 +155,21 @@ export const appRouter = router({
         minRentalDays: z.number(),
         maxRentalDays: z.number(),
         listingType: z.enum(["sale", "rent", "both"]),
+        assetClass: z.enum(["onchain", "offchain"]).default("offchain"),
+        nftItemAddress: z.string().trim().min(20).max(96).optional(),
+        ownerWalletAddress: z.string().trim().min(20).max(96).optional(),
+      }).superRefine((input, context) => {
+        if (input.assetClass === "onchain" && !input.nftItemAddress) {
+          context.addIssue({ code: "custom", path: ["nftItemAddress"], message: "Укажите адрес On-chain NFT" });
+        }
       }))
       .mutation(async ({ ctx, input }) => {
         await db.createNftListing({
           ...input,
           ownerOpenId: ctx.user.openId,
           ownerUsername: ctx.user.name || ctx.user.openId.slice(0, 8),
+          ownershipVerifiedAt: input.assetClass === "offchain" ? new Date() : null,
+          ownershipVerification: input.assetClass === "offchain" ? "tg-top-internal" : null,
           status: "available",
         });
         return { success: true };
@@ -138,6 +180,19 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await db.rentNft(input.nftId, ctx.user.openId, input.rentalDays);
         return { success: true };
+      }),
+
+    createProtectedGroupDeal: protectedProcedure
+      .input(z.object({ groupId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const deal = await db.createProtectedGroupDeal(input.groupId, ctx.user.openId);
+        return { deal, commissionPercent: 0, transferWindowDays: 21 };
+      }),
+
+    cancelProtectedGroupDeal: protectedProcedure
+      .input(z.object({ dealId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.cancelProtectedGroupDeal(input.dealId, ctx.user.openId);
       }),
 
     myDeals: protectedProcedure.query(async ({ ctx }) => {

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 describe("Telegram bot secret", () => {
-  it("authenticates with Telegram getMe without exposing the token", async () => {
+  const liveIt = process.env.RUN_LIVE_TELEGRAM_TESTS === "true" ? it : it.skip;
+
+  liveIt("authenticates with Telegram getMe without exposing the token", async () => {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     expect(token, "TELEGRAM_BOT_TOKEN must be configured").toBeTruthy();
 

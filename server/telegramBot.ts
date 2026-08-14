@@ -7,6 +7,7 @@ import {
   recordGroupActivity,
   recordGroupMembership,
   recordGroupSnapshot,
+  observeProtectedGroupTransfer,
   upsertTelegramGroup,
   upsertUser,
 } from "./db";
@@ -42,6 +43,7 @@ const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.xyz";
 const pollTimeoutSeconds = 30;
 
 function isBotAdmin(status: string): boolean { return status === "administrator" || status === "creator"; }
+function isChatOwner(status: string): boolean { return status === "creator" || status === "owner"; }
 function isActiveMember(status: string): boolean { return ["creator", "administrator", "member", "restricted"].includes(status); }
 function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { return chat.type === "channel" ? "Каналы" : "Чаты"; }
 function catalogChatId(chatId: number): string { return String(chatId); }
@@ -105,7 +107,7 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   const profile = await getChatProfile(chat.id);
   const membersCount = await getMemberCount(chat.id);
   const ownerOpenId = `telegram:${from.id}`;
-  await upsertUser({ openId: ownerOpenId, name: from.username ?? from.first_name ?? "Telegram user", loginMethod: "telegram-bot", lastSignedIn: new Date() });
+  await upsertUser({ openId: ownerOpenId, name: from.username ?? from.first_name ?? "Telegram user", telegramUsername: from.username ?? null, loginMethod: "telegram-bot", lastSignedIn: new Date() });
   await upsertTelegramGroup({
     chatId: catalogChatId(chat.id), title: profile.title ?? chat.title ?? "Telegram community", username: profile.username ?? chat.username ?? null,
     description: profile.description ?? null, avatarFileId: profile.photo?.small_file_id ?? null, membersCount, ownerOpenId,
@@ -127,6 +129,9 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
   if (update.my_chat_member) { await saveAdminChat(update); return; }
   if (update.chat_member) {
     const membership = update.chat_member;
+    if (!isChatOwner(membership.old_chat_member.status) && isChatOwner(membership.new_chat_member.status)) {
+      await observeProtectedGroupTransfer(catalogChatId(membership.chat.id), `telegram:${membership.new_chat_member.user.id}`);
+    }
     const joins = !isActiveMember(membership.old_chat_member.status) && isActiveMember(membership.new_chat_member.status);
     const leaves = isActiveMember(membership.old_chat_member.status) && !isActiveMember(membership.new_chat_member.status);
     if (joins || leaves) await recordGroupMembership(catalogChatId(membership.chat.id), joins, leaves, Boolean(membership.invite_link?.invite_link));
@@ -140,7 +145,7 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
   if (!message?.text?.startsWith("/start")) return;
   if (message.from) {
     const openId = `telegram:${message.from.id}`;
-    await upsertUser({ openId, name: message.from.username ?? message.from.first_name ?? "Telegram user", loginMethod: "telegram-bot", lastSignedIn: new Date() });
+    await upsertUser({ openId, name: message.from.username ?? message.from.first_name ?? "Telegram user", telegramUsername: message.from.username ?? null, loginMethod: "telegram-bot", lastSignedIn: new Date() });
     const referralCode = getReferralCodeFromStartText(message.text);
     const attributed = referralCode ? await attributeTelegramReferral(message.from.id, referralCode) : false;
     await openMiniApp(message.chat.id, attributed
@@ -169,6 +174,6 @@ async function run(): Promise<void> {
   }
 }
 
-export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, isActiveMember, isBotAdmin, publicGroupUrl };
+export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, isActiveMember, isBotAdmin, isChatOwner, publicGroupUrl };
 const isMainModule = process.argv[1] ? new URL(`file://${process.argv[1]}`).href === import.meta.url : false;
 if (isMainModule) void run();

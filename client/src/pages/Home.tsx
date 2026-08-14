@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import {
   Filter,
   FolderPlus,
   Globe2,
-  Monitor,
   Moon,
   Plus,
   Settings2,
@@ -36,8 +35,19 @@ import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@toncon
 type Page = "top" | "catalog" | "mine" | "details" | "profile";
 type Audience = "all" | "small" | "medium" | "large";
 type Language = "ru" | "en";
+const n = (value: number, language: Language = "ru") =>
+  new Intl.NumberFormat(language === "en" ? "en-US" : "ru-RU").format(value);
+const date = (value?: Date | null, language: Language = "ru") =>
+  value
+    ? new Date(value).toLocaleDateString(language === "en" ? "en-US" : "ru-RU", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
 type ListingType = "catalog" | "sale" | "rent" | "both";
 type ListingCountry = "Global" | "UA" | "RU" | "EU" | "US";
+type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
 type Group = {
   id: number;
   chatId: string;
@@ -71,21 +81,50 @@ type Slot = {
   bidAmount: number;
   group: Group | null;
 };
-const n = (value: number) => new Intl.NumberFormat("ru-RU").format(value);
-const date = (value?: Date | null) =>
-  value
-    ? new Date(value).toLocaleDateString("ru-RU", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : "—";
+type Nft = {
+  id: number;
+  username: string;
+  price: string;
+  rentalPricePerDay: string;
+  minRentalDays: number;
+  maxRentalDays: number;
+  ownerUsername: string;
+  assetClass: "onchain" | "offchain";
+  nftItemAddress?: string | null;
+  ownerWalletAddress?: string | null;
+  ownershipVerifiedAt?: Date | null;
+  listingType: "sale" | "rent" | "both";
+  status: "available" | "rented" | "sold";
+};
+type PreparedNftTransfer = {
+  transfer: {
+    id: number;
+    assetClass: "onchain" | "offchain";
+    status: "draft" | "awaiting_signature";
+    transferReference: string | null;
+    expiresAt: Date | null;
+  };
+  nft: Nft;
+  recipient: {
+    openId: string;
+    name: string | null;
+    telegramUsername: string | null;
+    avatarUrl: string | null;
+  };
+  requirements: {
+    requiresWalletSignature: boolean;
+    requiresVerifiedRecipientWallet: boolean;
+    platformFeePercent: number;
+  };
+};
 const getTelegramAvatarSrc = (group: Group) =>
   group.avatarFileId
     ? `/api/telegram-avatar/${group.chatId}`
     : group.username
       ? `https://t.me/i/userpic/320/${group.username}.jpg`
       : null;
+const getCategoryLabel = (category: Group["category"], language: Language) =>
+  language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
 
 function Avatar({
   group,
@@ -123,10 +162,12 @@ function GroupCard({
   group,
   variant = "list",
   onClick,
+  language = "ru",
 }: {
   group?: Group | null;
   variant?: GroupCardVariant;
   onClick: () => void;
+  language?: Language;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const lead = variant === "lead";
@@ -172,13 +213,13 @@ function GroupCard({
             <small
               className={`mt-1 block truncate text-xs text-slate-200/80 ${compact ? "hidden" : ""}`}
             >
-              {group.username ? `@${group.username}` : group.category} ·{" "}
-              {n(group.membersCount)} участников
+              {group.username ? `@${group.username}` : getCategoryLabel(group.category, language)} ·{" "}
+              {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
             <small
               className={`mt-1 block text-[10px] font-medium tracking-wide text-[#a6c8ff] ${compact ? "hidden" : ""}`}
             >
-              ПРОВЕРЕНА TG TOP
+              {language === "en" ? "VERIFIED BY TG TOP" : "ПРОВЕРЕНА TG TOP"}
             </small>
           </span>
         </>
@@ -194,9 +235,14 @@ function GroupCard({
             <small
               className={`mt-1 block truncate text-xs text-slate-500 ${compact ? "hidden" : ""}`}
             >
-              {group.username ? `@${group.username}` : group.category} ·{" "}
-              {n(group.membersCount)} участников
+              {group.username ? `@${group.username}` : getCategoryLabel(group.category, language)} ·{" "}
+              {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
+            {group.salePriceTon && (group.listingType === "sale" || group.listingType === "both") && (
+              <small className={`mt-1 block truncate text-[10px] text-[#a6c8ff] ${compact ? "hidden" : ""}`}>
+                {language === "en" ? `Sale · ${group.salePriceTon} TON · TG TOP fee · 0%` : `Продажа · ${group.salePriceTon} TON · Комиссия TG TOP · 0%`}
+              </small>
+            )}
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
         </span>
@@ -211,7 +257,7 @@ function GroupCard({
             <small
               className={`font-light tracking-wide text-slate-500 ${compact ? "text-[9px]" : "text-[11px]"}`}
             >
-              Добавить группу
+              {language === "en" ? "Add group" : "Добавить группу"}
             </small>
           </span>
         </span>
@@ -222,7 +268,7 @@ function GroupCard({
           </span>
           <span>
             <b className="block text-sm font-light text-slate-300">
-              Добавить группу
+              {language === "en" ? "Add group" : "Добавить группу"}
             </b>
           </span>
         </span>
@@ -249,13 +295,51 @@ function Metric({
   );
 }
 
+function NftCard({ nft, language }: { nft: Nft; language: Language }) {
+  const copy = language === "en"
+    ? { sale: "Sale", rent: "Rent", both: "Sale + rent", available: "Available", rented: "Rented", sold: "Sold", owner: "Owner", perDay: "TON / day", days: "days", onchain: "On-chain", offchain: "Off-chain" }
+    : { sale: "Продажа", rent: "Аренда", both: "Продажа + аренда", available: "Доступен", rented: "В аренде", sold: "Продан", owner: "Владелец", perDay: "TON / день", days: "дней", onchain: "On-chain", offchain: "Off-chain" };
+  const listingLabel = nft.listingType === "sale" ? copy.sale : nft.listingType === "rent" ? copy.rent : copy.both;
+  const statusLabel = nft.status === "available" ? copy.available : nft.status === "rented" ? copy.rented : copy.sold;
+  return (
+    <article className="rounded-2xl border border-white/8 bg-[#111720] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <span className="min-w-0">
+          <b className="block truncate text-base font-semibold text-slate-100">@{nft.username}</b>
+          <small className="mt-1 block text-xs text-slate-500">{copy.owner}: {nft.ownerUsername}</small>
+        </span>
+        <span className="flex flex-col items-end gap-1">
+          <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-medium uppercase tracking-[0.08em] text-slate-400">{nft.assetClass === "onchain" ? copy.onchain : copy.offchain}</span>
+          <span className="rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/10 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">{statusLabel}</span>
+        </span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+        {(nft.listingType === "sale" || nft.listingType === "both") && (
+          <div className="rounded-xl bg-white/5 p-2.5">
+            <span className="block text-[10px] text-slate-500">{copy.sale}</span>
+            <b className="mt-1 block text-sm text-slate-100">{nft.price}</b>
+          </div>
+        )}
+        {(nft.listingType === "rent" || nft.listingType === "both") && (
+          <div className="rounded-xl bg-white/5 p-2.5">
+            <span className="block text-[10px] text-slate-500">{copy.rent}</span>
+            <b className="mt-1 block text-sm text-slate-100">{nft.rentalPricePerDay} {copy.perDay}</b>
+            <small className="mt-1 block text-[10px] text-slate-500">{nft.minRentalDays}–{nft.maxRentalDays} {copy.days}</small>
+          </div>
+        )}
+      </div>
+      <span className="mt-3 inline-flex rounded-md bg-white/5 px-2 py-1 text-[10px] text-slate-400">{listingLabel}</span>
+    </article>
+  );
+}
+
 function BrandMark() {
   return (
     <span
       aria-label="TG TOP"
-      className="brand-mark relative grid h-8 w-8 place-items-center overflow-hidden rounded-[10px] border border-[#83b1ff]/45 bg-[linear-gradient(145deg,#61a0ff_0%,#3f8cff_48%,#2859c5_100%)] shadow-[0_6px_16px_rgba(63,140,255,0.28)]"
+      className="brand-mark relative grid h-8 w-8 place-items-center overflow-hidden rounded-[10px] border border-white/20 bg-black shadow-[0_6px_16px_rgba(0,0,0,0.32)]"
     >
-      <span className="absolute -right-2 -top-3 h-7 w-7 rounded-full bg-white/25 blur-[1px]" />
+      <span className="absolute -right-2 -top-3 h-7 w-7 rounded-full bg-white/12 blur-[1px]" />
       <b className="brand-mark-symbol relative text-[16px] font-black leading-none tracking-[-0.12em] text-white">
         T
       </b>
@@ -263,13 +347,17 @@ function BrandMark() {
   );
 }
 
-function WalletConnectControl() {
+function WalletConnectControl({ language }: { language: Language }) {
   const [tonConnectUi] = useTonConnectUI();
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
-  const label = address ? `${address.slice(0, 5)}…${address.slice(-4)}` : "Connect Wallet";
+  const label = address
+    ? `${address.slice(0, 5)}…${address.slice(-4)}`
+    : language === "en"
+      ? "Connect wallet"
+      : "Кошелёк";
 
-  return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? label : "Loading…"}</button>;
+  return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? label : language === "en" ? "Loading…" : "Загрузка…"}</button>;
 }
 
 function SettingsSheet({
@@ -288,9 +376,8 @@ function SettingsSheet({
   const appearanceItems: Array<{
     value: Appearance;
     label: string;
-    icon: typeof Monitor;
+    icon: typeof Moon;
   }> = [
-    { value: "system", label: isEnglish ? "System" : "Система", icon: Monitor },
     { value: "dark", label: isEnglish ? "Dark" : "Темная", icon: Moon },
     { value: "light", label: isEnglish ? "Light" : "Светлая", icon: Sun },
   ];
@@ -370,11 +457,13 @@ function SettingsSheet({
   );
 }
 
-export default function Home() {
+export default function Home({ onReady }: { onReady?: () => void }) {
   const { user, isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
+  const hasSignaledReady = useRef(false);
   const [page, setPage] = useState<Page>("top");
   const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
+  const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
   const [country, setCountry] = useState("Все");
   const [audience, setAudience] = useState<Audience>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -393,6 +482,12 @@ export default function Home() {
   const [rentalPriceTon, setRentalPriceTon] = useState("");
   const [minRentalDays, setMinRentalDays] = useState("7");
   const [maxRentalDays, setMaxRentalDays] = useState("30");
+  const [nftTransferOpen, setNftTransferOpen] = useState(false);
+  const [nftTransferStep, setNftTransferStep] = useState<"select" | "review" | "prepared">("select");
+  const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
+  const [selectedNftId, setSelectedNftId] = useState<number | null>(null);
+  const [recipientInput, setRecipientInput] = useState("");
+  const [preparedNftTransfer, setPreparedNftTransfer] = useState<PreparedNftTransfer | null>(null);
 
   useEffect(() => {
     localStorage.setItem("tg-top-language", language);
@@ -407,9 +502,13 @@ export default function Home() {
           groups: "groups",
           addGroup: "Add group",
           top: "Top",
-          catalog: "Catalog",
           mine: "Mine",
           profile: "Profile",
+          globalEmptyTitle: "No communities in TG TOP yet",
+          globalEmptyBody: "Add the first group from your personal cabinet.",
+          loading: "Loading…",
+          listing: "Listing",
+          back: "Back",
         }
       : {
           filter: "Фильтр",
@@ -419,10 +518,28 @@ export default function Home() {
           groups: "групп",
           addGroup: "Добавить группу",
           top: "Топ",
-          catalog: "Каталог",
           mine: "Мои",
           profile: "Профиль",
+          globalEmptyTitle: "В TG TOP пока нет площадок",
+          globalEmptyBody: "Добавьте первую группу через личную папку.",
+          loading: "Загрузка…",
+          listing: "Листинг",
+          back: "Назад",
         };
+  const tx = (ru: string, en: string) => (language === "en" ? en : ru);
+  const errorText = (message: string) => {
+    if (language === "ru") return message;
+    const translations: Record<string, string> = {
+      "Выберите хотя бы одну группу": "Select at least one community.",
+      "Для аренды укажите цену и корректный срок": "Enter a price and a valid rental period.",
+      "Выберите группу, которая уже находится в каталоге": "Select a community that is already listed.",
+      "Реферальная ссылка загружается": "Your referral link is still loading.",
+      "Не удалось скопировать ссылку. Скопируйте ее вручную.": "Could not copy the link. Please copy it manually.",
+      "NFT недоступен для передачи": "This NFT is not available to transfer.",
+      "Нельзя передать NFT самому себе": "You cannot transfer an NFT to yourself.",
+    };
+    return translations[message] ?? "The action could not be completed. Please try again.";
+  };
 
   const slotsQuery = trpc.tgTop.getSlots.useQuery({
     category,
@@ -431,6 +548,24 @@ export default function Home() {
   const slots = (slotsQuery.data ?? []) as Slot[];
   const groupsQuery = trpc.tgTop.getGroups.useQuery({ category, country });
   const listedGroups = (groupsQuery.data ?? []) as Group[];
+  useEffect(() => {
+    if (!onReady || hasSignaledReady.current || !slotsQuery.isFetched || !groupsQuery.isFetched) return;
+    hasSignaledReady.current = true;
+    const frame = window.requestAnimationFrame(onReady);
+    return () => window.cancelAnimationFrame(frame);
+  }, [groupsQuery.isFetched, onReady, slotsQuery.isFetched]);
+  const nftsQuery = trpc.tgTop.getNfts.useQuery(undefined, {
+    enabled: globalDirection === "NFT",
+  });
+  const nfts = (nftsQuery.data ?? []) as Nft[];
+  const myNftsQuery = trpc.tgTop.myNfts.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const myNfts = (myNftsQuery.data ?? []) as Nft[];
+  const nftRecipientQuery = trpc.tgTop.resolveNftTransferRecipient.useQuery(
+    { recipientInput },
+    { enabled: false, retry: false }
+  );
   const mineQuery = trpc.tgTop.myGroups.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -458,6 +593,25 @@ export default function Home() {
       };
     }
     | undefined;
+  const dealsQuery = trpc.tgTop.myDeals.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const deals = (dealsQuery.data ?? []) as Array<{
+    id: number;
+    groupId: number | null;
+    buyerOpenId: string;
+    sellerOpenId: string;
+    price: string;
+    dealType: "group_buy" | "nft_buy" | "nft_rent";
+    status: "open" | "escrow_funded" | "active" | "completed" | "expired" | "cancelled" | "disputed";
+    fundedAt: Date | null;
+    transferObservedAt: Date | null;
+    expiresAt: Date | null;
+    cancelledAt: Date | null;
+    createdAt: Date;
+    groupTitle: string | null;
+    groupUsername: string | null;
+  }>;
   const detailQuery = trpc.tgTop.getGroupDetail.useQuery(
     { groupId: selectedGroupId ?? 0 },
     { enabled: selectedGroupId !== null }
@@ -476,7 +630,7 @@ export default function Home() {
 
   const listWithCredits = trpc.tgTop.listGroupsWithCredits.useMutation({
     onSuccess: () => {
-      toast.success("Настройки листинга сохранены");
+      toast.success(tx("Настройки листинга сохранены", "Listing settings saved."));
       setListingOpen(false);
       setSelectedGroupIds([]);
       void utils.tgTop.myGroups.invalidate();
@@ -488,7 +642,7 @@ export default function Home() {
   });
   const unlistGroups = trpc.tgTop.unlistGroups.useMutation({
     onSuccess: () => {
-      toast.success("Группы сняты с листинга");
+      toast.success(tx("Группы сняты с листинга", "Communities removed from listings."));
       setSelectedGroupIds([]);
       void utils.tgTop.myGroups.invalidate();
       void utils.tgTop.getGroups.invalidate();
@@ -498,12 +652,50 @@ export default function Home() {
   });
   const placeBid = trpc.tgTop.placeBid.useMutation({
     onSuccess: () => {
-      toast.success("Размещение обновлено");
+      toast.success(tx("Размещение обновлено", "Placement updated."));
       setTargetSlot(null);
       setAmount("0.1");
       void utils.tgTop.getSlots.invalidate();
     },
     onError: error => toast.error(error.message),
+  });
+  const createProtectedGroupDeal = trpc.tgTop.createProtectedGroupDeal.useMutation({
+    onSuccess: () => {
+      toast.success(tx("Офер создан. Оплата будет доступна после запуска проверенного эскроу.", "Offer created. Payment will be available after verified escrow launches."));
+      void utils.tgTop.myDeals.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const cancelProtectedGroupDeal = trpc.tgTop.cancelProtectedGroupDeal.useMutation({
+    onSuccess: result => {
+      toast.success(result.requiresEscrowRefund
+        ? tx("Офер отменен. Возврат эскроу будет обработан после подключения платежного контура.", "Offer cancelled. The escrow refund will be processed after the payment layer is connected.")
+        : tx("Офер отменен.", "Offer cancelled."));
+      void utils.tgTop.myDeals.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const prepareNftTransferMutation = trpc.tgTop.prepareNftTransfer.useMutation({
+    onSuccess: result => {
+      setPreparedNftTransfer(result as PreparedNftTransfer);
+      setNftTransferStep("prepared");
+      void utils.tgTop.myNftTransfers.invalidate();
+    },
+    onError: error => toast.error(language === "en" ? "Could not prepare the NFT transfer. Please check the recipient and try again." : error.message),
+  });
+  const completeOffchainNftTransferMutation = trpc.tgTop.completeOffchainNftTransfer.useMutation({
+    onSuccess: () => {
+      toast.success(tx("Передача Off-chain NFT подтверждена. Комиссия TG TOP · 0%", "Off-chain NFT transfer confirmed. TG TOP fee · 0%."));
+      setNftTransferOpen(false);
+      setPreparedNftTransfer(null);
+      setSelectedNftId(null);
+      setRecipientInput("");
+      setNftTransferStep("select");
+      void utils.tgTop.myNfts.invalidate();
+      void utils.tgTop.getNfts.invalidate();
+      void utils.tgTop.myNftTransfers.invalidate();
+    },
+    onError: error => toast.error(language === "en" ? "Could not confirm the off-chain transfer. Please try again." : error.message),
   });
 
   const matchesAudience = (group: Group | null) => {
@@ -516,6 +708,10 @@ export default function Home() {
   const visibleGroups = useMemo(
     () => listedGroups.filter(matchesAudience),
     [listedGroups, audience]
+  );
+  const visibleNfts = useMemo(
+    () => nftAssetFilter === "all" ? nfts : nfts.filter(nft => nft.assetClass === nftAssetFilter),
+    [nfts, nftAssetFilter]
   );
   const board = useMemo(
     () =>
@@ -545,6 +741,23 @@ export default function Home() {
   const mainTon = Number(account?.user?.mainBalanceTon ?? 0).toFixed(2);
   const transactions = account?.transactions ?? [];
   const referral = account?.referral;
+  const dealStatusLabel = (status: typeof deals[number]["status"]) => {
+    const labels = {
+      open: tx("Ожидает оплаты", "Awaiting payment"),
+      escrow_funded: tx("Средства в эскроу", "Funds in escrow"),
+      active: tx("Передача зафиксирована", "Transfer observed"),
+      completed: tx("Завершена", "Completed"),
+      expired: tx("Срок истек", "Expired"),
+      cancelled: tx("Отменена", "Cancelled"),
+      disputed: tx("На разборе", "Under review"),
+    } as const;
+    return labels[status];
+  };
+  const getDaysRemaining = (expiresAt: Date | null) => {
+    if (!expiresAt) return null;
+    return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000));
+  };
+  const globalCount = globalDirection === "NFT" ? visibleNfts.length : visibleGroups.length;
   const telegramAvatar =
     typeof window !== "undefined"
       ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
@@ -556,12 +769,18 @@ export default function Home() {
   const selectedListingGroups = mine.filter(group => selectedGroupIds.includes(group.id));
   const includesSale = listingType === "sale" || listingType === "both";
   const includesRent = listingType === "rent" || listingType === "both";
+  const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
+  const reviewedRecipient = nftRecipientQuery.data;
 
   const openGroup = (id: number) => {
     setSelectedGroupId(id);
     setPage("details");
   };
   const openMine = (slot?: Slot) => {
+    if (slot) {
+      const nextBid = Math.max(0.1, slot.bidAmount / 1000 + 0.1);
+      setAmount(nextBid.toFixed(1));
+    }
     setTargetSlot(slot ?? null);
     setPage("mine");
   };
@@ -588,12 +807,12 @@ export default function Home() {
     setListingOpen(true);
   };
   const saveListing = () => {
-    if (!selectedGroupIds.length) return toast.error("Выберите хотя бы одну группу");
+    if (!selectedGroupIds.length) return toast.error(tx("Выберите хотя бы одну группу", "Select at least one community."));
     const isRental = listingType === "rent" || listingType === "both";
     const minDays = Number(minRentalDays);
     const maxDays = Number(maxRentalDays);
     if (isRental && (!rentalPriceTon || !Number.isFinite(minDays) || !Number.isFinite(maxDays) || minDays < 1 || maxDays < minDays)) {
-      return toast.error("Для аренды укажите цену и корректный срок");
+      return toast.error(tx("Для аренды укажите цену и корректный срок", "Enter a price and a valid rental period."));
     }
     listWithCredits.mutate({
       groupIds: selectedGroupIds,
@@ -607,16 +826,16 @@ export default function Home() {
   };
   const removeSelectedFromListing = () => {
     const listedIds = mine.filter(group => selectedGroupIds.includes(group.id) && group.status === "listed").map(group => group.id);
-    if (!listedIds.length) return toast.error("Выберите группу, которая уже находится в каталоге");
+    if (!listedIds.length) return toast.error(tx("Выберите группу, которая уже находится в каталоге", "Select a community that is already listed."));
     unlistGroups.mutate({ groupIds: listedIds });
   };
   const copyReferralLink = async () => {
-    if (!referral?.referralLink) return toast.error("Реферальная ссылка загружается");
+    if (!referral?.referralLink) return toast.error(tx("Реферальная ссылка загружается", "Your referral link is still loading."));
     try {
       await navigator.clipboard.writeText(referral.referralLink);
-      toast.success("Реферальная ссылка скопирована");
+      toast.success(tx("Реферальная ссылка скопирована", "Referral link copied."));
     } catch {
-      toast.error("Не удалось скопировать ссылку. Скопируйте ее вручную.");
+      toast.error(tx("Не удалось скопировать ссылку. Скопируйте ее вручную.", "Could not copy the link. Please copy it manually."));
     }
   };
   const addBot = (kind: "channel" | "group") =>
@@ -624,6 +843,10 @@ export default function Home() {
       `https://t.me/TGTOP_robot?${kind === "channel" ? "startchannel=admin" : "startgroup=admin"}`,
       "_blank"
     );
+  const selectGlobalDirection = (value: GlobalDirection) => {
+    setGlobalDirection(value);
+    if (value !== "NFT") setCategory(value);
+  };
   const submitPlacement = (group: Group) => {
     if (!targetSlot?.id)
       return toast.error(
@@ -640,6 +863,34 @@ export default function Home() {
       currentBid: `${value.toFixed(1)} TON`,
     });
   };
+  const openNftTransfer = () => {
+    setSelectedNftId(null);
+    setRecipientInput("");
+    setPreparedNftTransfer(null);
+    setNftTransferStep("select");
+    setNftTransferOpen(true);
+  };
+  const reviewNftRecipient = async () => {
+    if (!selectedNft) return toast.error(tx("Выберите NFT для передачи", "Select an NFT to transfer."));
+    const result = await nftRecipientQuery.refetch();
+    if (result.data) {
+      setNftTransferStep("review");
+      return;
+    }
+    toast.error(language === "en" ? "Recipient was not found in TG TOP. Ask them to open the app through @TGTOP_robot first." : (result.error?.message ?? "Получатель не найден в TG TOP. Попросите его открыть приложение через @TGTOP_robot."));
+  };
+  const prepareNftTransfer = () => {
+    if (!selectedNft || !reviewedRecipient) return;
+    if (selectedNft.assetClass === "onchain") {
+      toast.error(tx("Передача On-chain NFT станет доступна после проверки кошельков отправителя и получателя.", "On-chain transfers become available after both sender and recipient wallets are verified."));
+      return;
+    }
+    prepareNftTransferMutation.mutate({ nftId: selectedNft.id, recipientInput });
+  };
+  const completePreparedOffchainNftTransfer = () => {
+    if (!preparedNftTransfer || preparedNftTransfer.transfer.assetClass !== "offchain") return;
+    completeOffchainNftTransferMutation.mutate({ transferId: preparedNftTransfer.transfer.id });
+  };
 
   return (
     <div className="tg-shell min-h-screen bg-[#0b0f14] text-slate-100">
@@ -653,6 +904,7 @@ export default function Home() {
             <b className="text-sm tracking-tight">TG TOP</b>
           </button>
           <div className="flex items-center gap-2">
+            <WalletConnectControl language={language} />
             <button
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
@@ -691,17 +943,6 @@ export default function Home() {
       <main className="mx-auto max-w-3xl px-4 pb-28 pt-3">
         {page === "top" && (
           <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <WalletConnectControl />
-              <Button
-                onClick={() => setFiltersOpen(true)}
-                variant="outline"
-                className="h-8 border-white/10 bg-[#111720] px-3 text-xs text-slate-200"
-              >
-                <Filter className="mr-1.5 h-3.5 w-3.5" />
-                Фильтр
-              </Button>
-            </div>
             <div className="rounded-xl border border-white/8 bg-[#111720] p-1.5 shadow-[0_12px_28px_rgba(0,0,0,0.12)]">
               <div className="flex items-center px-1.5 pb-1">
                 <span className="flex items-center gap-1.5">
@@ -710,46 +951,84 @@ export default function Home() {
                   </h1>
                   <span
                     aria-live="polite"
-                    className="rounded-full border border-[#3f8cff]/25 bg-[#3f8cff]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#a6c8ff]"
+                  className="rounded-full border border-[#3f8cff]/25 bg-[#3f8cff]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#a6c8ff]"
                   >
-                    {n(visibleGroups.length)} групп
+                    {n(globalCount)} {globalDirection === "NFT" ? "NFT" : ui.groups}
                   </span>
                 </span>
               </div>
               <ToggleGroup
                 type="single"
-                value={category}
+                value={globalDirection}
                 onValueChange={value => {
-                  if (value) setCategory(value as typeof category);
+                  if (value) selectGlobalDirection(value as GlobalDirection);
                 }}
                 variant="outline"
                 size="sm"
-                className="grid w-full grid-cols-3 overflow-hidden rounded-lg border border-white/8 bg-[#0b0f14] p-0.5"
+                className="grid w-full grid-cols-4 overflow-hidden rounded-lg border border-white/8 bg-[#0b0f14] p-0.5"
               >
                 <ToggleGroupItem
                   value="Все"
                   className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
                 >
-                  Все
+                  {ui.all}
                 </ToggleGroupItem>
                 <ToggleGroupItem
                   value="Каналы"
                   className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
                 >
-                  Каналы
+                  {ui.channels}
                 </ToggleGroupItem>
                 <ToggleGroupItem
                   value="Чаты"
                   className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
                 >
-                  Чаты
+                  {ui.chats}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="NFT"
+                  className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
+                >
+                  NFT
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
+            {globalDirection === "NFT" ? (
+              <section className="space-y-2 pt-1">
+                <div className="flex items-baseline justify-between px-1">
+                  <span>
+                    <h2 className="text-sm font-semibold text-slate-200">{tx("NFT-направление", "NFT marketplace")}</h2>
+                    <span className="text-[10px] text-slate-500">{tx("юзернеймы и права", "usernames and rights")}</span>
+                  </span>
+                  {isAuthenticated && (
+                    <button onClick={openNftTransfer} className="rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 py-1.5 text-[10px] font-semibold text-[#a6c8ff]">
+                      {tx("Передать NFT", "Send NFT")}
+                    </button>
+                  )}
+                </div>
+                <ToggleGroup type="single" value={nftAssetFilter} onValueChange={value => value && setNftAssetFilter(value as typeof nftAssetFilter)} className="grid w-full grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
+                  <ToggleGroupItem value="all" className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white">{tx("Все", "All")}</ToggleGroupItem>
+                  <ToggleGroupItem value="onchain" className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white">On-chain</ToggleGroupItem>
+                  <ToggleGroupItem value="offchain" className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white">Off-chain</ToggleGroupItem>
+                </ToggleGroup>
+                {nftsQuery.isLoading ? (
+                  <div className="rounded-2xl border border-white/8 bg-[#111720] p-6 text-center text-sm text-slate-500">{ui.loading}</div>
+                ) : visibleNfts.length ? (
+                  <div className="space-y-2">{visibleNfts.map(nft => <NftCard key={nft.id} nft={nft} language={language} />)}</div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-white/12 bg-[#111720] p-7 text-center">
+                    <p className="text-sm font-medium text-slate-300">{tx("В этой категории NFT пока нет", "No NFTs in this category yet")}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{tx("On-chain активы подтверждаются в TON, Off-chain — в безопасном учете TG TOP.", "On-chain assets are verified on TON; Off-chain assets use TG TOP’s protected ledger.")}</p>
+                  </div>
+                )}
+              </section>
+            ) : (
+            <>
             <div className="space-y-3">
               <GroupCard
                 group={leadSlot.group}
                 variant="lead"
+                language={language}
                 onClick={() =>
                   leadSlot.group
                     ? openGroup(leadSlot.group.id)
@@ -762,6 +1041,7 @@ export default function Home() {
                     key={slot.slotNumber}
                     group={slot.group}
                     variant="secondary"
+                    language={language}
                     onClick={() =>
                       slot.group ? openGroup(slot.group.id) : openMine(slot)
                     }
@@ -774,6 +1054,7 @@ export default function Home() {
                     key={slot.slotNumber}
                     group={slot.group}
                     variant="compact"
+                    language={language}
                     onClick={() =>
                       slot.group ? openGroup(slot.group.id) : openMine(slot)
                     }
@@ -788,21 +1069,24 @@ export default function Home() {
                     key={group.id}
                     group={group}
                     variant="list"
+                    language={language}
                     onClick={() => openGroup(group.id)}
                   />
                 ))}
                 {generalList.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-white/12 bg-[#111720] p-6 text-center">
                     <p className="text-sm font-medium text-slate-300">
-                      В TG TOP пока нет площадок
+                      {ui.globalEmptyTitle}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Добавьте первую группу через личную папку.
+                      {ui.globalEmptyBody}
                     </p>
                   </div>
                 )}
               </div>
             </section>
+            </>
+            )}
           </section>
         )}
 
@@ -858,33 +1142,31 @@ export default function Home() {
               className="flex items-center gap-1 text-xs text-slate-400"
             >
               <ArrowLeft className="h-4 w-4" />
-              Назад
+              {ui.back}
             </button>
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#72a8ff]">
-                Личная папка
+                {tx("Личная папка", "Personal cabinet")}
               </p>
-              <h1 className="mt-1 text-2xl font-semibold">Мои группы</h1>
+              <h1 className="mt-1 text-2xl font-semibold">{tx("Мои группы", "My groups")}</h1>
               <p className="mt-1 text-sm text-slate-500">
-                Подключите бота, чтобы получить статистику и разместить
-                площадку.
+                {tx("Подключите бота, чтобы получить статистику и разместить площадку.", "Add the bot as an administrator to get analytics and list your community.")}
               </p>
             </div>
             {targetSlot && (
-              <div className="rounded-xl border border-[#3f8cff]/30 bg-[#3f8cff]/10 p-3">
-                <p className="text-sm">Выберите группу для размещения</p>
-                <div className="mt-2 flex gap-2">
-                  <Input
-                    value={amount}
-                    type="number"
-                    step="0.1"
-                    onChange={event => setAmount(event.target.value)}
-                    className="h-9 border-white/10 bg-[#0b0f14]"
-                  />
-                  <span className="flex items-center text-xs text-slate-400">
-                    TON
-                  </span>
-                </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-2.5">
+                <span>
+                  <b className="block text-xs text-slate-100">{tx("Выберите группу для позиции", "Choose a group for this placement")}</b>
+                  <small className="mt-0.5 block text-[11px] text-slate-400">
+                    {tx(`Следующая ставка · ${amount} TON`, `Next bid · ${amount} TON`)}
+                  </small>
+                </span>
+                <button
+                  onClick={() => setPage("top")}
+                  className="shrink-0 text-[11px] font-medium text-[#a6c8ff]"
+                >
+                  {tx("К топу", "View top")}
+                </button>
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
@@ -892,20 +1174,20 @@ export default function Home() {
                 onClick={() => addBot("channel")}
                 className="rounded-xl border border-white/10 bg-[#111720] px-3 py-3 text-sm font-semibold"
               >
-                + Канал
+                {tx("+ Канал", "+ Channel")}
               </button>
               <button
                 onClick={() => addBot("group")}
                 className="rounded-xl border border-white/10 bg-[#111720] px-3 py-3 text-sm font-semibold"
               >
-                + Чат
+                {tx("+ Чат", "+ Chat")}
               </button>
             </div>
             {selectedGroupIds.length > 0 && (
               <div className="sticky top-[62px] z-20 rounded-xl border border-[#3f8cff]/30 bg-[#101a2a]/95 p-2.5 shadow-lg backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-slate-300">
-                    Выбрано: <b className="text-white">{selectedGroupIds.length}</b>
+                  <span className="text-[11px] text-slate-300">
+                    {tx("Выбрано:", "Selected:")} <b className="text-white">{selectedGroupIds.length}</b>
                   </span>
                   <div className="flex gap-2">
                     <button
@@ -913,13 +1195,13 @@ export default function Home() {
                       disabled={unlistGroups.isPending}
                       className="rounded-lg border border-white/12 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 disabled:opacity-50"
                     >
-                      Снять
+                      {tx("Снять", "Unlist")}
                     </button>
                     <button
                       onClick={() => openListing(selectedGroupIds)}
                       className="rounded-lg bg-[#3f8cff] px-2.5 py-1.5 text-[11px] font-semibold text-white"
                     >
-                      Листинг
+                      {ui.listing}
                     </button>
                   </div>
                 </div>
@@ -934,7 +1216,7 @@ export default function Home() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => toggleGroupSelection(group.id)}
-                      aria-label={`Выбрать ${group.title}`}
+                      aria-label={tx(`Выбрать ${group.title}`, `Select ${group.title}`)}
                       aria-pressed={selectedGroupIds.includes(group.id)}
                       className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selectedGroupIds.includes(group.id) ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}
                     >
@@ -948,7 +1230,7 @@ export default function Home() {
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-sm">{group.title}</b>
                         <small className="mt-1 block text-xs text-slate-500">
-                          {group.username ? `@${group.username}` : group.category} · {n(group.membersCount)}
+                          {group.username ? `@${group.username}` : group.category} · {n(group.membersCount)} {tx("участников", "members")}
                         </small>
                       </span>
                       <ChevronRight className="h-4 w-4 text-slate-600" />
@@ -960,14 +1242,14 @@ export default function Home() {
                         onClick={() => submitPlacement(group)}
                         className="flex-1 rounded-lg bg-[#3f8cff] py-2 text-xs font-semibold"
                       >
-                        Разместить
+                        {tx("Разместить", "Place")}
                       </button>
                     )}
                     <button
                       onClick={() => openListing([group.id])}
                       className="flex-1 rounded-lg border border-white/10 py-2 text-xs font-semibold text-slate-200"
                     >
-                      {group.status === "listed" ? "Настроить листинг" : "Выставить на листинг"}
+                      {group.status === "listed" ? tx("Настроить листинг", "Configure listing") : tx("Выставить на листинг", "Create listing")}
                     </button>
                   </div>
                 </div>
@@ -975,9 +1257,9 @@ export default function Home() {
               {mine.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center">
                   <FolderPlus className="mx-auto h-7 w-7 text-slate-600" />
-                  <p className="mt-3 text-sm">Групп пока нет</p>
+                  <p className="mt-3 text-sm">{tx("Групп пока нет", "No groups yet")}</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Добавьте @TGTOP_robot в администраторы.
+                    {tx("Добавьте @TGTOP_robot в администраторы.", "Add @TGTOP_robot as an administrator.")}
                   </p>
                 </div>
               )}
@@ -994,7 +1276,7 @@ export default function Home() {
                   className="flex items-center gap-1 text-xs text-slate-400"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Назад
+                  {ui.back}
                 </button>
                 <div className="rounded-2xl border border-white/8 bg-[#111720] p-5">
                   <div className="flex items-start gap-4">
@@ -1010,18 +1292,18 @@ export default function Home() {
                       </p>
                       <p className="mt-3 text-sm leading-5 text-slate-400">
                         {detail.group.description ||
-                          "Описание не передано Telegram API."}
+                          tx("Описание не передано Telegram API.", "Telegram did not provide a description.")}
                       </p>
                     </span>
                   </div>
                   <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-white/8 pt-4 text-xs">
                     <span className="rounded-md bg-white/5 px-2 py-1 text-slate-300">
                       {detail.group.status === "listed"
-                        ? `В каталоге с ${date(detail.group.listedAt)}`
-                        : "Не размещена в каталоге"}
+                        ? tx(`В каталоге с ${date(detail.group.listedAt)}`, `Listed since ${date(detail.group.listedAt)}`)
+                        : tx("Не размещена в каталоге", "Not listed")}
                     </span>
                     <span className="rounded-md bg-white/5 px-2 py-1 text-slate-400">
-                      {selectedSlot ? "Выделенная позиция" : "Общий список"}
+                      {selectedSlot ? tx("Выделенная позиция", "Featured placement") : tx("Общий список", "General list")}
                     </span>
                   </div>
                   {ownsDetail && (
@@ -1029,18 +1311,39 @@ export default function Home() {
                       onClick={() => openMine()}
                       className="mt-3 w-full rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 py-2 text-xs font-semibold text-[#a6c8ff]"
                     >
-                      Управлять этой группой
+                      {tx("Управлять этой группой", "Manage this group")}
                     </button>
+                  )}
+                  {!ownsDetail && detail.group.salePriceTon && (detail.group.listingType === "sale" || detail.group.listingType === "both") && (
+                    <div className="mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 p-3">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span>
+                          <b className="block text-sm text-slate-100">{tx("Безопасная покупка", "Protected purchase")}</b>
+                          <small className="mt-1 block text-[11px] text-slate-400">{tx("Передача owner-прав · до 21 дня", "Owner-rights transfer · up to 21 days")}</small>
+                        </span>
+                        <b className="text-sm text-[#a6c8ff]">{detail.group.salePriceTon} TON</b>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <small className="text-[10px] text-slate-500">{tx("Комиссия TG TOP · 0%", "TG TOP fee · 0%")}</small>
+                        <button
+                          onClick={() => createProtectedGroupDeal.mutate({ groupId: detail.group.id })}
+                          disabled={createProtectedGroupDeal.isPending || !isAuthenticated}
+                          className="rounded-lg bg-[#3f8cff] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                          {isAuthenticated ? tx("Создать офер", "Create offer") : tx("Войти через Telegram", "Sign in with Telegram")}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Metric
-                    label="Участники"
+                    label={tx("Участники", "Members")}
                     value={n(detail.group.membersCount)}
-                    note="последнее измерение"
+                    note={tx("последнее измерение", "latest measurement")}
                   />
                   <Metric
-                    label="Прирост"
+                    label={tx("Прирост", "Growth")}
                     value={
                       detail.snapshots.length > 1
                         ? n(
@@ -1051,55 +1354,55 @@ export default function Home() {
                     }
                     note={
                       detail.snapshots.length > 1
-                        ? "за период наблюдения"
-                        : "данные накапливаются"
+                        ? tx("за период наблюдения", "during observation")
+                        : tx("данные накапливаются", "data is accumulating")
                     }
                   />
                   <Metric
-                    label="Вступления"
+                    label={tx("Вступления", "Joins")}
                     value={
                       detail.group.joinedCount
                         ? n(detail.group.joinedCount)
                         : "—"
                     }
-                    note="замеченные ботом"
+                    note={tx("замеченные ботом", "observed by the bot")}
                   />
                   <Metric
-                    label="Выходы"
+                    label={tx("Выходы", "Leaves")}
                     value={
                       detail.group.leavesCount
                         ? n(detail.group.leavesCount)
                         : "—"
                     }
-                    note="замеченные ботом"
+                    note={tx("замеченные ботом", "observed by the bot")}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Metric
-                    label="По приглашениям"
+                    label={tx("По приглашениям", "Via invites")}
                     value={
                       detail.group.invitedCount
                         ? n(detail.group.invitedCount)
                         : "—"
                     }
-                    note="когда Telegram передал ссылку"
+                    note={tx("когда Telegram передал ссылку", "when Telegram provided the link")}
                   />
                   <Metric
-                    label="Публикации"
+                    label={tx("Публикации", "Posts")}
                     value={
                       detail.group.messagesCount
                         ? n(detail.group.messagesCount)
                         : "—"
                     }
-                    note="увиденные ботом"
+                    note={tx("увиденные ботом", "observed by the bot")}
                   />
                 </div>
                 <div className="rounded-2xl border border-white/8 bg-[#111720] p-4">
                   <div className="flex justify-between">
                     <span>
-                      <b className="block text-sm">Динамика аудитории</b>
+                      <b className="block text-sm">{tx("Динамика аудитории", "Audience dynamics")}</b>
                       <small className="block mt-1 text-xs text-slate-500">
-                        Только снимки TG TOP.
+                        {tx("Только снимки TG TOP.", "TG TOP snapshots only.")}
                       </small>
                     </span>
                     <BarChart3 className="h-5 w-5 text-slate-500" />
@@ -1176,31 +1479,31 @@ export default function Home() {
                 </span>
                 <span>
                   <h1 className="text-lg font-semibold">
-                    {user?.name ?? "Telegram user"}
+                    {user?.name ?? tx("Пользователь Telegram", "Telegram user")}
                   </h1>
                   <small className="text-xs text-slate-500">
-                    Личный кабинет TG TOP
+                    {tx("Личный кабинет TG TOP", "TG TOP account")}
                   </small>
                 </span>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <Metric
-                  label="Основной баланс"
+                  label={tx("Основной баланс", "Main balance")}
                   value={`${mainTon} TON`}
-                  note="пополнения и оплаты"
+                  note={tx("пополнения и оплаты", "top-ups and payments")}
                 />
                 <Metric
-                  label="Бонусный баланс"
+                  label={tx("Бонусный баланс", "Bonus balance")}
                   value={`${bonus} GRAM`}
-                  note="для размещения"
+                  note={tx("для размещения", "for placement")}
                 />
               </div>
             </div>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="border-b border-white/8 px-4 py-4">
-                <h2 className="text-sm font-semibold">История операций</h2>
+                <h2 className="text-sm font-semibold">{tx("История операций", "Transaction history")}</h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  Бонусы и списания по вашим площадкам
+                  {tx("Бонусы и списания по вашим площадкам", "Bonuses and charges for your communities")}
                 </p>
               </div>
               {transactions.length ? (
@@ -1218,11 +1521,11 @@ export default function Home() {
                         <span className="min-w-0">
                           <b className="block truncate text-sm">
                             {earned
-                              ? "Бонус за подключение"
-                              : "Размещение в каталоге"}
+                              ? tx("Бонус за подключение", "Connection bonus")
+                              : tx("Размещение в каталоге", "Catalog placement")}
                           </b>
                           <small className="mt-1 block truncate text-xs text-slate-500">
-                            {groupName} · {date(transaction.createdAt)}
+                            {groupName} · {date(transaction.createdAt, language)}
                           </small>
                         </span>
                         <b
@@ -1237,56 +1540,115 @@ export default function Home() {
                 </div>
               ) : (
                 <p className="px-4 py-8 text-center text-sm text-slate-500">
-                  Операцій поки немає.
+                  {tx("Операций пока нет.", "No transactions yet.")}
+                </p>
+              )}
+            </section>
+            <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
+              <div className="flex items-start justify-between gap-3 border-b border-white/8 px-4 py-4">
+                <span>
+                  <h2 className="text-sm font-semibold">{tx("История оферов", "Offer history")}</h2>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {tx("Покупки и продажи с защищенным сценарием передачи", "Purchases and sales with a protected transfer flow")}
+                  </p>
+                </span>
+                <span className="rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">
+                  {tx("Комиссия · 0%", "Fee · 0%")}
+                </span>
+              </div>
+              {deals.length ? (
+                <div className="divide-y divide-white/7">
+                  {deals.map(deal => {
+                    const isBuyer = deal.buyerOpenId === user?.openId;
+                    const canCancel = isBuyer && (deal.status === "open" || deal.status === "escrow_funded");
+                    const remainingDays = getDaysRemaining(deal.expiresAt);
+                    const title = deal.groupUsername ? `@${deal.groupUsername}` : (deal.groupTitle ?? tx("Группа TG TOP", "TG TOP community"));
+                    return (
+                      <div key={deal.id} className="px-4 py-3.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="min-w-0">
+                            <b className="block truncate text-sm">{title}</b>
+                            <small className="mt-1 block text-[11px] text-slate-500">
+                              {isBuyer ? tx("Покупатель", "Buyer") : tx("Продавец", "Seller")} · {date(deal.createdAt, language)}
+                            </small>
+                          </span>
+                          <b className="shrink-0 text-sm text-[#a6c8ff]">{deal.price} TON</b>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                          <span className="rounded-md bg-white/5 px-2 py-1 text-[10px] text-slate-300">
+                            {dealStatusLabel(deal.status)}
+                          </span>
+                          {remainingDays !== null && deal.status === "escrow_funded" && (
+                            <small className="text-[10px] text-slate-500">
+                              {tx(`До дедлайна: ${remainingDays} дн.`, `${remainingDays} days to deadline`)}
+                            </small>
+                          )}
+                          {canCancel && (
+                            <button
+                              onClick={() => cancelProtectedGroupDeal.mutate({ dealId: deal.id })}
+                              disabled={cancelProtectedGroupDeal.isPending}
+                              className="ml-auto text-[11px] font-medium text-slate-400 underline decoration-white/20 underline-offset-4 disabled:opacity-50"
+                            >
+                              {tx("Отменить офер", "Cancel offer")}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="px-4 py-8 text-center text-sm text-slate-500">
+                  {tx("Оферов пока нет. Создайте безопасный офер со страницы группы.", "No offers yet. Create a protected offer from a community page.")}
                 </p>
               )}
             </section>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="border-b border-white/8 px-4 py-4">
-                <h2 className="text-sm font-semibold">Реферальная программа</h2>
+                <h2 className="text-sm font-semibold">{tx("Реферальная программа", "Referral program")}</h2>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Приглашайте владельцев площадок. Доход отражается только после закрытых сделок с комиссией TG TOP.
+                  {tx("Приглашайте владельцев площадок. Доход отражается только после закрытых сделок с комиссией TG TOP.", "Invite community owners. Earnings appear only after completed TG TOP fee-bearing deals.")}
                 </p>
               </div>
               <div className="space-y-3 p-4">
                 <div className="grid grid-cols-2 gap-3">
                   <Metric
-                    label="Приглашено"
+                    label={tx("Приглашено", "Invited")}
                     value={String(referral?.referralsCount ?? 0)}
-                    note="активированных аккаунтов"
+                    note={tx("активированных аккаунтов", "activated accounts")}
                   />
                   <Metric
-                    label="Заработано"
+                    label={tx("Заработано", "Earned")}
                     value={referral?.earnings ?? "0 TON"}
-                    note="из комиссий платформы"
+                    note={tx("из комиссий платформы", "from platform fees")}
                   />
                 </div>
                 <div className="rounded-xl border border-white/8 bg-[#0b0f14] p-3">
-                  <span className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Ваша ссылка</span>
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-slate-500">{tx("Ваша ссылка", "Your link")}</span>
                   <code className="mt-1.5 block truncate text-xs text-[#a6c8ff]">
-                    {referral?.referralLink ?? "Готовим персональную ссылку…"}
+                    {referral?.referralLink ?? tx("Готовим персональную ссылку…", "Preparing your personal link…")}
                   </code>
                   <button
                     onClick={copyReferralLink}
                     disabled={!referral}
                     className="mt-3 w-full rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 py-2 text-xs font-semibold text-[#a6c8ff] disabled:opacity-50"
                   >
-                    Скопировать ссылку
+                    {tx("Скопировать ссылку", "Copy link")}
                   </button>
                 </div>
               </div>
             </section>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="border-b border-white/8 px-4 py-4">
-                <h2 className="text-sm font-semibold">Как это работает</h2>
-                <p className="mt-1 text-xs text-slate-500">Коротко о безопасном использовании TG TOP.</p>
+                <h2 className="text-sm font-semibold">{tx("Как это работает", "How it works")}</h2>
+                <p className="mt-1 text-xs text-slate-500">{tx("Коротко о безопасном использовании TG TOP.", "A quick guide to using TG TOP safely.")}</p>
               </div>
               <div className="divide-y divide-white/7">
                 {[
-                  ["Кошелек", "Подключение кошелька только показывает ваш TON-адрес. TG TOP пока не запрашивает подпись или перевод TON."],
-                  ["Листинг", "Подключите @TGTOP_robot как администратора, получите 0.1 GRAM и настройте каталог, продажу или аренду в личной папке."],
-                  ["Рейтинг", "Место в топе меняется при большей ставке. Перед оплатой будет отдельное подтверждение — автоматические TON-платежи еще не включены."],
-                  ["NFT и сделки", "Проверяйте владельца и условия вручную. Передача прав и денег будет доступна только через защищенный сценарий сделки после запуска проверки платежей."],
+                  [tx("Кошелек", "Wallet"), tx("Подключение кошелька только показывает ваш TON-адрес. TG TOP пока не запрашивает подпись или перевод TON.", "Connecting a wallet shows your TON address. TG TOP does not yet request a TON signature or transfer.")],
+                  [tx("Листинг", "Listing"), tx("Подключите @TGTOP_robot как администратора, получите 0.1 GRAM и настройте каталог, продажу или аренду в личной папке.", "Add @TGTOP_robot as an administrator, receive 0.1 GRAM, then configure catalog, sale, or rental settings in My Groups.")],
+                  [tx("Рейтинг", "Ranking"), tx("Место в топе меняется при большей ставке. Перед оплатой будет отдельное подтверждение — автоматические TON-платежи еще не включены.", "A higher bid changes the top placement. Payment will require a separate confirmation; automatic TON payments are not enabled yet.")],
+                  [tx("NFT и сделки", "NFTs and deals"), tx("Проверяйте владельца и условия вручную. Передача прав и денег будет доступна только через защищенный сценарий сделки после запуска проверки платежей.", "Check the owner and terms manually. Rights and funds transfer only through a protected deal after payment verification launches.")],
                 ].map(([title, text]) => (
                   <details key={title} className="group px-4">
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-medium text-slate-200">
@@ -1305,9 +1667,9 @@ export default function Home() {
               <span className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-[#72a8ff]" />
                 <span>
-                  <b className="block text-sm">Мои группы</b>
+                  <b className="block text-sm">{tx("Мои группы", "My groups")}</b>
                   <small className="block mt-0.5 text-xs text-slate-500">
-                    Управление и листинг
+                    {tx("Управление и листинг", "Management and listing")}
                   </small>
                 </span>
               </span>
@@ -1321,9 +1683,9 @@ export default function Home() {
         <div className="mx-auto grid max-w-3xl grid-cols-3 px-3 py-2">
           {(
             [
-              { key: "top", label: "Топ", icon: Trophy },
-              { key: "mine", label: "Мои", icon: Users },
-              { key: "profile", label: "Профиль", icon: UserRound },
+              { key: "top", label: ui.top, icon: Trophy },
+              { key: "mine", label: ui.mine, icon: Users },
+              { key: "profile", label: ui.profile, icon: UserRound },
             ] as const
           ).map(item => {
             const Icon = item.icon;
@@ -1349,28 +1711,28 @@ export default function Home() {
           className="max-h-[92dvh] overflow-y-auto rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100"
         >
           <SheetHeader className="px-4">
-            <SheetTitle className="text-slate-100">Настроить листинг</SheetTitle>
+            <SheetTitle className="text-slate-100">{tx("Настроить листинг", "Configure listing")}</SheetTitle>
             <p className="text-xs leading-5 text-slate-500">
               {selectedListingGroups.length === 1
                 ? selectedListingGroups[0]?.title
-                : `${selectedListingGroups.length} выбранных групп`}
+                : tx(`${selectedListingGroups.length} выбранных групп`, `${selectedListingGroups.length} selected communities`)}
             </p>
           </SheetHeader>
           <div className="space-y-5 px-4 pb-4">
             <section>
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs text-slate-400">Формат листинга</p>
+                <p className="text-xs text-slate-400">{tx("Формат листинга", "Listing format")}</p>
                 <span className="text-[10px] text-slate-600">
-                  Подходит для {Array.from(new Set(selectedListingGroups.map(group => group.category))).join(" · ") || "групп"}
+                  {tx("Подходит для", "Suitable for")} {Array.from(new Set(selectedListingGroups.map(group => getCategoryLabel(group.category, language)))).join(" · ") || tx("групп", "communities")}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    { value: "catalog", title: "Каталог", note: "Без цены" },
-                    { value: "sale", title: "Продажа", note: "Цена по желанию" },
-                    { value: "rent", title: "Аренда", note: "Цена и срок" },
-                    { value: "both", title: "Продажа + аренда", note: "Оба сценария" },
+                    { value: "catalog", title: tx("Каталог", "Catalog"), note: tx("Без цены", "No price") },
+                    { value: "sale", title: tx("Продажа", "Sale"), note: tx("Цена по желанию", "Optional price") },
+                    { value: "rent", title: tx("Аренда", "Rent"), note: tx("Цена и срок", "Price and duration") },
+                    { value: "both", title: tx("Продажа + аренда", "Sale + rent"), note: tx("Оба сценария", "Both options") },
                   ] as Array<{ value: ListingType; title: string; note: string }>
                 ).map(item => (
                   <button
@@ -1386,7 +1748,7 @@ export default function Home() {
             </section>
 
             <section>
-              <p className="mb-2 text-xs text-slate-400">Страна / регион в каталоге</p>
+              <p className="mb-2 text-xs text-slate-400">{tx("Страна / регион в каталоге", "Catalog country / region")}</p>
               <div className="grid grid-cols-5 gap-1.5">
                 {(["Global", "UA", "RU", "EU", "US"] as ListingCountry[]).map(item => (
                   <button
@@ -1403,8 +1765,8 @@ export default function Home() {
             {includesSale && (
               <section>
                 <div className="mb-2 flex items-baseline justify-between">
-                  <p className="text-xs text-slate-400">Цена продажи</p>
-                  <span className="text-[10px] text-slate-600">Необязательно — можно договориться в чате</span>
+                  <p className="text-xs text-slate-400">{tx("Цена продажи", "Sale price")}</p>
+                  <span className="text-[10px] text-slate-600">{tx("Необязательно — можно договориться в чате", "Optional — you can agree in chat")}</span>
                 </div>
                 <div className="relative">
                   <Input
@@ -1414,7 +1776,7 @@ export default function Home() {
                     min="0"
                     step="0.1"
                     onChange={event => setSalePriceTon(event.target.value)}
-                    placeholder="Например, 250"
+                    placeholder={tx("Например, 250", "For example, 250")}
                     className="h-10 border-white/10 bg-[#0b0f14] pr-12 text-sm"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">TON</span>
@@ -1424,7 +1786,7 @@ export default function Home() {
 
             {includesRent && (
               <section className="space-y-3">
-                <p className="text-xs text-slate-400">Условия аренды</p>
+                <p className="text-xs text-slate-400">{tx("Условия аренды", "Rental terms")}</p>
                 <div className="relative">
                   <Input
                     value={rentalPriceTon}
@@ -1433,14 +1795,14 @@ export default function Home() {
                     min="0"
                     step="0.1"
                     onChange={event => setRentalPriceTon(event.target.value)}
-                    placeholder="Цена за день"
+                    placeholder={tx("Цена за день", "Price per day")}
                     className="h-10 border-white/10 bg-[#0b0f14] pr-16 text-sm"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">TON / день</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">TON / {tx("день", "day")}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="space-y-1.5">
-                    <span className="text-[10px] text-slate-500">Минимум дней</span>
+                    <span className="text-[10px] text-slate-500">{tx("Минимум дней", "Minimum days")}</span>
                     <Input
                       value={minRentalDays}
                       type="number"
@@ -1451,7 +1813,7 @@ export default function Home() {
                     />
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-[10px] text-slate-500">Максимум дней</span>
+                    <span className="text-[10px] text-slate-500">{tx("Максимум дней", "Maximum days")}</span>
                     <Input
                       value={maxRentalDays}
                       type="number"
@@ -1466,7 +1828,7 @@ export default function Home() {
             )}
 
             <div className="rounded-xl border border-[#3f8cff]/18 bg-[#3f8cff]/8 p-3 text-[11px] leading-4 text-slate-400">
-              Новая публикация использует <b className="font-medium text-[#a6c8ff]">0.1 GRAM</b> за группу. Повторное редактирование уже опубликованного листинга не списывает бонусы. Оплата TON и передача прав пока не запускаются автоматически.
+              {tx("Новая публикация использует", "A new publication uses")} <b className="font-medium text-[#a6c8ff]">0.1 GRAM</b> {tx("за группу. Повторное редактирование уже опубликованного листинга не списывает бонусы. Оплата TON и передача прав пока не запускаются автоматически.", "per community. Editing an existing listing does not spend more bonuses. TON payments and ownership transfers do not start automatically yet.")}
             </div>
           </div>
           <SheetFooter className="sticky bottom-0 border-t border-white/8 bg-[#10161f] px-4 py-3 sm:flex-row">
@@ -1475,15 +1837,129 @@ export default function Home() {
               onClick={() => setListingOpen(false)}
               className="border-white/10 text-slate-300"
             >
-              Отмена
+              {tx("Отмена", "Cancel")}
             </Button>
             <Button
               onClick={saveListing}
               disabled={listWithCredits.isPending || !selectedGroupIds.length}
               className="bg-[#3f8cff] text-white disabled:opacity-60"
             >
-              {listWithCredits.isPending ? "Сохраняем…" : "Сохранить листинг"}
+              {listWithCredits.isPending ? ui.loading : tx("Сохранить листинг", "Save listing")}
             </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={nftTransferOpen}
+        onOpenChange={open => {
+          setNftTransferOpen(open);
+          if (!open) {
+            setSelectedNftId(null);
+            setRecipientInput("");
+            setPreparedNftTransfer(null);
+            setNftTransferStep("select");
+          }
+        }}
+      >
+        <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4">
+            <SheetTitle className="text-center text-slate-100">{tx("Передать NFT", "Send NFT")}</SheetTitle>
+            <p className="text-center text-xs leading-5 text-slate-500">
+              {tx("Комиссия TG TOP · 0%. Всегда проверяйте получателя перед подтверждением.", "TG TOP fee · 0%. Always check the recipient before confirming.")}
+            </p>
+          </SheetHeader>
+
+          {nftTransferStep === "select" && (
+            <div className="space-y-4 px-4 pb-4">
+              <label className="block space-y-2">
+                <span className="text-xs text-slate-400">{tx("Username или Telegram ID получателя", "Recipient username or Telegram ID")}</span>
+                <div className="flex h-12 items-center gap-2 rounded-xl border border-white/12 bg-[#0b0f14] px-3 focus-within:border-[#3f8cff]/70">
+                  <span className="text-lg text-[#a6c8ff]">@</span>
+                  <Input value={recipientInput} onChange={event => setRecipientInput(event.target.value)} placeholder={tx("username или 123456789", "username or 123456789")} className="h-9 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0" />
+                </div>
+              </label>
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">{tx("Выберите NFT", "Select NFTs")}</span>
+                  <span className="text-[10px] text-slate-600">{tx("доступно для передачи", "available to transfer")}</span>
+                </div>
+                {myNftsQuery.isLoading ? (
+                  <div className="rounded-xl border border-white/8 bg-[#0b0f14] p-5 text-center text-xs text-slate-500">{ui.loading}</div>
+                ) : myNfts.length ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {myNfts.map(nft => {
+                      const selected = selectedNftId === nft.id;
+                      const transferable = nft.status === "available";
+                      return (
+                        <button key={nft.id} disabled={!transferable} onClick={() => setSelectedNftId(nft.id)} className={`rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${selected ? "border-[#a6c8ff] bg-[#3f8cff]/12" : "border-white/10 bg-[#0b0f14]"}`}>
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="rounded-md bg-white/5 px-2 py-1 text-[9px] font-medium uppercase tracking-[0.08em] text-slate-400">{nft.assetClass === "onchain" ? "On-chain" : "Off-chain"}</span>
+                            {selected && <Check className="h-4 w-4 text-[#a6c8ff]" />}
+                          </span>
+                          <b className="mt-4 block truncate text-sm text-slate-100">@{nft.username}</b>
+                          <small className="mt-1 block text-[10px] text-slate-500">{nft.status === "available" ? tx("Доступен", "Available") : tx("Недоступен", "Unavailable")}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-white/12 bg-[#0b0f14] p-5 text-center text-xs leading-5 text-slate-500">{tx("В вашем профиле пока нет NFT, доступных для передачи.", "There are no NFTs available to transfer in your profile yet.")}</div>
+                )}
+              </div>
+              <p className="rounded-xl border border-white/8 bg-white/[0.025] p-3 text-[11px] leading-5 text-slate-500">{tx("Off-chain NFT передается внутри защищенного учета TG TOP. On-chain NFT требует проверки обоих кошельков и подписи транзакции в TON.", "Off-chain NFTs move through TG TOP’s protected ledger. On-chain NFTs require both wallets to be verified and a TON transaction signature.")}</p>
+            </div>
+          )}
+
+          {nftTransferStep === "review" && selectedNft && reviewedRecipient && (
+            <div className="space-y-4 px-4 pb-4">
+              <div className="rounded-2xl border border-white/10 bg-[#0b0f14] p-4">
+                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Получатель", "Recipient")}</span>
+                <div className="mt-2 flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-[#1b2430] text-sm font-semibold text-slate-300">
+                    {reviewedRecipient.avatarUrl ? <img src={reviewedRecipient.avatarUrl} alt="" className="h-full w-full object-cover" /> : (reviewedRecipient.name ?? "T").slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="min-w-0">
+                    <b className="block truncate text-sm text-slate-100">{reviewedRecipient.name ?? tx("Пользователь TG TOP", "TG TOP user")}</b>
+                    <small className="block truncate text-[11px] text-slate-500">{reviewedRecipient.telegramUsername ? `@${reviewedRecipient.telegramUsername}` : reviewedRecipient.openId.replace("telegram:", "ID ")}</small>
+                  </span>
+                  <Check className="ml-auto h-5 w-5 text-[#72a8ff]" />
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0b0f14] p-4">
+                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Передаваемый актив", "Asset to send")}</span>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <span><b className="block text-sm text-slate-100">@{selectedNft.username}</b><small className="mt-1 block text-[11px] text-slate-500">{selectedNft.assetClass === "onchain" ? "On-chain" : "Off-chain"}</small></span>
+                  <span className="rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/10 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">{tx("TG TOP · 0%", "TG TOP · 0%")}</span>
+                </div>
+              </div>
+              {selectedNft.assetClass === "onchain" && <p className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-[11px] leading-5 text-amber-100/75">{tx("On-chain перевод необратим. Он станет доступен только после криптографической проверки кошельков отправителя и получателя; сеть TON взимает свою комиссию.", "On-chain transfers are irreversible. They become available only after cryptographic wallet verification for both parties; the TON network charges its own fee.")}</p>}
+            </div>
+          )}
+
+          {nftTransferStep === "prepared" && preparedNftTransfer && (
+            <div className="space-y-4 px-4 pb-4">
+              <div className="rounded-2xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 p-4 text-center">
+                <Check className="mx-auto h-7 w-7 text-[#72a8ff]" />
+                <b className="mt-2 block text-base text-slate-100">{preparedNftTransfer.transfer.assetClass === "offchain" ? tx("Подтвердите передачу", "Confirm transfer") : tx("Проверка кошельков требуется", "Wallet verification required")}</b>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{preparedNftTransfer.transfer.assetClass === "offchain" ? tx("После подтверждения NFT перейдет получателю внутри TG TOP. Комиссия платформы — 0%.", "After confirmation, the NFT will move to the recipient inside TG TOP. Platform fee — 0%.") : tx("Этот On-chain NFT останется в безопасности до завершения проверки адресов и подготовки подписи в TON Connect.", "This on-chain NFT remains safe until address verification and TON Connect signing are ready.")}</p>
+              </div>
+            </div>
+          )}
+
+          <SheetFooter className="sticky bottom-0 border-t border-white/8 bg-[#10161f] px-4 py-3 sm:flex-row">
+            {nftTransferStep === "select" && <>
+              <Button variant="outline" onClick={() => setNftTransferOpen(false)} className="border-white/10 text-slate-300">{tx("Отмена", "Cancel")}</Button>
+              <Button onClick={reviewNftRecipient} disabled={!selectedNft || !recipientInput.trim() || nftRecipientQuery.isFetching} className="bg-[#3f8cff] text-white">{nftRecipientQuery.isFetching ? ui.loading : tx("Продолжить", "Continue")}</Button>
+            </>}
+            {nftTransferStep === "review" && <>
+              <Button variant="outline" onClick={() => setNftTransferStep("select")} className="border-white/10 text-slate-300">{tx("Назад", "Back")}</Button>
+              <Button onClick={prepareNftTransfer} disabled={prepareNftTransferMutation.isPending} className="bg-[#3f8cff] text-white">{prepareNftTransferMutation.isPending ? ui.loading : selectedNft?.assetClass === "onchain" ? tx("Проверить кошельки", "Check wallets") : tx("Продолжить", "Continue")}</Button>
+            </>}
+            {nftTransferStep === "prepared" && <>
+              <Button variant="outline" onClick={() => setNftTransferOpen(false)} className="border-white/10 text-slate-300">{tx("Закрыть", "Close")}</Button>
+              {preparedNftTransfer?.transfer.assetClass === "offchain" && <Button onClick={completePreparedOffchainNftTransfer} disabled={completeOffchainNftTransferMutation.isPending} className="bg-[#3f8cff] text-white">{completeOffchainNftTransferMutation.isPending ? ui.loading : tx("Подтвердить передачу", "Confirm transfer")}</Button>}
+            </>}
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -1494,28 +1970,32 @@ export default function Home() {
           className="border-white/10 bg-[#10161f] text-slate-100"
         >
           <SheetHeader>
-            <SheetTitle className="text-slate-100">Фильтр</SheetTitle>
+            <SheetTitle className="text-slate-100">{tx("Фильтр", "Filters")}</SheetTitle>
             <p className="text-xs text-slate-500">
-              Обновляет карточки и весь список одновременно.
+              {tx("Обновляет карточки и весь список одновременно.", "Updates featured cards and the full list together.")}
             </p>
           </SheetHeader>
           <div className="space-y-6 px-4">
             <div>
-              <p className="mb-2 text-xs text-slate-400">Тип площадки</p>
+              <p className="mb-2 text-xs text-slate-400">{tx("Тип площадки", "Community type")}</p>
               <div className="grid grid-cols-3 gap-2">
-                {(["Все", "Каналы", "Чаты"] as const).map(item => (
+                {([
+                  { value: "Все", label: ui.all },
+                  { value: "Каналы", label: ui.channels },
+                  { value: "Чаты", label: ui.chats },
+                ] as const).map(item => (
                   <button
-                    key={item}
-                    onClick={() => setCategory(item)}
-                    className={`rounded-lg border px-2 py-2 text-xs ${category === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
+                    key={item.value}
+                    onClick={() => setCategory(item.value)}
+                    className={`rounded-lg border px-2 py-2 text-xs ${category === item.value ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
                   >
-                    {item}
+                    {item.label}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs text-slate-400">Страна / регион</p>
+              <p className="mb-2 text-xs text-slate-400">{tx("Страна / регион", "Country / region")}</p>
               <div className="grid grid-cols-2 gap-2">
                 {["Все", "Global", "UA", "RU", "EU", "US"].map(item => (
                   <button
@@ -1530,15 +2010,15 @@ export default function Home() {
             </div>
             <div>
               <p className="mb-2 text-xs text-slate-400">
-                Количество участников
+                {tx("Количество участников", "Audience size")}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    { key: "all", label: "Все" },
-                    { key: "small", label: "До 1 тыс." },
-                    { key: "medium", label: "1–10 тыс." },
-                    { key: "large", label: "От 10 тыс." },
+                    { key: "all", label: tx("Все", "All") },
+                    { key: "small", label: tx("До 1 тыс.", "Up to 1K") },
+                    { key: "medium", label: tx("1–10 тыс.", "1K–10K") },
+                    { key: "large", label: tx("От 10 тыс.", "10K+") },
                   ] as const
                 ).map(item => (
                   <button
@@ -1562,13 +2042,13 @@ export default function Home() {
               }}
               className="border-white/10 text-slate-300"
             >
-              Сбросить
+              {tx("Сбросить", "Reset")}
             </Button>
             <Button
               onClick={() => setFiltersOpen(false)}
               className="bg-[#3f8cff]"
             >
-              Показать
+              {tx("Показать", "Show results")}
             </Button>
           </SheetFooter>
         </SheetContent>

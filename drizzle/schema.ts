@@ -1,4 +1,4 @@
-import { decimal, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -6,6 +6,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   avatarUrl: varchar("avatarUrl", { length: 512 }),
+  telegramUsername: varchar("telegramUsername", { length: 128 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   referralCode: varchar("referralCode", { length: 32 }).unique(),
@@ -20,6 +21,17 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+export const websiteLoginSessions = mysqlTable("website_login_sessions", {
+  nonce: varchar("nonce", { length: 96 }).primaryKey(),
+  telegramOpenId: varchar("telegramOpenId", { length: 64 }),
+  status: mysqlEnum("status", ["pending", "confirmed", "consumed", "expired"]).default("pending").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  confirmedAt: timestamp("confirmedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WebsiteLoginSession = typeof websiteLoginSessions.$inferSelect;
 
 export const groupsCatalog = mysqlTable("groups_catalog", {
   id: int("id").autoincrement().primaryKey(),
@@ -106,15 +118,52 @@ export const nftUsernames = mysqlTable("nft_usernames", {
   maxRentalDays: int("maxRentalDays").default(365).notNull(),
   ownerOpenId: varchar("ownerOpenId", { length: 64 }).notNull(),
   ownerUsername: varchar("ownerUsername", { length: 128 }).default("Anonymous").notNull(),
+  assetClass: mysqlEnum("assetClass", ["onchain", "offchain"]).default("offchain").notNull(),
+  nftItemAddress: varchar("nftItemAddress", { length: 96 }).unique(),
+  ownerWalletAddress: varchar("ownerWalletAddress", { length: 96 }),
+  ownershipVerifiedAt: timestamp("ownershipVerifiedAt"),
+  ownershipVerification: varchar("ownershipVerification", { length: 255 }),
+  showcaseGroupId: int("showcaseGroupId"),
   listingType: mysqlEnum("listingType", ["sale", "rent", "both"]).default("both").notNull(),
   status: mysqlEnum("status", ["available", "rented", "sold"]).default("available").notNull(),
   currentRenterOpenId: varchar("currentRenterOpenId", { length: 64 }),
   rentalExpiresAt: timestamp("rentalExpiresAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, table => [
+  index("nft_usernames_owner_asset_status_idx").on(table.ownerOpenId, table.assetClass, table.status),
+]);
 
 export type NftUsername = typeof nftUsernames.$inferSelect;
 export type InsertNftUsername = typeof nftUsernames.$inferInsert;
+
+export const nftTransfers = mysqlTable("nft_transfers", {
+  id: int("id").autoincrement().primaryKey(),
+  nftId: int("nftId").notNull(),
+  assetClass: mysqlEnum("assetClass", ["onchain", "offchain"]).notNull(),
+  status: mysqlEnum("status", ["draft", "awaiting_signature", "broadcast_pending", "completed", "cancelled", "expired", "failed"]).default("draft").notNull(),
+  senderOpenId: varchar("senderOpenId", { length: 64 }).notNull(),
+  recipientOpenId: varchar("recipientOpenId", { length: 64 }).notNull(),
+  recipientInput: varchar("recipientInput", { length: 128 }).notNull(),
+  sourceWalletAddress: varchar("sourceWalletAddress", { length: 96 }),
+  recipientWalletAddress: varchar("recipientWalletAddress", { length: 96 }),
+  transferReference: varchar("transferReference", { length: 128 }).unique(),
+  transactionBocHash: varchar("transactionBocHash", { length: 128 }),
+  transactionLt: varchar("transactionLt", { length: 64 }),
+  failureReason: varchar("failureReason", { length: 255 }),
+  expiresAt: timestamp("expiresAt"),
+  signedAt: timestamp("signedAt"),
+  confirmedAt: timestamp("confirmedAt"),
+  cancelledAt: timestamp("cancelledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("nft_transfers_sender_status_idx").on(table.senderOpenId, table.status),
+  index("nft_transfers_recipient_status_idx").on(table.recipientOpenId, table.status),
+  index("nft_transfers_nft_status_idx").on(table.nftId, table.status),
+]);
+
+export type NftTransfer = typeof nftTransfers.$inferSelect;
+export type InsertNftTransfer = typeof nftTransfers.$inferInsert;
 
 export const deals = mysqlTable("deals", {
   id: int("id").autoincrement().primaryKey(),
@@ -125,7 +174,16 @@ export const deals = mysqlTable("deals", {
   price: varchar("price", { length: 64 }).notNull(),
   dealType: mysqlEnum("dealType", ["group_buy", "nft_buy", "nft_rent"]).default("group_buy").notNull(),
   rentalDays: int("rentalDays"),
-  status: mysqlEnum("status", ["open", "escrow_funded", "active", "completed", "disputed"]).default("open").notNull(),
+  status: mysqlEnum("status", ["open", "escrow_funded", "active", "completed", "expired", "cancelled", "disputed"]).default("open").notNull(),
+  fundingReference: varchar("fundingReference", { length: 128 }),
+  transferEvidence: varchar("transferEvidence", { length: 512 }),
+  fundedAt: timestamp("fundedAt"),
+  transferObservedAt: timestamp("transferObservedAt"),
+  buyerConfirmedAt: timestamp("buyerConfirmedAt"),
+  releasedAt: timestamp("releasedAt"),
+  cancelledAt: timestamp("cancelledAt"),
+  expiresAt: timestamp("expiresAt"),
+  disputedAt: timestamp("disputedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
