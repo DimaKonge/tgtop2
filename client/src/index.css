@@ -97,6 +97,21 @@ html[data-theme="light"] .tg-shell .text-slate-300 { color: #1e293b !important; 
 html[data-theme="light"] .tg-shell .text-slate-400,
 html[data-theme="light"] .tg-shell .text-slate-500,
 html[data-theme="light"] .tg-shell .text-slate-600 { color: #64748b !important; }
+html[data-theme="light"] .tg-shell .text-white { color: #0f172a !important; }
+html[data-theme="light"] .tg-shell .brand-mark-symbol {
+  color: #ffffff !important;
+  text-shadow: 0 1px 4px rgba(255, 255, 255, 0.25);
+}
+html[data-theme="light"] .tg-shell .bg-white\/5,
+html[data-theme="light"] .tg-shell .bg-white\/8,
+html[data-theme="light"] .tg-shell .bg-white\/10 { background-color: #f1f5f9 !important; }
+html[data-theme="light"] .tg-shell .text-\[\#a6c8ff\],
+html[data-theme="light"] .tg-shell .text-\[\#72a8ff\] { color: #2563eb !important; }
+html[data-theme="light"] .tg-shell .bg-\[\#3f8cff\]\/8,
+html[data-theme="light"] .tg-shell .bg-\[\#3f8cff\]\/10,
+html[data-theme="light"] .tg-shell .bg-\[\#3f8cff\]\/14 { background-color: rgba(37, 99, 235, 0.1) !important; }
+html[data-theme="light"] .tg-shell .border-\[\#3f8cff\]\/25,
+html[data-theme="light"] .tg-shell .border-\[\#3f8cff\]\/35 { border-color: rgba(37, 99, 235, 0.32) !important; }
 html[data-theme="light"] .tg-shell .bg-\[\#0b0f14\] { background-color: #f5f7fb !important; }
 html[data-theme="light"] .bg-\[\#10161f\] { background-color: #ffffff !important; color: #1e293b !important; }
 html[data-theme="light"] .brand-mark { border-color: rgba(37, 99, 235, 0.22) !important; box-shadow: 0 6px 16px rgba(63, 140, 255, 0.18) !important; }

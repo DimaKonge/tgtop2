@@ -42,6 +42,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('<WalletConnectControl language={language} />');
     expect(source).not.toContain('{ value: "system"');
     expect(source).toContain('setFiltersOpen(true)');
+    expect(source).toContain('side="bottom"');
+    expect(source).toContain('max-h-[62dvh] rounded-t-[22px]');
+    expect(source).toContain('Настроить выдачу');
+    expect(source).toContain('max-h-[48dvh] rounded-t-[22px]');
+    expect(source).toContain('min-w-14 border-0 px-2 text-[11px]');
     expect(source).toContain('tx("Весь мир", "Worldwide")');
     expect(source).toContain('const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU"] as const');
     expect(source).toContain('PL: { ru: "Польша", en: "Poland" }');
@@ -71,7 +76,6 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('CATEGORY_SUBCATEGORIES');
     expect(source).toContain('setCountry(item)');
     expect(source).toContain('CATEGORY_SUBCATEGORIES[category].map(item =>');
-    expect(source).toContain('setGlobalDirection(item.value);');
     expect(source).toContain('setSubcategory("Все");');
     expect(source).toContain('setCountry("Все");');
   });

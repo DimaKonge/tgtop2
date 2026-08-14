@@ -407,23 +407,18 @@ function SettingsSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        side="right"
-        className="border-white/10 bg-[#10161f] text-slate-100"
+        side="bottom"
+        className="max-h-[48dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-4 text-slate-100"
       >
-        <SheetHeader>
+        <SheetHeader className="px-4 pb-2">
           <SheetTitle className="flex items-center gap-2 text-slate-100">
             <BrandMark />
             {isEnglish ? "Settings" : "Настройки"}
           </SheetTitle>
-          <p className="text-xs text-slate-500">
-            {isEnglish
-              ? "Personalize language and appearance."
-              : "Настройте язык и внешний вид."}
-          </p>
         </SheetHeader>
-        <div className="space-y-6 px-4">
-          <section>
-            <div className="mb-2 flex items-center gap-2 text-xs text-slate-400">
+        <div className="space-y-4 px-4">
+          <section className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[11px] text-slate-400">
               <Globe2 className="h-4 w-4" />
               {isEnglish ? "Language" : "Язык"}
             </div>
@@ -433,28 +428,28 @@ function SettingsSheet({
               onValueChange={value => {
                 if (value) onLanguageChange(value as Language);
               }}
-              className="grid w-full grid-cols-2 overflow-hidden rounded-xl border border-white/10 bg-[#0b0f14] p-1"
+              className="inline-flex w-auto overflow-hidden rounded-lg border border-white/10 bg-[#0b0f14] p-0.5"
             >
               <ToggleGroupItem
                 value="ru"
-                className="h-10 border-0 text-xs text-slate-400 data-[state=on]:rounded-lg data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
+                className="h-8 min-w-14 border-0 px-2 text-[11px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
               >
-                Русский
+                RU
               </ToggleGroupItem>
               <ToggleGroupItem
                 value="en"
-                className="h-10 border-0 text-xs text-slate-400 data-[state=on]:rounded-lg data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
+                className="h-8 min-w-14 border-0 px-2 text-[11px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
               >
-                English
+                EN
               </ToggleGroupItem>
             </ToggleGroup>
           </section>
-          <section>
-            <div className="mb-2 flex items-center gap-2 text-xs text-slate-400">
+          <section className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[11px] text-slate-400">
               <Sun className="h-4 w-4" />
               {isEnglish ? "Appearance" : "Оформление"}
             </div>
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0b0f14]">
+            <div className="inline-flex overflow-hidden rounded-lg border border-white/10 bg-[#0b0f14] p-0.5">
               {appearanceItems.map(item => {
                 const Icon = item.icon;
                 const active = appearance === item.value;
@@ -462,13 +457,11 @@ function SettingsSheet({
                   <button
                     key={item.value}
                     onClick={() => setAppearance(item.value)}
-                    className={`flex w-full items-center justify-between border-b border-white/8 px-3 py-3 text-left last:border-b-0 ${active ? "bg-[#3f8cff]/12 text-[#a6c8ff]" : "text-slate-300"}`}
+                    aria-label={item.label}
+                    className={`flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[11px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-400"}`}
                   >
-                    <span className="flex items-center gap-3 text-sm">
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </span>
-                    {active && <Check className="h-4 w-4" />}
+                    <Icon className="h-3.5 w-3.5" />
+                    {item.value === "dark" ? (isEnglish ? "Dark" : "Темн.") : (isEnglish ? "Light" : "Светл.")}
                   </button>
                 );
               })}
@@ -1042,7 +1035,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <span aria-live="polite" className="text-[11px] text-slate-500">{n(globalCount, language)} {globalDirection === "NFT" ? "NFT" : ui.groups}</span>
                 </span>
                 {globalDirection !== "NFT" && (
-                  <button onClick={() => setFiltersOpen(true)} className="flex items-center gap-1.5 text-[11px] text-slate-400 transition-colors hover:text-slate-100">
+                  <button onClick={() => setFiltersOpen(true)} className="flex h-7 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2 text-[10px] text-slate-400 transition-colors hover:text-slate-100">
                     <Globe2 className="h-3.5 w-3.5 text-[#79a7ff]" />
                     {country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}
                   </button>
@@ -1066,7 +1059,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 ))}
               </div>
               {globalDirection !== "NFT" && (
-                <button onClick={() => setFiltersOpen(true)} className="mt-2 flex items-center gap-1.5 px-0.5 text-[11px] text-slate-500 transition-colors hover:text-slate-200">
+                <button onClick={() => setFiltersOpen(true)} className="mt-2 flex h-7 items-center gap-1.5 rounded-md border border-white/8 bg-white/5 px-2 text-[10px] text-slate-500 transition-colors hover:text-slate-200">
                   <Filter className="h-3.5 w-3.5" />
                   <span>{subcategory === "Все" ? tx("Все темы", "All topics") : getSubcategoryLabel(subcategory, language)}</span>
                   <span className="text-slate-700">·</span>
@@ -2081,80 +2074,55 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
         <SheetContent
-          side="right"
-          className="border-white/10 bg-[#10161f] text-slate-100"
+          side="bottom"
+          className="max-h-[62dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-3 text-slate-100"
         >
-          <SheetHeader>
-            <SheetTitle className="text-slate-100">{tx("Фильтр", "Filters")}</SheetTitle>
-            <p className="text-xs text-slate-500">
-              {tx("Обновляет карточки и весь список одновременно.", "Updates featured cards and the full list together.")}
-            </p>
+          <SheetHeader className="px-4 pb-2">
+            <SheetTitle className="text-base text-slate-100">{tx("Настроить выдачу", "Refine results")}</SheetTitle>
           </SheetHeader>
-          <div className="space-y-6 px-4">
-            <div>
-              <p className="mb-2 text-xs text-slate-400">{tx("Тип площадки", "Community type")}</p>
-              <div className="grid grid-cols-3 gap-2">
-                {([
-                  { value: "Все", label: ui.all },
-                  { value: "Каналы", label: ui.channels },
-                  { value: "Чаты", label: ui.chats },
-                ] as const).map(item => (
-                  <button
-                    key={item.value}
-                    onClick={() => {
-                      setCategory(item.value);
-                      setGlobalDirection(item.value);
-                      setSubcategory("Все");
-                    }}
-                    className={`rounded-lg border px-2 py-2 text-xs ${category === item.value ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="space-y-4 overflow-y-auto px-4 pb-2">
             {(category === "Каналы" || category === "Чаты") && (
               <div>
-                <p className="mb-2 text-xs text-slate-400">{tx("Подкатегория", "Subcategory")}</p>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => setSubcategory("Все")} className={`rounded-lg border px-2 py-2 text-xs ${subcategory === "Все" ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{tx("Все", "All")}</button>
+                <p className="mb-2 text-[11px] text-slate-500">{tx("Тема", "Topic")}</p>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+                  <button onClick={() => setSubcategory("Все")} className={`shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] ${subcategory === "Все" ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{tx("Все", "All")}</button>
                   {CATEGORY_SUBCATEGORIES[category].map(item => (
-                    <button key={item} onClick={() => setSubcategory(item)} className={`rounded-lg border px-2 py-2 text-xs ${subcategory === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{getSubcategoryLabel(item, language)}</button>
+                    <button key={item} onClick={() => setSubcategory(item)} className={`shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] ${subcategory === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{getSubcategoryLabel(item, language)}</button>
                   ))}
                 </div>
               </div>
             )}
             <div>
-              <p className="mb-2 text-xs text-slate-400">{tx("Страна / регион", "Country / region")}</p>
-              <div className="grid grid-cols-2 gap-2">
+              <p className="mb-2 text-[11px] text-slate-500">{tx("Страна", "Country")}</p>
+              <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
                 {["Все", "UA", "PL", "DE", "GB", "US", "RU"].map(item => (
                   <button
                     key={item}
                     onClick={() => setCountry(item)}
-                    className={`rounded-lg border px-2 py-2 text-left text-xs ${country === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
+                    className={`shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] ${country === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
                   >
-                    {item === "Все" ? tx("Все страны", "All countries") : getCountryLabel(item, language)}
+                    {item === "Все" ? tx("Все", "All") : getCountryLabel(item, language)}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs text-slate-400">
+              <p className="mb-2 text-[11px] text-slate-500">
                 {tx("Количество участников", "Audience size")}
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-4 gap-1.5">
                 {(
                   [
                     { key: "all", label: tx("Все", "All") },
-                    { key: "small", label: tx("До 1 тыс.", "Up to 1K") },
-                    { key: "medium", label: tx("1–10 тыс.", "1K–10K") },
-                    { key: "large", label: tx("От 10 тыс.", "10K+") },
+                    { key: "small", label: tx("<1K", "<1K") },
+                    { key: "medium", label: tx("1–10K", "1–10K") },
+                    { key: "large", label: tx("10K+", "10K+") },
                   ] as const
                 ).map(item => (
                   <button
                     key={item.key}
                     onClick={() => setAudience(item.key)}
-                    className={`rounded-lg border px-2 py-2 text-left text-xs ${audience === item.key ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
+                    className={`rounded-md border px-1 py-1.5 text-center text-[10px] ${audience === item.key ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
                   >
                     {item.label}
                   </button>
@@ -2162,7 +2130,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>
             </div>
           </div>
-          <SheetFooter>
+          <SheetFooter className="mt-1 flex-row gap-2 px-4">
             <Button
               variant="outline"
               onClick={() => {
@@ -2172,13 +2140,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 setCountry("Все");
                 setAudience("all");
               }}
-              className="border-white/10 text-slate-300"
+              className="h-9 flex-1 border-white/10 text-xs text-slate-300"
             >
               {tx("Сбросить", "Reset")}
             </Button>
             <Button
               onClick={() => setFiltersOpen(false)}
-              className="bg-[#3f8cff]"
+              className="h-9 flex-1 bg-[#3f8cff] text-xs"
             >
               {tx("Показать", "Show results")}
             </Button>

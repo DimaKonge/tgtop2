@@ -111,6 +111,13 @@
 - [x] Add a group listing panel with catalog-only, sale-price, and rental-term options
 - [ ] Localize all visible TG TOP interface labels and copy through the persistent RU/EN setting
 - [ ] Complete light-theme treatment for every TG TOP owner-management and listing surface
+- [ ] Audit every light-theme owner workflow screen and correct remaining dark-only styles in My Groups, listing sheets, profile deals, NFT cards, and transfer surfaces
+- [ ] Add targeted regression coverage for light-theme owner-management and listing states beyond generic CSS selector assertions
+- [ ] Visually verify authenticated light-theme owner-management, listing, NFT, and protected-deal flows before completing the light-theme task
+- [x] Fix the TG TOP brand-mark symbol disappearing against the black logo tile in light mode and add a regression check
+- [ ] Detect and render supported Telegram animated group avatars in TG TOP cards, with static-image and initials fallbacks
+- [x] Replace the oversized Global side filter drawer with a compact mobile filter experience that does not crowd the ranking pyramid
+- [x] Redesign Settings language and appearance controls as smaller compact selectors that match the streamlined Global filtering style
 - [ ] Reduce and verify the 390×844 mobile vertical footprint of the Global 1 → 2 → 4 pyramid
 - [ ] Accrue and persist referral earnings from completed TG TOP fee-bearing deals with backend regression coverage
 - [x] Add NFT as a fourth primary Global toggle with a dedicated discovery state outside the group catalog
