@@ -26,5 +26,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('<ToggleGroup type="single" value={category}');
     expect(source).toContain('value="Каналы"');
     expect(source).toContain('value="Чаты"');
+    expect(source).toContain('aria-live="polite"');
+    expect(source).toContain('{n(visibleGroups.length)} групп');
   });
 });

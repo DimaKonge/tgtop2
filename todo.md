@@ -87,3 +87,6 @@
 - [x] Remove the redundant «Все площадки» heading above the general catalog list
 - [x] Remove the descriptive subtitle beneath the Global home heading
 - [x] Add a polished synchronized quick category panel with Все / Каналы / Чаты above the ranking pyramid
+- [ ] Confirm the real Telegram Mini App displays the synchronized Все / Каналы / Чаты quick toggle under Global
+- [x] Show a live count of groups matching the active category, country, and audience filters in the Global panel
+- [x] Show a live count of groups matching the active category, country, and audience filters in the Global panel
