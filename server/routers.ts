@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { notifyRecordedRankingBid } from "./telegramNotifications";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
 const groupListingInput = z.object({
@@ -12,7 +13,7 @@ const groupListingInput = z.object({
   rentalPriceTon: tonAmount.optional(),
   minRentalDays: z.number().int().min(1).max(365).optional(),
   maxRentalDays: z.number().int().min(1).max(365).optional(),
-  country: z.enum(["Global", "UA", "RU", "EU", "US"]).optional(),
+  country: z.enum(["Global", "UA", "PL", "DE", "GB", "US", "RU"]).optional(),
   subcategory: z.string().min(2).max(64).optional(),
 }).superRefine((input, ctx) => {
   const rentalListing = input.listingType === "rent" || input.listingType === "both";
@@ -57,7 +58,7 @@ export const appRouter = router({
         if (!group || group.ownerOpenId !== ctx.user.openId) {
           throw new Error("Выберите свою группу из личной папки");
         }
-        await db.placeBid(
+        const intent = await db.placeBid(
           input.slotId,
           Math.round(input.bidAmount * 1000),
           `${input.bidAmount.toFixed(1)} TON`,
@@ -65,7 +66,13 @@ export const appRouter = router({
           ctx.user.openId,
           input.groupId
         );
-        return { success: true };
+        void notifyRecordedRankingBid({
+          openId: ctx.user.openId,
+          groupTitle: intent.groupTitle,
+          bidAmount: intent.bidAmount,
+          slotNumber: intent.slotNumber,
+        });
+        return { success: true, rankingIntentId: intent.id, paymentStatus: "recorded" as const };
       }),
 
     getGroups: publicProcedure

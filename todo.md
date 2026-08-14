@@ -137,14 +137,21 @@
 - [x] Give the TG TOP logo mark a black background treatment in the header
 - [x] Remove System appearance mode and retain only explicit black and white TG TOP themes
 - [ ] Automatically place an eligible newly listed group into the highest free ranking slot; require bids only to displace occupied slots
+- [x] Repair the current production lead slot so the already connected @o_a_th community is visibly assigned to the large first card
 - [ ] Require at least 0.2 TON to overtake the first premium slot while allowing a 0.1 TON entry bid for lower vacant slots
 - [ ] Remove every free ranking-listing path so each TG TOP placement requires a qualifying TON bid
+- [x] Record qualifying ranking bids as explicit internal intents, notify the user through @TGTOP_robot, and never label them as paid until TON verification is enabled
 - [ ] Add scalable catalog, analytics, offers, and NFT query safeguards through indexes, pagination, and request controls
 - [x] Add a short black TG TOP launch screen with a real readiness indicator and reduced-motion support
 - [x] Animate rising cubes into the TG TOP 1→2→4 pyramid during launch
 - [x] Replace the launch screen’s fixed delay with a real readiness signal while retaining reduced-motion behavior
 - [x] Animate rising cubes into the TG TOP 1→2→4 pyramid during launch
 - [x] Move Connect Wallet into the compact top brand row and pull the Global panel upward
+- [x] Redesign the Global mobile control area as a minimal marketplace header with compact type segments and unobtrusive geography selection
+- [x] Make the Global heading state the exact active top list, including selected type, subcategory, and geography
+- [x] Replace geographic filter codes with localized country and region names in the active top heading and filtering controls
+- [x] Remove the Europe region option and use concrete localized country choices in TG TOP geography filtering
+- [x] Add Ukraine, Poland, Germany, United Kingdom, United States, and Russia as the first concrete TG TOP country filters
 - [x] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
 - [x] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
 - [x] Add persisted channel and chat subcategories that synchronize across Global ranking cards, catalog listings, and detailed filters

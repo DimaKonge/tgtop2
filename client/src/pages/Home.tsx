@@ -46,8 +46,18 @@ const date = (value?: Date | null, language: Language = "ru") =>
       })
     : "—";
 type ListingType = "catalog" | "sale" | "rent" | "both";
-type ListingCountry = "Global" | "UA" | "RU" | "EU" | "US";
+type ListingCountry = "Global" | "UA" | "PL" | "DE" | "GB" | "US" | "RU";
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
+const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU"] as const;
+const COUNTRY_LABELS: Record<string, { ru: string; en: string }> = {
+  Global: { ru: "Весь мир", en: "Worldwide" },
+  UA: { ru: "Украина", en: "Ukraine" },
+  PL: { ru: "Польша", en: "Poland" },
+  DE: { ru: "Германия", en: "Germany" },
+  GB: { ru: "Великобритания", en: "United Kingdom" },
+  US: { ru: "США", en: "United States" },
+  RU: { ru: "Россия", en: "Russia" },
+};
 const CATEGORY_SUBCATEGORIES = {
   "Каналы": ["General", "News", "Crypto", "Technology", "Business", "Education", "Entertainment", "Games", "Memes"],
   "Чаты": ["General", "Community", "Dating", "City", "Support", "Work", "Hobbies", "Learning", "Games"],
@@ -136,6 +146,8 @@ const getCategoryLabel = (category: Group["category"], language: Language) =>
   language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
 const getSubcategoryLabel = (subcategory: string, language: Language) =>
   SUBCATEGORY_LABELS[subcategory]?.[language] ?? subcategory;
+const getCountryLabel = (country: string, language: Language) =>
+  COUNTRY_LABELS[country]?.[language] ?? country;
 
 function Avatar({
   group,
@@ -666,7 +678,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const placeBid = trpc.tgTop.placeBid.useMutation({
     onSuccess: () => {
-      toast.success(tx("Размещение обновлено", "Placement updated."));
+      toast.success(tx("Ставка зафиксирована в журнале TG TOP. TON не отправлялся.", "Bid recorded in the TG TOP journal. No TON was sent."));
       setTargetSlot(null);
       setAmount("0.1");
       void utils.tgTop.getSlots.invalidate();
@@ -772,6 +784,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000));
   };
   const globalCount = globalDirection === "NFT" ? visibleNfts.length : visibleGroups.length;
+  const currentTopTitle = [
+    globalDirection === "NFT"
+      ? "NFT"
+      : globalDirection === "Все"
+        ? tx("Все сообщества", "All communities")
+        : getCategoryLabel(globalDirection, language),
+    globalDirection !== "NFT" && subcategory !== "Все" ? getSubcategoryLabel(subcategory, language) : null,
+    globalDirection !== "NFT" && country !== "Все" ? getCountryLabel(country, language) : null,
+  ].filter((part): part is string => Boolean(part)).join(" · ");
   const telegramAvatar =
     typeof window !== "undefined"
       ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
@@ -798,8 +819,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   };
   const openMine = (slot?: Slot) => {
     if (slot) {
-      const nextBid = Math.max(0.1, slot.bidAmount / 1000 + 0.1);
-      setAmount(nextBid.toFixed(1));
+      const nextBid = slot.group ? Math.max(0.1, slot.bidAmount / 1000 + 0.001) : 0.1;
+      setAmount(nextBid.toFixed(3));
     }
     setTargetSlot(slot ?? null);
     setPage("mine");
@@ -816,7 +837,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setSelectedGroupIds(Array.from(new Set(groupIds)));
     setListingType(firstGroup?.listingType ?? "catalog");
     setListingCountry(
-      (["Global", "UA", "RU", "EU", "US"] as const).includes(firstGroup?.country as ListingCountry)
+      COUNTRY_OPTIONS.includes(firstGroup?.country as ListingCountry)
         ? (firstGroup?.country as ListingCountry)
         : "Global"
     );
@@ -879,13 +900,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       );
     const value = Number(amount);
     const current = targetSlot.bidAmount / 1000;
-    if (!Number.isFinite(value) || value <= current)
-      return toast.error(`Укажите сумму выше ${current.toFixed(1)} TON`);
+    const minimum = targetSlot.group ? Math.max(0.1, current + 0.001) : 0.1;
+    if (!Number.isFinite(value) || value < minimum)
+      return toast.error(tx(`Минимальная ставка: ${minimum.toFixed(3)} TON`, `Minimum bid: ${minimum.toFixed(3)} TON`));
     placeBid.mutate({
       slotId: targetSlot.id,
       groupId: group.id,
       bidAmount: value,
-      currentBid: `${value.toFixed(1)} TON`,
+      currentBid: `${value.toFixed(3)} TON`,
     });
   };
   const openNftTransfer = () => {
@@ -968,73 +990,43 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <main className="mx-auto max-w-3xl px-4 pb-28 pt-3">
         {page === "top" && (
           <section className="space-y-3">
-            <div className="rounded-xl border border-white/8 bg-[#111720] p-1.5 shadow-[0_12px_28px_rgba(0,0,0,0.12)]">
-              <div className="flex items-center px-1.5 pb-1">
-                <span className="flex items-center gap-1.5">
-                  <h1 className="text-xl font-semibold tracking-tight">
-                    Global
-                  </h1>
-                  <span
-                    aria-live="polite"
-                  className="rounded-full border border-[#3f8cff]/25 bg-[#3f8cff]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#a6c8ff]"
-                  >
-                    {n(globalCount)} {globalDirection === "NFT" ? "NFT" : ui.groups}
-                  </span>
+            <div className="border-b border-white/8 pb-2">
+              <div className="flex items-center justify-between gap-3 px-0.5">
+                <span className="flex items-baseline gap-2">
+                  <h1 className="truncate text-lg font-semibold tracking-tight text-white">{currentTopTitle}</h1>
+                  <span aria-live="polite" className="text-[11px] text-slate-500">{n(globalCount, language)} {globalDirection === "NFT" ? "NFT" : ui.groups}</span>
                 </span>
+                {globalDirection !== "NFT" && (
+                  <button onClick={() => setFiltersOpen(true)} className="flex items-center gap-1.5 text-[11px] text-slate-400 transition-colors hover:text-slate-100">
+                    <Globe2 className="h-3.5 w-3.5 text-[#79a7ff]" />
+                    {country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}
+                  </button>
+                )}
               </div>
-              <ToggleGroup
-                type="single"
-                value={globalDirection}
-                onValueChange={value => {
-                  if (value) selectGlobalDirection(value as GlobalDirection);
-                }}
-                variant="outline"
-                size="sm"
-                className="grid w-full grid-cols-4 overflow-hidden rounded-lg border border-white/8 bg-[#0b0f14] p-0.5"
-              >
-                <ToggleGroupItem
-                  value="Все"
-                  className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
-                >
-                  {ui.all}
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="Каналы"
-                  className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
-                >
-                  {ui.channels}
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="Чаты"
-                  className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
-                >
-                  {ui.chats}
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="NFT"
-                  className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
-                >
-                  NFT
-                </ToggleGroupItem>
-              </ToggleGroup>
+              <div className="mt-2 flex items-center gap-4 overflow-x-auto border-b border-white/8 px-0.5 [scrollbar-width:none]">
+                {([
+                  ["Все", ui.all],
+                  ["Каналы", ui.channels],
+                  ["Чаты", ui.chats],
+                  ["NFT", "NFT"],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => selectGlobalDirection(value)}
+                    className={`relative shrink-0 pb-2 text-[12px] font-medium transition-colors ${globalDirection === value ? "text-white" : "text-slate-500 hover:text-slate-300"}`}
+                  >
+                    {label}
+                    {globalDirection === value && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-[#4a90ff]" />}
+                  </button>
+                ))}
+              </div>
               {globalDirection !== "NFT" && (
-                <div className="space-y-1.5 px-1 pb-1 pt-2">
-                  {globalSubcategoryCategory && (
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
-                      <span className="shrink-0 text-[9px] font-medium uppercase tracking-[0.08em] text-slate-600">{tx("Тема", "Topic")}</span>
-                      <button onClick={() => setSubcategory("Все")} className={`shrink-0 rounded-md border px-2 py-1 text-[10px] ${subcategory === "Все" ? "border-[#3f8cff]/50 bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/8 text-slate-500"}`}>{tx("Все", "All")}</button>
-                      {globalSubcategoryOptions.map(item => (
-                        <button key={item} onClick={() => setSubcategory(item)} className={`shrink-0 rounded-md border px-2 py-1 text-[10px] ${subcategory === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/8 text-slate-500"}`}>{getSubcategoryLabel(item, language)}</button>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
-                    <span className="shrink-0 text-[9px] font-medium uppercase tracking-[0.08em] text-slate-600">{tx("Регион", "Region")}</span>
-                    {(["Все", "UA", "RU", "EU", "US"] as const).map(item => (
-                      <button key={item} onClick={() => setCountry(item)} className={`shrink-0 rounded-md border px-2 py-1 text-[10px] ${country === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/8 text-slate-500"}`}>{item === "Все" ? tx("Все", "All") : item}</button>
-                    ))}
-                  </div>
-                </div>
+                <button onClick={() => setFiltersOpen(true)} className="mt-2 flex items-center gap-1.5 px-0.5 text-[11px] text-slate-500 transition-colors hover:text-slate-200">
+                  <Filter className="h-3.5 w-3.5" />
+                  <span>{subcategory === "Все" ? tx("Все темы", "All topics") : getSubcategoryLabel(subcategory, language)}</span>
+                  <span className="text-slate-700">·</span>
+                  <span>{country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}</span>
+                </button>
               )}
             </div>
             {globalDirection === "NFT" ? (
@@ -1202,7 +1194,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <span>
                   <b className="block text-xs text-slate-100">{tx("Выберите группу для позиции", "Choose a group for this placement")}</b>
                   <small className="mt-0.5 block text-[11px] text-slate-400">
-                    {tx(`Следующая ставка · ${amount} TON`, `Next bid · ${amount} TON`)}
+                    {targetSlot.group
+                      ? tx(`Перебитие · от ${amount} TON`, `Outbid · from ${amount} TON`)
+                      : tx("Свободная позиция · от 0.100 TON", "Vacant position · from 0.100 TON")}
+                  </small>
+                  <small className="mt-0.5 block text-[10px] text-slate-500">
+                    {tx("Ставка фиксируется в журнале и в боте; TON пока не отправляется.", "The bid is recorded in the journal and bot; TON is not sent yet.")}
                   </small>
                 </span>
                 <button
@@ -1794,13 +1791,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <section>
               <p className="mb-2 text-xs text-slate-400">{tx("Страна / регион в каталоге", "Catalog country / region")}</p>
               <div className="grid grid-cols-5 gap-1.5">
-                {(["Global", "UA", "RU", "EU", "US"] as ListingCountry[]).map(item => (
+                {COUNTRY_OPTIONS.map(item => (
                   <button
                     key={item}
                     onClick={() => setListingCountry(item)}
                     className={`rounded-lg border py-2 text-[10px] font-medium ${listingCountry === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
                   >
-                    {item}
+                    {getCountryLabel(item, language)}
                   </button>
                 ))}
               </div>
@@ -2072,13 +2069,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <div>
               <p className="mb-2 text-xs text-slate-400">{tx("Страна / регион", "Country / region")}</p>
               <div className="grid grid-cols-2 gap-2">
-                {["Все", "UA", "RU", "EU", "US"].map(item => (
+                {["Все", "UA", "PL", "DE", "GB", "US", "RU"].map(item => (
                   <button
                     key={item}
                     onClick={() => setCountry(item)}
                     className={`rounded-lg border px-2 py-2 text-left text-xs ${country === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
                   >
-                    {item}
+                    {item === "Все" ? tx("Все страны", "All countries") : getCountryLabel(item, language)}
                   </button>
                 ))}
               </div>

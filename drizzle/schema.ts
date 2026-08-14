@@ -112,6 +112,21 @@ export const auctionSlots = mysqlTable("auction_slots", {
 export type AuctionSlot = typeof auctionSlots.$inferSelect;
 export type InsertAuctionSlot = typeof auctionSlots.$inferInsert;
 
+export const rankingBidIntents = mysqlTable("ranking_bid_intents", {
+  id: int("id").autoincrement().primaryKey(),
+  slotId: int("slotId").notNull(),
+  groupId: int("groupId").notNull(),
+  bidderOpenId: varchar("bidderOpenId", { length: 64 }).notNull(),
+  bidAmount: int("bidAmount").notNull(),
+  status: mysqlEnum("status", ["recorded", "verified", "cancelled"]).default("recorded").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("ranking_bid_intents_bidder_status_idx").on(table.bidderOpenId, table.status),
+  index("ranking_bid_intents_slot_idx").on(table.slotId),
+]);
+
+export type RankingBidIntent = typeof rankingBidIntents.$inferSelect;
+
 export const nftUsernames = mysqlTable("nft_usernames", {
   id: int("id").autoincrement().primaryKey(),
   username: varchar("username", { length: 128 }).notNull().unique(),

@@ -1,13 +1,14 @@
 import { eq, and, or, asc, desc, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, rankingBidIntents, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { cascadeRankedOccupants } from "./auctionCascade";
 import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, getTransferDeadline } from "./protectedDeals";
 import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
 import { isCatalogSubcategory } from "./catalogTaxonomy";
+import { getMinimumRankingBidMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -140,22 +141,16 @@ export async function attributeTelegramReferral(telegramUserId: number, referral
 export async function getAuctionSlots(category?: string, country?: string, subcategory?: string) {
   const db = await getDb();
   if (!db) return [];
-  
-  let query = db.select().from(auctionSlots);
-  const conditions = [];
-  if (category && category !== "Все") {
-    conditions.push(eq(auctionSlots.category, category as any));
-  }
-  if (country && country !== "Global") {
-    conditions.push(eq(auctionSlots.country, country));
-  }
-  
-  const slots = conditions.length > 0
-    ? await db.select().from(auctionSlots).where(and(...conditions))
-    : await db.select().from(auctionSlots);
+
+  const slots = await db.select().from(auctionSlots).where(and(
+    eq(auctionSlots.category, "Все"),
+    eq(auctionSlots.country, "Global")
+  )).orderBy(asc(auctionSlots.slotNumber));
   const groupIds = slots.map(slot => slot.groupId).filter((id): id is number => id !== null);
   if (groupIds.length === 0) return slots.map(slot => ({ ...slot, group: null }));
   const groupConditions = [inArray(groupsCatalog.id, groupIds)];
+  if (category && category !== "Все") groupConditions.push(eq(groupsCatalog.category, category as "Каналы" | "Чаты"));
+  if (country && country !== "Все" && country !== "Global") groupConditions.push(eq(groupsCatalog.country, country));
   if (subcategory && subcategory !== "Все") groupConditions.push(eq(groupsCatalog.subcategory, subcategory));
   const groups = await db.select().from(groupsCatalog).where(and(...groupConditions));
   const groupMap = new Map(groups.map(group => [group.id, group]));
@@ -170,11 +165,16 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   if (!groupId || !group) throw new Error("Группа недоступна для размещения");
   const target = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
   if (!target) throw new Error("Позиция рейтинга не найдена");
+  if (!isQualifyingRankingBid(bidAmount, target.bidAmount, target.groupId !== null)) {
+    const requiredMilliTon = getMinimumRankingBidMilliTon(target.bidAmount, target.groupId !== null);
+    throw new Error(`Минимальная ставка для этой позиции — ${(requiredMilliTon / 1000).toFixed(3)} TON`);
+  }
   const board = await db.select().from(auctionSlots).where(and(
     eq(auctionSlots.category, target.category),
     eq(auctionSlots.country, target.country)
   )).orderBy(asc(auctionSlots.slotNumber));
 
+  let rankingIntentId = 0;
   await db.transaction(async tx => {
     const originalByGroupId = new Map(board.filter(slot => slot.groupId !== null).map(slot => [slot.groupId!, slot]));
     const cascaded = cascadeRankedOccupants(
@@ -221,7 +221,18 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
         updatedAt: new Date(),
       }).where(eq(auctionSlots.id, slot.id));
     }
+
+    const inserted = await tx.insert(rankingBidIntents).values({
+      slotId: target.id,
+      groupId,
+      bidderOpenId: leaderUserId,
+      bidAmount,
+      status: "recorded",
+    });
+    rankingIntentId = Number(inserted[0]?.insertId ?? 0);
   });
+
+  return { id: rankingIntentId, slotNumber: target.slotNumber, bidAmount, groupTitle: group.title };
 }
 
 export async function getGroupsCatalog(category?: string, country?: string, subcategory?: string) {
