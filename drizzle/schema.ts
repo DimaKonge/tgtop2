@@ -76,7 +76,9 @@ export const groupStatsSnapshots = mysqlTable("group_stats_snapshots", {
   messagesCount: int("messagesCount").default(0).notNull(),
   joinedCount: int("joinedCount").default(0).notNull(),
   recordedAt: timestamp("recordedAt").defaultNow().notNull(),
-});
+}, table => [
+  index("group_stats_snapshots_group_recorded_idx").on(table.groupId, table.recordedAt),
+]);
 
 export type GroupStatsSnapshot = typeof groupStatsSnapshots.$inferSelect;
 
@@ -90,6 +92,7 @@ export const creditTransactions = mysqlTable("credit_transactions", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [
   uniqueIndex("credit_transactions_kind_telegram_chat_unique").on(table.kind, table.telegramChatId),
+  index("credit_transactions_user_created_idx").on(table.userOpenId, table.createdAt),
 ]);
 
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
@@ -107,7 +110,9 @@ export const auctionSlots = mysqlTable("auction_slots", {
   leaderUserId: varchar("leaderUserId", { length: 64 }),
   groupId: int("groupId"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, table => [
+  uniqueIndex("auction_slots_board_slot_unique").on(table.category, table.country, table.slotNumber),
+]);
 
 export type AuctionSlot = typeof auctionSlots.$inferSelect;
 export type InsertAuctionSlot = typeof auctionSlots.$inferInsert;
@@ -205,7 +210,11 @@ export const deals = mysqlTable("deals", {
   expiresAt: timestamp("expiresAt"),
   disputedAt: timestamp("disputedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, table => [
+  index("deals_buyer_status_created_idx").on(table.buyerOpenId, table.status, table.createdAt),
+  index("deals_seller_status_created_idx").on(table.sellerOpenId, table.status, table.createdAt),
+  index("deals_status_expires_idx").on(table.status, table.expiresAt),
+]);
 
 export type Deal = typeof deals.$inferSelect;
 export type InsertDeal = typeof deals.$inferInsert;

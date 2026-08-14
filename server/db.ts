@@ -9,6 +9,7 @@ import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, getTransferDeadline } from ".
 import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
 import { isCatalogSubcategory } from "./catalogTaxonomy";
 import { getMinimumRankingBidMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
+import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -424,6 +425,26 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       ...(listingOptions.country ? { country: listingOptions.country } : {}),
       ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),
     }).where(eq(groupsCatalog.id, groupId))));
+
+    const board = await tx.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, "Все"),
+      eq(auctionSlots.country, "Global")
+    )).orderBy(asc(auctionSlots.slotNumber));
+    const assignments = planVacantRankingAssignments(board, groupsNeedingListing.map(group => group.id));
+    for (const assignment of assignments) {
+      const group = groups.find(item => item.id === assignment.groupId);
+      if (!group) continue;
+      await tx.update(auctionSlots).set({
+        groupId: group.id,
+        title: group.title,
+        subtitle: group.username ? `@${group.username}` : group.category,
+        leaderUsername: group.username ?? group.title,
+        leaderUserId: group.ownerOpenId,
+        bidAmount: 0,
+        currentBid: "0 TON",
+        updatedAt: new Date(),
+      }).where(and(eq(auctionSlots.id, assignment.slotId), sql`${auctionSlots.groupId} IS NULL`));
+    }
   });
 }
 

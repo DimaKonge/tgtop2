@@ -136,12 +136,13 @@
 - [x] Move Connect Wallet into the compact top brand row above Global controls
 - [x] Give the TG TOP logo mark a black background treatment in the header
 - [x] Remove System appearance mode and retain only explicit black and white TG TOP themes
-- [ ] Automatically place an eligible newly listed group into the highest free ranking slot; require bids only to displace occupied slots
+- [x] Automatically place an eligible newly listed group into the highest free ranking slot; require bids only to displace occupied slots
 - [x] Repair the current production lead slot so the already connected @o_a_th community is visibly assigned to the large first card
 - [ ] Require at least 0.2 TON to overtake the first premium slot while allowing a 0.1 TON entry bid for lower vacant slots
 - [ ] Remove every free ranking-listing path so each TG TOP placement requires a qualifying TON bid
 - [x] Record qualifying ranking bids as explicit internal intents, notify the user through @TGTOP_robot, and never label them as paid until TON verification is enabled
 - [ ] Add scalable catalog, analytics, offers, and NFT query safeguards through indexes, pagination, and request controls
+- [x] Add production indexes for ranking boards, group snapshots, account ledgers, deal histories, and deal-expiry queries
 - [x] Add a short black TG TOP launch screen with a real readiness indicator and reduced-motion support
 - [x] Animate rising cubes into the TG TOP 1→2→4 pyramid during launch
 - [x] Replace the launch screen’s fixed delay with a real readiness signal while retaining reduced-motion behavior
