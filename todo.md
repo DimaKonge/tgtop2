@@ -90,3 +90,26 @@
 - [ ] Confirm the real Telegram Mini App displays the synchronized Все / Каналы / Чаты quick toggle under Global
 - [x] Show a live count of groups matching the active category, country, and audience filters in the Global panel
 - [x] Show a live count of groups matching the active category, country, and audience filters in the Global panel
+- [x] Compact and elevate the Global quick-filter panel while reducing category-label text size
+- [x] Add a visible safe TON Wallet connection entry button without enabling payment actions
+- [x] Label the Global wallet entry button as Connect Wallet
+- [x] Add persistent Russian/English language selection to TG TOP settings
+- [x] Add persistent System/Dark/Light appearance selection with a complete light theme
+- [x] Refresh the TG TOP brand mark so it works cohesively in dark and light themes
+- [x] Use an inverted stylized T as the primary TG TOP brand mark in dark mode
+- [x] Reduce Global control sizes and move action buttons higher on mobile
+- [x] Resize the mobile 1 → 2 → 4 ranking pyramid so the complete top fits within one screen
+- [x] Integrate TON Connect for wallet connection and address display without enabling payment or transaction signing
+- [ ] Add NFT as a separate quick-filter direction alongside channels and chats without mixing NFT cards into the group catalog
+- [x] Remove the redundant Catalog tab from the bottom navigation and route catalog access through Global
+- [x] Add an owner-facing «Выставить на листинг» control for connected groups in My Groups
+- [x] Let the owner choose a normal catalog listing with no price or a sale listing with an optional TON price
+- [x] Add MarketApp-style multi-select management for applying listing and sale actions to several owned groups at once
+- [ ] Build a progressive rich owner cabinet covering groups, listings, pricing, bulk actions, deals, NFTs, and referral insight
+- [ ] Add a commission-based referral program with a personal link, referral count, and TG TOP fee earnings dashboard
+- [x] Add a concise TG TOP FAQ covering wallet connection, listings, bidding, NFTs, and safe deal rules
+- [x] Add a group listing panel with catalog-only, sale-price, and rental-term options
+- [ ] Localize all visible TG TOP interface labels and copy through the persistent RU/EN setting
+- [ ] Complete light-theme treatment for every TG TOP owner-management and listing surface
+- [ ] Reduce and verify the 390×844 mobile vertical footprint of the Global 1 → 2 → 4 pyramid
+- [ ] Accrue and persist referral earnings from completed TG TOP fee-bearing deals with backend regression coverage

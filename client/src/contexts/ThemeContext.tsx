@@ -1,64 +1,53 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-type Theme = "light" | "dark";
+export type Appearance = "system" | "dark" | "light";
+export type ResolvedTheme = "dark" | "light";
 
 interface ThemeContextType {
-  theme: Theme;
-  toggleTheme?: () => void;
-  switchable: boolean;
+  appearance: Appearance;
+  resolvedTheme: ResolvedTheme;
+  setAppearance: (appearance: Appearance) => void;
+  theme: ResolvedTheme;
+  toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const APPEARANCE_STORAGE_KEY = "tg-top-appearance";
 
-interface ThemeProviderProps {
-  children: React.ReactNode;
-  defaultTheme?: Theme;
-  switchable?: boolean;
-}
-
-export function ThemeProvider({
-  children,
-  defaultTheme = "light",
-  switchable = false,
-}: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
-    }
-    return defaultTheme;
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [appearance, setAppearance] = useState<Appearance>(() => {
+    const stored = localStorage.getItem(APPEARANCE_STORAGE_KEY);
+    return stored === "dark" || stored === "light" || stored === "system" ? stored : "system";
   });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const updateSystemTheme = () => setSystemPrefersDark(query.matches);
+    query.addEventListener("change", updateSystemTheme);
+    return () => query.removeEventListener("change", updateSystemTheme);
+  }, []);
 
-    if (switchable) {
-      localStorage.setItem("theme", theme);
-    }
-  }, [theme, switchable]);
+  const resolvedTheme: ResolvedTheme = appearance === "system" ? (systemPrefersDark ? "dark" : "light") : appearance;
 
-  const toggleTheme = switchable
-    ? () => {
-        setTheme(prev => (prev === "light" ? "dark" : "light"));
-      }
-    : undefined;
+  useEffect(() => {
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, appearance);
+  }, [appearance, resolvedTheme]);
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, switchable }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  const value = useMemo(() => ({
+    appearance,
+    resolvedTheme,
+    setAppearance,
+    theme: resolvedTheme,
+    toggleTheme: () => setAppearance(resolvedTheme === "dark" ? "light" : "dark"),
+  }), [appearance, resolvedTheme]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within ThemeProvider");
-  }
+  if (!context) throw new Error("useTheme must be used within ThemeProvider");
   return context;
 }

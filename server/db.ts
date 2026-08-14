@@ -1,5 +1,6 @@
 import { eq, and, asc, desc, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { randomBytes } from "node:crypto";
 import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, nftUsernames, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
@@ -69,7 +70,7 @@ export async function getUserByOpenId(openId: string) {
 
 export async function getAccountLedger(openId: string) {
   const db = await getDb();
-  if (!db) return { user: undefined, transactions: [] };
+  if (!db) return { user: undefined, transactions: [], referral: undefined };
   const user = await getUserByOpenId(openId);
   const transactions = await db.select({
     id: creditTransactions.id,
@@ -83,7 +84,53 @@ export async function getAccountLedger(openId: string) {
     .leftJoin(groupsCatalog, eq(creditTransactions.groupId, groupsCatalog.id))
     .where(eq(creditTransactions.userOpenId, openId))
     .orderBy(desc(creditTransactions.createdAt), desc(creditTransactions.id));
-  return { user, transactions };
+  const referral = user ? await getReferralOverview(openId) : undefined;
+  return { user, transactions, referral };
+}
+
+function createReferralCode() {
+  return `TG${randomBytes(5).toString("hex").toUpperCase()}`;
+}
+
+export async function getReferralOverview(openId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const user = await getUserByOpenId(openId);
+  if (!user) return undefined;
+  let referralCode = user.referralCode;
+  if (!referralCode) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const candidate = createReferralCode();
+      try {
+        await db.update(users).set({ referralCode: candidate }).where(eq(users.openId, openId));
+        referralCode = candidate;
+        break;
+      } catch (error) {
+        if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+      }
+    }
+  }
+  if (!referralCode) throw new Error("Не удалось создать реферальный код");
+  const referrals = await db.select({ id: users.id }).from(users).where(eq(users.referredBy, referralCode));
+  const freshUser = await getUserByOpenId(openId);
+  return {
+    referralCode,
+    referralLink: `https://t.me/TGTOP_robot?start=ref_${referralCode}`,
+    referralsCount: referrals.length,
+    earnings: freshUser?.referralEarnings ?? user.referralEarnings,
+  };
+}
+
+export async function attributeTelegramReferral(telegramUserId: number, referralCode: string) {
+  const db = await getDb();
+  if (!db) return false;
+  const cleanCode = referralCode.trim().toUpperCase();
+  const referrer = await db.select().from(users).where(eq(users.referralCode, cleanCode)).limit(1);
+  const referredOpenId = `telegram:${telegramUserId}`;
+  const referredUser = await getUserByOpenId(referredOpenId);
+  if (!referrer[0] || !referredUser || referredUser.referredBy || referrer[0].openId === referredOpenId) return false;
+  await db.update(users).set({ referredBy: cleanCode }).where(eq(users.openId, referredOpenId));
+  return true;
 }
 
 // TG TOP specific queries
@@ -299,17 +346,90 @@ export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: nu
   }
 }
 
-export async function listGroupWithCredits(ownerOpenId: string, groupId: number, cost = GROUP_CONNECTION_BONUS) {
+export type GroupListingOptions = {
+  listingType?: "catalog" | "sale" | "rent" | "both";
+  salePriceTon?: string;
+  rentalPriceTon?: string;
+  minRentalDays?: number;
+  maxRentalDays?: number;
+  country?: string;
+};
+
+export function normalizeGroupListingOptions(listing?: GroupListingOptions | string) {
+  const options = typeof listing === "string" ? { salePriceTon: listing } : (listing ?? {});
+  const listingType = options.listingType ?? (options.salePriceTon ? "sale" : "catalog");
+  return {
+    listingType,
+    salePriceTon: listingType === "sale" || listingType === "both" ? (options.salePriceTon ?? null) : null,
+    rentalPriceTon: listingType === "rent" || listingType === "both" ? (options.rentalPriceTon ?? null) : null,
+    minRentalDays: listingType === "rent" || listingType === "both" ? (options.minRentalDays ?? null) : null,
+    maxRentalDays: listingType === "rent" || listingType === "both" ? (options.maxRentalDays ?? null) : null,
+    country: options.country,
+  };
+}
+
+export async function listGroupsWithCredits(ownerOpenId: string, groupIds: number[], listing?: GroupListingOptions | string, cost = GROUP_CONNECTION_BONUS) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const group = await getGroupById(groupId);
-  if (!group || group.ownerOpenId !== ownerOpenId) throw new Error("Группа недоступна для размещения");
+  const uniqueGroupIds = Array.from(new Set(groupIds));
+  if (!uniqueGroupIds.length) throw new Error("Выберите хотя бы одну группу");
+  const listingOptions = normalizeGroupListingOptions(listing);
+  const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
+  if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) throw new Error("Группа недоступна для размещения");
+  const groupsNeedingListing = groups.filter(group => group.status !== "listed");
+  const totalCost = groupsNeedingListing.length * cost;
   const user = await getUserByOpenId(ownerOpenId);
-  if (!user || user.bonusBalance < cost) throw new Error("Недостаточно бонусных GRAM");
+  if (!user || user.bonusBalance < totalCost) throw new Error("Недостаточно бонусных GRAM");
   await db.transaction(async tx => {
-    await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${cost}` }).where(eq(users.openId, ownerOpenId));
-    await tx.insert(creditTransactions).values({ userOpenId: ownerOpenId, groupId, amount: -cost, kind: "listing_spend" });
-    await tx.update(groupsCatalog).set({ status: "listed", listedAt: new Date() }).where(eq(groupsCatalog.id, groupId));
+    if (totalCost) {
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${totalCost}` }).where(eq(users.openId, ownerOpenId));
+      await tx.insert(creditTransactions).values(groupsNeedingListing.map(group => ({ userOpenId: ownerOpenId, groupId: group.id, amount: -cost, kind: "listing_spend" as const })));
+    }
+    await Promise.all(uniqueGroupIds.map(groupId => tx.update(groupsCatalog).set({
+      status: "listed",
+      listedAt: new Date(),
+      listingType: listingOptions.listingType,
+      salePriceTon: listingOptions.salePriceTon,
+      rentalPriceTon: listingOptions.rentalPriceTon,
+      minRentalDays: listingOptions.minRentalDays,
+      maxRentalDays: listingOptions.maxRentalDays,
+      ...(listingOptions.country ? { country: listingOptions.country } : {}),
+    }).where(eq(groupsCatalog.id, groupId))));
+  });
+}
+
+export async function listGroupWithCredits(ownerOpenId: string, groupId: number, listing?: GroupListingOptions | string, cost = GROUP_CONNECTION_BONUS) {
+  return listGroupsWithCredits(ownerOpenId, [groupId], listing, cost);
+}
+
+export async function unlistGroups(ownerOpenId: string, groupIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const uniqueGroupIds = Array.from(new Set(groupIds));
+  if (!uniqueGroupIds.length) throw new Error("Выберите хотя бы одну группу");
+  const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
+  if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) {
+    throw new Error("Группа недоступна для управления");
+  }
+  await db.transaction(async tx => {
+    await tx.update(auctionSlots).set({
+      groupId: null,
+      leaderUserId: null,
+      leaderUsername: "-",
+      currentBid: "0 TON",
+      bidAmount: 0,
+      title: "Свободное место",
+      subtitle: "Ждет листинга",
+    }).where(inArray(auctionSlots.groupId, uniqueGroupIds));
+    await tx.update(groupsCatalog).set({
+      status: "pending",
+      listedAt: null,
+      listingType: "catalog",
+      salePriceTon: null,
+      rentalPriceTon: null,
+      minRentalDays: null,
+      maxRentalDays: null,
+    }).where(inArray(groupsCatalog.id, uniqueGroupIds));
   });
 }
 

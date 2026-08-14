@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import { TonConnectUIProvider } from "@tonconnect/ui-react";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -26,15 +27,14 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
+      <TonConnectUIProvider manifestUrl="https://tgtop.xyz/tonconnect-manifest.json">
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ThemeProvider>
+      </TonConnectUIProvider>
     </ErrorBoundary>
   );
 }

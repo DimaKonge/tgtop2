@@ -71,6 +71,20 @@
       "when": 1786673378221,
       "tag": "0009_black_zarek",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1786676899642,
+      "tag": "0010_opposite_spirit",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1786677201330,
+      "tag": "0011_sparkling_the_captain",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,27 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 
+const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
+const groupListingInput = z.object({
+  listingType: z.enum(["catalog", "sale", "rent", "both"]).default("catalog"),
+  salePriceTon: tonAmount.optional(),
+  rentalPriceTon: tonAmount.optional(),
+  minRentalDays: z.number().int().min(1).max(365).optional(),
+  maxRentalDays: z.number().int().min(1).max(365).optional(),
+  country: z.enum(["Global", "UA", "RU", "EU", "US"]).optional(),
+}).superRefine((input, ctx) => {
+  const rentalListing = input.listingType === "rent" || input.listingType === "both";
+  if (rentalListing && !input.rentalPriceTon) {
+    ctx.addIssue({ code: "custom", path: ["rentalPriceTon"], message: "Укажите цену аренды в TON" });
+  }
+  if (rentalListing && (!input.minRentalDays || !input.maxRentalDays)) {
+    ctx.addIssue({ code: "custom", path: ["minRentalDays"], message: "Укажите срок аренды" });
+  }
+  if (input.minRentalDays && input.maxRentalDays && input.minRentalDays > input.maxRentalDays) {
+    ctx.addIssue({ code: "custom", path: ["maxRentalDays"], message: "Максимальный срок не может быть меньше минимального" });
+  }
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -67,9 +88,23 @@ export const appRouter = router({
       }),
 
     listGroupWithCredits: protectedProcedure
-      .input(z.object({ groupId: z.number() }))
+      .input(z.object({ groupId: z.number() }).merge(groupListingInput))
       .mutation(async ({ ctx, input }) => {
-        await db.listGroupWithCredits(ctx.user.openId, input.groupId);
+        await db.listGroupWithCredits(ctx.user.openId, input.groupId, input);
+        return { success: true };
+      }),
+
+    listGroupsWithCredits: protectedProcedure
+      .input(z.object({ groupIds: z.array(z.number()).min(1).max(50) }).merge(groupListingInput))
+      .mutation(async ({ ctx, input }) => {
+        await db.listGroupsWithCredits(ctx.user.openId, input.groupIds, input);
+        return { success: true };
+      }),
+
+    unlistGroups: protectedProcedure
+      .input(z.object({ groupIds: z.array(z.number()).min(1).max(50) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.unlistGroups(ctx.user.openId, input.groupIds);
         return { success: true };
       }),
 

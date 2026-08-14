@@ -1,0 +1,1 @@
+ALTER TABLE `groups_catalog` ADD `salePriceTon` decimal(20,9);

@@ -2,6 +2,7 @@ import "dotenv/config";
 import axios from "axios";
 import {
   getGroupByChatId,
+  attributeTelegramReferral,
   grantGroupConnectionBonus,
   recordGroupActivity,
   recordGroupMembership,
@@ -45,6 +46,10 @@ function isActiveMember(status: string): boolean { return ["creator", "administr
 function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { return chat.type === "channel" ? "Каналы" : "Чаты"; }
 function catalogChatId(chatId: number): string { return String(chatId); }
 function publicGroupUrl(chat: TelegramChat): string | undefined { return chat.username ? `https://t.me/${chat.username}` : undefined; }
+export function getReferralCodeFromStartText(text?: string): string | undefined {
+  const match = text?.trim().match(/^\/start\s+ref_([A-Za-z0-9]{6,32})$/i);
+  return match?.[1]?.toUpperCase();
+}
 function getApiUrl(method: string): string {
   if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
   return `https://api.telegram.org/bot${botToken}/${method}`;
@@ -133,6 +138,16 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     await recordGroupActivity(catalogChatId(activity.chat.id), activity.views ?? 0);
   }
   if (!message?.text?.startsWith("/start")) return;
+  if (message.from) {
+    const openId = `telegram:${message.from.id}`;
+    await upsertUser({ openId, name: message.from.username ?? message.from.first_name ?? "Telegram user", loginMethod: "telegram-bot", lastSignedIn: new Date() });
+    const referralCode = getReferralCodeFromStartText(message.text);
+    const attributed = referralCode ? await attributeTelegramReferral(message.from.id, referralCode) : false;
+    await openMiniApp(message.chat.id, attributed
+      ? "Вы присоединились к TG TOP по приглашению. Откройте приложение, чтобы добавить группу и посмотреть каталог."
+      : "Добро пожаловать в TG TOP. Откройте приложение, чтобы управлять каталогом и рейтингом.");
+    return;
+  }
   await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP. Откройте приложение, чтобы управлять каталогом и рейтингом.");
 }
 
@@ -154,6 +169,6 @@ async function run(): Promise<void> {
   }
 }
 
-export const __private__ = { buildOnboardingConfirmation, catalogCategory, isActiveMember, isBotAdmin, publicGroupUrl };
+export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, isActiveMember, isBotAdmin, publicGroupUrl };
 const isMainModule = process.argv[1] ? new URL(`file://${process.argv[1]}`).href === import.meta.url : false;
 if (isMainModule) void run();

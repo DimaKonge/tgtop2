@@ -31,6 +31,12 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(__private__.publicGroupUrl({ id: -1002, type: "supergroup" })).toBeUndefined();
   });
 
+  it("accepts a bounded referral payload and rejects unrelated start text", () => {
+    expect(__private__.getReferralCodeFromStartText("/start ref_tg8fa43b2c1")).toBe("TG8FA43B2C1");
+    expect(__private__.getReferralCodeFromStartText("/start invite-anything")).toBeUndefined();
+    expect(__private__.getReferralCodeFromStartText("/start ref_invalid-payload")).toBeUndefined();
+  });
+
   it("creates a rich owner confirmation with the GRAM award and both relevant actions", () => {
     const confirmation = __private__.buildOnboardingConfirmation(
       { id: -1001, type: "channel", title: "OATH", username: "o_a_th" },
