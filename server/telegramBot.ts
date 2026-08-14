@@ -67,7 +67,7 @@ async function openMiniApp(chatId: number, greeting: string): Promise<void> {
   await telegramCall<boolean>("sendMessage", { chat_id: chatId, text: greeting, reply_markup: { inline_keyboard: [[{ text: "Открыть TG TOP", web_app: { url: miniAppUrl } }]] } });
 }
 
-async function sendOnboardingConfirmation(ownerChatId: number, group: TelegramChat, awarded: boolean): Promise<void> {
+function buildOnboardingConfirmation(group: TelegramChat, awarded: boolean): { text: string; buttons: Array<Array<Record<string, unknown>>> } {
   const handle = group.username ? `@${group.username}` : group.title ?? "Сообщество";
   const text = [
     "✅ Группа добавлена в TG TOP",
@@ -81,7 +81,12 @@ async function sendOnboardingConfirmation(ownerChatId: number, group: TelegramCh
   const buttons: Array<Array<Record<string, unknown>>> = [[{ text: "Открыть TG TOP", web_app: { url: miniAppUrl } }]];
   const groupUrl = publicGroupUrl(group);
   if (groupUrl) buttons.push([{ text: `Открыть ${handle}`, url: groupUrl }]);
-  try { await telegramCall<boolean>("sendMessage", { chat_id: ownerChatId, text, reply_markup: { inline_keyboard: buttons } }); }
+  return { text, buttons };
+}
+
+async function sendOnboardingConfirmation(ownerChatId: number, group: TelegramChat, awarded: boolean): Promise<void> {
+  const confirmation = buildOnboardingConfirmation(group, awarded);
+  try { await telegramCall<boolean>("sendMessage", { chat_id: ownerChatId, text: confirmation.text, reply_markup: { inline_keyboard: confirmation.buttons } }); }
   catch (error) { console.warn(`[Telegram] Could not send onboarding confirmation to ${ownerChatId}:`, error); }
 }
 
@@ -149,6 +154,6 @@ async function run(): Promise<void> {
   }
 }
 
-export const __private__ = { catalogCategory, isActiveMember, isBotAdmin, publicGroupUrl };
+export const __private__ = { buildOnboardingConfirmation, catalogCategory, isActiveMember, isBotAdmin, publicGroupUrl };
 const isMainModule = process.argv[1] ? new URL(`file://${process.argv[1]}`).href === import.meta.url : false;
 if (isMainModule) void run();

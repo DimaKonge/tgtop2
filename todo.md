@@ -49,13 +49,13 @@
 - [x] Remove the My Storage / Public Directory switcher and keep personal groups in a dedicated My Groups view
 - [x] Populate selected ranking cards with the real group avatar, full title, username, and member count
 - [x] Add a detailed clickable list of all groups beneath the top-ranking slots
-- [ ] Award and display 0.1 GRAM for each newly connected group or channel through @TGTOP_robot
+- [x] Award and display 0.1 GRAM for each newly connected group or channel through @TGTOP_robot
 - [x] Store internal GRAM credit transactions and allow credits to be spent on a group’s general-list placement
 - [ ] Record source-backed channel/group age, member growth, posting activity, and engagement snapshots without fabricating unavailable metrics
 - [x] Present group detail statistics in a TGStat-inspired hierarchy while retaining TG TOP branding and only displaying verified metrics
 - [ ] Redesign the Mini App into a serious analytics-first marketplace with restrained styling, clear hierarchy, and consistent professional cards
 - [ ] Let a verified group owner create a sale listing with price and terms, then guide the buyer through a staged ownership-transfer deal
-- [ ] Send the owner a rich Telegram confirmation after group onboarding with the verified group link, Mini App button, and 0.1 GRAM internal-credit award
+- [x] Send the owner a rich Telegram confirmation after group onboarding with the verified group link, Mini App button, and 0.1 GRAM internal-credit award
 - [ ] Let a user replace an occupied ranking card by selecting an owned group and confirming a payment higher than the current placement amount
 - [x] Show a chronological general listing beneath the featured cards and refresh both featured cards and the list for every category or country filter
 - [x] Add an audience-size filter that refreshes both featured cards and the general group list together
@@ -70,3 +70,5 @@
 - [x] Add owner-aware detail controls and explicit catalog placement information to the group detail page
 - [ ] Re-verify the polished mobile marketplace with a real connected group/card state and record the outcome in project notes
 - [x] Add a focused UI acceptance check proving branded empty states and shared GroupCard rendering across featured and general-list states
+- [x] Confirm the one-time 0.1 GRAM connection bonus for the pre-existing `@o_a_th` channel
+- [x] Enforce that each Telegram group or channel can receive the 0.1 GRAM connection bonus only once across removal and re-listing cycles

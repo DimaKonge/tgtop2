@@ -2,6 +2,9 @@ import { eq, and, asc, desc, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, nftUsernames, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
+
+export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -201,22 +204,34 @@ export async function recordGroupMembership(chatId: string, joined: boolean, lef
   await recordGroupSnapshot(group.id, group.membersCount, group.messagesCount, nextJoined);
 }
 
-export const GROUP_CONNECTION_BONUS = 100;
-
 export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: number) {
   const db = await getDb();
   if (!db) return false;
+  const group = await getGroupById(groupId);
+  if (!group) return false;
+  const telegramChatId = getGroupConnectionBonusIdentity(group.chatId);
   const existing = await db.select().from(creditTransactions).where(and(
-    eq(creditTransactions.userOpenId, ownerOpenId),
-    eq(creditTransactions.groupId, groupId),
+    eq(creditTransactions.telegramChatId, telegramChatId),
     eq(creditTransactions.kind, "group_connection_bonus")
   )).limit(1);
   if (existing.length > 0) return false;
-  await db.transaction(async tx => {
-    await tx.insert(creditTransactions).values({ userOpenId: ownerOpenId, groupId, amount: GROUP_CONNECTION_BONUS, kind: "group_connection_bonus" });
-    await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${GROUP_CONNECTION_BONUS}` }).where(eq(users.openId, ownerOpenId));
-  });
-  return true;
+  try {
+    await db.transaction(async tx => {
+      await tx.insert(creditTransactions).values({
+        userOpenId: ownerOpenId,
+        groupId,
+        telegramChatId,
+        amount: GROUP_CONNECTION_BONUS,
+        kind: "group_connection_bonus",
+      });
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${GROUP_CONNECTION_BONUS}` }).where(eq(users.openId, ownerOpenId));
+    });
+    return true;
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "ER_DUP_ENTRY") return false;
+    throw error;
+  }
 }
 
 export async function listGroupWithCredits(ownerOpenId: string, groupId: number, cost = GROUP_CONNECTION_BONUS) {

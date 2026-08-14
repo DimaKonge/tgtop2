@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -61,10 +61,13 @@ export const creditTransactions = mysqlTable("credit_transactions", {
   id: int("id").autoincrement().primaryKey(),
   userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
   groupId: int("groupId"),
+  telegramChatId: varchar("telegramChatId", { length: 64 }),
   amount: int("amount").notNull(),
   kind: mysqlEnum("kind", ["group_connection_bonus", "listing_spend"]).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, table => [
+  uniqueIndex("credit_transactions_kind_telegram_chat_unique").on(table.kind, table.telegramChatId),
+]);
 
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 
