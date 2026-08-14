@@ -73,6 +73,7 @@ type Group = {
   username: string | null;
   description: string | null;
   avatarFileId: string | null;
+  animatedAvatarUrl?: string | null;
   membersCount: number;
   ownerOpenId: string;
   category: "Каналы" | "Чаты";
@@ -148,6 +149,12 @@ const getSubcategoryLabel = (subcategory: string, language: Language) =>
   SUBCATEGORY_LABELS[subcategory]?.[language] ?? subcategory;
 const getCountryLabel = (country: string, language: Language) =>
   COUNTRY_LABELS[country]?.[language] ?? country;
+const readFileAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+  reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+  reader.readAsDataURL(file);
+});
 
 function Avatar({
   group,
@@ -165,7 +172,9 @@ function Avatar({
     <span
       className={`${size} grid shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#1b2430] text-sm font-semibold text-slate-200`}
     >
-      {avatarSrc && !failed ? (
+      {group.animatedAvatarUrl && !failed ? (
+        <video src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="metadata" className="h-full w-full object-cover" onError={() => setFailed(true)} />
+      ) : avatarSrc && !failed ? (
         <img
           src={avatarSrc}
           alt=""
@@ -207,6 +216,7 @@ function GroupCard({
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
     : "flex h-full items-center gap-3";
   const avatarSrc = group ? getTelegramAvatarSrc(group) : null;
+  const animatedAvatarSrc = group?.animatedAvatarUrl ?? null;
   return (
     <button
       onClick={onClick}
@@ -215,14 +225,20 @@ function GroupCard({
       {group && rankingPlacement ? (
         <>
           <>
-            {avatarSrc && !imageFailed ? (
+            {animatedAvatarSrc && !imageFailed ? (
+              <video src={animatedAvatarSrc} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" onError={() => setImageFailed(true)} />
+            ) : avatarSrc && !imageFailed ? (
               <img
                 src={avatarSrc}
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
                 onError={() => setImageFailed(true)}
               />
-            ) : null}
+            ) : (
+              <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_30%_22%,#28496f,#111720_62%)] text-4xl font-semibold text-slate-200">
+                {group.title.slice(0, 1).toUpperCase()}
+              </span>
+            )}
           </>
           <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,15,0.06)_8%,rgba(7,10,15,0.82)_100%)]" />
           <span
@@ -506,6 +522,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [selectedNftId, setSelectedNftId] = useState<number | null>(null);
   const [recipientInput, setRecipientInput] = useState("");
   const [preparedNftTransfer, setPreparedNftTransfer] = useState<PreparedNftTransfer | null>(null);
+  const [animatedAvatarFile, setAnimatedAvatarFile] = useState<File | null>(null);
 
   useEffect(() => {
     localStorage.setItem("tg-top-language", language);
@@ -692,6 +709,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         ? tx("Офер отменен. Возврат эскроу будет обработан после подключения платежного контура.", "Offer cancelled. The escrow refund will be processed after the payment layer is connected.")
         : tx("Офер отменен.", "Offer cancelled."));
       void utils.tgTop.myDeals.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const uploadGroupAnimatedAvatar = trpc.tgTop.uploadGroupAnimatedAvatar.useMutation({
+    onSuccess: () => {
+      toast.success(tx("Анимированный аватар сохранен.", "Animated avatar saved."));
+      setAnimatedAvatarFile(null);
+      void utils.tgTop.myGroups.invalidate();
+      void utils.tgTop.getGroups.invalidate();
+      void utils.tgTop.getSlots.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -904,6 +931,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       minRentalDays: isRental ? minDays : undefined,
       maxRentalDays: isRental ? maxDays : undefined,
     });
+  };
+  const uploadSelectedAnimatedAvatar = async () => {
+    const group = selectedListingGroups[0];
+    if (!group || selectedListingGroups.length !== 1) {
+      return toast.error(tx("Выберите одну группу для анимированного аватара.", "Select one community for the animated avatar."));
+    }
+    if (!animatedAvatarFile) {
+      return toast.error(tx("Выберите MP4-файл.", "Choose an MP4 file."));
+    }
+    if (animatedAvatarFile.type !== "video/mp4" || animatedAvatarFile.size > 5 * 1024 * 1024) {
+      return toast.error(tx("Нужен MP4-файл до 5 МБ.", "Use an MP4 file up to 5 MB."));
+    }
+    try {
+      const contentBase64 = await readFileAsBase64(animatedAvatarFile);
+      if (!contentBase64) throw new Error("Файл не содержит данных");
+      uploadGroupAnimatedAvatar.mutate({ groupId: group.id, contentType: "video/mp4", contentBase64 });
+    } catch {
+      toast.error(tx("Не удалось прочитать MP4-файл. Выберите файл еще раз.", "Could not read the MP4 file. Please choose it again."));
+    }
   };
   const removeSelectedFromListing = () => {
     const listedIds = mine.filter(group => selectedGroupIds.includes(group.id) && group.status === "listed").map(group => group.id);
@@ -1867,6 +1913,26 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
               ) : (
                 <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] text-slate-500">{tx("Подкатегории задаются отдельно для каналов и чатов.", "Subcategories are configured separately for channels and chats.")}</p>
+              )}
+            </section>
+
+            <section>
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <p className="text-xs text-slate-400">{tx("Анимированный аватар", "Animated avatar")}</p>
+                <span className="text-[10px] text-slate-600">MP4 · {tx("до 5 МБ", "up to 5 MB")}</span>
+              </div>
+              {selectedListingGroups.length === 1 ? (
+                <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#0b0f14] p-2">
+                  <label className="min-w-0 flex-1 cursor-pointer rounded-lg border border-dashed border-white/15 px-3 py-2 text-[11px] text-slate-400 transition-colors hover:border-[#3f8cff]/45">
+                    <input type="file" accept="video/mp4" className="sr-only" onChange={event => setAnimatedAvatarFile(event.target.files?.[0] ?? null)} />
+                    <span className="block truncate">{animatedAvatarFile?.name ?? tx("Выбрать MP4", "Choose MP4")}</span>
+                  </label>
+                  <Button type="button" onClick={() => void uploadSelectedAnimatedAvatar()} disabled={!animatedAvatarFile || uploadGroupAnimatedAvatar.isPending} className="h-9 shrink-0 bg-[#3f8cff] px-3 text-[11px] text-white disabled:opacity-60">
+                    {uploadGroupAnimatedAvatar.isPending ? ui.loading : tx("Загрузить", "Upload")}
+                  </Button>
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] text-slate-500">{tx("Анимированный аватар настраивается для одной выбранной группы.", "An animated avatar is set for one selected community at a time.")}</p>
               )}
             </section>
 

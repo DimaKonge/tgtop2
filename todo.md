@@ -115,7 +115,9 @@
 - [ ] Add targeted regression coverage for light-theme owner-management and listing states beyond generic CSS selector assertions
 - [ ] Visually verify authenticated light-theme owner-management, listing, NFT, and protected-deal flows before completing the light-theme task
 - [x] Fix the TG TOP brand-mark symbol disappearing against the black logo tile in light mode and add a regression check
-- [ ] Detect and render supported Telegram animated group avatars in TG TOP cards, with static-image and initials fallbacks
+- [x] Add owner-uploaded MP4 animated group avatars with protected ownership checks, marketplace playback, and Telegram image/initials fallbacks
+- [x] Add initials fallback to ranked cards when animated and static group avatar media both fail
+- [x] Show a clear client-side error if animated-avatar file reading fails before upload
 - [x] Replace the oversized Global side filter drawer with a compact mobile filter experience that does not crowd the ranking pyramid
 - [x] Redesign Settings language and appearance controls as smaller compact selectors that match the streamlined Global filtering style
 - [ ] Reduce and verify the 390×844 mobile vertical footprint of the Global 1 → 2 → 4 pyramid

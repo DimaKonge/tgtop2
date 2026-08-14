@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { notifyRecordedRankingBid } from "./telegramNotifications";
+import { validateAnimatedAvatarUpload } from "./animatedAvatarPolicy";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
 const groupListingInput = z.object({
@@ -84,6 +85,18 @@ export const appRouter = router({
     myGroups: protectedProcedure.query(async ({ ctx }) => {
       return await db.getMyGroups(ctx.user.openId);
     }),
+
+    uploadGroupAnimatedAvatar: protectedProcedure
+      .input(z.object({
+        groupId: z.number().int().positive(),
+        contentType: z.literal("video/mp4"),
+        contentBase64: z.string().min(16).max(7_000_000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const bytes = Buffer.from(input.contentBase64, "base64");
+        validateAnimatedAvatarUpload(input.contentType, bytes);
+        return await db.setGroupAnimatedAvatar(ctx.user.openId, input.groupId, bytes);
+      }),
 
     getAccount: protectedProcedure.query(async ({ ctx }) => {
       return await db.getAccountLedger(ctx.user.openId);
