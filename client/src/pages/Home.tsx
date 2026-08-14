@@ -896,7 +896,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const submitPlacement = (group: Group) => {
     if (!targetSlot?.id)
       return toast.error(
-        "Эта позиция будет доступна после создания рейтинговой доски."
+        tx("Эта позиция будет доступна после создания рейтинговой доски.", "This placement will be available after the ranking board is created.")
       );
     const value = Number(amount);
     const current = targetSlot.bidAmount / 1000;
@@ -1131,9 +1131,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#72a8ff]">
-                  Маркетплейс
+                  {tx("Маркетплейс", "Marketplace")}
                 </p>
-                <h1 className="mt-1 text-2xl font-semibold">Каталог групп</h1>
+                <h1 className="mt-1 text-2xl font-semibold">{tx("Каталог групп", "Community catalog")}</h1>
               </div>
               <Button
                 onClick={() => setFiltersOpen(true)}
@@ -1141,7 +1141,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 className="border-white/10 bg-[#111720] text-slate-200"
               >
                 <Filter className="mr-2 h-4 w-4" />
-                Фильтр
+                {tx("Фильтр", "Filter")}
               </Button>
             </div>
             <div className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720] divide-y divide-white/7">
@@ -1156,7 +1156,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <b className="block truncate text-sm">{group.title}</b>
                     <small className="mt-1 block text-xs text-slate-500">
                       {group.username ? `@${group.username}` : group.category} ·{" "}
-                      {n(group.membersCount)} участников
+                      {n(group.membersCount)} {tx("участников", "members")}
                     </small>
                   </span>
                   <ChevronRight className="h-4 w-4 text-slate-600" />
@@ -1164,7 +1164,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               ))}
               {visibleGroups.length === 0 && (
                 <p className="p-8 text-center text-sm text-slate-500">
-                  По этому фильтру площадок пока нет.
+                  {tx("По этому фильтру площадок пока нет.", "No communities match this filter yet.")}
                 </p>
               )}
             </div>
@@ -1463,41 +1463,41 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         ))
                     ) : (
                       <p className="text-sm text-slate-500">
-                        Первый снимок будет создан при следующем обновлении.
+                        {tx("Первый снимок будет создан при следующем обновлении.", "The first snapshot will be created during the next update.")}
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Metric
-                    label="В TG TOP с"
+                    label={tx("В TG TOP с", "On TG TOP since")}
                     value={date(detail.group.createdAt)}
-                    note="дата подключения"
+                    note={tx("дата подключения", "connection date")}
                   />
                   <Metric
-                    label="Возраст площадки"
+                    label={tx("Возраст площадки", "Community age")}
                     value="—"
-                    note="Telegram не отдал дату создания"
+                    note={tx("Telegram не отдал дату создания", "Telegram did not provide a creation date")}
                   />
                   <Metric
-                    label="Просмотры"
+                    label={tx("Просмотры", "Views")}
                     value={
                       detail.group.lastPostViews
                         ? n(detail.group.lastPostViews)
                         : "—"
                     }
-                    note="последний доступный пост"
+                    note={tx("последний доступный пост", "latest available post")}
                   />
                   <Metric
-                    label="Обновлено"
+                    label={tx("Обновлено", "Updated")}
                     value={date(detail.group.lastStatsAt)}
-                    note="последние данные"
+                    note={tx("последние данные", "latest data")}
                   />
                 </div>
               </>
             ) : (
               <p className="py-16 text-center text-sm text-slate-500">
-                Загружаем статистику…
+                {tx("Загружаем статистику…", "Loading statistics…")}
               </p>
             )}
           </section>

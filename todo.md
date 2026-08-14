@@ -125,7 +125,7 @@
 - [ ] Notify a seller after verified buyer funding and release escrowed TON automatically only after owner-rights transfer is verified
 - [ ] Enforce a twenty-one-day seller ownership-transfer deadline before protected refund or dispute handling
 - [ ] Allow buyer cancellation and escrow refund only before bot-observed owner-rights transfer is verified
-- [ ] Display a subtle “Комісія TG TOP · 0%” disclosure beside sale prices and protected-deal summaries
+- [x] Display a subtle “Комісія TG TOP · 0%” disclosure beside sale prices and protected-deal summaries
 - [ ] Design a separate NFT deposit bot that verifies received assets before enabling NFT sale or rental listings
 - [ ] Add Fragment-inspired NFT showcase panels to user profiles and listed community detail pages
 - [ ] Let a verified NFT owner assign or remove an NFT showcase from their connected TG TOP channel or chat
@@ -158,10 +158,10 @@
 - [x] Add persisted channel and chat subcategories that synchronize across Global ranking cards, catalog listings, and detailed filters
 - [x] Unify detailed and compact Global filtering with shared type, subcategory, and geography states plus matching query semantics
 - [x] Make default migrated subcategories valid for both channel and chat listings and test safe round-trip behavior
-- [ ] Audit and correct every visible UI string so Russian has no Ukrainian or English remnants and English is complete and natural
-- [ ] Add transparent offer history with price, state, role, creation time, transfer deadline, and pre-transfer cancellation control
+- [x] Audit and correct every visible UI string so Russian has no Ukrainian or English remnants and English is complete and natural
+- [x] Add transparent offer history with price, state, role, creation time, transfer deadline, and pre-transfer cancellation control
 - [ ] Add a non-custodial peer-to-peer NFT transfer flow with @username or Telegram ID recipient verification, 0% TG TOP commission, and clear TON network-fee disclosure
 - [ ] Split NFT discovery, ownership proof, and transfer controls into separate On-chain and Off-chain asset categories
 - [x] Add an audited Off-chain NFT transfer sheet with recipient lookup, explicit confirmation, 0% TG TOP commission, and immutable transfer history records
 - [x] Add On-chain and Off-chain NFT category labels and discovery filters while reserving On-chain transfer signing for cryptographically verified wallets
-- [ ] Display a subtle “Комісія TG TOP · 0% на старті” disclosure beside sale prices and protected-deal summaries
+- [x] Display a subtle “Комісія TG TOP · 0% на старті” disclosure beside sale prices and protected-deal summaries

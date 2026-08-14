@@ -53,6 +53,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Все сообщества", "All communities")');
     expect(source).toContain('getSubcategoryLabel(subcategory, language)');
     expect(source).toContain('<h1 className="truncate text-lg font-semibold tracking-tight text-white">{currentTopTitle}</h1>');
+    expect(source).toContain('tx("Каталог групп", "Community catalog")');
+    expect(source).toContain('tx("По этому фильтру площадок пока нет.", "No communities match this filter yet.")');
+    expect(source).toContain('tx("В TG TOP с", "On TG TOP since")');
+    expect(source).toContain('tx("Загружаем статистику…", "Loading statistics…")');
+    expect(source).toContain('"This placement will be available after the ranking board is created."');
     expect(source).toContain('const [subcategory, setSubcategory] = useState("Все")');
     expect(source).toContain('getSlots.useQuery({');
     expect(source).toContain('subcategory,');
