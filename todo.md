@@ -77,6 +77,12 @@
 - [x] Match the «+ Канал» button styling to the outlined dark «+ Чат» button in My Groups
 - [x] Show separate bonus GRAM and main TON balances in the profile
 - [x] Add a profile transaction history with group, date, operation type, and amount
-- [ ] Diagnose and fix missing Telegram group avatars in the production catalog and My Groups views
+- [x] Diagnose and fix missing Telegram group avatars in the production catalog and My Groups views
 - [x] Cascade displaced groups one rank lower when a higher placement is outbid, returning only the final displaced group to the general catalog
-- [ ] Diagnose and fix missing Telegram group avatars in the production catalog and My Groups views
+- [x] Diagnose and fix missing Telegram group avatars in the production catalog and My Groups views
+- [x] Center the plus icon in empty ranking slots and show an occupied group's avatar as full-card imagery with an overlaid title
+- [x] Use a lighter font weight for the «Добавить группу» empty-slot label
+- [x] Rename the main marketplace heading from «Площадки» to «Global»
+- [x] Remove the redundant «Каталог» eyebrow above the main Global heading
+- [x] Remove the redundant «Все площадки» heading above the general catalog list
+- [x] Remove the descriptive subtitle beneath the Global home heading

@@ -20,5 +20,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('variant="compact"');
     expect(source).toContain('<GroupCard key={group.id} group={group} variant="list" onClick={() => openGroup(group.id)} />');
     expect(source).toContain('В TG TOP пока нет площадок');
+    expect(source).toContain('https://t.me/i/userpic/320/${group.username}.jpg');
+    expect(source).toContain('className="absolute inset-0 grid place-items-center"');
+    expect(source).toContain('className="absolute inset-0 h-full w-full object-cover"');
   });
 });
