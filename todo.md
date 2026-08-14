@@ -19,3 +19,54 @@
 - [ ] Add referral links generator with configurable 0-50% commission share of TG TOP platform fees
 - [ ] Implement completed-deal payout calculation deducting the set referral share from platform fees
 - [ ] Verify referral dashboard in profile with earnings breakdown
+- [ ] Inspect the legacy server deployment and create a restorable backup before changes
+- [x] Configure the fresh @TGTOP_robot token and production bot event handler
+- [x] Implement the persistent Telegram update handler that opens the Mini App and records groups/channels after @TGTOP_robot becomes an administrator
+- [x] Replace obsolete @GiftsLabBot admin and referral deep links with @TGTOP_robot throughout the production UI
+- [x] Deploy TG TOP to the production server in a separate directory and validate the public URL
+- [ ] Switch traffic only after the website, bot, group onboarding, and My Storage flow pass a real test
+- [ ] Confirm and remove obsolete `/root/tg_top` deployment from the production server
+- [x] Deploy clean TG TOP production service and validate it before handing it over
+- [ ] Configure a standard HTTPS domain for the Telegram Mini App; retain tgtop.ton as the project's Web3 identity
+- [x] Confirm `tgtop.xyz` registrar status is explicitly Active
+- [x] Re-check public DNS to confirm the Zomro name servers are delegated and visible externally
+- [x] Create `@` and `www` A records for `tgtop.xyz` pointing to `212.43.154.171`
+- [x] Prepare the VPS with the production runtime, reverse proxy, and deployment configuration
+- [x] Deploy the TG TOP web application and persistent `@TGTOP_robot` service on the VPS
+- [ ] Add the required external authentication settings to the VPS and verify protected mutations
+- [x] Validate Telegram.WebApp initData server-side and use the verified Telegram identity for protected TG TOP actions
+- [ ] Validate bot onboarding, Mini App launch, authenticated profile/storage access, and a protected action in production
+- [x] Issue and validate HTTPS certificates for `tgtop.xyz` and `www.tgtop.xyz`
+- [ ] Configure the HTTPS Mini App URL in BotFather and verify the real group-onboarding flow
+- [x] Verify a real Telegram onboarding: @TGTOP_robot added `@o_a_th` as a listed catalog channel with member statistics
+- [ ] Enable BotFather Main App for @TGTOP_robot with `https://tgtop.xyz` to add the profile-level Launch App button
+- [x] Remove MarketApp branding and the NFT asset-listing modal from the TG TOP interface
+- [x] Capture richer Telegram group/channel metadata and activity metrics through @TGTOP_robot
+- [x] Build a navigable group detail screen with ownership-aware statistics and catalog placement information
+- [ ] Simplify the Mini App layout, reduce visual effects and replace the current typography with a cleaner Telegram-friendly font system
+- [x] Route clicks on empty ranking slots to My Groups and provide direct channel/chat bot-admin buttons there
+- [x] Make the group directory welcome screen show all groups by default and move country/type/subcategory filters into a slide-out panel
+- [x] Remove the My Storage / Public Directory switcher and keep personal groups in a dedicated My Groups view
+- [x] Populate selected ranking cards with the real group avatar, full title, username, and member count
+- [x] Add a detailed clickable list of all groups beneath the top-ranking slots
+- [ ] Award and display 0.1 GRAM for each newly connected group or channel through @TGTOP_robot
+- [x] Store internal GRAM credit transactions and allow credits to be spent on a group’s general-list placement
+- [ ] Record source-backed channel/group age, member growth, posting activity, and engagement snapshots without fabricating unavailable metrics
+- [x] Present group detail statistics in a TGStat-inspired hierarchy while retaining TG TOP branding and only displaying verified metrics
+- [ ] Redesign the Mini App into a serious analytics-first marketplace with restrained styling, clear hierarchy, and consistent professional cards
+- [ ] Let a verified group owner create a sale listing with price and terms, then guide the buyer through a staged ownership-transfer deal
+- [ ] Send the owner a rich Telegram confirmation after group onboarding with the verified group link, Mini App button, and 0.1 GRAM internal-credit award
+- [ ] Let a user replace an occupied ranking card by selecting an owned group and confirming a payment higher than the current placement amount
+- [x] Show a chronological general listing beneath the featured cards and refresh both featured cards and the list for every category or country filter
+- [x] Add an audience-size filter that refreshes both featured cards and the general group list together
+- [x] Use the same group-card design for featured placements and the general list, with only scale and position differing
+- [ ] Let owners pay for a higher general-list position, then show all remaining groups below according to the active filter
+- [x] Record bot-observed joins, leaves, net growth, and invite-link attribution when Telegram includes the source in an update
+- [ ] Plan TON Keeper payment confirmation and transaction-verification safeguards before enabling real TON charges for placements or sales
+- [x] Remove elite/premium rank labels, visible slot numbering, free-slot labels, and current-bid labels from the ranking interface
+- [x] Use a hidden-on-home 0.1 TON default starting placement value when a user selects a personal group for a ranking card
+- [x] Remove elite/premium rank labels and visible slot numbering from the ranking interface
+- [ ] Run and verify a real production My Groups flow, including opening an owned group and a protected action
+- [x] Add owner-aware detail controls and explicit catalog placement information to the group detail page
+- [ ] Re-verify the polished mobile marketplace with a real connected group/card state and record the outcome in project notes
+- [x] Add a focused UI acceptance check proving branded empty states and shared GroupCard rendering across featured and general-list states

@@ -28,15 +28,18 @@ export const appRouter = router({
         slotId: z.number(),
         bidAmount: z.number(),
         currentBid: z.string(),
-        leaderUsername: z.string(),
-        groupId: z.number().optional(),
+        groupId: z.number(),
       }))
       .mutation(async ({ ctx, input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.ownerOpenId !== ctx.user.openId) {
+          throw new Error("Выберите свою группу из личной папки");
+        }
         await db.placeBid(
           input.slotId,
-          input.bidAmount,
-          input.currentBid,
-          input.leaderUsername,
+          Math.round(input.bidAmount * 1000),
+          `${input.bidAmount.toFixed(1)} TON`,
+          group.username ?? group.title,
           ctx.user.openId,
           input.groupId
         );
@@ -47,6 +50,23 @@ export const appRouter = router({
       .input(z.object({ category: z.string().optional(), country: z.string().optional() }).optional())
       .query(async ({ input }) => {
         return await db.getGroupsCatalog(input?.category, input?.country);
+      }),
+
+    myGroups: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getMyGroups(ctx.user.openId);
+    }),
+
+    getGroupDetail: publicProcedure
+      .input(z.object({ groupId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getGroupDetail(input.groupId);
+      }),
+
+    listGroupWithCredits: protectedProcedure
+      .input(z.object({ groupId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.listGroupWithCredits(ctx.user.openId, input.groupId);
+        return { success: true };
       }),
 
     getNfts: publicProcedure.query(async () => {

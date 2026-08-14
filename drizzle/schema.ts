@@ -5,11 +5,13 @@ export const users = mysqlTable("users", {
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  avatarUrl: varchar("avatarUrl", { length: 512 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   referralCode: varchar("referralCode", { length: 32 }).unique(),
   referredBy: varchar("referredBy", { length: 32 }),
   referralEarnings: varchar("referralEarnings", { length: 64 }).default("0 TON").notNull(),
+  bonusBalance: int("bonusBalance").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -23,6 +25,8 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   chatId: varchar("chatId", { length: 64 }).notNull().unique(),
   title: varchar("title", { length: 255 }).notNull(),
   username: varchar("username", { length: 128 }),
+  description: text("description"),
+  avatarFileId: varchar("avatarFileId", { length: 255 }),
   membersCount: int("membersCount").default(0).notNull(),
   ownerOpenId: varchar("ownerOpenId", { length: 64 }).notNull(),
   category: mysqlEnum("category", ["Каналы", "Чаты"]).default("Каналы").notNull(),
@@ -30,11 +34,39 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   status: mysqlEnum("status", ["listed", "rented", "sold", "pending"]).default("listed").notNull(),
   messagesCount: int("messagesCount").default(0).notNull(),
   joinedCount: int("joinedCount").default(0).notNull(),
+  leavesCount: int("leavesCount").default(0).notNull(),
+  invitedCount: int("invitedCount").default(0).notNull(),
+  lastPostViews: int("lastPostViews").default(0).notNull(),
+  lastPostAt: timestamp("lastPostAt"),
+  lastStatsAt: timestamp("lastStatsAt"),
+  listedAt: timestamp("listedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export type GroupCatalog = typeof groupsCatalog.$inferSelect;
 export type InsertGroupCatalog = typeof groupsCatalog.$inferInsert;
+
+export const groupStatsSnapshots = mysqlTable("group_stats_snapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("groupId").notNull(),
+  membersCount: int("membersCount").default(0).notNull(),
+  messagesCount: int("messagesCount").default(0).notNull(),
+  joinedCount: int("joinedCount").default(0).notNull(),
+  recordedAt: timestamp("recordedAt").defaultNow().notNull(),
+});
+
+export type GroupStatsSnapshot = typeof groupStatsSnapshots.$inferSelect;
+
+export const creditTransactions = mysqlTable("credit_transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  groupId: int("groupId"),
+  amount: int("amount").notNull(),
+  kind: mysqlEnum("kind", ["group_connection_bonus", "listing_spend"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
 
 export const auctionSlots = mysqlTable("auction_slots", {
   id: int("id").autoincrement().primaryKey(),

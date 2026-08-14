@@ -8,6 +8,19 @@ import App from "./App";
 import { startLogin } from "./const";
 import "./index.css";
 
+type TelegramWebApp = {
+  initData?: string;
+  initDataUnsafe?: { user?: { photo_url?: string } };
+  ready?: () => void;
+  expand?: () => void;
+};
+
+declare global {
+  interface Window {
+    Telegram?: { WebApp?: TelegramWebApp };
+  }
+}
+
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
@@ -17,7 +30,11 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
 
   if (!isUnauthorized) return;
-
+  if (window.Telegram?.WebApp?.initData) {
+    console.warn("[Telegram] Mini App authorization was rejected by the server.");
+    return;
+  }
+  
   startLogin();
 };
 
@@ -43,6 +60,11 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
+        const telegramInitData = window.Telegram?.WebApp?.initData;
+        if (telegramInitData) {
+          return { "x-telegram-init-data": telegramInitData };
+        }
+
         // Preview auto-login fallback: when the browser blocks iframe cookies
         // (Safari ITP / private browsing / WebView), the runtime mirrors the
         // session into sessionStorage so we can forward it as a Bearer token.
@@ -71,6 +93,9 @@ const trpcClient = trpc.createClient({
     }),
   ],
 });
+
+window.Telegram?.WebApp?.ready?.();
+window.Telegram?.WebApp?.expand?.();
 
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>

@@ -1,0 +1,19 @@
+[Unit]
+Description=TG TOP Telegram catalog bot
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tgtop
+Group=tgtop
+WorkingDirectory=/opt/tgtop
+EnvironmentFile=/etc/tgtop/runtime.conf
+ExecStart=/usr/local/bin/node /opt/tgtop/dist/telegramBot.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

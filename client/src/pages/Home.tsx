@@ -1,584 +1,119 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Crown, Flame, Compass, Calendar, Folder, User, Sparkles, Wallet, Plus, ExternalLink, Copy, Check } from "lucide-react";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ArrowLeft, BarChart3, ChevronRight, Filter, FolderPlus, LayoutGrid, Plus, Trophy, UserRound, Users } from "lucide-react";
 import { toast } from "sonner";
+
+type Page = "top" | "catalog" | "mine" | "details" | "profile";
+type Audience = "all" | "small" | "medium" | "large";
+type Group = {
+  id: number; chatId: string; title: string; username: string | null; description: string | null; avatarFileId: string | null;
+  membersCount: number; ownerOpenId: string; category: "Каналы" | "Чаты"; country: string; status: "listed" | "rented" | "sold" | "pending";
+  messagesCount: number; joinedCount: number; leavesCount: number; invitedCount: number; lastPostViews: number; lastPostAt: Date | null; lastStatsAt: Date | null; listedAt: Date | null; createdAt: Date;
+};
+type Slot = { id: number; slotNumber: number; bidAmount: number; group: Group | null };
+const n = (value: number) => new Intl.NumberFormat("ru-RU").format(value);
+const date = (value?: Date | null) => value ? new Date(value).toLocaleDateString("ru-RU", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+function Avatar({ group, large = false }: { group: Group; large?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const size = large ? "h-16 w-16" : "h-11 w-11";
+  return <span className={`${size} grid shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#1b2430] text-sm font-semibold text-slate-200`}>
+    {group.avatarFileId && !failed ? <img src={`/api/telegram-avatar/${group.chatId}`} alt="" className="h-full w-full object-cover" onError={() => setFailed(true)} /> : group.title.slice(0, 1).toUpperCase()}
+  </span>;
+}
+
+function GroupCard({ group, featured = false, onClick }: { group?: Group | null; featured?: boolean; onClick: () => void }) {
+  return <button onClick={onClick} className={`w-full rounded-2xl border text-left transition-colors hover:border-[#3f8cff]/35 ${featured ? "border-[#3f8cff]/30 bg-[#141c27] p-4" : "border-white/8 bg-[#111720] p-3"}`}>
+    {group ? <span className="flex items-center gap-3"><Avatar group={group} large={featured} /><span className="min-w-0 flex-1"><b className={`${featured ? "text-base" : "text-sm"} block truncate font-semibold text-slate-100`}>{group.title}</b><small className="mt-0.5 block truncate text-xs text-slate-500">{group.username ? `@${group.username}` : group.category} · {n(group.membersCount)} участников</small><small className="mt-1 block text-[10px] font-medium tracking-wide text-[#72a8ff]">ПРОВЕРЕНА TG TOP</small></span><ChevronRight className="h-4 w-4 text-slate-600" /></span> : <span className="flex items-center gap-3"><span className={`${featured ? "h-16 w-16" : "h-11 w-11"} grid place-items-center rounded-xl border border-dashed border-white/20 text-slate-500`}><Plus className="h-4 w-4" /></span><span><b className="block text-sm font-medium text-slate-300">Добавить группу</b><small className="mt-1 block text-[10px] text-slate-500">Из личной папки</small></span></span>}
+  </button>;
+}
+
+function Metric({ label, value, note }: { label: string; value: string; note: string }) {
+  return <div className="rounded-xl border border-white/8 bg-[#111720] p-3"><small className="block text-[11px] text-slate-500">{label}</small><b className="mt-1 block text-lg font-semibold">{value}</b><small className="mt-1 block text-[10px] text-slate-500">{note}</small></div>;
+}
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState<"ranking" | "explore" | "nft" | "deals" | "dashboard">("ranking");
-  const [selectedCategory, setSelectedCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
-  const [selectedCountry, setSelectedCountry] = useState<string>("Global");
-  const [directoryMode, setDirectoryMode] = useState<"storage" | "public">("storage");
-
-  // Bidding dialog state
-  const [biddingSlot, setBiddingSlot] = useState<any>(null);
-  const [bidAmountInput, setBidAmountInput] = useState<string>("");
-
-  // NFT / Username listing modal
-  const [nftModalOpen, setNftModalOpen] = useState(false);
-  const [newUsername, setNewUsername] = useState("");
-  const [salePrice, setSalePrice] = useState("100 TON");
-  const [rentalPrice, setRentalPrice] = useState("2 TON/day");
-
-  const [copiedRef, setCopiedRef] = useState(false);
-
   const utils = trpc.useUtils();
-  const { data: slots = [] } = trpc.tgTop.getSlots.useQuery({ category: selectedCategory, country: selectedCountry });
-  const { data: groups = [] } = trpc.tgTop.getGroups.useQuery({ category: selectedCategory, country: selectedCountry });
-  const { data: nfts = [] } = trpc.tgTop.getNfts.useQuery();
-  const { data: deals = [] } = trpc.tgTop.myDeals.useQuery();
+  const [page, setPage] = useState<Page>("top");
+  const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
+  const [country, setCountry] = useState("Все");
+  const [audience, setAudience] = useState<Audience>("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [targetSlot, setTargetSlot] = useState<Slot | null>(null);
+  const [amount, setAmount] = useState("0.1");
 
-  const placeBidMutation = trpc.tgTop.placeBid.useMutation({
-    onSuccess: () => {
-      toast.success("Ставка успешно принята! Вы в топе рейтинга.");
-      utils.tgTop.getSlots.invalidate();
-      setBiddingSlot(null);
-      setBidAmountInput("");
-    },
-    onError: (err) => {
-      toast.error("Ошибка ставки: " + err.message);
-    }
+  const slotsQuery = trpc.tgTop.getSlots.useQuery({ category, country: country === "Все" ? "Global" : country });
+  const slots = (slotsQuery.data ?? []) as Slot[];
+  const groupsQuery = trpc.tgTop.getGroups.useQuery({ category, country });
+  const listedGroups = (groupsQuery.data ?? []) as Group[];
+  const mineQuery = trpc.tgTop.myGroups.useQuery(undefined, { enabled: isAuthenticated });
+  const mine = (mineQuery.data ?? []) as Group[];
+  const detailQuery = trpc.tgTop.getGroupDetail.useQuery({ groupId: selectedGroupId ?? 0 }, { enabled: selectedGroupId !== null });
+  const detail = detailQuery.data as { group: Group; snapshots: Array<{ membersCount: number; messagesCount: number; joinedCount: number; recordedAt: Date }> } | undefined;
+
+  const listWithCredits = trpc.tgTop.listGroupWithCredits.useMutation({
+    onSuccess: () => { toast.success("Группа размещена в каталоге"); void utils.tgTop.myGroups.invalidate(); void utils.tgTop.getGroups.invalidate(); },
+    onError: error => toast.error(error.message),
+  });
+  const placeBid = trpc.tgTop.placeBid.useMutation({
+    onSuccess: () => { toast.success("Размещение обновлено"); setTargetSlot(null); setAmount("0.1"); void utils.tgTop.getSlots.invalidate(); },
+    onError: error => toast.error(error.message),
   });
 
-  const createNftMutation = trpc.tgTop.createNft.useMutation({
-    onSuccess: () => {
-      toast.success("Актив успешно выставлен на MarketApp!");
-      utils.tgTop.getNfts.invalidate();
-      setNftModalOpen(false);
-      setNewUsername("");
-    }
-  });
+  const matchesAudience = (group: Group | null) => {
+    if (!group || audience === "all") return true;
+    if (audience === "small") return group.membersCount < 1000;
+    if (audience === "medium") return group.membersCount >= 1000 && group.membersCount < 10000;
+    return group.membersCount >= 10000;
+  };
+  const visibleGroups = useMemo(() => listedGroups.filter(matchesAudience), [listedGroups, audience]);
+  const board = useMemo(() => Array.from({ length: 7 }, (_, index) => {
+    const slot = slots.find(item => item.slotNumber === index + 1);
+    return slot && matchesAudience(slot.group) ? slot : { id: slot?.id ?? 0, slotNumber: index + 1, bidAmount: 0, group: null };
+  }), [slots, audience]);
+  const occupiedIds = new Set(board.map(slot => slot.group?.id).filter((id): id is number => Boolean(id)));
+  const generalList = visibleGroups.filter(group => !occupiedIds.has(group.id));
+  const featured = board[0];
+  const remaining = board.slice(1);
+  const bonus = ((user?.bonusBalance ?? 0) / 100).toFixed(1);
+  const telegramAvatar = typeof window !== "undefined" ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url : undefined;
+  const selectedSlot = detail ? slots.find(slot => slot.group?.id === detail.group.id) : undefined;
+  const ownsDetail = detail?.group.ownerOpenId === user?.openId;
 
-  const rentNftMutation = trpc.tgTop.rentNft.useMutation({
-    onSuccess: () => {
-      toast.success("Аренда оформлена через MarketApp Escrow!");
-      utils.tgTop.getNfts.invalidate();
-    }
-  });
-
-  const defaultSlotProps = {
-    category: selectedCategory,
-    country: selectedCountry,
-    leaderUserId: null,
-    groupId: null,
-    updatedAt: new Date(),
+  const openGroup = (id: number) => { setSelectedGroupId(id); setPage("details"); };
+  const openMine = (slot?: Slot) => { setTargetSlot(slot ?? null); setPage("mine"); };
+  const addBot = (kind: "channel" | "group") => window.open(`https://t.me/TGTOP_robot?${kind === "channel" ? "startchannel=admin" : "startgroup=admin"}`, "_blank");
+  const submitPlacement = (group: Group) => {
+    if (!targetSlot?.id) return toast.error("Эта позиция будет доступна после создания рейтинговой доски.");
+    const value = Number(amount);
+    const current = targetSlot.bidAmount / 1000;
+    if (!Number.isFinite(value) || value <= current) return toast.error(`Укажите сумму выше ${current.toFixed(1)} TON`);
+    placeBid.mutate({ slotId: targetSlot.id, groupId: group.id, bidAmount: value, currentBid: `${value.toFixed(1)} TON` });
   };
 
-  // Pyramid slots organization
-  const kingSlot = slots.find(s => s.slotNumber === 1) || { id: 1, slotNumber: 1, title: "", subtitle: "Свободный слот", currentBid: "0 TON", bidAmount: 0, leaderUsername: "-", ...defaultSlotProps };
-  const rank23Slots = slots.filter(s => s.slotNumber === 2 || s.slotNumber === 3);
-  while (rank23Slots.length < 2) {
-    rank23Slots.push({ id: 100 + rank23Slots.length, slotNumber: rank23Slots.length + 2, title: "", subtitle: "Свободный слот", currentBid: "0 TON", bidAmount: 0, leaderUsername: "-", ...defaultSlotProps });
-  }
+  return <div className="tg-shell min-h-screen bg-[#0b0f14] text-slate-100">
+    <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0b0f14]/95 px-4 py-3 backdrop-blur"><div className="mx-auto flex max-w-3xl items-center justify-between"><button onClick={() => setPage("top")} className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#3f8cff] text-[11px] font-black tracking-tighter">TG</span><span className="text-left"><b className="block text-sm tracking-tight">TG TOP</b><small className="block text-[10px] text-slate-500">Проверенные площадки</small></span></button><button onClick={() => setPage("profile")} className="flex items-center gap-2"><span className="hidden text-right sm:block"><b className="block text-xs">{user?.name ?? "Telegram user"}</b><small className="block text-[10px] text-slate-500">{bonus} GRAM</small></span><span className="grid h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold"><>{(user?.avatarUrl ?? telegramAvatar) ? <img src={user?.avatarUrl ?? telegramAvatar} alt="" className="h-full w-full object-cover" /> : (user?.name?.slice(0, 1).toUpperCase() ?? "T")}</></span></button></div></header>
 
-  const rank47Slots = slots.filter(s => s.slotNumber >= 4 && s.slotNumber <= 7);
-  while (rank47Slots.length < 4) {
-    rank47Slots.push({ id: 200 + rank47Slots.length, slotNumber: rank47Slots.length + 4, title: "", subtitle: "Свободный слот", currentBid: "0 TON", bidAmount: 0, leaderUsername: "-", ...defaultSlotProps });
-  }
+    <main className="mx-auto max-w-3xl px-4 pb-28 pt-5">
+      {page === "top" && <section className="space-y-5"><div className="flex items-end justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#72a8ff]">Каталог</p><h1 className="mt-1 text-2xl font-semibold">Площадки</h1><p className="mt-1 text-sm text-slate-500">Проверенные сообщества и открытая видимость.</p></div><Button onClick={() => setFiltersOpen(true)} variant="outline" className="border-white/10 bg-[#111720] text-slate-200"><Filter className="mr-2 h-4 w-4" />Фильтр</Button></div><GroupCard group={featured.group} featured onClick={() => featured.group ? openGroup(featured.group.id) : openMine(featured)} /><div className="grid grid-cols-2 gap-3">{remaining.map(slot => <GroupCard key={slot.slotNumber} group={slot.group} onClick={() => slot.group ? openGroup(slot.group.id) : openMine(slot)} />)}</div><section><div className="mb-3"><h2 className="text-sm font-semibold">Все площадки</h2><p className="mt-0.5 text-xs text-slate-500">Порядок выбранного фильтра</p></div><div className="space-y-2">{generalList.map(group => <GroupCard key={group.id} group={group} onClick={() => openGroup(group.id)} />)}{generalList.length === 0 && <div className="rounded-2xl border border-dashed border-white/12 bg-[#111720] p-6 text-center"><p className="text-sm font-medium text-slate-300">В TG TOP пока нет площадок</p><p className="mt-1 text-xs text-slate-500">Добавьте первую группу через личную папку.</p></div>}</div></section></section>}
 
-  const handlePlaceBid = (slot: any) => {
-    const amount = parseInt(bidAmountInput);
-    if (isNaN(amount) || amount <= slot.bidAmount) {
-      toast.error(`Ставка должна быть больше текущей (${slot.currentBid})`);
-      return;
-    }
-    placeBidMutation.mutate({
-      slotId: slot.id,
-      bidAmount: amount,
-      currentBid: `${amount} TON`,
-      leaderUsername: user?.name || user?.openId?.slice(0, 8) || "dimij",
-    });
-  };
+      {page === "catalog" && <section className="space-y-4"><div className="flex items-end justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#72a8ff]">Маркетплейс</p><h1 className="mt-1 text-2xl font-semibold">Каталог групп</h1></div><Button onClick={() => setFiltersOpen(true)} variant="outline" className="border-white/10 bg-[#111720] text-slate-200"><Filter className="mr-2 h-4 w-4" />Фильтр</Button></div><div className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720] divide-y divide-white/7">{visibleGroups.map(group => <button key={group.id} onClick={() => openGroup(group.id)} className="flex w-full items-center gap-3 px-4 py-4 text-left"><Avatar group={group} /><span className="min-w-0 flex-1"><b className="block truncate text-sm">{group.title}</b><small className="mt-1 block text-xs text-slate-500">{group.username ? `@${group.username}` : group.category} · {n(group.membersCount)} участников</small></span><ChevronRight className="h-4 w-4 text-slate-600" /></button>)}{visibleGroups.length === 0 && <p className="p-8 text-center text-sm text-slate-500">По этому фильтру площадок пока нет.</p>}</div></section>}
 
-  const handleAddBotLink = (type: 'channel' | 'group') => {
-    const botUsername = 'GiftsLabBot';
-    const url = type === 'channel'
-      ? `https://t.me/${botUsername}?startchannel=admin`
-      : `https://t.me/${botUsername}?startgroup=admin`;
-    window.open(url, '_blank');
-  };
+      {page === "mine" && <section className="space-y-4"><button onClick={() => setPage(targetSlot ? "top" : "profile")} className="flex items-center gap-1 text-xs text-slate-400"><ArrowLeft className="h-4 w-4" />Назад</button><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-[#72a8ff]">Личная папка</p><h1 className="mt-1 text-2xl font-semibold">Мои группы</h1><p className="mt-1 text-sm text-slate-500">Подключите бота, чтобы получить статистику и разместить площадку.</p></div>{targetSlot && <div className="rounded-xl border border-[#3f8cff]/30 bg-[#3f8cff]/10 p-3"><p className="text-sm">Выберите группу для размещения</p><div className="mt-2 flex gap-2"><Input value={amount} type="number" step="0.1" onChange={event => setAmount(event.target.value)} className="h-9 border-white/10 bg-[#0b0f14]" /><span className="flex items-center text-xs text-slate-400">TON</span></div></div>}<div className="grid grid-cols-2 gap-2"><button onClick={() => addBot("channel")} className="rounded-xl bg-[#3f8cff] px-3 py-3 text-sm font-semibold">+ Канал</button><button onClick={() => addBot("group")} className="rounded-xl border border-white/10 bg-[#111720] px-3 py-3 text-sm font-semibold">+ Чат</button></div><div className="space-y-2">{mine.map(group => <div key={group.id} className="rounded-xl border border-white/8 bg-[#111720] p-3"><button onClick={() => openGroup(group.id)} className="flex w-full items-center gap-3 text-left"><Avatar group={group} /><span className="min-w-0 flex-1"><b className="block truncate text-sm">{group.title}</b><small className="mt-1 block text-xs text-slate-500">{group.username ? `@${group.username}` : group.category} · {n(group.membersCount)}</small></span><ChevronRight className="h-4 w-4 text-slate-600" /></button><div className="mt-3 flex gap-2">{targetSlot && <button onClick={() => submitPlacement(group)} className="flex-1 rounded-lg bg-[#3f8cff] py-2 text-xs font-semibold">Разместить</button>}{group.status === "pending" && <button onClick={() => listWithCredits.mutate({ groupId: group.id })} className="flex-1 rounded-lg border border-white/10 py-2 text-xs font-semibold">В каталог · 0.1 GRAM</button>}</div></div>)}{mine.length === 0 && <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center"><FolderPlus className="mx-auto h-7 w-7 text-slate-600" /><p className="mt-3 text-sm">Групп пока нет</p><p className="mt-1 text-xs text-slate-500">Добавьте @TGTOP_robot в администраторы.</p></div>}</div></section>}
 
-  const referralLink = `https://t.me/GiftsLabBot?start=ref_${user?.openId || 'dimij'}`;
+      {page === "details" && <section className="space-y-4">{detail ? <><button onClick={() => setPage("top")} className="flex items-center gap-1 text-xs text-slate-400"><ArrowLeft className="h-4 w-4" />Назад</button><div className="rounded-2xl border border-white/8 bg-[#111720] p-5"><div className="flex items-start gap-4"><Avatar group={detail.group} large /><span className="min-w-0"><h1 className="truncate text-xl font-semibold">{detail.group.title}</h1><p className="mt-1 text-sm text-[#72a8ff]">{detail.group.username ? `@${detail.group.username}` : detail.group.category}</p><p className="mt-3 text-sm leading-5 text-slate-400">{detail.group.description || "Описание не передано Telegram API."}</p></span></div><div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-white/8 pt-4 text-xs"><span className="rounded-md bg-white/5 px-2 py-1 text-slate-300">{detail.group.status === "listed" ? `В каталоге с ${date(detail.group.listedAt)}` : "Не размещена в каталоге"}</span><span className="rounded-md bg-white/5 px-2 py-1 text-slate-400">{selectedSlot ? "Выделенная позиция" : "Общий список"}</span></div>{ownsDetail && <button onClick={() => openMine()} className="mt-3 w-full rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 py-2 text-xs font-semibold text-[#a6c8ff]">Управлять этой группой</button>}</div><div className="grid grid-cols-2 gap-3"><Metric label="Участники" value={n(detail.group.membersCount)} note="последнее измерение" /><Metric label="Прирост" value={detail.snapshots.length > 1 ? n(detail.snapshots.at(-1)!.membersCount - detail.snapshots[0].membersCount) : "—"} note={detail.snapshots.length > 1 ? "за период наблюдения" : "данные накапливаются"} /><Metric label="Вступления" value={detail.group.joinedCount ? n(detail.group.joinedCount) : "—"} note="замеченные ботом" /><Metric label="Выходы" value={detail.group.leavesCount ? n(detail.group.leavesCount) : "—"} note="замеченные ботом" /></div><div className="grid grid-cols-2 gap-3"><Metric label="По приглашениям" value={detail.group.invitedCount ? n(detail.group.invitedCount) : "—"} note="когда Telegram передал ссылку" /><Metric label="Публикации" value={detail.group.messagesCount ? n(detail.group.messagesCount) : "—"} note="увиденные ботом" /></div><div className="rounded-2xl border border-white/8 bg-[#111720] p-4"><div className="flex justify-between"><span><b className="block text-sm">Динамика аудитории</b><small className="block mt-1 text-xs text-slate-500">Только снимки TG TOP.</small></span><BarChart3 className="h-5 w-5 text-slate-500" /></div><div className="mt-4 flex h-16 items-end gap-1 border-b border-white/8">{detail.snapshots.length ? detail.snapshots.slice(-16).map((snapshot, index) => <span key={index} className="min-w-1 flex-1 rounded-t bg-[#3f8cff]" style={{ height: `${Math.max(8, (snapshot.membersCount / Math.max(...detail.snapshots.map(item => item.membersCount), 1)) * 100)}%` }} />) : <p className="text-sm text-slate-500">Первый снимок будет создан при следующем обновлении.</p>}</div></div><div className="grid grid-cols-2 gap-3"><Metric label="В TG TOP с" value={date(detail.group.createdAt)} note="дата подключения" /><Metric label="Возраст площадки" value="—" note="Telegram не отдал дату создания" /><Metric label="Просмотры" value={detail.group.lastPostViews ? n(detail.group.lastPostViews) : "—"} note="последний доступный пост" /><Metric label="Обновлено" value={date(detail.group.lastStatsAt)} note="последние данные" /></div></> : <p className="py-16 text-center text-sm text-slate-500">Загружаем статистику…</p>}</section>}
 
-  const copyReferral = () => {
-    navigator.clipboard.writeText(referralLink);
-    setCopiedRef(true);
-    toast.success("Реферальная ссылка скопирована!");
-    setTimeout(() => setCopiedRef(false), 2000);
-  };
+      {page === "profile" && <section className="space-y-4"><div className="rounded-2xl border border-white/8 bg-[#111720] p-5"><div className="flex items-center gap-3"><span className="grid h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold">{(user?.avatarUrl ?? telegramAvatar) ? <img src={user?.avatarUrl ?? telegramAvatar} alt="" className="h-full w-full object-cover" /> : (user?.name?.slice(0, 1).toUpperCase() ?? "T")}</span><span><h1 className="text-lg font-semibold">{user?.name ?? "Telegram user"}</h1><small className="text-xs text-slate-500">Личный кабинет TG TOP</small></span></div><div className="mt-5 grid grid-cols-2 gap-3"><Metric label="Бонусный баланс" value={`${bonus} GRAM`} note="для размещения" /><Metric label="Мои площадки" value={n(mine.length)} note="подключено к боту" /></div></div><button onClick={() => openMine()} className="flex w-full items-center justify-between rounded-xl border border-white/8 bg-[#111720] p-4 text-left"><span className="flex items-center gap-3"><Users className="h-5 w-5 text-[#72a8ff]" /><span><b className="block text-sm">Мои группы</b><small className="block mt-0.5 text-xs text-slate-500">Управление и листинг</small></span></span><ChevronRight className="h-4 w-4 text-slate-600" /></button></section>}
+    </main>
 
-  return (
-    <div className="min-h-screen bg-[#0b0f19] text-white font-sans flex flex-col pb-24 select-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0b0f19] to-[#07090e]">
-      {/* Liquid Glass Header */}
-      <header className="px-4 py-3 flex justify-between items-center border-b border-white/10 bg-white/5 backdrop-blur-xl sticky top-0 z-50 shadow-lg">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500/20 to-indigo-500/20 text-cyan-400 flex items-center justify-center font-bold border border-cyan-500/30 shadow-inner">
-            ⚡
-          </div>
-          <div>
-            <div className="text-xs font-bold text-white tracking-wide">TG TOP</div>
-            <div className="text-[10px] text-cyan-400 font-mono">@{user?.name || user?.openId?.slice(0, 6) || "dimij"}</div>
-          </div>
-        </div>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/8 bg-[#0b0f14]/95 backdrop-blur"><div className="mx-auto grid max-w-3xl grid-cols-4 px-3 py-2">{([{ key: "top", label: "Топ", icon: Trophy }, { key: "catalog", label: "Каталог", icon: LayoutGrid }, { key: "mine", label: "Мои", icon: Users }, { key: "profile", label: "Профиль", icon: UserRound }] as const).map(item => { const Icon = item.icon; return <button key={item.key} onClick={() => item.key === "mine" ? openMine() : setPage(item.key)} className={`flex flex-col items-center gap-1 py-1 text-[10px] ${page === item.key ? "text-[#72a8ff]" : "text-slate-500"}`}><Icon className="h-4 w-4" />{item.label}</button>; })}</div></nav>
 
-        <div className="flex items-center gap-2">
-          <Button size="sm" className="h-8 text-xs bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-slate-950 font-black shadow-cyan-500/20 shadow-md" onClick={() => toast.success("Web3 Wallet Connected!")}>
-            <Wallet className="w-3.5 h-3.5 mr-1" /> Connect
-          </Button>
-        </div>
-      </header>
-
-      {/* Directory & Storage Tabs */}
-      <div className="px-4 pt-3">
-        <div className="bg-white/5 border border-white/10 p-1 rounded-2xl flex gap-1 backdrop-blur-md">
-          <button 
-            onClick={() => setDirectoryMode("storage")} 
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${directoryMode === "storage" ? "bg-cyan-400 text-slate-950 shadow-cyan-400/30 shadow-md" : "text-gray-400 hover:text-white"}`}
-          >
-            My Storage
-          </button>
-          <button 
-            onClick={() => setDirectoryMode("public")} 
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${directoryMode === "public" ? "bg-cyan-400 text-slate-950 shadow-cyan-400/30 shadow-md" : "text-gray-400 hover:text-white"}`}
-          >
-            Public Directory
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <main className="px-4 pt-4 flex-1">
-        {activeTab === "ranking" && (
-          <div className="space-y-4">
-            {/* Category Filters */}
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {(["Все", "Каналы", "Чаты"] as const).map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${selectedCategory === cat ? "bg-cyan-400 text-slate-950 border-cyan-300 shadow-cyan-400/20 shadow" : "bg-white/5 text-gray-300 border-white/10 hover:bg-white/10"}`}
-                >
-                  {cat.toUpperCase()}
-                </button>
-              ))}
-            </div>
-
-            {/* Geo / Country Filters */}
-            <div className="flex gap-2 overflow-x-auto pb-1 text-[10px]">
-              {["Global", "RU", "CIS", "US", "EU"].map(country => (
-                <button
-                  key={country}
-                  onClick={() => setSelectedCountry(country)}
-                  className={`px-3 py-1 rounded-lg border ${selectedCountry === country ? "bg-indigo-500/20 text-cyan-400 border-cyan-500/50 font-bold" : "bg-white/5 text-gray-400 border-white/10"}`}
-                >
-                  🌐 {country}
-                </button>
-              ))}
-            </div>
-
-            {/* PYRAMID RANKING LAYOUT */}
-
-            {/* LEVEL 1: RANK #1 KING PEDESTAL (Large Banner) */}
-            <div className="bg-gradient-to-br from-white/10 via-white/5 to-transparent border border-amber-500/40 rounded-3xl p-5 shadow-2xl relative overflow-hidden backdrop-blur-xl">
-              <div className="absolute top-3 right-3 flex items-center gap-1 text-amber-400 text-xs font-bold bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/30 shadow">
-                <Crown className="w-4 h-4 text-amber-400 fill-amber-400" /> Rank #1
-              </div>
-
-              {kingSlot.title ? (
-                <div className="flex items-center gap-3.5 mb-4">
-                  <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black text-2xl border border-amber-500/40 shadow-inner">
-                    {kingSlot.title[0]}
-                  </div>
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">👑 KING PEDESTAL</div>
-                    <div className="text-base font-black text-white">{kingSlot.title}</div>
-                    <div className="text-xs text-gray-400">Лидер: @{kingSlot.leaderUsername}</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-4 mb-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button className="w-16 h-16 rounded-2xl bg-white/5 border border-dashed border-amber-500/50 flex items-center justify-center text-amber-400 hover:bg-amber-500/10 transition-all shadow-inner group">
-                        <Plus className="w-8 h-8 group-hover:scale-110 transition-transform" />
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-slate-900 text-white border-white/10 backdrop-blur-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Занять слот #1 (Царь Горы)</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-2">
-                        <div>
-                          <label className="text-xs text-gray-400 mb-1 block">Ваша ставка (TON):</label>
-                          <Input 
-                            type="number" 
-                            placeholder="Сумма ставки..." 
-                            value={bidAmountInput}
-                            onChange={(e) => setBidAmountInput(e.target.value)}
-                            className="bg-black/50 border-white/10 text-white"
-                          />
-                        </div>
-                        <Button 
-                          onClick={() => handlePlaceBid(kingSlot)}
-                          className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black hover:opacity-90"
-                        >
-                          Сделать ставку и занять топ-1
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                  <span className="text-xs text-amber-400/80 font-semibold mt-2">Свободный слот #1 (Нажмите для ставки)</span>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center bg-black/40 p-3 rounded-2xl border border-white/10 mb-3">
-                <span className="text-xs text-gray-400">Текущая ставка:</span>
-                <span className="text-sm font-black text-amber-400">{kingSlot.currentBid}</span>
-              </div>
-
-              {kingSlot.title && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs py-2.5 rounded-xl shadow-lg">
-                      ⚡ ПЕРЕБИТЬ СТАВКУ
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-slate-900 text-white border-white/10">
-                    <DialogHeader>
-                      <DialogTitle>Перебить ставку на Ранг #1</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-2">
-                      <p className="text-xs text-gray-300">Текущая ставка: <span className="text-amber-400 font-bold">{kingSlot.currentBid}</span></p>
-                      <Input 
-                        type="number" 
-                        placeholder="Введите сумму TON..." 
-                        value={bidAmountInput}
-                        onChange={(e) => setBidAmountInput(e.target.value)}
-                        className="bg-black/50 border-white/10 text-white"
-                      />
-                      <Button onClick={() => handlePlaceBid(kingSlot)} className="w-full bg-amber-500 text-slate-950 font-bold">
-                        Подтвердить ставку
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-
-            {/* LEVEL 2: RANKS #2 - #3 (2 Cards) */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 px-1">🥈 Элитный ряд (#2 - #3)</div>
-              <div className="grid grid-cols-2 gap-3">
-                {rank23Slots.map((slot) => (
-                  <div key={slot.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col justify-between backdrop-blur-md hover:border-cyan-500/40 transition-all shadow-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">#{slot.slotNumber}</span>
-                      <span className="text-xs">🥈</span>
-                    </div>
-
-                    {slot.title ? (
-                      <div>
-                        <div className="text-sm font-bold text-white mb-0.5 truncate">{slot.title}</div>
-                        <div className="text-[11px] text-gray-400 mb-3">{slot.currentBid}</div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-2 mb-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <button className="w-10 h-10 rounded-xl bg-white/5 border border-dashed border-cyan-500/40 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/10 transition-all">
-                              <Plus className="w-5 h-5" />
-                            </button>
-                          </DialogTrigger>
-                          <DialogContent className="bg-slate-900 text-white border-white/10">
-                            <DialogHeader><DialogTitle>Занять слот #{slot.slotNumber}</DialogTitle></DialogHeader>
-                            <div className="space-y-4 py-2">
-                              <Input type="number" placeholder="Ставка TON..." value={bidAmountInput} onChange={(e) => setBidAmountInput(e.target.value)} className="bg-black/50 border-white/10 text-white" />
-                              <Button onClick={() => handlePlaceBid(slot)} className="w-full bg-cyan-400 text-slate-950 font-bold">Сделать ставку</Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                        <span className="text-[10px] text-gray-500 mt-1">Свободно</span>
-                      </div>
-                    )}
-
-                    {slot.title && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="w-full h-7 text-[10px] bg-black/40 border-white/10 text-cyan-300 hover:bg-cyan-400 hover:text-slate-950">
-                            Перебить
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="bg-slate-900 text-white border-white/10">
-                          <DialogHeader><DialogTitle>Перебить ставку (#{slot.slotNumber})</DialogTitle></DialogHeader>
-                          <div className="space-y-4 py-2">
-                            <Input type="number" placeholder="Ставка TON..." value={bidAmountInput} onChange={(e) => setBidAmountInput(e.target.value)} className="bg-black/50 border-white/10 text-white" />
-                            <Button onClick={() => handlePlaceBid(slot)} className="w-full bg-cyan-400 text-slate-950 font-bold">Подтвердить</Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* LEVEL 3: RANKS #4 - #7 (4 Cards) */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 px-1 flex items-center gap-1.5">
-                <Flame className="w-3.5 h-3.5 text-orange-400" /> Премиум ряд (#4 - #7)
-              </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                {rank47Slots.map((slot) => (
-                  <div key={slot.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col justify-between backdrop-blur-md hover:border-indigo-500/40 transition-all">
-                    <div className="flex justify-between items-start mb-1.5">
-                      <span className="text-[9px] font-mono text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">#{slot.slotNumber}</span>
-                    </div>
-
-                    {slot.title ? (
-                      <div>
-                        <div className="text-xs font-bold text-white truncate">{slot.title}</div>
-                        <div className="text-[10px] text-gray-400 mb-2">{slot.currentBid}</div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-1 mb-1">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <button className="w-8 h-8 rounded-lg bg-white/5 border border-dashed border-indigo-500/40 flex items-center justify-center text-indigo-400 hover:bg-indigo-500/10 transition-all">
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </DialogTrigger>
-                          <DialogContent className="bg-slate-900 text-white border-white/10">
-                            <DialogHeader><DialogTitle>Занять слот #{slot.slotNumber}</DialogTitle></DialogHeader>
-                            <div className="space-y-4 py-2">
-                              <Input type="number" placeholder="Ставка TON..." value={bidAmountInput} onChange={(e) => setBidAmountInput(e.target.value)} className="bg-black/50 border-white/10 text-white" />
-                              <Button onClick={() => handlePlaceBid(slot)} className="w-full bg-indigo-500 text-white font-bold">Сделать ставку</Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    )}
-
-                    {slot.title && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="w-full h-6 text-[10px] bg-black/40 border-white/10 text-indigo-300 hover:bg-indigo-500 hover:text-white">
-                            Перебить
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="bg-slate-900 text-white border-white/10">
-                          <DialogHeader><DialogTitle>Перебить ставку (#{slot.slotNumber})</DialogTitle></DialogHeader>
-                          <div className="space-y-4 py-2">
-                            <Input type="number" placeholder="Ставка TON..." value={bidAmountInput} onChange={(e) => setBidAmountInput(e.target.value)} className="bg-black/50 border-white/10 text-white" />
-                            <Button onClick={() => handlePlaceBid(slot)} className="w-full bg-indigo-500 text-white font-bold">Подтвердить</Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Bot Admin Action */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center backdrop-blur-md">
-              <h4 className="text-xs font-bold text-gray-200 mb-1">Добавить свою группу или канал</h4>
-              <p className="text-[11px] text-gray-400 mb-3">Назначьте бота @GiftsLabBot администратором, чтобы зачислить 0.1 GRAM и листить в каталог.</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button onClick={() => handleAddBotLink('channel')} className="bg-black/40 border border-white/10 text-xs font-bold hover:bg-white/10 text-cyan-300">
-                  📢 Канал
-                </Button>
-                <Button onClick={() => handleAddBotLink('group')} className="bg-black/40 border border-white/10 text-xs font-bold hover:bg-white/10 text-cyan-300">
-                  💬 Чат
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "explore" && (
-          <div className="space-y-3">
-            <h2 className="text-sm font-black uppercase text-gray-300 mb-2">Общий каталог площадок</h2>
-            {groups.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 text-xs bg-white/5 border border-white/10 rounded-2xl">
-                Пока нет добавленных групп. Добавьте бота в администраторы!
-              </div>
-            ) : (
-              groups.map(g => (
-                <div key={g.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex justify-between items-center backdrop-blur-md">
-                  <div>
-                    <div className="text-sm font-bold text-white">{g.title}</div>
-                    <div className="text-xs text-cyan-400">@{g.username} • 👥 {g.membersCount} уч.</div>
-                  </div>
-                  <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded border border-cyan-500/20">{g.category}</span>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {activeTab === "nft" && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-sm font-black uppercase text-gray-300">NFT MarketApp Аренда</h2>
-                <p className="text-[11px] text-gray-400">Сдача в аренду и продажа юзернеймов</p>
-              </div>
-              <Dialog open={nftModalOpen} onOpenChange={setNftModalOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-950 font-bold text-xs">
-                    + Выставить
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-slate-900 text-white border-white/10">
-                  <DialogHeader>
-                    <DialogTitle>Выставить актив в MarketApp</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3 py-2">
-                    <Input 
-                      placeholder="Username (@crypto)..." 
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      className="bg-black/50 border-white/10 text-white"
-                    />
-                    <Input 
-                      placeholder="Цена продажи (например, 100 TON)" 
-                      value={salePrice}
-                      onChange={(e) => setSalePrice(e.target.value)}
-                      className="bg-black/50 border-white/10 text-white"
-                    />
-                    <Input 
-                      placeholder="Аренда в сутки (например, 2 TON/day)" 
-                      value={rentalPrice}
-                      onChange={(e) => setRentalPrice(e.target.value)}
-                      className="bg-black/50 border-white/10 text-white"
-                    />
-                    <Button 
-                      onClick={() => createNftMutation.mutate({
-                        username: newUsername,
-                        price: salePrice,
-                        priceAmount: 100,
-                        rentalPricePerDay: rentalPrice,
-                        rentalAmountPerDay: 2,
-                        minRentalDays: 7,
-                        maxRentalDays: 90,
-                        listingType: "both"
-                      })}
-                      className="w-full bg-cyan-400 text-slate-950 font-bold hover:bg-cyan-500"
-                    >
-                      Опубликовать
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {nfts.length === 0 ? (
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center text-gray-400 text-xs backdrop-blur-md">
-                Нет активных NFT. Выставьте первый актив на аренду!
-              </div>
-            ) : (
-              nfts.map(nft => (
-                <div key={nft.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex justify-between items-center backdrop-blur-md">
-                  <div>
-                    <div className="text-sm font-bold text-white">@{nft.username}</div>
-                    <div className="text-xs text-gray-400">💰 Покупка: <span className="text-cyan-400">{nft.price}</span></div>
-                    <div className="text-xs text-gray-400">⏳ Аренда: <span className="text-amber-400">{nft.rentalPricePerDay}</span></div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Button size="sm" className="h-7 text-xs bg-cyan-400 hover:bg-cyan-500 text-slate-950 font-bold" onClick={() => toast.success(`Покупка юзернейма @${nft.username}`)}>
-                      Купить
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-white/10 text-amber-400 hover:bg-white/10" onClick={() => rentNftMutation.mutate({ nftId: nft.id, rentalDays: 30 })}>
-                      Аренда 30д
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {activeTab === "deals" && (
-          <div className="space-y-3">
-            <h2 className="text-sm font-black uppercase text-gray-300 mb-2">Сделки и Escrow Аренда</h2>
-            {deals.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 text-xs bg-white/5 border border-white/10 rounded-2xl">
-                Активных сделок нет.
-              </div>
-            ) : (
-              deals.map(d => (
-                <div key={d.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex justify-between items-center backdrop-blur-md">
-                  <div>
-                    <div className="text-xs font-bold text-white">Сделка #{d.id}</div>
-                    <div className="text-[11px] text-gray-400">Сумма: {d.price}</div>
-                  </div>
-                  <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/20 uppercase font-bold">{d.status}</span>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {activeTab === "dashboard" && (
-          <div className="space-y-4">
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 text-center backdrop-blur-xl shadow-2xl">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-indigo-500/20 text-cyan-400 flex items-center justify-center font-black text-2xl mx-auto mb-3 border border-cyan-500/30">
-                {user?.name?.[0] || "U"}
-              </div>
-              <h2 className="text-base font-black text-white">{user?.name || "Web3 Owner"}</h2>
-              <p className="text-xs text-cyan-400 font-mono mb-4">@{user?.name || "dimij"}</p>
-              
-              <div className="grid grid-cols-2 gap-3 text-left mb-4">
-                <div className="bg-black/40 p-3 rounded-2xl border border-white/10">
-                  <div className="text-[10px] text-gray-400">Бонусный баланс (GRAM)</div>
-                  <div className="text-lg font-black text-cyan-400">0.0 GRAM</div>
-                </div>
-                <div className="bg-black/40 p-3 rounded-2xl border border-white/10">
-                  <div className="text-[10px] text-gray-400">Реферальный доход (5%)</div>
-                  <div className="text-lg font-black text-amber-400">0.0 TON</div>
-                </div>
-              </div>
-
-              {/* Referral Link Widget */}
-              <div className="bg-black/40 border border-white/10 rounded-2xl p-4 text-left">
-                <div className="text-xs font-bold text-white mb-1 flex items-center gap-1">
-                  <span>🤝 Реферальная программа (5%)</span>
-                </div>
-                <p className="text-[11px] text-gray-400 mb-3">Приглашайте друзей и получайте 5% с каждой завершенной сделки реферала.</p>
-                <div className="flex gap-2">
-                  <Input readOnly value={referralLink} className="bg-black/60 border-white/10 text-xs text-gray-300 font-mono" />
-                  <Button size="sm" onClick={copyReferral} className="bg-cyan-400 hover:bg-cyan-500 text-slate-950 font-bold shrink-0">
-                    {copiedRef ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Bottom Navigation Bar */}
-      <footer className="bg-[#07090e]/90 border-t border-white/10 fixed bottom-0 left-0 right-0 p-3 grid grid-cols-5 text-center text-[10px] text-gray-400 z-50 backdrop-blur-xl">
-        <button onClick={() => setActiveTab("ranking")} className={`flex flex-col items-center gap-0.5 ${activeTab === "ranking" ? "text-cyan-400 font-bold" : "hover:text-white"}`}>
-          <Crown className="w-4 h-4" /> Топ
-        </button>
-        <button onClick={() => setActiveTab("explore")} className={`flex flex-col items-center gap-0.5 ${activeTab === "explore" ? "text-cyan-400 font-bold" : "hover:text-white"}`}>
-          <Compass className="w-4 h-4" /> Каталог
-        </button>
-        <button onClick={() => setActiveTab("nft")} className={`flex flex-col items-center gap-0.5 ${activeTab === "nft" ? "text-cyan-400 font-bold" : "hover:text-white"}`}>
-          <Sparkles className="w-4 h-4" /> NFT
-        </button>
-        <button onClick={() => setActiveTab("deals")} className={`flex flex-col items-center gap-0.5 ${activeTab === "deals" ? "text-cyan-400 font-bold" : "hover:text-white"}`}>
-          <Calendar className="w-4 h-4" /> Сделки
-        </button>
-        <button onClick={() => setActiveTab("dashboard")} className={`flex flex-col items-center gap-0.5 ${activeTab === "dashboard" ? "text-cyan-400 font-bold" : "hover:text-white"}`}>
-          <User className="w-4 h-4" /> Профиль
-        </button>
-      </footer>
-    </div>
-  );
+    <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}><SheetContent side="right" className="border-white/10 bg-[#10161f] text-slate-100"><SheetHeader><SheetTitle className="text-slate-100">Фильтр</SheetTitle><p className="text-xs text-slate-500">Обновляет карточки и весь список одновременно.</p></SheetHeader><div className="space-y-6 px-4"><div><p className="mb-2 text-xs text-slate-400">Тип площадки</p><div className="grid grid-cols-3 gap-2">{(["Все", "Каналы", "Чаты"] as const).map(item => <button key={item} onClick={() => setCategory(item)} className={`rounded-lg border px-2 py-2 text-xs ${category === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{item}</button>)}</div></div><div><p className="mb-2 text-xs text-slate-400">Страна / регион</p><div className="grid grid-cols-2 gap-2">{["Все", "Global", "UA", "RU", "EU", "US"].map(item => <button key={item} onClick={() => setCountry(item)} className={`rounded-lg border px-2 py-2 text-left text-xs ${country === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{item}</button>)}</div></div><div><p className="mb-2 text-xs text-slate-400">Количество участников</p><div className="grid grid-cols-2 gap-2">{([{ key: "all", label: "Все" }, { key: "small", label: "До 1 тыс." }, { key: "medium", label: "1–10 тыс." }, { key: "large", label: "От 10 тыс." }] as const).map(item => <button key={item.key} onClick={() => setAudience(item.key)} className={`rounded-lg border px-2 py-2 text-left text-xs ${audience === item.key ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{item.label}</button>)}</div></div></div><SheetFooter><Button variant="outline" onClick={() => { setCategory("Все"); setCountry("Все"); setAudience("all"); }} className="border-white/10 text-slate-300">Сбросить</Button><Button onClick={() => setFiltersOpen(false)} className="bg-[#3f8cff]">Показать</Button></SheetFooter></SheetContent></Sheet>
+  </div>;
 }
