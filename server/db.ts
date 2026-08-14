@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, nftUsernames, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
+import { cascadeRankedOccupants } from "./auctionCascade";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -66,6 +67,25 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+export async function getAccountLedger(openId: string) {
+  const db = await getDb();
+  if (!db) return { user: undefined, transactions: [] };
+  const user = await getUserByOpenId(openId);
+  const transactions = await db.select({
+    id: creditTransactions.id,
+    amount: creditTransactions.amount,
+    kind: creditTransactions.kind,
+    createdAt: creditTransactions.createdAt,
+    groupId: creditTransactions.groupId,
+    groupTitle: groupsCatalog.title,
+    groupUsername: groupsCatalog.username,
+  }).from(creditTransactions)
+    .leftJoin(groupsCatalog, eq(creditTransactions.groupId, groupsCatalog.id))
+    .where(eq(creditTransactions.userOpenId, openId))
+    .orderBy(desc(creditTransactions.createdAt), desc(creditTransactions.id));
+  return { user, transactions };
+}
+
 // TG TOP specific queries
 export async function getAuctionSlots(category?: string, country?: string) {
   const db = await getDb();
@@ -95,16 +115,61 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   if (!db) throw new Error("Database not available");
 
   const group = groupId ? await getGroupById(groupId) : undefined;
-  await db.update(auctionSlots).set({
-    bidAmount,
-    currentBid: currentBidStr,
-    leaderUsername,
-    leaderUserId,
-    groupId: groupId ?? null,
-    title: group?.title ?? "Свободное место",
-    subtitle: group?.username ? `@${group.username}` : (group?.category ?? "Ждет листинга"),
-    updatedAt: new Date()
-  }).where(eq(auctionSlots.id, slotId));
+  if (!groupId || !group) throw new Error("Группа недоступна для размещения");
+  const target = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
+  if (!target) throw new Error("Позиция рейтинга не найдена");
+  const board = await db.select().from(auctionSlots).where(and(
+    eq(auctionSlots.category, target.category),
+    eq(auctionSlots.country, target.country)
+  )).orderBy(asc(auctionSlots.slotNumber));
+
+  await db.transaction(async tx => {
+    const originalByGroupId = new Map(board.filter(slot => slot.groupId !== null).map(slot => [slot.groupId!, slot]));
+    const cascaded = cascadeRankedOccupants(
+      board.map(slot => ({ slotNumber: slot.slotNumber, occupant: slot.groupId })),
+      target.slotNumber,
+      groupId
+    );
+
+    for (const slot of board) {
+      const nextGroupId = cascaded.find(item => item.slotNumber === slot.slotNumber)?.occupant ?? null;
+      if (slot.id === target.id) {
+        await tx.update(auctionSlots).set({
+          bidAmount,
+          currentBid: currentBidStr,
+          leaderUsername,
+          leaderUserId,
+          groupId,
+          title: group.title,
+          subtitle: group.username ? `@${group.username}` : group.category,
+          updatedAt: new Date(),
+        }).where(eq(auctionSlots.id, slot.id));
+        continue;
+      }
+      const source = nextGroupId ? originalByGroupId.get(nextGroupId) : undefined;
+      const changed = slot.groupId !== nextGroupId;
+      if (!changed) continue;
+      await tx.update(auctionSlots).set(source ? {
+        bidAmount: source.bidAmount,
+        currentBid: source.currentBid,
+        leaderUsername: source.leaderUsername,
+        leaderUserId: source.leaderUserId,
+        groupId: source.groupId,
+        title: source.title,
+        subtitle: source.subtitle,
+        updatedAt: new Date(),
+      } : {
+        bidAmount: 0,
+        currentBid: "0 TON",
+        leaderUsername: "-",
+        leaderUserId: null,
+        groupId: null,
+        title: "Свободное место",
+        subtitle: "Ждет листинга",
+        updatedAt: new Date(),
+      }).where(eq(auctionSlots.id, slot.id));
+    }
+  });
 }
 
 export async function getGroupsCatalog(category?: string, country?: string) {

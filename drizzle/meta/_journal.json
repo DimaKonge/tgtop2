@@ -64,6 +64,13 @@
       "when": 1786672652243,
       "tag": "0008_groovy_red_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1786673378221,
+      "tag": "0009_black_zarek",
+      "breakpoints": true
     }
   ]
 }

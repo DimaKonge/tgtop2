@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { decimal, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -12,6 +12,7 @@ export const users = mysqlTable("users", {
   referredBy: varchar("referredBy", { length: 32 }),
   referralEarnings: varchar("referralEarnings", { length: 64 }).default("0 TON").notNull(),
   bonusBalance: int("bonusBalance").default(0).notNull(),
+  mainBalanceTon: decimal("mainBalanceTon", { precision: 20, scale: 9 }).default("0.000000000").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

@@ -56,6 +56,10 @@ export const appRouter = router({
       return await db.getMyGroups(ctx.user.openId);
     }),
 
+    getAccount: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getAccountLedger(ctx.user.openId);
+    }),
+
     getGroupDetail: publicProcedure
       .input(z.object({ groupId: z.number() }))
       .query(async ({ input }) => {

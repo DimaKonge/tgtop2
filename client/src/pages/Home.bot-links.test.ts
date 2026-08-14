@@ -14,9 +14,11 @@ describe("TG TOP production bot links", () => {
   it("uses the shared GroupCard component for ranked and general catalog placements", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 
-    expect(source).toContain('function GroupCard({ group, featured = false, onClick }');
-    expect(source).toContain('<GroupCard group={featured.group} featured');
-    expect(source).toContain('<GroupCard key={group.id} group={group} onClick={() => openGroup(group.id)} />');
+    expect(source).toContain('type GroupCardVariant = "lead" | "secondary" | "compact" | "list"');
+    expect(source).toContain('<GroupCard group={leadSlot.group} variant="lead"');
+    expect(source).toContain('variant="secondary"');
+    expect(source).toContain('variant="compact"');
+    expect(source).toContain('<GroupCard key={group.id} group={group} variant="list" onClick={() => openGroup(group.id)} />');
     expect(source).toContain('В TG TOP пока нет площадок');
   });
 });

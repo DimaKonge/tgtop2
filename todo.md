@@ -72,3 +72,11 @@
 - [x] Add a focused UI acceptance check proving branded empty states and shared GroupCard rendering across featured and general-list states
 - [x] Confirm the one-time 0.1 GRAM connection bonus for the pre-existing `@o_a_th` channel
 - [x] Enforce that each Telegram group or channel can receive the 0.1 GRAM connection bonus only once across removal and re-listing cycles
+- [x] Redesign the main ranking into a single-screen pyramid: one large lead card, two second-row cards, and three-to-five compact third-row cards above the general catalog
+- [x] Simplify the header branding to the TG mark and TG TOP name only, removing the «Проверенные площадки» subtitle
+- [x] Match the «+ Канал» button styling to the outlined dark «+ Чат» button in My Groups
+- [x] Show separate bonus GRAM and main TON balances in the profile
+- [x] Add a profile transaction history with group, date, operation type, and amount
+- [ ] Diagnose and fix missing Telegram group avatars in the production catalog and My Groups views
+- [x] Cascade displaced groups one rank lower when a higher placement is outbid, returning only the final displaced group to the general catalog
+- [ ] Diagnose and fix missing Telegram group avatars in the production catalog and My Groups views
