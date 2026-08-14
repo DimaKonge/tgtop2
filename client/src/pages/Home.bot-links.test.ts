@@ -42,5 +42,15 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('<WalletConnectControl language={language} />');
     expect(source).not.toContain('{ value: "system"');
     expect(source).toContain('text-[10px] text-slate-400');
+    expect(source).toContain('const [subcategory, setSubcategory] = useState("Все")');
+    expect(source).toContain('getSlots.useQuery({');
+    expect(source).toContain('subcategory,');
+    expect(source).toContain('getGroups.useQuery({ category, country, subcategory })');
+    expect(source).toContain('CATEGORY_SUBCATEGORIES');
+    expect(source).toContain('setCountry(item)');
+    expect(source).toContain('CATEGORY_SUBCATEGORIES[category].map(item =>');
+    expect(source).toContain('setGlobalDirection(item.value);');
+    expect(source).toContain('setSubcategory("Все");');
+    expect(source).toContain('setCountry("Все");');
   });
 });

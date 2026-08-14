@@ -48,6 +48,14 @@ const date = (value?: Date | null, language: Language = "ru") =>
 type ListingType = "catalog" | "sale" | "rent" | "both";
 type ListingCountry = "Global" | "UA" | "RU" | "EU" | "US";
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
+const CATEGORY_SUBCATEGORIES = {
+  "Каналы": ["General", "News", "Crypto", "Technology", "Business", "Education", "Entertainment", "Games", "Memes"],
+  "Чаты": ["General", "Community", "Dating", "City", "Support", "Work", "Hobbies", "Learning", "Games"],
+} as const;
+const SUBCATEGORY_LABELS: Record<string, { ru: string; en: string }> = {
+  News: { ru: "Новости", en: "News" }, Crypto: { ru: "Крипто", en: "Crypto" }, Technology: { ru: "Технологии", en: "Technology" }, Business: { ru: "Бизнес", en: "Business" }, Education: { ru: "Образование", en: "Education" }, Entertainment: { ru: "Развлечения", en: "Entertainment" }, Games: { ru: "Игры", en: "Games" }, Memes: { ru: "Мемы", en: "Memes" },
+  Community: { ru: "Сообщества", en: "Community" }, Dating: { ru: "Знакомства", en: "Dating" }, City: { ru: "Город", en: "City" }, Support: { ru: "Поддержка", en: "Support" }, Work: { ru: "Работа", en: "Work" }, Hobbies: { ru: "Хобби", en: "Hobbies" }, Learning: { ru: "Обучение", en: "Learning" }, General: { ru: "Общее", en: "General" },
+};
 type Group = {
   id: number;
   chatId: string;
@@ -58,6 +66,7 @@ type Group = {
   membersCount: number;
   ownerOpenId: string;
   category: "Каналы" | "Чаты";
+  subcategory: string;
   country: string;
   status: "listed" | "rented" | "sold" | "pending";
   messagesCount: number;
@@ -125,6 +134,8 @@ const getTelegramAvatarSrc = (group: Group) =>
       : null;
 const getCategoryLabel = (category: Group["category"], language: Language) =>
   language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
+const getSubcategoryLabel = (subcategory: string, language: Language) =>
+  SUBCATEGORY_LABELS[subcategory]?.[language] ?? subcategory;
 
 function Avatar({
   group,
@@ -464,6 +475,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [page, setPage] = useState<Page>("top");
   const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
   const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
+  const [subcategory, setSubcategory] = useState("Все");
   const [country, setCountry] = useState("Все");
   const [audience, setAudience] = useState<Audience>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -478,6 +490,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [listingOpen, setListingOpen] = useState(false);
   const [listingType, setListingType] = useState<ListingType>("catalog");
   const [listingCountry, setListingCountry] = useState<ListingCountry>("Global");
+  const [listingSubcategory, setListingSubcategory] = useState("General");
   const [salePriceTon, setSalePriceTon] = useState("");
   const [rentalPriceTon, setRentalPriceTon] = useState("");
   const [minRentalDays, setMinRentalDays] = useState("7");
@@ -544,9 +557,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const slotsQuery = trpc.tgTop.getSlots.useQuery({
     category,
     country: country === "Все" ? "Global" : country,
+    subcategory,
   });
   const slots = (slotsQuery.data ?? []) as Slot[];
-  const groupsQuery = trpc.tgTop.getGroups.useQuery({ category, country });
+  const groupsQuery = trpc.tgTop.getGroups.useQuery({ category, country, subcategory });
   const listedGroups = (groupsQuery.data ?? []) as Group[];
   useEffect(() => {
     if (!onReady || hasSignaledReady.current || !slotsQuery.isFetched || !groupsQuery.isFetched) return;
@@ -767,6 +781,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : undefined;
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
   const selectedListingGroups = mine.filter(group => selectedGroupIds.includes(group.id));
+  const globalSubcategoryCategory = globalDirection === "Каналы" || globalDirection === "Чаты" ? globalDirection : null;
+  const globalSubcategoryOptions = globalSubcategoryCategory ? CATEGORY_SUBCATEGORIES[globalSubcategoryCategory] : [];
+  const listingCategory = selectedListingGroups.length && selectedListingGroups.every(group => group.category === selectedListingGroups[0]?.category)
+    ? selectedListingGroups[0]?.category
+    : null;
+  const listingSubcategoryOptions = listingCategory ? CATEGORY_SUBCATEGORIES[listingCategory] : [];
   const includesSale = listingType === "sale" || listingType === "both";
   const includesRent = listingType === "rent" || listingType === "both";
   const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
@@ -800,6 +820,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         ? (firstGroup?.country as ListingCountry)
         : "Global"
     );
+    setListingSubcategory(firstGroup?.subcategory ?? "General");
     setSalePriceTon(firstGroup?.salePriceTon ?? "");
     setRentalPriceTon(firstGroup?.rentalPriceTon ?? "");
     setMinRentalDays(String(firstGroup?.minRentalDays ?? 7));
@@ -818,6 +839,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       groupIds: selectedGroupIds,
       listingType,
       country: listingCountry,
+      subcategory: listingSubcategory,
       salePriceTon: salePriceTon || undefined,
       rentalPriceTon: isRental ? rentalPriceTon : undefined,
       minRentalDays: isRental ? minDays : undefined,
@@ -845,7 +867,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     );
   const selectGlobalDirection = (value: GlobalDirection) => {
     setGlobalDirection(value);
-    if (value !== "NFT") setCategory(value);
+    if (value !== "NFT") {
+      setCategory(value);
+      setSubcategory("Все");
+    }
   };
   const submitPlacement = (group: Group) => {
     if (!targetSlot?.id)
@@ -992,6 +1017,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   NFT
                 </ToggleGroupItem>
               </ToggleGroup>
+              {globalDirection !== "NFT" && (
+                <div className="space-y-1.5 px-1 pb-1 pt-2">
+                  {globalSubcategoryCategory && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+                      <span className="shrink-0 text-[9px] font-medium uppercase tracking-[0.08em] text-slate-600">{tx("Тема", "Topic")}</span>
+                      <button onClick={() => setSubcategory("Все")} className={`shrink-0 rounded-md border px-2 py-1 text-[10px] ${subcategory === "Все" ? "border-[#3f8cff]/50 bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/8 text-slate-500"}`}>{tx("Все", "All")}</button>
+                      {globalSubcategoryOptions.map(item => (
+                        <button key={item} onClick={() => setSubcategory(item)} className={`shrink-0 rounded-md border px-2 py-1 text-[10px] ${subcategory === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/8 text-slate-500"}`}>{getSubcategoryLabel(item, language)}</button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
+                    <span className="shrink-0 text-[9px] font-medium uppercase tracking-[0.08em] text-slate-600">{tx("Регион", "Region")}</span>
+                    {(["Все", "UA", "RU", "EU", "US"] as const).map(item => (
+                      <button key={item} onClick={() => setCountry(item)} className={`shrink-0 rounded-md border px-2 py-1 text-[10px] ${country === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/8 text-slate-500"}`}>{item === "Все" ? tx("Все", "All") : item}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             {globalDirection === "NFT" ? (
               <section className="space-y-2 pt-1">
@@ -1762,6 +1806,22 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>
             </section>
 
+            <section>
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <p className="text-xs text-slate-400">{tx("Подкатегория", "Subcategory")}</p>
+                {!listingCategory && <span className="text-[10px] text-amber-100/70">{tx("Выберите группы одного типа", "Select one community type")}</span>}
+              </div>
+              {listingCategory ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {listingSubcategoryOptions.map(item => (
+                    <button key={item} onClick={() => setListingSubcategory(item)} className={`rounded-lg border px-2.5 py-1.5 text-[10px] ${listingSubcategory === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{getSubcategoryLabel(item, language)}</button>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] text-slate-500">{tx("Подкатегории задаются отдельно для каналов и чатов.", "Subcategories are configured separately for channels and chats.")}</p>
+              )}
+            </section>
+
             {includesSale && (
               <section>
                 <div className="mb-2 flex items-baseline justify-between">
@@ -1986,7 +2046,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 ] as const).map(item => (
                   <button
                     key={item.value}
-                    onClick={() => setCategory(item.value)}
+                    onClick={() => {
+                      setCategory(item.value);
+                      setGlobalDirection(item.value);
+                      setSubcategory("Все");
+                    }}
                     className={`rounded-lg border px-2 py-2 text-xs ${category === item.value ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
                   >
                     {item.label}
@@ -1994,10 +2058,21 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 ))}
               </div>
             </div>
+            {(category === "Каналы" || category === "Чаты") && (
+              <div>
+                <p className="mb-2 text-xs text-slate-400">{tx("Подкатегория", "Subcategory")}</p>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setSubcategory("Все")} className={`rounded-lg border px-2 py-2 text-xs ${subcategory === "Все" ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{tx("Все", "All")}</button>
+                  {CATEGORY_SUBCATEGORIES[category].map(item => (
+                    <button key={item} onClick={() => setSubcategory(item)} className={`rounded-lg border px-2 py-2 text-xs ${subcategory === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{getSubcategoryLabel(item, language)}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <p className="mb-2 text-xs text-slate-400">{tx("Страна / регион", "Country / region")}</p>
               <div className="grid grid-cols-2 gap-2">
-                {["Все", "Global", "UA", "RU", "EU", "US"].map(item => (
+                {["Все", "UA", "RU", "EU", "US"].map(item => (
                   <button
                     key={item}
                     onClick={() => setCountry(item)}
@@ -2037,6 +2112,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               variant="outline"
               onClick={() => {
                 setCategory("Все");
+                setGlobalDirection("Все");
+                setSubcategory("Все");
                 setCountry("Все");
                 setAudience("all");
               }}

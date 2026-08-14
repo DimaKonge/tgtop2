@@ -13,6 +13,7 @@ const groupListingInput = z.object({
   minRentalDays: z.number().int().min(1).max(365).optional(),
   maxRentalDays: z.number().int().min(1).max(365).optional(),
   country: z.enum(["Global", "UA", "RU", "EU", "US"]).optional(),
+  subcategory: z.string().min(2).max(64).optional(),
 }).superRefine((input, ctx) => {
   const rentalListing = input.listingType === "rent" || input.listingType === "both";
   if (rentalListing && !input.rentalPriceTon) {
@@ -39,9 +40,9 @@ export const appRouter = router({
 
   tgTop: router({
     getSlots: publicProcedure
-      .input(z.object({ category: z.string().optional(), country: z.string().optional() }).optional())
+      .input(z.object({ category: z.string().optional(), country: z.string().optional(), subcategory: z.string().optional() }).optional())
       .query(async ({ input }) => {
-        return await db.getAuctionSlots(input?.category, input?.country);
+        return await db.getAuctionSlots(input?.category, input?.country, input?.subcategory);
       }),
 
     placeBid: protectedProcedure
@@ -68,9 +69,9 @@ export const appRouter = router({
       }),
 
     getGroups: publicProcedure
-      .input(z.object({ category: z.string().optional(), country: z.string().optional() }).optional())
+      .input(z.object({ category: z.string().optional(), country: z.string().optional(), subcategory: z.string().optional() }).optional())
       .query(async ({ input }) => {
-        return await db.getGroupsCatalog(input?.category, input?.country);
+        return await db.getGroupsCatalog(input?.category, input?.country, input?.subcategory);
       }),
 
     myGroups: protectedProcedure.query(async ({ ctx }) => {

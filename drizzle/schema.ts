@@ -43,6 +43,7 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   membersCount: int("membersCount").default(0).notNull(),
   ownerOpenId: varchar("ownerOpenId", { length: 64 }).notNull(),
   category: mysqlEnum("category", ["Каналы", "Чаты"]).default("Каналы").notNull(),
+  subcategory: varchar("subcategory", { length: 64 }).default("General").notNull(),
   country: varchar("country", { length: 64 }).default("Global").notNull(),
   status: mysqlEnum("status", ["listed", "rented", "sold", "pending"]).default("listed").notNull(),
   messagesCount: int("messagesCount").default(0).notNull(),
@@ -59,7 +60,11 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   minRentalDays: int("minRentalDays"),
   maxRentalDays: int("maxRentalDays"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, table => [
+  index("groups_catalog_listing_filters_idx").on(table.status, table.category, table.subcategory, table.country),
+  index("groups_catalog_owner_idx").on(table.ownerOpenId),
+  index("groups_catalog_listed_at_idx").on(table.listedAt),
+]);
 
 export type GroupCatalog = typeof groupsCatalog.$inferSelect;
 export type InsertGroupCatalog = typeof groupsCatalog.$inferInsert;

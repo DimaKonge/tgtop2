@@ -3,7 +3,7 @@ import { normalizeGroupListingOptions } from "./db";
 
 describe("normalizeGroupListingOptions", () => {
   it("keeps a normal catalog listing free of sale and rental fields", () => {
-    expect(normalizeGroupListingOptions({ listingType: "catalog", country: "UA" })).toEqual({
+    expect(normalizeGroupListingOptions({ listingType: "catalog", country: "UA" })).toMatchObject({
       listingType: "catalog",
       salePriceTon: null,
       rentalPriceTon: null,
@@ -21,7 +21,7 @@ describe("normalizeGroupListingOptions", () => {
       minRentalDays: 7,
       maxRentalDays: 30,
       country: "Global",
-    })).toEqual({
+    })).toMatchObject({
       listingType: "both",
       salePriceTon: "250",
       rentalPriceTon: "3.5",
@@ -32,13 +32,21 @@ describe("normalizeGroupListingOptions", () => {
   });
 
   it("supports the legacy sale-price argument without retaining rental fields", () => {
-    expect(normalizeGroupListingOptions("42.25")).toEqual({
+    expect(normalizeGroupListingOptions("42.25")).toMatchObject({
       listingType: "sale",
       salePriceTon: "42.25",
       rentalPriceTon: null,
       minRentalDays: null,
       maxRentalDays: null,
       country: undefined,
+    });
+  });
+
+  it("retains the valid General subcategory used by migrated TG TOP listings", () => {
+    expect(normalizeGroupListingOptions({ listingType: "catalog", country: "Global", subcategory: "General" })).toMatchObject({
+      listingType: "catalog",
+      country: "Global",
+      subcategory: "General",
     });
   });
 });

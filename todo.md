@@ -145,9 +145,11 @@
 - [x] Replace the launch screen’s fixed delay with a real readiness signal while retaining reduced-motion behavior
 - [x] Animate rising cubes into the TG TOP 1→2→4 pyramid during launch
 - [x] Move Connect Wallet into the compact top brand row and pull the Global panel upward
-- [ ] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
-- [ ] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
-- [ ] Add persisted channel and chat subcategories that synchronize across Global ranking cards, catalog listings, and detailed filters
+- [x] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
+- [x] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
+- [x] Add persisted channel and chat subcategories that synchronize across Global ranking cards, catalog listings, and detailed filters
+- [x] Unify detailed and compact Global filtering with shared type, subcategory, and geography states plus matching query semantics
+- [x] Make default migrated subcategories valid for both channel and chat listings and test safe round-trip behavior
 - [ ] Audit and correct every visible UI string so Russian has no Ukrainian or English remnants and English is complete and natural
 - [ ] Add transparent offer history with price, state, role, creation time, transfer deadline, and pre-transfer cancellation control
 - [ ] Add a non-custodial peer-to-peer NFT transfer flow with @username or Telegram ID recipient verification, 0% TG TOP commission, and clear TON network-fee disclosure

@@ -7,6 +7,7 @@ import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./group
 import { cascadeRankedOccupants } from "./auctionCascade";
 import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, getTransferDeadline } from "./protectedDeals";
 import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
+import { isCatalogSubcategory } from "./catalogTaxonomy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -136,7 +137,7 @@ export async function attributeTelegramReferral(telegramUserId: number, referral
 }
 
 // TG TOP specific queries
-export async function getAuctionSlots(category?: string, country?: string) {
+export async function getAuctionSlots(category?: string, country?: string, subcategory?: string) {
   const db = await getDb();
   if (!db) return [];
   
@@ -154,7 +155,9 @@ export async function getAuctionSlots(category?: string, country?: string) {
     : await db.select().from(auctionSlots);
   const groupIds = slots.map(slot => slot.groupId).filter((id): id is number => id !== null);
   if (groupIds.length === 0) return slots.map(slot => ({ ...slot, group: null }));
-  const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, groupIds));
+  const groupConditions = [inArray(groupsCatalog.id, groupIds)];
+  if (subcategory && subcategory !== "Все") groupConditions.push(eq(groupsCatalog.subcategory, subcategory));
+  const groups = await db.select().from(groupsCatalog).where(and(...groupConditions));
   const groupMap = new Map(groups.map(group => [group.id, group]));
   return slots.map(slot => ({ ...slot, group: slot.groupId ? groupMap.get(slot.groupId) ?? null : null }));
 }
@@ -221,11 +224,12 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   });
 }
 
-export async function getGroupsCatalog(category?: string, country?: string) {
+export async function getGroupsCatalog(category?: string, country?: string, subcategory?: string) {
   const db = await getDb();
   if (!db) return [];
   const conditions = [eq(groupsCatalog.status, "listed")];
   if (category && category !== "Все") conditions.push(eq(groupsCatalog.category, category as "Каналы" | "Чаты"));
+  if (subcategory && subcategory !== "Все") conditions.push(eq(groupsCatalog.subcategory, subcategory));
   if (country && country !== "Все" && country !== "Global") conditions.push(eq(groupsCatalog.country, country));
   return await db.select().from(groupsCatalog).where(and(...conditions)).orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
 }
@@ -358,6 +362,7 @@ export type GroupListingOptions = {
   minRentalDays?: number;
   maxRentalDays?: number;
   country?: string;
+  subcategory?: string;
 };
 
 export function normalizeGroupListingOptions(listing?: GroupListingOptions | string) {
@@ -370,6 +375,7 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
     minRentalDays: listingType === "rent" || listingType === "both" ? (options.minRentalDays ?? null) : null,
     maxRentalDays: listingType === "rent" || listingType === "both" ? (options.maxRentalDays ?? null) : null,
     country: options.country,
+    subcategory: options.subcategory,
   };
 }
 
@@ -381,6 +387,12 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
   const listingOptions = normalizeGroupListingOptions(listing);
   const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
   if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) throw new Error("Группа недоступна для размещения");
+  if (listingOptions.subcategory) {
+    const categories = Array.from(new Set(groups.map(group => group.category)));
+    if (categories.length !== 1 || !isCatalogSubcategory(categories[0], listingOptions.subcategory)) {
+      throw new Error("Подкатегория не соответствует выбранным группам");
+    }
+  }
   const groupsNeedingListing = groups.filter(group => group.status !== "listed");
   const totalCost = groupsNeedingListing.length * cost;
   const user = await getUserByOpenId(ownerOpenId);
@@ -399,6 +411,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       minRentalDays: listingOptions.minRentalDays,
       maxRentalDays: listingOptions.maxRentalDays,
       ...(listingOptions.country ? { country: listingOptions.country } : {}),
+      ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),
     }).where(eq(groupsCatalog.id, groupId))));
   });
 }
