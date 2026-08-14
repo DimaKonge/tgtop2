@@ -86,3 +86,4 @@
 - [x] Remove the redundant «Каталог» eyebrow above the main Global heading
 - [x] Remove the redundant «Все площадки» heading above the general catalog list
 - [x] Remove the descriptive subtitle beneath the Global home heading
+- [x] Add a polished synchronized quick category panel with Все / Каналы / Чаты above the ranking pyramid
