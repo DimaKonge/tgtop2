@@ -5,7 +5,7 @@ import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactio
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { cascadeRankedOccupants } from "./auctionCascade";
-import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, getTransferDeadline } from "./protectedDeals";
+import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline } from "./protectedDeals";
 import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
 import { isCatalogSubcategory } from "./catalogTaxonomy";
 import { getMinimumRankingBidMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
@@ -662,6 +662,7 @@ export async function getUserDeals(openId: string) {
     status: deals.status,
     fundedAt: deals.fundedAt,
     transferObservedAt: deals.transferObservedAt,
+    buyerConfirmedAt: deals.buyerConfirmedAt,
     expiresAt: deals.expiresAt,
     cancelledAt: deals.cancelledAt,
     createdAt: deals.createdAt,
@@ -752,4 +753,21 @@ export async function cancelProtectedGroupDeal(dealId: number, buyerOpenId: stri
     eq(deals.status, deal.status)
   ));
   return { requiresEscrowRefund: deal.status === "escrow_funded", transferWindowMs: GROUP_TRANSFER_WINDOW_MS };
+}
+
+/** Records buyer acknowledgement after bot-observed owner transfer. Settlement remains locked until on-chain verification exists. */
+export async function confirmProtectedGroupTransfer(dealId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId))).limit(1);
+  if (!deal || deal.dealType !== "group_buy" || !canBuyerConfirmTransfer(deal.status) || !deal.transferObservedAt) {
+    throw new Error("Подтверждение передачи пока недоступно");
+  }
+  if (deal.buyerConfirmedAt) return { settlementLocked: true, alreadyConfirmed: true };
+  await db.update(deals).set({ buyerConfirmedAt: new Date() }).where(and(
+    eq(deals.id, dealId),
+    eq(deals.buyerOpenId, buyerOpenId),
+    eq(deals.status, "active")
+  ));
+  return { settlementLocked: true, alreadyConfirmed: false };
 }

@@ -203,6 +203,12 @@ export const appRouter = router({
         return await db.cancelProtectedGroupDeal(input.dealId, ctx.user.openId);
       }),
 
+    confirmProtectedGroupTransfer: protectedProcedure
+      .input(z.object({ dealId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.confirmProtectedGroupTransfer(input.dealId, ctx.user.openId);
+      }),
+
     myDeals: protectedProcedure.query(async ({ ctx }) => {
       return await db.getUserDeals(ctx.user.openId);
     }),

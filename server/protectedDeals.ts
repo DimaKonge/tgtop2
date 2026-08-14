@@ -21,6 +21,10 @@ export function canReleaseAfterTransfer(status: ProtectedDealStatus) {
   return status === "active";
 }
 
+export function canBuyerConfirmTransfer(status: ProtectedDealStatus) {
+  return status === "active";
+}
+
 export function getProtectedDealLabel(status: ProtectedDealStatus) {
   const labels: Record<ProtectedDealStatus, string> = {
     open: "Ожидает оплаты",

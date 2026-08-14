@@ -58,6 +58,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("В TG TOP с", "On TG TOP since")');
     expect(source).toContain('tx("Загружаем статистику…", "Loading statistics…")');
     expect(source).toContain('"This placement will be available after the ranking board is created."');
+    expect(source).toContain('const getProtectedDealGuidance = (status: string, isBuyer: boolean, buyerConfirmed = false) =>');
+    expect(source).toContain('Transfer the Telegram owner rights before the 21-day deadline.');
+    expect(source).toContain('confirmProtectedGroupTransfer');
+    expect(source).toContain('Confirm receipt');
+    expect(source).toContain('Settlement remains locked until payment verification.');
+    expect(source).toContain('{getProtectedDealGuidance(deal.status, isBuyer, Boolean(deal.buyerConfirmedAt))}');
     expect(source).toContain('const [subcategory, setSubcategory] = useState("Все")');
     expect(source).toContain('getSlots.useQuery({');
     expect(source).toContain('subcategory,');

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GROUP_TRANSFER_WINDOW_MS,
   canBuyerCancel,
+  canBuyerConfirmTransfer,
   canReleaseAfterTransfer,
   getTransferDeadline,
 } from "./protectedDeals";
@@ -23,5 +24,11 @@ describe("protected group deal policy", () => {
   it("permits release only after the bot-observed transfer state", () => {
     expect(canReleaseAfterTransfer("escrow_funded")).toBe(false);
     expect(canReleaseAfterTransfer("active")).toBe(true);
+  });
+
+  it("allows buyer acknowledgement only after the bot has observed owner-rights transfer", () => {
+    expect(canBuyerConfirmTransfer("escrow_funded")).toBe(false);
+    expect(canBuyerConfirmTransfer("active")).toBe(true);
+    expect(canBuyerConfirmTransfer("completed")).toBe(false);
   });
 });

@@ -124,7 +124,9 @@
 - [ ] Release escrowed TON only after bot-observed ownership-transfer evidence, buyer confirmation, expiry handling, and dispute safeguards are implemented
 - [ ] Notify a seller after verified buyer funding and release escrowed TON automatically only after owner-rights transfer is verified
 - [ ] Enforce a twenty-one-day seller ownership-transfer deadline before protected refund or dispute handling
-- [ ] Allow buyer cancellation and escrow refund only before bot-observed owner-rights transfer is verified
+- [x] Allow buyer cancellation and escrow refund only before bot-observed owner-rights transfer is verified
+- [x] Add role-aware protected-deal stage guidance for buyer funding, seller transfer, bot observation, final confirmation, and outcome states
+- [x] Add operable protected-deal stage controls while keeping payment verification and settlement explicitly locked until on-chain safeguards exist
 - [x] Display a subtle “Комісія TG TOP · 0%” disclosure beside sale prices and protected-deal summaries
 - [ ] Design a separate NFT deposit bot that verifies received assets before enabling NFT sale or rental listings
 - [ ] Add Fragment-inspired NFT showcase panels to user profiles and listed community detail pages

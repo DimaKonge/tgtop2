@@ -632,6 +632,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     status: "open" | "escrow_funded" | "active" | "completed" | "expired" | "cancelled" | "disputed";
     fundedAt: Date | null;
     transferObservedAt: Date | null;
+    buyerConfirmedAt: Date | null;
     expiresAt: Date | null;
     cancelledAt: Date | null;
     createdAt: Date;
@@ -697,6 +698,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       toast.success(result.requiresEscrowRefund
         ? tx("Офер отменен. Возврат эскроу будет обработан после подключения платежного контура.", "Offer cancelled. The escrow refund will be processed after the payment layer is connected.")
         : tx("Офер отменен.", "Offer cancelled."));
+      void utils.tgTop.myDeals.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const confirmProtectedGroupTransfer = trpc.tgTop.confirmProtectedGroupTransfer.useMutation({
+    onSuccess: () => {
+      toast.success(tx("Подтверждение передачи записано. Расчет остается заблокирован до проверки платежей.", "Transfer acknowledgement recorded. Settlement remains locked until payment verification."));
       void utils.tgTop.myDeals.invalidate();
     },
     onError: error => toast.error(error.message),
@@ -782,6 +790,43 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const getDaysRemaining = (expiresAt: Date | null) => {
     if (!expiresAt) return null;
     return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000));
+  };
+  const getProtectedDealGuidance = (status: string, isBuyer: boolean, buyerConfirmed = false) => {
+    const role = isBuyer ? "buyer" : "seller";
+    const guidance: Record<string, Record<"buyer" | "seller", [string, string]>> = {
+      open: {
+        buyer: ["Офер создан. Оплата станет доступна только после запуска проверенного эскроу.", "Offer created. Payment will become available only after verified escrow launches."],
+        seller: ["Офер получен. Ожидайте подтвержденного финансирования перед передачей owner-прав.", "Offer received. Wait for verified funding before transferring owner rights."],
+      },
+      escrow_funded: {
+        buyer: ["Финансирование подтверждено. Вы можете отменить офер до фиксации передачи owner-прав ботом.", "Funding is verified. You may cancel the offer until the bot observes owner-rights transfer."],
+        seller: ["Финансирование подтверждено. Передайте owner-права в Telegram до дедлайна 21 день.", "Funding is verified. Transfer the Telegram owner rights before the 21-day deadline."],
+      },
+      active: {
+        buyer: buyerConfirmed
+          ? ["Ваше подтверждение передачи записано. Расчет остается заблокирован до проверки платежного контура.", "Your transfer acknowledgement is recorded. Settlement remains locked until payment-layer verification."]
+          : ["Бот зафиксировал передачу owner-прав. Подтвердите получение, чтобы завершить защищенный этап передачи.", "The bot observed owner-rights transfer. Confirm receipt to complete the protected transfer stage."],
+        seller: ["Передача owner-прав зафиксирована ботом. Финальный расчет доступен только после проверки платежного контура.", "Owner-rights transfer was observed. Final settlement is available only after payment-layer verification."],
+      },
+      completed: {
+        buyer: ["Защищенный сценарий завершен.", "The protected flow is complete."],
+        seller: ["Защищенный сценарий завершен.", "The protected flow is complete."],
+      },
+      cancelled: {
+        buyer: ["Офер отменен до фиксации передачи owner-прав.", "The offer was cancelled before owner-rights transfer was observed."],
+        seller: ["Офер отменен покупателем до фиксации передачи owner-прав.", "The buyer cancelled the offer before owner-rights transfer was observed."],
+      },
+      expired: {
+        buyer: ["Срок передачи истек. Обратитесь в поддержку защищенного сценария.", "The transfer deadline expired. Contact protected-flow support."],
+        seller: ["Срок передачи истек. Сделка требует ручного разбора.", "The transfer deadline expired. The deal requires manual review."],
+      },
+      disputed: {
+        buyer: ["Сделка находится на разборе.", "The deal is under review."],
+        seller: ["Сделка находится на разборе.", "The deal is under review."],
+      },
+    };
+    const [ru, en] = guidance[status]?.[role] ?? ["Статус сделки обновляется.", "The deal status is updating."];
+    return tx(ru, en);
   };
   const globalCount = globalDirection === "NFT" ? visibleNfts.length : visibleGroups.length;
   const currentTopTitle = [
@@ -1602,6 +1647,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {deals.map(deal => {
                     const isBuyer = deal.buyerOpenId === user?.openId;
                     const canCancel = isBuyer && (deal.status === "open" || deal.status === "escrow_funded");
+                    const canConfirmTransfer = isBuyer && deal.status === "active" && !deal.buyerConfirmedAt;
                     const remainingDays = getDaysRemaining(deal.expiresAt);
                     const title = deal.groupUsername ? `@${deal.groupUsername}` : (deal.groupTitle ?? tx("Группа TG TOP", "TG TOP community"));
                     return (
@@ -1633,7 +1679,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                               {tx("Отменить офер", "Cancel offer")}
                             </button>
                           )}
+                          {canConfirmTransfer && (
+                            <button
+                              onClick={() => confirmProtectedGroupTransfer.mutate({ dealId: deal.id })}
+                              disabled={confirmProtectedGroupTransfer.isPending}
+                              className="ml-auto rounded-md border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2 py-1 text-[10px] font-medium text-[#a6c8ff] disabled:opacity-50"
+                            >
+                              {tx("Подтвердить получение", "Confirm receipt")}
+                            </button>
+                          )}
                         </div>
+                        <p className="mt-2 text-[11px] leading-4 text-slate-500">
+                          {getProtectedDealGuidance(deal.status, isBuyer, Boolean(deal.buyerConfirmedAt))}
+                        </p>
                       </div>
                     );
                   })}
