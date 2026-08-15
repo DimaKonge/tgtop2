@@ -13,6 +13,7 @@ type TelegramWebApp = {
   initDataUnsafe?: { user?: { photo_url?: string } };
   ready?: () => void;
   expand?: () => void;
+  openInvoice?: (url: string, callback?: (status: "paid" | "cancelled" | "failed" | "pending") => void) => void;
 };
 
 declare global {

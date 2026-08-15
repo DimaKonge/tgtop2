@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { notifyRecordedRankingBid, sendStarsRankingInvoice } from "./telegramNotifications";
+import { createStarsRankingInvoiceLink, notifyRecordedRankingBid } from "./telegramNotifications";
 import { formatTonAmount } from "./tonFormatting";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
@@ -71,16 +71,14 @@ export const appRouter = router({
           groupId: input.groupId,
           bidAmount: Math.round(input.bidAmount * 1000),
         });
-        const invoice = await sendStarsRankingInvoice({
-          openId: ctx.user.openId,
+        const invoiceLink = await createStarsRankingInvoiceLink({
           payload: intent.payload,
           starsAmount: intent.starsAmount,
           groupTitle: intent.groupTitle,
           slotNumber: intent.slotNumber,
         });
-        if (!invoice.sent) throw new Error("Не удалось отправить Stars-счёт. Откройте диалог с @TGTOP_robot и попробуйте снова.");
-        if (invoice.messageId) await db.setStarsRankingInvoiceMessage(intent.id, invoice.messageId);
-        return { success: true, starsAmount: intent.starsAmount, expiresAt: intent.expiresAt };
+        if (!invoiceLink) throw new Error("Не удалось открыть оплату Stars. Попробуйте снова.");
+        return { success: true, starsAmount: intent.starsAmount, expiresAt: intent.expiresAt, invoiceLink };
       }),
 
     getGroups: publicProcedure

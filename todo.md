@@ -198,6 +198,7 @@
 - [ ] Build a secure account-wallet foundation with TON Connect, deposit verification, withdrawal requests, immutable transaction states, and no live payout before treasury safeguards are approved
 - [ ] Add server-verified TON deposit reconciliation and withdrawal requests with idempotency, recipient-address confirmation, limits, and manual approval before payout
 - [x] Add a Telegram Stars payment choice for ranking bids using official invoice confirmation and immutable payment-intent records
+- [x] Open the official Telegram Stars payment window directly from the Mini App instead of sending the payment invoice as a bot chat message
 - [x] Add a factual TG TOP leaderboard with transparent ranking criteria and no fabricated point balances
 - [x] Add a unified account activity history using real credit, deal, NFT-transfer, and verified wallet records
 - [x] Add a verifiable TG TOP tasks program with explicit completion rules and no unearned rewards

@@ -721,8 +721,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const createStarsRankingPayment = trpc.tgTop.createStarsRankingPayment.useMutation({
     onSuccess: result => {
-      toast.success(tx(`Счёт на ${result.starsAmount} Stars отправлен в @TGTOP_robot. Позиция обновится после чека Telegram.`, `A ${result.starsAmount}-Stars invoice was sent in @TGTOP_robot. The placement updates after Telegram confirms payment.`));
       setStarsPaymentGroup(null);
+      const openInvoice = window.Telegram?.WebApp?.openInvoice;
+      if (openInvoice) {
+        openInvoice(result.invoiceLink, status => {
+          if (status === "paid") {
+            toast.success(tx("Оплата подтверждена Telegram. Позиция обновляется…", "Telegram confirmed payment. Updating placement…"));
+            void utils.tgTop.getSlots.invalidate();
+            void utils.tgTop.getAccountActivity.invalidate();
+          } else if (status === "cancelled") {
+            toast.message(tx("Оплата отменена.", "Payment cancelled."));
+          } else if (status === "failed") {
+            toast.error(tx("Оплату Stars не удалось завершить.", "Could not complete Stars payment."));
+          }
+        });
+        return;
+      }
+      window.open(result.invoiceLink, "_blank", "noopener,noreferrer");
     },
     onError: error => toast.error(error.message),
   });
