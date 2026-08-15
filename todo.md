@@ -130,7 +130,7 @@
 - [ ] Record visual verification of the 390×844 TG TOP top screen after the compact pyramid refinement
 - [ ] Stabilize mobile card dimensions and prevent Global text, labels, and controls from shifting or overflowing outside their containers
 - [x] Remove rental listing options and rental terms from groups and channels while retaining NFT rental mechanics
-- [ ] Simplify the settings panel into compact language and theme rows with minimal explanatory copy
+- [x] Simplify the settings panel into compact language and theme rows with minimal explanatory copy
 - [ ] Correct catalog listing charges to exactly 0.1 GRAM and refund the affected 0.9 GRAM overcharge through the ledger
 - [ ] Build trustworthy group and channel analytics from Telegram-observable snapshots, activity, growth, invite, and post-view data without fabricated metrics
 - [ ] Design a TGStat-grade analytics architecture with metric provenance, owner consent, and compliant historical enrichment for public channels

@@ -415,17 +415,16 @@ function SettingsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[48dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-4 text-slate-100"
+        className="max-h-[34dvh] rounded-t-[20px] border-white/10 bg-[#10161f] pb-3 text-slate-100"
       >
-        <SheetHeader className="px-4 pb-2">
-          <SheetTitle className="flex items-center gap-2 text-slate-100">
-            <BrandMark />
-            {isEnglish ? "Settings" : "Настройки"}
+        <SheetHeader className="px-4 pb-1">
+          <SheetTitle className="text-sm font-semibold text-slate-100">
+            {isEnglish ? "Preferences" : "Настройки"}
           </SheetTitle>
         </SheetHeader>
-        <div className="space-y-4 px-4">
-          <section className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[11px] text-slate-400">
+        <div className="mx-4 overflow-hidden rounded-xl border border-white/8 bg-black/10">
+          <section className="flex h-12 items-center justify-between gap-3 px-3">
+            <div className="flex items-center gap-2 text-xs text-slate-300">
               <Globe2 className="h-4 w-4" />
               {isEnglish ? "Language" : "Язык"}
             </div>
@@ -435,28 +434,28 @@ function SettingsSheet({
               onValueChange={value => {
                 if (value) onLanguageChange(value as Language);
               }}
-              className="inline-flex w-auto overflow-hidden rounded-lg border border-white/10 bg-[#0b0f14] p-0.5"
+              className="inline-flex w-auto overflow-hidden rounded-md border border-white/8 bg-[#0b0f14] p-0.5"
             >
               <ToggleGroupItem
                 value="ru"
-                className="h-8 min-w-14 border-0 px-2 text-[11px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
+                className="h-7 min-w-10 border-0 px-2 text-[10px] text-slate-400 data-[state=on]:rounded data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
               >
                 RU
               </ToggleGroupItem>
               <ToggleGroupItem
                 value="en"
-                className="h-8 min-w-14 border-0 px-2 text-[11px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
+                className="h-7 min-w-10 border-0 px-2 text-[10px] text-slate-400 data-[state=on]:rounded data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
               >
                 EN
               </ToggleGroupItem>
             </ToggleGroup>
           </section>
-          <section className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[11px] text-slate-400">
+          <section className="flex h-12 items-center justify-between gap-3 border-t border-white/8 px-3">
+            <div className="flex items-center gap-2 text-xs text-slate-300">
               <Sun className="h-4 w-4" />
               {isEnglish ? "Appearance" : "Оформление"}
             </div>
-            <div className="inline-flex overflow-hidden rounded-lg border border-white/10 bg-[#0b0f14] p-0.5">
+            <div className="inline-flex overflow-hidden rounded-md border border-white/8 bg-[#0b0f14] p-0.5">
               {appearanceItems.map(item => {
                 const Icon = item.icon;
                 const active = appearance === item.value;
@@ -465,9 +464,9 @@ function SettingsSheet({
                     key={item.value}
                     onClick={() => setAppearance(item.value)}
                     aria-label={item.label}
-                    className={`flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[11px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-400"}`}
+                    className={`flex h-7 items-center gap-1 rounded px-2 text-[10px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-400"}`}
                   >
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon className="h-3 w-3" />
                     {item.value === "dark" ? (isEnglish ? "Dark" : "Темн.") : (isEnglish ? "Light" : "Светл.")}
                   </button>
                 );
