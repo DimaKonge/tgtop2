@@ -248,7 +248,7 @@ function GroupCard({
             <small
               className={`mt-1 block max-w-full truncate text-xs text-slate-200/80 ${compact ? "hidden" : ""}`}
             >
-              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="underline decoration-[#a6c8ff]/55 underline-offset-2 hover:text-white">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
+              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="no-underline hover:text-white">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
           </span>
@@ -265,7 +265,7 @@ function GroupCard({
             <small
               className={`mt-1 block truncate text-xs text-slate-500 ${compact ? "hidden" : ""}`}
             >
-              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="underline decoration-[#4a90ff]/50 underline-offset-2 hover:text-slate-200">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
+              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="no-underline hover:text-slate-200">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
             {group.salePriceTon && group.listingType === "sale" && (

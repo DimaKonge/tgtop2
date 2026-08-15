@@ -191,3 +191,5 @@
 - [x] Add an audited Off-chain NFT transfer sheet with recipient lookup, explicit confirmation, 0% TG TOP commission, and immutable transfer history records
 - [x] Add On-chain and Off-chain NFT category labels and discovery filters while reserving On-chain transfer signing for cryptographically verified wallets
 - [x] Display a subtle “Комісія TG TOP · 0% на старті” disclosure beside sale prices and protected-deal summaries
+- [ ] Show the listing owner inside every community card and provide a safe direct entry to that owner’s TG TOP profile
+- [x] Remove visible underlines from Telegram username links inside community cards while preserving direct navigation

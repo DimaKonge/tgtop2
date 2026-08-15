@@ -35,6 +35,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('className="absolute inset-0 h-full w-full object-cover"');
     expect(source).toContain('https://t.me/${group.username}');
     expect(source).toContain('onClick={event => event.stopPropagation()}');
+    expect(source).toContain('className="no-underline hover:text-white"');
+    expect(source).toContain('className="no-underline hover:text-slate-200"');
+    expect(source).not.toContain('underline-offset-2');
     expect(source).not.toContain('ПРОВЕРЕНА TG TOP');
     expect(source).toContain('tx("Перебить ставку", "Outbid placement")');
     expect(source).toContain('const formatTon = (value: number | string | null | undefined)');
