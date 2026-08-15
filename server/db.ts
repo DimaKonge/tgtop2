@@ -154,8 +154,26 @@ export async function getAuctionSlots(category?: string, country?: string, subca
   if (category && category !== "Все") groupConditions.push(eq(groupsCatalog.category, category as "Каналы" | "Чаты"));
   if (country && country !== "Все" && country !== "Global") groupConditions.push(eq(groupsCatalog.country, country));
   if (subcategory && subcategory !== "Все") groupConditions.push(eq(groupsCatalog.subcategory, subcategory));
-  const groups = await db.select().from(groupsCatalog).where(and(...groupConditions));
-  const groupMap = new Map(groups.map(group => [group.id, group]));
+  const groups = await db.select({
+    group: groupsCatalog,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+    ownerAvatarUrl: users.avatarUrl,
+  }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
+    .where(and(...groupConditions));
+  const groupMap = new Map(groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => [
+    group.id,
+    {
+      ...group,
+      owner: {
+        openId: group.ownerOpenId,
+        name: ownerName,
+        telegramUsername: ownerTelegramUsername,
+        avatarUrl: ownerAvatarUrl,
+      },
+    },
+  ]));
   return slots.map(slot => ({ ...slot, group: slot.groupId ? groupMap.get(slot.groupId) ?? null : null }));
 }
 
@@ -244,7 +262,44 @@ export async function getGroupsCatalog(category?: string, country?: string, subc
   if (category && category !== "Все") conditions.push(eq(groupsCatalog.category, category as "Каналы" | "Чаты"));
   if (subcategory && subcategory !== "Все") conditions.push(eq(groupsCatalog.subcategory, subcategory));
   if (country && country !== "Все" && country !== "Global") conditions.push(eq(groupsCatalog.country, country));
-  return await db.select().from(groupsCatalog).where(and(...conditions)).orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
+  const groups = await db.select({
+    group: groupsCatalog,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+    ownerAvatarUrl: users.avatarUrl,
+  }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
+    .where(and(...conditions))
+    .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
+  return groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => ({
+    ...group,
+    owner: {
+      openId: group.ownerOpenId,
+      name: ownerName,
+      telegramUsername: ownerTelegramUsername,
+      avatarUrl: ownerAvatarUrl,
+    },
+  }));
+}
+
+export async function getPublicOwnerProfile(openId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [owner] = await db.select({
+    openId: users.openId,
+    name: users.name,
+    telegramUsername: users.telegramUsername,
+    avatarUrl: users.avatarUrl,
+  }).from(users).where(eq(users.openId, openId)).limit(1);
+  if (!owner) return undefined;
+  const groups = await db.select().from(groupsCatalog).where(and(
+    eq(groupsCatalog.ownerOpenId, openId),
+    eq(groupsCatalog.status, "listed")
+  )).orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
+  return {
+    owner,
+    groups: groups.map(group => ({ ...group, owner })),
+  };
 }
 
 export async function upsertTelegramGroup(data: InsertGroupCatalog): Promise<void> {
@@ -472,6 +527,29 @@ export async function unlistGroups(ownerOpenId: string, groupIds: number[]) {
       listingType: "catalog",
       salePriceTon: null,
     }).where(inArray(groupsCatalog.id, uniqueGroupIds));
+
+    const board = await tx.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, "Все"),
+      eq(auctionSlots.country, "Global")
+    )).orderBy(asc(auctionSlots.slotNumber));
+    const listedCandidates = await tx.select().from(groupsCatalog).where(eq(groupsCatalog.status, "listed"))
+      .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
+    const assignments = planVacantRankingAssignments(board, listedCandidates.map(group => group.id));
+    const candidatesById = new Map(listedCandidates.map(group => [group.id, group]));
+    for (const assignment of assignments) {
+      const group = candidatesById.get(assignment.groupId);
+      if (!group) continue;
+      await tx.update(auctionSlots).set({
+        groupId: group.id,
+        title: group.title,
+        subtitle: group.username ? `@${group.username}` : group.category,
+        leaderUsername: group.username ?? group.title,
+        leaderUserId: group.ownerOpenId,
+        bidAmount: 0,
+        currentBid: "0 TON",
+        updatedAt: new Date(),
+      }).where(and(eq(auctionSlots.id, assignment.slotId), sql`${auctionSlots.groupId} IS NULL`));
+    }
   });
 }
 

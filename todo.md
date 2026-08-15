@@ -193,3 +193,4 @@
 - [x] Display a subtle “Комісія TG TOP · 0% на старті” disclosure beside sale prices and protected-deal summaries
 - [ ] Show the listing owner inside every community card and provide a safe direct entry to that owner’s TG TOP profile
 - [x] Remove visible underlines from Telegram username links inside community cards while preserving direct navigation
+- [x] Backfill every vacant ranking slot atomically from eligible listed communities after a ranked listing is removed

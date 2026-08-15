@@ -18,4 +18,12 @@ describe("vacant ranking auto-placement", () => {
       { id: 2, slotNumber: 2, groupId: null },
     ], [11, 22])).toEqual([{ slotId: 2, groupId: 22 }]);
   });
+
+  it("fills a newly vacated rank with the next eligible listed community", () => {
+    expect(planVacantRankingAssignments([
+      { id: 1, slotNumber: 1, groupId: 11 },
+      { id: 2, slotNumber: 2, groupId: null },
+      { id: 3, slotNumber: 3, groupId: 33 },
+    ], [11, 33, 44, 55])).toEqual([{ slotId: 2, groupId: 44 }]);
+  });
 });

@@ -82,6 +82,12 @@ export const appRouter = router({
         return await db.getGroupDetail(input.groupId);
       }),
 
+    getPublicOwnerProfile: publicProcedure
+      .input(z.object({ openId: z.string().min(1).max(64) }))
+      .query(async ({ input }) => {
+        return await db.getPublicOwnerProfile(input.openId);
+      }),
+
     listGroupWithCredits: protectedProcedure
       .input(z.object({ groupId: z.number() }).merge(groupListingInput))
       .mutation(async ({ ctx, input }) => {
