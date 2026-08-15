@@ -73,6 +73,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Record a TON bid without payment');
     expect(source).toContain('Добавить свою группу в список');
     expect(source).toContain('Добавить свою группу');
+    expect(source).toContain('function OwnerEntry');
+    expect(source).toContain('getPublicOwnerProfile.useQuery');
+    expect(source).toContain('Разместил');
+    expect(source).toContain('Профиль владельца');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');
     expect(source).toContain('<WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} />');
     expect(source).not.toContain('{ value: "system"');

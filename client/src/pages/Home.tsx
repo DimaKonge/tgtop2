@@ -32,7 +32,7 @@ import {
 import { toast } from "sonner";
 import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 
-type Page = "top" | "catalog" | "mine" | "details" | "profile";
+type Page = "top" | "catalog" | "mine" | "details" | "owner" | "profile";
 type Audience = "all" | "small" | "medium" | "large";
 type Language = "ru" | "en";
 const n = (value: number, language: Language = "ru") =>
@@ -90,6 +90,12 @@ type Group = {
   salePriceTon?: string | null;
   listingType?: ListingType;
   createdAt: Date;
+  owner?: {
+    openId: string;
+    name: string | null;
+    telegramUsername: string | null;
+    avatarUrl: string | null;
+  };
 };
 type Slot = {
   id: number;
@@ -179,17 +185,28 @@ function Avatar({
   );
 }
 
+function OwnerEntry({ group, language, onOpen, inverse = false }: { group: Group; language: Language; onOpen?: () => void; inverse?: boolean }) {
+  const owner = group.owner;
+  if (!owner) return null;
+  const label = owner.telegramUsername ? `@${owner.telegramUsername}` : (owner.name ?? (language === "en" ? "TG TOP user" : "Пользователь TG TOP"));
+  const content = <>{language === "en" ? "Listed by" : "Разместил"} <b className="font-medium">{label}</b></>;
+  if (!onOpen) return <small className={`mt-1 block truncate text-[10px] ${inverse ? "text-slate-200/65" : "text-slate-500"}`}>{content}</small>;
+  return <button type="button" onClick={event => { event.stopPropagation(); onOpen(); }} onKeyDown={event => event.stopPropagation()} className={`mt-1 block max-w-full truncate text-left text-[10px] no-underline transition-colors ${inverse ? "text-slate-200/75 hover:text-white" : "text-slate-500 hover:text-[#a6c8ff]"}`}>{content}</button>;
+}
+
 type GroupCardVariant = "lead" | "secondary" | "compact" | "list";
 
 function GroupCard({
   group,
   variant = "list",
   onClick,
+  onOwnerClick,
   language = "ru",
 }: {
   group?: Group | null;
   variant?: GroupCardVariant;
   onClick: () => void;
+  onOwnerClick?: () => void;
   language?: Language;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -251,6 +268,7 @@ function GroupCard({
               {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="no-underline hover:text-white">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
+            {!compact && <OwnerEntry group={group} language={language} onOpen={onOwnerClick} inverse />}
           </span>
         </>
       ) : group ? (
@@ -268,6 +286,7 @@ function GroupCard({
               {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="no-underline hover:text-slate-200">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
+            {!compact && <OwnerEntry group={group} language={language} onOpen={onOwnerClick} />}
             {group.salePriceTon && group.listingType === "sale" && (
               <small className={`mt-1 block truncate text-[10px] text-[#a6c8ff] ${compact ? "hidden" : ""}`}>
                 {language === "en" ? `Sale · ${formatTon(group.salePriceTon)} TON · TG TOP fee · 0%` : `Продажа · ${formatTon(group.salePriceTon)} TON · Комиссия TG TOP · 0%`}
@@ -496,6 +515,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     localStorage.getItem("tg-top-language") === "en" ? "en" : "ru"
   );
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [selectedOwnerOpenId, setSelectedOwnerOpenId] = useState<string | null>(null);
   const [targetSlot, setTargetSlot] = useState<Slot | null>(null);
   const [amount, setAmount] = useState("0.1");
   const [starsPaymentGroup, setStarsPaymentGroup] = useState<Group | null>(null);
@@ -641,6 +661,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     { groupId: selectedGroupId ?? 0 },
     { enabled: selectedGroupId !== null }
   );
+  const publicOwnerQuery = trpc.tgTop.getPublicOwnerProfile.useQuery(
+    { openId: selectedOwnerOpenId ?? "" },
+    { enabled: selectedOwnerOpenId !== null }
+  );
+  const publicOwner = publicOwnerQuery.data as { owner: NonNullable<Group["owner"]>; groups: Group[] } | undefined;
   const detail = detailQuery.data as
     | {
         group: Group;
@@ -865,6 +890,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const openGroup = (id: number) => {
     setSelectedGroupId(id);
     setPage("details");
+  };
+  const openOwner = (openId: string) => {
+    setSelectedOwnerOpenId(openId);
+    setPage("owner");
   };
   const openMine = (slot?: Slot) => {
     if (slot) {
@@ -1121,6 +1150,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     ? openGroup(leadSlot.group.id)
                     : openMine(leadSlot)
                 }
+                onOwnerClick={() => leadSlot.group && openOwner(leadSlot.group.ownerOpenId)}
               />
               <div className="grid grid-cols-2 gap-2">
                 {secondTier.map(slot => (
@@ -1132,6 +1162,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     onClick={() =>
                       slot.group ? openGroup(slot.group.id) : openMine(slot)
                     }
+                    onOwnerClick={() => slot.group && openOwner(slot.group.ownerOpenId)}
                   />
                 ))}
               </div>
@@ -1145,6 +1176,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     onClick={() =>
                       slot.group ? openGroup(slot.group.id) : openMine(slot)
                     }
+                    onOwnerClick={() => slot.group && openOwner(slot.group.ownerOpenId)}
                   />
                 ))}
               </div>
@@ -1158,6 +1190,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     variant="list"
                     language={language}
                     onClick={() => openGroup(group.id)}
+                    onOwnerClick={() => openOwner(group.ownerOpenId)}
                   />
                 ))}
                 {generalList.length > 0 && (
@@ -1487,6 +1520,34 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <p className="py-16 text-center text-sm text-slate-500">
                 {tx("Загружаем статистику…", "Loading statistics…")}
               </p>
+            )}
+          </section>
+        )}
+
+        {page === "owner" && (
+          <section className="space-y-4">
+            <button onClick={() => setPage("top")} className="flex items-center gap-1 text-xs text-slate-400"><ArrowLeft className="h-4 w-4" />{ui.back}</button>
+            {publicOwner ? (
+              <>
+                <div className="rounded-2xl border border-white/8 bg-[#111720] p-5">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold">
+                      {publicOwner.owner.avatarUrl ? <img src={publicOwner.owner.avatarUrl} alt="" className="h-full w-full object-cover" /> : (publicOwner.owner.name?.slice(0, 1).toUpperCase() ?? "T")}
+                    </span>
+                    <span className="min-w-0">
+                      <h1 className="truncate text-lg font-semibold">{publicOwner.owner.name ?? tx("Пользователь TG TOP", "TG TOP user")}</h1>
+                      <small className="mt-1 block truncate text-xs text-slate-500">{publicOwner.owner.telegramUsername ? `@${publicOwner.owner.telegramUsername}` : tx("Профиль владельца", "Owner profile")}</small>
+                    </span>
+                  </div>
+                  <div className="mt-5"><Metric label={tx("Активные площадки", "Active communities")} value={n(publicOwner.groups.length, language)} note={tx("в каталоге TG TOP", "listed in TG TOP")} /></div>
+                </div>
+                <section className="space-y-2">
+                  <h2 className="px-1 text-sm font-semibold">{tx("Площадки владельца", "Owner communities")}</h2>
+                  {publicOwner.groups.map(group => <GroupCard key={group.id} group={group} variant="list" language={language} onClick={() => openGroup(group.id)} />)}
+                </section>
+              </>
+            ) : (
+              <p className="py-16 text-center text-sm text-slate-500">{tx("Загружаем профиль владельца…", "Loading owner profile…")}</p>
             )}
           </section>
         )}
