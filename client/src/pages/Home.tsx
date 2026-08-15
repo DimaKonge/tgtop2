@@ -1375,7 +1375,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {tx("+ Чат", "+ Chat")}
               </button>
             </div>
-            {selectedGroupIds.length > 0 && (
+            {!targetSlot && selectedGroupIds.length > 0 && (
               <div className="sticky top-[62px] z-20 rounded-xl border border-[#3f8cff]/30 bg-[#101a2a]/95 p-2.5 shadow-lg backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] text-slate-300">
@@ -1406,14 +1406,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   className="rounded-xl border border-white/8 bg-[#111720] p-3"
                 >
                   <div className="flex items-center gap-2">
-                    <button
+                    {!targetSlot && <button
                       onClick={() => toggleGroupSelection(group.id)}
                       aria-label={tx(`Выбрать ${group.title}`, `Select ${group.title}`)}
                       aria-pressed={selectedGroupIds.includes(group.id)}
                       className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selectedGroupIds.includes(group.id) ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}
                     >
                       <Check className="h-3.5 w-3.5" />
-                    </button>
+                    </button>}
                     <button
                       onClick={() => openGroup(group.id)}
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
@@ -1428,21 +1428,22 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <ChevronRight className="h-4 w-4 text-slate-600" />
                     </button>
                   </div>
-                  <div className="mt-3 flex gap-2">
-                    {targetSlot && (
+                  <div className="mt-3">
+                    {targetSlot ? (
                       <button
                         onClick={() => openStarsPayment(group)}
-                        className="flex-1 rounded-lg bg-[#3f8cff] py-2 text-xs font-semibold"
+                        className="w-full rounded-lg bg-[#3f8cff] py-2 text-xs font-semibold"
                       >
-                        {tx("Оплатить ставку", "Pay bid")}
+                        {tx("Выбрать для ставки", "Choose for placement")}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => openListing([group.id])}
+                        className="w-full rounded-lg border border-white/10 py-2 text-xs font-semibold text-slate-200"
+                      >
+                        {group.status === "listed" ? tx("Настроить листинг", "Configure listing") : tx("Выставить на листинг", "Create listing")}
                       </button>
                     )}
-                    <button
-                      onClick={() => openListing([group.id])}
-                      className="flex-1 rounded-lg border border-white/10 py-2 text-xs font-semibold text-slate-200"
-                    >
-                      {group.status === "listed" ? tx("Настроить листинг", "Configure listing") : tx("Выставить на листинг", "Create listing")}
-                    </button>
                   </div>
                 </div>
               ))}

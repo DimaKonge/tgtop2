@@ -158,7 +158,7 @@
 - [ ] Support a distinct verified wallet reference per NFT for rental source, payout, and return routing
 - [ ] Automatically discover eligible NFT assets after wallet connection while requiring owner approval before public display or assignment
 - [ ] Let a renter select a connected community for a leased username, show renewal timing, and prepare safe asset return at expiry
-- [ ] Simplify the My Groups mobile layout by removing duplicated placement inputs and separating ranking placement from listing controls
+- [x] Simplify the My Groups mobile layout by removing duplicated placement inputs and separating ranking placement from listing controls
 - [x] Move Connect Wallet into the compact top brand row above Global controls
 - [x] Give the TG TOP logo mark a black background treatment in the header
 - [x] Remove System appearance mode and retain only explicit black and white TG TOP themes

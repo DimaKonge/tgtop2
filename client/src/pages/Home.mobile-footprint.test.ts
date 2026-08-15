@@ -10,6 +10,8 @@ describe("TG TOP Global mobile featured board", () => {
     expect(source).toContain('h-[286px]');
     expect(source).toContain('h-[116px]');
     expect(source).toContain('h-[84px]');
+    expect(source).toContain('!targetSlot && selectedGroupIds.length > 0');
+    expect(source).toContain('Выбрать для ставки');
     expect(mobileBudget).toBeLessThan(viewportHeight);
   });
 });
