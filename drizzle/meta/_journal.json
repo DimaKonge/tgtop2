@@ -141,6 +141,13 @@
       "when": 1786769285478,
       "tag": "0019_jazzy_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1786772008486,
+      "tag": "0020_chubby_doomsday",
+      "breakpoints": true
     }
   ]
 }

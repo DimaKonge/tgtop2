@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { notifyRecordedRankingBid } from "./telegramNotifications";
+import { notifyRecordedRankingBid, sendStarsRankingInvoice } from "./telegramNotifications";
 import { formatTonAmount } from "./tonFormatting";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
@@ -60,6 +60,27 @@ export const appRouter = router({
           slotNumber: intent.slotNumber,
         });
         return { success: true, rankingIntentId: intent.id, paymentStatus: "recorded" as const };
+      }),
+
+    createStarsRankingPayment: protectedProcedure
+      .input(z.object({ slotId: z.number().int().positive(), groupId: z.number().int().positive(), bidAmount: z.number().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const intent = await db.createStarsRankingPaymentIntent({
+          userOpenId: ctx.user.openId,
+          slotId: input.slotId,
+          groupId: input.groupId,
+          bidAmount: Math.round(input.bidAmount * 1000),
+        });
+        const invoice = await sendStarsRankingInvoice({
+          openId: ctx.user.openId,
+          payload: intent.payload,
+          starsAmount: intent.starsAmount,
+          groupTitle: intent.groupTitle,
+          slotNumber: intent.slotNumber,
+        });
+        if (!invoice.sent) throw new Error("Не удалось отправить Stars-счёт. Откройте диалог с @TGTOP_robot и попробуйте снова.");
+        if (invoice.messageId) await db.setStarsRankingInvoiceMessage(intent.id, invoice.messageId);
+        return { success: true, starsAmount: intent.starsAmount, expiresAt: intent.expiresAt };
       }),
 
     getGroups: publicProcedure

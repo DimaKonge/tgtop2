@@ -194,3 +194,12 @@
 - [ ] Show the listing owner inside every community card and provide a safe direct entry to that owner’s TG TOP profile
 - [x] Remove visible underlines from Telegram username links inside community cards while preserving direct navigation
 - [x] Backfill every vacant ranking slot atomically from eligible listed communities after a ranked listing is removed
+- [x] Show the bot-observed invitation count in the community detail analytics alongside joins, leaves, and posts
+- [ ] Build a secure account-wallet foundation with TON Connect, deposit verification, withdrawal requests, immutable transaction states, and no live payout before treasury safeguards are approved
+- [ ] Add server-verified TON deposit reconciliation and withdrawal requests with idempotency, recipient-address confirmation, limits, and manual approval before payout
+- [x] Add a Telegram Stars payment choice for ranking bids using official invoice confirmation and immutable payment-intent records
+- [ ] Add a factual TG TOP leaderboard with transparent ranking criteria and no fabricated point balances
+- [ ] Add a unified account activity history using real credit, deal, NFT-transfer, and verified wallet records
+- [ ] Add a verifiable TG TOP tasks program with explicit completion rules and no unearned rewards
+- [x] Make the lower general-list area and empty state clickable, with a clear plus action that opens the personal cabinet to add or list a community
+- [x] Replace the exposed wallet address in the header with a compact connected indicator and visible account balance

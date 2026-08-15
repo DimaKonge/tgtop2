@@ -377,17 +377,17 @@ function BrandMark() {
   );
 }
 
-function WalletConnectControl({ language }: { language: Language }) {
+function WalletConnectControl({ language, balanceTon }: { language: Language; balanceTon: string }) {
   const [tonConnectUi] = useTonConnectUI();
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
   const label = address
-    ? `${address.slice(0, 5)}…${address.slice(-4)}`
+    ? language === "en" ? "Connected" : "Подключён"
     : language === "en"
       ? "Connect wallet"
       : "Кошелёк";
 
-  return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? label : language === "en" ? "Loading…" : "Загрузка…"}</button>;
+  return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? <><span>{label}</span>{address && <span className="rounded-md bg-[#0b0f14]/70 px-1.5 py-0.5 text-[10px] text-white">{balanceTon} TON</span>}</> : language === "en" ? "Loading…" : "Загрузка…"}</button>;
 }
 
 function SettingsSheet({
@@ -498,6 +498,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [targetSlot, setTargetSlot] = useState<Slot | null>(null);
   const [amount, setAmount] = useState("0.1");
+  const [starsPaymentGroup, setStarsPaymentGroup] = useState<Group | null>(null);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [listingOpen, setListingOpen] = useState(false);
   const [listingType, setListingType] = useState<ListingType>("catalog");
@@ -680,6 +681,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setTargetSlot(null);
       setAmount("0.1");
       void utils.tgTop.getSlots.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const createStarsRankingPayment = trpc.tgTop.createStarsRankingPayment.useMutation({
+    onSuccess: result => {
+      toast.success(tx(`Счёт на ${result.starsAmount} Stars отправлен в @TGTOP_robot. Позиция обновится после чека Telegram.`, `A ${result.starsAmount}-Stars invoice was sent in @TGTOP_robot. The placement updates after Telegram confirms payment.`));
+      setStarsPaymentGroup(null);
     },
     onError: error => toast.error(error.message),
   });
@@ -943,6 +951,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       currentBid: `${formatTon(value)} TON`,
     });
   };
+  const openStarsPayment = (group: Group) => {
+    if (!targetSlot?.id) return toast.error(tx("Эта позиция пока недоступна.", "This placement is not available yet."));
+    const value = Number(amount);
+    const current = targetSlot.bidAmount / 1000;
+    const minimum = targetSlot.group ? Math.max(0.1, current + 0.001) : 0.1;
+    if (!Number.isFinite(value) || value < minimum) {
+      return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} TON`, `Minimum bid: ${formatTon(minimum)} TON`));
+    }
+    setStarsPaymentGroup(group);
+  };
   const openNftTransfer = () => {
     setSelectedNftId(null);
     setRecipientInput("");
@@ -984,7 +1002,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <b className="text-sm tracking-tight">TG TOP</b>
           </button>
           <div className="flex items-center gap-2">
-            <WalletConnectControl language={language} />
+              <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} />
             <button
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
@@ -1142,15 +1160,31 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     onClick={() => openGroup(group.id)}
                   />
                 ))}
+                {generalList.length > 0 && (
+                  <button
+                    onClick={() => openMine()}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#3f8cff]/6 px-4 py-4 text-sm font-medium text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {tx("Добавить свою группу в список", "Add your community to the list")}
+                  </button>
+                )}
                 {generalList.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-white/12 bg-[#111720] p-6 text-center">
+                  <button
+                    onClick={() => openMine()}
+                    className="w-full rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#111720] p-6 text-center transition-colors hover:bg-[#151d28]"
+                  >
+                    <span className="mx-auto grid h-10 w-10 place-items-center rounded-full border border-[#3f8cff]/35 bg-[#3f8cff]/10 text-[#a6c8ff]">
+                      <Plus className="h-5 w-5" />
+                    </span>
                     <p className="text-sm font-medium text-slate-300">
                       {ui.globalEmptyTitle}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                       {ui.globalEmptyBody}
                     </p>
-                  </div>
+                    <span className="mt-3 inline-block text-xs font-semibold text-[#a6c8ff]">{tx("Добавить свою группу", "Add your community")}</span>
+                  </button>
                 )}
               </div>
             </section>
@@ -1313,10 +1347,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div className="mt-3 flex gap-2">
                     {targetSlot && (
                       <button
-                        onClick={() => submitPlacement(group)}
+                        onClick={() => openStarsPayment(group)}
                         className="flex-1 rounded-lg bg-[#3f8cff] py-2 text-xs font-semibold"
                       >
-                        {tx("Разместить", "Place")}
+                        {tx("Оплатить ставку", "Pay bid")}
                       </button>
                     )}
                     <button
@@ -1442,14 +1476,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </span>
                   <Users className="h-5 w-5 text-[#72a8ff]" />
                 </div>
-                {(detail.group.joinedCount > 0 || detail.group.leavesCount > 0 || detail.group.invitedCount > 0 || detail.group.messagesCount > 0) && (
-                  <div className="grid grid-cols-2 gap-3">
-                    {detail.group.joinedCount > 0 && <Metric label={tx("Вступления", "Joins")} value={n(detail.group.joinedCount)} note={tx("замеченные ботом", "observed by the bot")} />}
-                    {detail.group.leavesCount > 0 && <Metric label={tx("Выходы", "Leaves")} value={n(detail.group.leavesCount)} note={tx("замеченные ботом", "observed by the bot")} />}
-                    {detail.group.invitedCount > 0 && <Metric label={tx("По приглашениям", "Via invites")} value={n(detail.group.invitedCount)} note={tx("замеченные ботом", "observed by the bot")} />}
-                    {detail.group.messagesCount > 0 && <Metric label={tx("Публикации", "Posts")} value={n(detail.group.messagesCount)} note={tx("увиденные ботом", "observed by the bot")} />}
-                  </div>
-                )}
+                <div className="grid grid-cols-2 gap-3">
+                  {detail.group.joinedCount > 0 && <Metric label={tx("Вступления", "Joins")} value={n(detail.group.joinedCount)} note={tx("замеченные ботом", "observed by the bot")} />}
+                  {detail.group.leavesCount > 0 && <Metric label={tx("Выходы", "Leaves")} value={n(detail.group.leavesCount)} note={tx("замеченные ботом", "observed by the bot")} />}
+                  <Metric label={tx("Приглашения", "Invites")} value={n(detail.group.invitedCount)} note={tx("зафиксировано ботом", "recorded by the bot")} />
+                  {detail.group.messagesCount > 0 && <Metric label={tx("Публикации", "Posts")} value={n(detail.group.messagesCount)} note={tx("увиденные ботом", "observed by the bot")} />}
+                </div>
               </>
             ) : (
               <p className="py-16 text-center text-sm text-slate-500">
@@ -1714,6 +1746,41 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           })}
         </div>
       </nav>
+
+      <Sheet open={Boolean(starsPaymentGroup)} onOpenChange={open => !open && setStarsPaymentGroup(null)}>
+        <SheetContent side="bottom" className="rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4">
+            <SheetTitle className="text-slate-100">{tx("Оплата ставки", "Bid payment")}</SheetTitle>
+            <p className="text-xs leading-5 text-slate-500">
+              {starsPaymentGroup?.title} · {tx(`позиция ${targetSlot?.slotNumber ?? "—"}`, `placement ${targetSlot?.slotNumber ?? "—"}`)}
+            </p>
+          </SheetHeader>
+          <div className="space-y-3 px-4 pb-5">
+            <button
+              onClick={() => starsPaymentGroup && createStarsRankingPayment.mutate({ slotId: targetSlot!.id, groupId: starsPaymentGroup.id, bidAmount: Number(amount) })}
+              disabled={createStarsRankingPayment.isPending}
+              className="flex w-full items-center justify-between rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 p-4 text-left disabled:opacity-55"
+            >
+              <span>
+                <b className="block text-sm text-[#a6c8ff]">{tx("Оплатить Telegram Stars", "Pay with Telegram Stars")}</b>
+                <small className="mt-1 block text-[11px] leading-4 text-slate-400">{tx("Telegram покажет защищённое подтверждение списания.", "Telegram will show its protected payment confirmation.")}</small>
+              </span>
+              <b className="shrink-0 text-lg text-white">{Math.max(10, Math.ceil(Number(amount) * 100))} ★</b>
+            </button>
+            <button
+              onClick={() => {
+                if (starsPaymentGroup) submitPlacement(starsPaymentGroup);
+                setStarsPaymentGroup(null);
+              }}
+              disabled={placeBid.isPending}
+              className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-left disabled:opacity-55"
+            >
+              <b className="block text-xs text-slate-200">{tx("Записать TON-ставку без оплаты", "Record a TON bid without payment")}</b>
+              <small className="mt-1 block text-[10px] leading-4 text-slate-500">{tx("Только журнал TG TOP. TON не списывается и не отправляется.", "TG TOP journal only. No TON is charged or sent.")}</small>
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={listingOpen} onOpenChange={setListingOpen}>
         <SheetContent

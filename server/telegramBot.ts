@@ -8,6 +8,8 @@ import {
   recordGroupMembership,
   recordGroupSnapshot,
   observeProtectedGroupTransfer,
+  approveStarsRankingPayment,
+  settleStarsRankingPayment,
   upsertTelegramGroup,
   upsertUser,
 } from "./db";
@@ -32,10 +34,11 @@ type ChatMemberUpdate = {
 type TelegramActivity = { chat: TelegramChat; views?: number };
 type TelegramUpdate = {
   update_id: number;
-  message?: TelegramActivity & { from?: TelegramUser; text?: string; new_chat_members?: TelegramUser[] };
+  message?: TelegramActivity & { from?: TelegramUser; text?: string; new_chat_members?: TelegramUser[]; successful_payment?: { currency: string; total_amount: number; invoice_payload: string; telegram_payment_charge_id: string } };
   channel_post?: TelegramActivity;
   chat_member?: ChatMemberUpdate;
   my_chat_member?: { chat: TelegramChat; from: TelegramUser; old_chat_member: ChatMember; new_chat_member: ChatMember };
+  pre_checkout_query?: { id: string; from: TelegramUser; currency: string; total_amount: number; invoice_payload: string };
 };
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -126,6 +129,16 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
 }
 
 async function handleUpdate(update: TelegramUpdate): Promise<void> {
+  if (update.pre_checkout_query) {
+    const checkout = update.pre_checkout_query;
+    const approval = checkout.currency === "XTR"
+      ? await approveStarsRankingPayment({ payload: checkout.invoice_payload, telegramUserId: checkout.from.id, starsAmount: checkout.total_amount })
+      : { approved: false, reason: "Поддерживаются только Telegram Stars" };
+    await telegramCall<boolean>("answerPreCheckoutQuery", approval.approved
+      ? { pre_checkout_query_id: checkout.id, ok: true }
+      : { pre_checkout_query_id: checkout.id, ok: false, error_message: approval.reason });
+    return;
+  }
   if (update.my_chat_member) { await saveAdminChat(update); return; }
   if (update.chat_member) {
     const membership = update.chat_member;
@@ -138,9 +151,51 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     return;
   }
   const message = update.message;
+  if (message?.successful_payment) {
+    const payment = message.successful_payment;
+    if (!message.from || payment.currency !== "XTR") return;
+    const settlement = await settleStarsRankingPayment({
+      payload: payment.invoice_payload,
+      telegramUserId: message.from.id,
+      starsAmount: payment.total_amount,
+      telegramPaymentChargeId: payment.telegram_payment_charge_id,
+    });
+    const refunded = settlement.status === "refund_required"
+      ? await telegramCall<boolean>("refundStarPayment", {
+          user_id: message.from.id,
+          telegram_payment_charge_id: payment.telegram_payment_charge_id,
+        }).catch(error => {
+          console.error("[Telegram] Could not automatically refund Stars ranking payment:", error);
+          return false;
+        })
+      : false;
+    await telegramCall<boolean>("sendMessage", {
+      chat_id: message.chat.id,
+      text: settlement.status === "paid"
+        ? "✅ Оплата Stars подтверждена. Ставка TG TOP активирована."
+        : refunded
+          ? "↩️ Позиция изменилась до подтверждения. Stars автоматически возвращены."
+          : "⚠️ Оплата получена, но позиция изменилась. Запрос на возврат Stars передан в поддержку: /paysupport",
+    });
+    return;
+  }
   const activity = message ?? update.channel_post;
   if (activity && (activity.chat.type === "group" || activity.chat.type === "supergroup" || activity.chat.type === "channel")) {
     await recordGroupActivity(catalogChatId(activity.chat.id), activity.views ?? 0);
+  }
+  if (message?.text?.startsWith("/terms")) {
+    await telegramCall<boolean>("sendMessage", {
+      chat_id: message.chat.id,
+      text: "Условия оплаты TG TOP: Stars оплачивают цифровую услугу размещения в рейтинге. Позиция активируется только после чека Telegram. Если позиция недоступна на момент подтверждения, Stars возвращаются автоматически либо через поддержку. Для вопросов: /paysupport",
+    });
+    return;
+  }
+  if (message?.text?.startsWith("/paysupport")) {
+    await telegramCall<boolean>("sendMessage", {
+      chat_id: message.chat.id,
+      text: "Поддержка оплат TG TOP: опишите номер чека, позицию и группу в одном сообщении. Мы проверим историю платежа и ответим в этом чате.",
+    });
+    return;
   }
   if (!message?.text?.startsWith("/start")) return;
   if (message.from) {
@@ -162,7 +217,7 @@ async function run(): Promise<void> {
   let offset = 0;
   while (true) {
     try {
-      const updates = await telegramCall<TelegramUpdate[]>("getUpdates", { offset, timeout: pollTimeoutSeconds, allowed_updates: ["message", "channel_post", "my_chat_member", "chat_member"] });
+      const updates = await telegramCall<TelegramUpdate[]>("getUpdates", { offset, timeout: pollTimeoutSeconds, allowed_updates: ["message", "channel_post", "my_chat_member", "chat_member", "pre_checkout_query"] });
       for (const update of updates) {
         offset = update.update_id + 1;
         try { await handleUpdate(update); } catch (error) { console.error(`[Telegram] Failed to process update ${update.update_id}:`, error); }

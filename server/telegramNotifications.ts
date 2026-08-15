@@ -36,3 +36,24 @@ export async function notifyRecordedRankingBid(input: { openId: string; groupTit
     return false;
   }
 }
+
+export async function sendStarsRankingInvoice(input: { openId: string; payload: string; starsAmount: number; groupTitle: string; slotNumber: number }) {
+  const chatId = getTelegramChatIdFromOpenId(input.openId);
+  if (!chatId || !botToken) return { sent: false, messageId: null };
+  try {
+    const response = await axios.post<{ ok: boolean; result?: { message_id?: number } }>(`https://api.telegram.org/bot${botToken}/sendInvoice`, {
+      chat_id: chatId,
+      title: "TG TOP · рейтинг",
+      description: `Ставка за позицию ${input.slotNumber} для ${input.groupTitle}. Позиция активируется после подтверждённой оплаты.`,
+      payload: input.payload,
+      provider_token: "",
+      currency: "XTR",
+      prices: [{ label: "Ставка TG TOP", amount: input.starsAmount }],
+      start_parameter: `rank_${input.payload.slice(-24)}`,
+    }, { timeout: 15_000 });
+    return { sent: Boolean(response.data.ok), messageId: response.data.result?.message_id ?? null };
+  } catch (error) {
+    console.warn("[Telegram] Could not send Stars ranking invoice:", error);
+    return { sent: false, messageId: null };
+  }
+}

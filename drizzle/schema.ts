@@ -132,6 +132,31 @@ export const rankingBidIntents = mysqlTable("ranking_bid_intents", {
 
 export type RankingBidIntent = typeof rankingBidIntents.$inferSelect;
 
+export const starsRankingPaymentIntents = mysqlTable("stars_ranking_payment_intents", {
+  id: int("id").autoincrement().primaryKey(),
+  payload: varchar("payload", { length: 96 }).notNull().unique(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  slotId: int("slotId").notNull(),
+  groupId: int("groupId").notNull(),
+  bidAmount: int("bidAmount").notNull(),
+  starsAmount: int("starsAmount").notNull(),
+  status: mysqlEnum("status", ["pending", "pre_checkout_approved", "paid", "refund_required", "cancelled", "expired"]).default("pending").notNull(),
+  telegramPaymentChargeId: varchar("telegramPaymentChargeId", { length: 128 }).unique(),
+  telegramUserId: varchar("telegramUserId", { length: 64 }),
+  invoiceMessageId: int("invoiceMessageId"),
+  failureReason: varchar("failureReason", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  paidAt: timestamp("paidAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("stars_rank_payment_user_status_idx").on(table.userOpenId, table.status),
+  index("stars_rank_payment_slot_status_idx").on(table.slotId, table.status),
+  index("stars_rank_payment_expiry_idx").on(table.status, table.expiresAt),
+]);
+
+export type StarsRankingPaymentIntent = typeof starsRankingPaymentIntents.$inferSelect;
+
 export const nftUsernames = mysqlTable("nft_usernames", {
   id: int("id").autoincrement().primaryKey(),
   username: varchar("username", { length: 128 }).notNull().unique(),

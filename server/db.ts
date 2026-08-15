@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, rankingBidIntents, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { cascadeRankedOccupants } from "./auctionCascade";
@@ -13,6 +13,13 @@ import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
+
+export const STARS_PER_MINIMUM_RANKING_BID = 10;
+const STARS_RANKING_PAYMENT_TTL_MS = 20 * 60 * 1000;
+
+export function getStarsAmountForRankingBid(bidAmount: number) {
+  return Math.max(STARS_PER_MINIMUM_RANKING_BID, Math.ceil(bidAmount / 10));
+}
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -253,6 +260,93 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   });
 
   return { id: rankingIntentId, slotNumber: target.slotNumber, bidAmount, groupTitle: group.title };
+}
+
+export async function createStarsRankingPaymentIntent(input: { userOpenId: string; slotId: number; groupId: number; bidAmount: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const group = await getGroupById(input.groupId);
+  if (!group || group.ownerOpenId !== input.userOpenId) throw new Error("Выберите свою группу из личной папки");
+  const [slot] = await db.select().from(auctionSlots).where(eq(auctionSlots.id, input.slotId)).limit(1);
+  if (!slot || !isQualifyingRankingBid(input.bidAmount, slot.bidAmount, slot.groupId !== null)) {
+    throw new Error("Ставка больше недействительна. Обновите рейтинг и повторите попытку.");
+  }
+  const payload = `tg_top_rank_${randomBytes(18).toString("hex")}`;
+  const expiresAt = new Date(Date.now() + STARS_RANKING_PAYMENT_TTL_MS);
+  const starsAmount = getStarsAmountForRankingBid(input.bidAmount);
+  const result = await db.insert(starsRankingPaymentIntents).values({
+    payload,
+    userOpenId: input.userOpenId,
+    slotId: input.slotId,
+    groupId: input.groupId,
+    bidAmount: input.bidAmount,
+    starsAmount,
+    expiresAt,
+  });
+  return { id: Number(result[0]?.insertId ?? 0), payload, starsAmount, expiresAt, groupTitle: group.title, slotNumber: slot.slotNumber };
+}
+
+export async function setStarsRankingInvoiceMessage(intentId: number, invoiceMessageId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(starsRankingPaymentIntents).set({ invoiceMessageId }).where(eq(starsRankingPaymentIntents.id, intentId));
+}
+
+export async function approveStarsRankingPayment(input: { payload: string; telegramUserId: number; starsAmount: number }) {
+  const db = await getDb();
+  if (!db) return { approved: false, reason: "Сервис оплаты временно недоступен" };
+  const [intent] = await db.select().from(starsRankingPaymentIntents).where(eq(starsRankingPaymentIntents.payload, input.payload)).limit(1);
+  if (!intent || intent.status !== "pending" || intent.expiresAt.getTime() < Date.now()) return { approved: false, reason: "Счёт истёк или уже обработан" };
+  if (intent.userOpenId !== `telegram:${input.telegramUserId}` || intent.starsAmount !== input.starsAmount) return { approved: false, reason: "Параметры счёта не совпадают" };
+  const group = await getGroupById(intent.groupId);
+  const [slot] = await db.select().from(auctionSlots).where(eq(auctionSlots.id, intent.slotId)).limit(1);
+  if (!group || group.ownerOpenId !== intent.userOpenId || !slot || !isQualifyingRankingBid(intent.bidAmount, slot.bidAmount, slot.groupId !== null)) {
+    return { approved: false, reason: "Позиция изменилась. Обновите рейтинг и создайте новый счёт." };
+  }
+  await db.update(starsRankingPaymentIntents).set({ status: "pre_checkout_approved", telegramUserId: String(input.telegramUserId) }).where(eq(starsRankingPaymentIntents.id, intent.id));
+  return { approved: true };
+}
+
+export async function settleStarsRankingPayment(input: { payload: string; telegramUserId: number; starsAmount: number; telegramPaymentChargeId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [alreadyRecorded] = await db.select().from(starsRankingPaymentIntents)
+    .where(eq(starsRankingPaymentIntents.telegramPaymentChargeId, input.telegramPaymentChargeId)).limit(1);
+  if (alreadyRecorded?.status === "paid") return { status: "paid" as const, idempotent: true };
+  const [intent] = await db.select().from(starsRankingPaymentIntents).where(eq(starsRankingPaymentIntents.payload, input.payload)).limit(1);
+  if (!intent || intent.userOpenId !== `telegram:${input.telegramUserId}` || intent.starsAmount !== input.starsAmount) {
+    throw new Error("Не удалось сопоставить подтверждённую Stars-оплату со ставкой");
+  }
+  if (intent.status === "paid") return { status: "paid" as const, idempotent: true };
+  if (intent.status !== "pre_checkout_approved") {
+    await db.update(starsRankingPaymentIntents).set({
+      status: "refund_required",
+      telegramPaymentChargeId: input.telegramPaymentChargeId,
+      telegramUserId: String(input.telegramUserId),
+      failureReason: "Оплата не получила предварительное подтверждение",
+    }).where(eq(starsRankingPaymentIntents.id, intent.id));
+    return { status: "refund_required" as const, idempotent: false };
+  }
+  const group = await getGroupById(intent.groupId);
+  if (!group) throw new Error("Группа для подтверждённой ставки больше недоступна");
+  try {
+    await placeBid(intent.slotId, intent.bidAmount, `${formatTonAmount(intent.bidAmount / 1000)} TON`, group.username ?? group.title, intent.userOpenId, intent.groupId);
+    await db.update(starsRankingPaymentIntents).set({
+      status: "paid",
+      telegramPaymentChargeId: input.telegramPaymentChargeId,
+      telegramUserId: String(input.telegramUserId),
+      paidAt: new Date(),
+    }).where(eq(starsRankingPaymentIntents.id, intent.id));
+    return { status: "paid" as const, idempotent: false };
+  } catch (error) {
+    await db.update(starsRankingPaymentIntents).set({
+      status: "refund_required",
+      telegramPaymentChargeId: input.telegramPaymentChargeId,
+      telegramUserId: String(input.telegramUserId),
+      failureReason: error instanceof Error ? error.message.slice(0, 255) : "Не удалось активировать ставку",
+    }).where(eq(starsRankingPaymentIntents.id, intent.id));
+    return { status: "refund_required" as const, idempotent: false };
+  }
 }
 
 export async function getGroupsCatalog(category?: string, country?: string, subcategory?: string) {

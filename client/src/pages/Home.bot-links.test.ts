@@ -66,8 +66,15 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Connect wallet');
     expect(source).toContain('useTonConnectUI');
     expect(source).toContain('tonConnectUi.openModal()');
+    expect(source).toContain('language === "en" ? "Connected" : "Подключён"');
+    expect(source).toContain('balanceTon} TON');
+    expect(source).toContain('createStarsRankingPayment');
+    expect(source).toContain('Оплатить Telegram Stars');
+    expect(source).toContain('Record a TON bid without payment');
+    expect(source).toContain('Добавить свою группу в список');
+    expect(source).toContain('Добавить свою группу');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');
-    expect(source).toContain('<WalletConnectControl language={language} />');
+    expect(source).toContain('<WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} />');
     expect(source).not.toContain('{ value: "system"');
     expect(source).toContain('setFiltersOpen(true)');
     expect(source).toContain('side="bottom"');
@@ -89,6 +96,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Каталог групп", "Community catalog")');
     expect(source).toContain('tx("По этому фильтру площадок пока нет.", "No communities match this filter yet.")');
     expect(source).toContain('tx("Участники", "Members")');
+    expect(source).toContain('tx("Приглашения", "Invites")');
+    expect(source).toContain('tx("зафиксировано ботом", "recorded by the bot")');
     expect(source).toContain('sticky top-2 z-10 flex items-center justify-between');
     expect(source).toContain('tx("Загружаем статистику…", "Loading statistics…")');
     expect(source).toContain('"This placement will be available after the ranking board is created."');
