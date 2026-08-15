@@ -826,6 +826,36 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     direction: "in" | "out" | "neutral";
   }>;
   const referral = account?.referral;
+  const verifiedTasks = [
+    {
+      id: "connect-community",
+      title: tx("Подключить сообщество", "Connect a community"),
+      description: tx("Добавьте @TGTOP_robot администратором своей группы или канала.", "Add @TGTOP_robot as an administrator of your group or channel."),
+      complete: mine.length > 0,
+      action: () => openMine(),
+    },
+    {
+      id: "list-community",
+      title: tx("Разместить сообщество", "List a community"),
+      description: tx("Появитесь в общем каталоге TG TOP.", "Appear in the TG TOP general catalog."),
+      complete: mine.some(group => group.status === "listed"),
+      action: () => openMine(),
+    },
+    {
+      id: "ranking-bid",
+      title: tx("Участвовать в рейтинге", "Join the ranking"),
+      description: tx("Создайте зафиксированную ставку или оплатите позицию Stars.", "Create a recorded bid or pay for a position with Stars."),
+      complete: accountActivity.some(item => item.type === "bid" || item.type === "stars"),
+      action: () => setPage("top"),
+    },
+    {
+      id: "refer-owner",
+      title: tx("Пригласить владельца", "Invite an owner"),
+      description: tx("Поделитесь личной ссылкой с другим владельцем сообщества.", "Share your personal link with another community owner."),
+      complete: (referral?.referralsCount ?? 0) > 0,
+      action: () => void copyReferralLink(),
+    },
+  ];
   const dealStatusLabel = (status: typeof deals[number]["status"]) => {
     const labels = {
       open: tx("Ожидает оплаты", "Awaiting payment"),
@@ -1641,6 +1671,22 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               ) : (
                 <p className="px-4 py-8 text-center text-sm text-slate-500">{tx("Лидерборд появится после первых активных листингов.", "The leaderboard appears after the first active listings.")}</p>
               )}
+            </section>
+            <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
+              <div className="border-b border-white/8 px-4 py-4">
+                <h2 className="text-sm font-semibold">{tx("Задачи", "Tasks")}</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{tx("Прогресс подтверждается только действиями, зафиксированными в TG TOP. Награды не начисляются автоматически.", "Progress is confirmed only by actions recorded in TG TOP. Rewards are not issued automatically.")}</p>
+              </div>
+              <div className="divide-y divide-white/7">
+                {verifiedTasks.map(task => <button key={task.id} onClick={task.action} className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.025]">
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border text-xs ${task.complete ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300" : "border-white/10 bg-white/[0.03] text-slate-500"}`}>{task.complete ? <Check className="h-4 w-4" /> : <Trophy className="h-4 w-4" />}</span>
+                  <span className="min-w-0 flex-1">
+                    <b className="block truncate text-sm">{task.title}</b>
+                    <small className="mt-1 block text-[11px] leading-4 text-slate-500">{task.description}</small>
+                  </span>
+                  {task.complete ? <span className="text-[11px] font-medium text-emerald-300">{tx("Готово", "Done")}</span> : <ChevronRight className="h-4 w-4 text-slate-600" />}
+                </button>)}
+              </div>
             </section>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="border-b border-white/8 px-4 py-4">
