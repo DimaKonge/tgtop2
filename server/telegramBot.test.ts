@@ -23,7 +23,7 @@ describe("TG TOP Telegram catalog onboarding", () => {
 
   it("keeps the group connection reward denomination at 0.1 internal GRAM", async () => {
     const { GROUP_CONNECTION_BONUS } = await import("./db");
-    expect(GROUP_CONNECTION_BONUS).toBe(100);
+    expect(GROUP_CONNECTION_BONUS).toBe(10);
   });
 
   it("builds a public Telegram URL only for a channel with a verified username", () => {

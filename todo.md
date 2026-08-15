@@ -116,11 +116,26 @@
 - [ ] Visually verify authenticated light-theme owner-management, listing, NFT, and protected-deal flows before completing the light-theme task
 - [x] Fix the TG TOP brand-mark symbol disappearing against the black logo tile in light mode and add a regression check
 - [x] Add owner-uploaded MP4 animated group avatars with protected ownership checks, marketplace playback, and Telegram image/initials fallbacks
+- [x] Temporarily hide animated group-avatar upload and playback while retaining ordinary Telegram avatars
+- [x] Format all displayed TON prices and recorded-bid thresholds without trailing zeroes or unnecessary decimals
+- [x] Replace every remaining hard-coded fixed-decimal TON label with concise formatter-backed copy
+- [x] Fix chat onboarding so adding @TGTOP_robot explicitly guides the owner to grant administrator rights instead of silently leaving the bot as a member
+- [x] Simplify group details by removing the raw analytics graph and unavailable metrics, pinning the member count, and adding direct owner unlisting
 - [x] Add initials fallback to ranked cards when animated and static group avatar media both fail
 - [x] Show a clear client-side error if animated-avatar file reading fails before upload
 - [x] Replace the oversized Global side filter drawer with a compact mobile filter experience that does not crowd the ranking pyramid
 - [x] Redesign Settings language and appearance controls as smaller compact selectors that match the streamlined Global filtering style
 - [ ] Reduce and verify the 390×844 mobile vertical footprint of the Global 1 → 2 → 4 pyramid
+- [ ] Add a rendered acceptance check proving the Global 1→2→4 featured board fits and remains usable at 390×844
+- [ ] Record visual verification of the 390×844 TG TOP top screen after the compact pyramid refinement
+- [ ] Stabilize mobile card dimensions and prevent Global text, labels, and controls from shifting or overflowing outside their containers
+- [ ] Remove rental listing options and rental terms from groups and channels while retaining NFT rental mechanics
+- [ ] Simplify the settings panel into compact language and theme rows with minimal explanatory copy
+- [ ] Correct catalog listing charges to exactly 0.1 GRAM and refund the affected 0.9 GRAM overcharge through the ledger
+- [ ] Build trustworthy group and channel analytics from Telegram-observable snapshots, activity, growth, invite, and post-view data without fabricated metrics
+- [ ] Design a TGStat-grade analytics architecture with metric provenance, owner consent, and compliant historical enrichment for public channels
+- [x] Add visible recorded-bid outbid controls for occupied ranking slots and make eligible public @usernames themselves direct Telegram links
+- [x] Remove redundant "Верифицирована с TG" wording from the Global featured card while retaining internal verification data
 - [ ] Accrue and persist referral earnings from completed TG TOP fee-bearing deals with backend regression coverage
 - [x] Add NFT as a fourth primary Global toggle with a dedicated discovery state outside the group catalog
 - [ ] Configure tgtop.ton as TG TOP’s verified Web3 identity while retaining tgtop.xyz as the HTTPS Mini App origin

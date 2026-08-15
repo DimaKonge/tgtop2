@@ -14,7 +14,7 @@ describe("TG TOP one-time group connection bonus policy", () => {
   });
 
   it("keeps the reward at exactly 0.1 internal GRAM and rejects an empty group identity", () => {
-    expect(GROUP_CONNECTION_BONUS).toBe(100);
+    expect(GROUP_CONNECTION_BONUS).toBe(10);
     expect(() => getGroupConnectionBonusIdentity("   ")).toThrow("Telegram chat ID is required");
   });
 });

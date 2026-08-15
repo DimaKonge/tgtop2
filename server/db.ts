@@ -10,7 +10,7 @@ import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramR
 import { isCatalogSubcategory } from "./catalogTaxonomy";
 import { getMinimumRankingBidMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
 import { planVacantRankingAssignments } from "./autoPlacementPolicy";
-import { storagePut } from "./storage";
+import { formatTonAmount } from "./tonFormatting";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -169,7 +169,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   if (!target) throw new Error("Позиция рейтинга не найдена");
   if (!isQualifyingRankingBid(bidAmount, target.bidAmount, target.groupId !== null)) {
     const requiredMilliTon = getMinimumRankingBidMilliTon(target.bidAmount, target.groupId !== null);
-    throw new Error(`Минимальная ставка для этой позиции — ${(requiredMilliTon / 1000).toFixed(3)} TON`);
+    throw new Error(`Минимальная ставка для этой позиции — ${formatTonAmount(requiredMilliTon / 1000)} TON`);
   }
   const board = await db.select().from(auctionSlots).where(and(
     eq(auctionSlots.category, target.category),
@@ -286,24 +286,6 @@ export async function getMyGroups(ownerOpenId: string) {
   const groups = await db.select().from(groupsCatalog).where(eq(groupsCatalog.ownerOpenId, ownerOpenId)).orderBy(desc(groupsCatalog.createdAt));
   for (const group of groups) await grantGroupConnectionBonus(ownerOpenId, group.id);
   return groups;
-}
-
-export async function setGroupAnimatedAvatar(ownerOpenId: string, groupId: number, bytes: Buffer) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const [group] = await db.select().from(groupsCatalog).where(and(
-    eq(groupsCatalog.id, groupId),
-    eq(groupsCatalog.ownerOpenId, ownerOpenId)
-  )).limit(1);
-  if (!group) throw new Error("Группа недоступна для управления");
-
-  const upload = await storagePut(`group-avatars/${group.id}/animated-avatar.mp4`, bytes, "video/mp4");
-  await db.update(groupsCatalog).set({
-    animatedAvatarKey: upload.key,
-    animatedAvatarUrl: upload.url,
-    animatedAvatarUpdatedAt: new Date(),
-  }).where(eq(groupsCatalog.id, group.id));
-  return { url: upload.url };
 }
 
 export async function getGroupDetail(id: number) {

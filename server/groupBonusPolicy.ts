@@ -1,4 +1,5 @@
-export const GROUP_CONNECTION_BONUS = 100;
+// Balances are stored in hundredths of a GRAM; 10 units therefore equal 0.1 GRAM.
+export const GROUP_CONNECTION_BONUS = 10;
 
 /**
  * Telegram chat IDs survive catalog removal and re-listing, unlike a database row ID.

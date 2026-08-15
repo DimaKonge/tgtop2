@@ -73,7 +73,6 @@ type Group = {
   username: string | null;
   description: string | null;
   avatarFileId: string | null;
-  animatedAvatarUrl?: string | null;
   membersCount: number;
   ownerOpenId: string;
   category: "Каналы" | "Чаты";
@@ -143,19 +142,16 @@ const getTelegramAvatarSrc = (group: Group) =>
     : group.username
       ? `https://t.me/i/userpic/320/${group.username}.jpg`
       : null;
+const formatTon = (value: number | string | null | undefined) => {
+  const amount = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(amount) ? amount.toFixed(9).replace(/\.?0+$/, "") : "0";
+};
 const getCategoryLabel = (category: Group["category"], language: Language) =>
   language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
 const getSubcategoryLabel = (subcategory: string, language: Language) =>
   SUBCATEGORY_LABELS[subcategory]?.[language] ?? subcategory;
 const getCountryLabel = (country: string, language: Language) =>
   COUNTRY_LABELS[country]?.[language] ?? country;
-const readFileAsBase64 = (file: File) => new Promise<string>((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
-  reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
-  reader.readAsDataURL(file);
-});
-
 function Avatar({
   group,
   large = false,
@@ -172,9 +168,7 @@ function Avatar({
     <span
       className={`${size} grid shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#1b2430] text-sm font-semibold text-slate-200`}
     >
-      {group.animatedAvatarUrl && !failed ? (
-        <video src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="metadata" className="h-full w-full object-cover" onError={() => setFailed(true)} />
-      ) : avatarSrc && !failed ? (
+      {avatarSrc && !failed ? (
         <img
           src={avatarSrc}
           alt=""
@@ -206,28 +200,35 @@ function GroupCard({
   const compact = variant === "compact";
   const rankingPlacement = variant !== "list";
   const cardStyle = lead
-    ? "min-h-[42vh] border-[#3f8cff]/35 bg-[#141c27] p-6"
+    ? "h-[286px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[42vh] sm:p-6"
     : variant === "secondary"
-      ? "min-h-[140px] border-white/10 bg-[#111720] p-4"
+      ? "h-[116px] border-white/10 bg-[#111720] p-3 sm:h-[140px] sm:p-4"
       : compact
-        ? "min-h-[106px] border-white/8 bg-[#111720] p-2"
+        ? "h-[84px] border-white/8 bg-[#111720] p-2 sm:h-[106px]"
         : "border-white/8 bg-[#111720] p-3";
   const shellStyle = compact
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
     : "flex h-full items-center gap-3";
   const avatarSrc = group ? getTelegramAvatarSrc(group) : null;
-  const animatedAvatarSrc = group?.animatedAvatarUrl ?? null;
+  const groupUrl = group?.username ? `https://t.me/${group.username}` : null;
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className={`relative w-full overflow-hidden rounded-2xl border text-left transition-colors hover:border-[#3f8cff]/45 active:scale-[0.99] ${cardStyle}`}
+      onKeyDown={event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
+      className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-colors hover:border-[#3f8cff]/45 active:scale-[0.99] ${cardStyle}`}
     >
       {group && rankingPlacement ? (
         <>
           <>
-            {animatedAvatarSrc && !imageFailed ? (
-              <video src={animatedAvatarSrc} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" onError={() => setImageFailed(true)} />
-            ) : avatarSrc && !imageFailed ? (
+            {avatarSrc && !imageFailed ? (
               <img
                 src={avatarSrc}
                 alt=""
@@ -241,24 +242,17 @@ function GroupCard({
             )}
           </>
           <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,15,0.06)_8%,rgba(7,10,15,0.82)_100%)]" />
-          <span
-            className={`absolute inset-x-0 bottom-0 p-${compact ? "2" : lead ? "6" : "4"}`}
-          >
+          <span className={`absolute inset-x-0 bottom-0 min-w-0 ${compact ? "p-2" : lead ? "p-5 sm:p-6" : "p-3 sm:p-4"}`}>
             <b
-              className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} block truncate font-semibold text-white`}
+              className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} block max-w-full truncate font-semibold text-white`}
             >
               {group.title}
             </b>
             <small
-              className={`mt-1 block truncate text-xs text-slate-200/80 ${compact ? "hidden" : ""}`}
+              className={`mt-1 block max-w-full truncate text-xs text-slate-200/80 ${compact ? "hidden" : ""}`}
             >
-              {group.username ? `@${group.username}` : getCategoryLabel(group.category, language)} ·{" "}
+              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="underline decoration-[#a6c8ff]/55 underline-offset-2 hover:text-white">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
-            </small>
-            <small
-              className={`mt-1 block text-[10px] font-medium tracking-wide text-[#a6c8ff] ${compact ? "hidden" : ""}`}
-            >
-              {language === "en" ? "VERIFIED BY TG TOP" : "ПРОВЕРЕНА TG TOP"}
             </small>
           </span>
         </>
@@ -274,12 +268,12 @@ function GroupCard({
             <small
               className={`mt-1 block truncate text-xs text-slate-500 ${compact ? "hidden" : ""}`}
             >
-              {group.username ? `@${group.username}` : getCategoryLabel(group.category, language)} ·{" "}
+              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="underline decoration-[#4a90ff]/50 underline-offset-2 hover:text-slate-200">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
             {group.salePriceTon && (group.listingType === "sale" || group.listingType === "both") && (
               <small className={`mt-1 block truncate text-[10px] text-[#a6c8ff] ${compact ? "hidden" : ""}`}>
-                {language === "en" ? `Sale · ${group.salePriceTon} TON · TG TOP fee · 0%` : `Продажа · ${group.salePriceTon} TON · Комиссия TG TOP · 0%`}
+                {language === "en" ? `Sale · ${formatTon(group.salePriceTon)} TON · TG TOP fee · 0%` : `Продажа · ${formatTon(group.salePriceTon)} TON · Комиссия TG TOP · 0%`}
               </small>
             )}
           </span>
@@ -287,14 +281,14 @@ function GroupCard({
         </span>
       ) : rankingPlacement ? (
         <span className="absolute inset-0 grid place-items-center">
-          <span className="flex flex-col items-center gap-2 text-center">
+          <span className="flex max-w-full flex-col items-center gap-2 px-2 text-center">
             <span
               className={`${lead ? "h-16 w-16" : compact ? "h-9 w-9" : "h-11 w-11"} grid place-items-center rounded-xl border border-dashed border-white/20 text-slate-500`}
             >
               <Plus className="h-4 w-4" />
             </span>
             <small
-              className={`font-light tracking-wide text-slate-500 ${compact ? "text-[9px]" : "text-[11px]"}`}
+              className={`max-w-full truncate font-light tracking-wide text-slate-500 ${compact ? "text-[9px]" : "text-[11px]"}`}
             >
               {language === "en" ? "Add group" : "Добавить группу"}
             </small>
@@ -312,7 +306,7 @@ function GroupCard({
           </span>
         </span>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -501,6 +495,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [audience, setAudience] = useState<Audience>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
   const [language, setLanguage] = useState<Language>(() =>
     localStorage.getItem("tg-top-language") === "en" ? "en" : "ru"
   );
@@ -522,7 +517,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [selectedNftId, setSelectedNftId] = useState<number | null>(null);
   const [recipientInput, setRecipientInput] = useState("");
   const [preparedNftTransfer, setPreparedNftTransfer] = useState<PreparedNftTransfer | null>(null);
-  const [animatedAvatarFile, setAnimatedAvatarFile] = useState<File | null>(null);
 
   useEffect(() => {
     localStorage.setItem("tg-top-language", language);
@@ -712,16 +706,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     },
     onError: error => toast.error(error.message),
   });
-  const uploadGroupAnimatedAvatar = trpc.tgTop.uploadGroupAnimatedAvatar.useMutation({
-    onSuccess: () => {
-      toast.success(tx("Анимированный аватар сохранен.", "Animated avatar saved."));
-      setAnimatedAvatarFile(null);
-      void utils.tgTop.myGroups.invalidate();
-      void utils.tgTop.getGroups.invalidate();
-      void utils.tgTop.getSlots.invalidate();
-    },
-    onError: error => toast.error(error.message),
-  });
   const confirmProtectedGroupTransfer = trpc.tgTop.confirmProtectedGroupTransfer.useMutation({
     onSuccess: () => {
       toast.success(tx("Подтверждение передачи записано. Расчет остается заблокирован до проверки платежей.", "Transfer acknowledgement recorded. Settlement remains locked until payment verification."));
@@ -885,7 +869,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const openMine = (slot?: Slot) => {
     if (slot) {
       const nextBid = slot.group ? Math.max(0.1, slot.bidAmount / 1000 + 0.001) : 0.1;
-      setAmount(nextBid.toFixed(3));
+      setAmount(formatTon(nextBid));
     }
     setTargetSlot(slot ?? null);
     setPage("mine");
@@ -932,25 +916,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       maxRentalDays: isRental ? maxDays : undefined,
     });
   };
-  const uploadSelectedAnimatedAvatar = async () => {
-    const group = selectedListingGroups[0];
-    if (!group || selectedListingGroups.length !== 1) {
-      return toast.error(tx("Выберите одну группу для анимированного аватара.", "Select one community for the animated avatar."));
-    }
-    if (!animatedAvatarFile) {
-      return toast.error(tx("Выберите MP4-файл.", "Choose an MP4 file."));
-    }
-    if (animatedAvatarFile.type !== "video/mp4" || animatedAvatarFile.size > 5 * 1024 * 1024) {
-      return toast.error(tx("Нужен MP4-файл до 5 МБ.", "Use an MP4 file up to 5 MB."));
-    }
-    try {
-      const contentBase64 = await readFileAsBase64(animatedAvatarFile);
-      if (!contentBase64) throw new Error("Файл не содержит данных");
-      uploadGroupAnimatedAvatar.mutate({ groupId: group.id, contentType: "video/mp4", contentBase64 });
-    } catch {
-      toast.error(tx("Не удалось прочитать MP4-файл. Выберите файл еще раз.", "Could not read the MP4 file. Please choose it again."));
-    }
-  };
   const removeSelectedFromListing = () => {
     const listedIds = mine.filter(group => selectedGroupIds.includes(group.id) && group.status === "listed").map(group => group.id);
     if (!listedIds.length) return toast.error(tx("Выберите группу, которая уже находится в каталоге", "Select a community that is already listed."));
@@ -970,6 +935,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       `https://t.me/TGTOP_robot?${kind === "channel" ? "startchannel=admin" : "startgroup=admin"}`,
       "_blank"
     );
+  const startBotAdminSetup = (kind: "channel" | "group") => {
+    setAdminGuideKind(kind);
+    addBot(kind);
+  };
   const selectGlobalDirection = (value: GlobalDirection) => {
     setGlobalDirection(value);
     if (value !== "NFT") {
@@ -986,12 +955,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const current = targetSlot.bidAmount / 1000;
     const minimum = targetSlot.group ? Math.max(0.1, current + 0.001) : 0.1;
     if (!Number.isFinite(value) || value < minimum)
-      return toast.error(tx(`Минимальная ставка: ${minimum.toFixed(3)} TON`, `Minimum bid: ${minimum.toFixed(3)} TON`));
+      return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} TON`, `Minimum bid: ${formatTon(minimum)} TON`));
     placeBid.mutate({
       slotId: targetSlot.id,
       groupId: group.id,
       bidAmount: value,
-      currentBid: `${value.toFixed(3)} TON`,
+      currentBid: `${formatTon(value)} TON`,
     });
   };
   const openNftTransfer = () => {
@@ -1025,7 +994,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
   return (
     <div className="tg-shell min-h-screen bg-[#0b0f14] text-slate-100">
-      <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0b0f14]/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0b0f14]/95 px-4 py-2.5 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <button
             onClick={() => setPage("top")}
@@ -1071,23 +1040,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 pb-28 pt-3">
+      <main className="mx-auto max-w-3xl px-4 pb-28 pt-2">
         {page === "top" && (
-          <section className="space-y-3">
-            <div className="border-b border-white/8 pb-2">
-              <div className="flex items-center justify-between gap-3 px-0.5">
-                <span className="flex items-baseline gap-2">
-                  <h1 className="truncate text-lg font-semibold tracking-tight text-white">{currentTopTitle}</h1>
-                  <span aria-live="polite" className="text-[11px] text-slate-500">{n(globalCount, language)} {globalDirection === "NFT" ? "NFT" : ui.groups}</span>
+          <section className="space-y-2">
+            <div className="border-b border-white/8 pb-1.5">
+              <div className="flex min-w-0 items-center justify-between gap-2 px-0.5">
+                <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <h1 className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight text-white">{currentTopTitle}</h1>
+                  <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)} {globalDirection === "NFT" ? "NFT" : ui.groups}</span>
                 </span>
                 {globalDirection !== "NFT" && (
-                  <button onClick={() => setFiltersOpen(true)} className="flex h-7 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2 text-[10px] text-slate-400 transition-colors hover:text-slate-100">
-                    <Globe2 className="h-3.5 w-3.5 text-[#79a7ff]" />
-                    {country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}
+                  <button onClick={() => setFiltersOpen(true)} className="flex h-7 max-w-[112px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-white/10 bg-white/5 px-2 text-[10px] text-slate-400 transition-colors hover:text-slate-100">
+                    <Globe2 className="h-3.5 w-3.5 shrink-0 text-[#79a7ff]" />
+                    <span className="truncate">{country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}</span>
                   </button>
                 )}
               </div>
-              <div className="mt-2 flex items-center gap-4 overflow-x-auto border-b border-white/8 px-0.5 [scrollbar-width:none]">
+              <div className="mt-1.5 flex items-center gap-4 overflow-x-auto border-b border-white/8 px-0.5 [scrollbar-width:none]">
                 {([
                   ["Все", ui.all],
                   ["Каналы", ui.channels],
@@ -1097,7 +1066,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <button
                     key={value}
                     onClick={() => selectGlobalDirection(value)}
-                    className={`relative shrink-0 pb-2 text-[12px] font-medium transition-colors ${globalDirection === value ? "text-white" : "text-slate-500 hover:text-slate-300"}`}
+                    className={`relative shrink-0 pb-1.5 text-[12px] font-medium transition-colors ${globalDirection === value ? "text-white" : "text-slate-500 hover:text-slate-300"}`}
                   >
                     {label}
                     {globalDirection === value && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-[#4a90ff]" />}
@@ -1105,11 +1074,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 ))}
               </div>
               {globalDirection !== "NFT" && (
-                <button onClick={() => setFiltersOpen(true)} className="mt-2 flex h-7 items-center gap-1.5 rounded-md border border-white/8 bg-white/5 px-2 text-[10px] text-slate-500 transition-colors hover:text-slate-200">
-                  <Filter className="h-3.5 w-3.5" />
-                  <span>{subcategory === "Все" ? tx("Все темы", "All topics") : getSubcategoryLabel(subcategory, language)}</span>
-                  <span className="text-slate-700">·</span>
-                  <span>{country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}</span>
+                <button onClick={() => setFiltersOpen(true)} className="mt-1.5 flex h-6 max-w-full items-center gap-1.5 overflow-hidden rounded-md border border-white/8 bg-white/5 px-2 text-[10px] text-slate-500 transition-colors hover:text-slate-200">
+                  <Filter className="h-3.5 w-3.5 shrink-0" />
+                  <span className="min-w-0 truncate">{subcategory === "Все" ? tx("Все темы", "All topics") : getSubcategoryLabel(subcategory, language)}</span>
+                  <span className="shrink-0 text-slate-700">·</span>
+                  <span className="shrink-0 truncate">{country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}</span>
                 </button>
               )}
             </div>
@@ -1144,7 +1113,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             ) : (
             <>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <GroupCard
                 group={leadSlot.group}
                 variant="lead"
@@ -1155,7 +1124,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     : openMine(leadSlot)
                 }
               />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {secondTier.map(slot => (
                   <GroupCard
                     key={slot.slotNumber}
@@ -1280,7 +1249,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <small className="mt-0.5 block text-[11px] text-slate-400">
                     {targetSlot.group
                       ? tx(`Перебитие · от ${amount} TON`, `Outbid · from ${amount} TON`)
-                      : tx("Свободная позиция · от 0.100 TON", "Vacant position · from 0.100 TON")}
+                      : tx(`Свободная позиция · от ${formatTon(0.1)} TON`, `Vacant position · from ${formatTon(0.1)} TON`)}
                   </small>
                   <small className="mt-0.5 block text-[10px] text-slate-500">
                     {tx("Ставка фиксируется в журнале и в боте; TON пока не отправляется.", "The bid is recorded in the journal and bot; TON is not sent yet.")}
@@ -1296,13 +1265,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             )}
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => addBot("channel")}
+                onClick={() => startBotAdminSetup("channel")}
                 className="rounded-xl border border-white/10 bg-[#111720] px-3 py-3 text-sm font-semibold"
               >
                 {tx("+ Канал", "+ Channel")}
               </button>
               <button
-                onClick={() => addBot("group")}
+                onClick={() => startBotAdminSetup("group")}
                 className="rounded-xl border border-white/10 bg-[#111720] px-3 py-3 text-sm font-semibold"
               >
                 {tx("+ Чат", "+ Chat")}
@@ -1410,11 +1379,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <h1 className="truncate text-xl font-semibold">
                         {detail.group.title}
                       </h1>
-                      <p className="mt-1 text-sm text-[#72a8ff]">
-                        {detail.group.username
-                          ? `@${detail.group.username}`
-                          : detail.group.category}
-                      </p>
+                      {detail.group.username ? (
+                        <a href={`https://t.me/${detail.group.username}`} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm text-[#72a8ff] underline decoration-[#72a8ff]/50 underline-offset-4 hover:text-[#a6c8ff]">
+                          @{detail.group.username}
+                        </a>
+                      ) : (
+                        <p className="mt-1 text-sm text-[#72a8ff]">{detail.group.category}</p>
+                      )}
                       <p className="mt-3 text-sm leading-5 text-slate-400">
                         {detail.group.description ||
                           tx("Описание не передано Telegram API.", "Telegram did not provide a description.")}
@@ -1439,6 +1410,29 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       {tx("Управлять этой группой", "Manage this group")}
                     </button>
                   )}
+                  {ownsDetail && detail.group.status === "listed" && (
+                    <button
+                      onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
+                      disabled={unlistGroups.isPending}
+                      className="mt-2 w-full rounded-lg border border-rose-300/20 bg-rose-300/5 py-2 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50"
+                    >
+                      {tx("Снять с листинга", "Remove from listing")}
+                    </button>
+                  )}
+                  {!ownsDetail && selectedSlot && isAuthenticated && (
+                    <button
+                      onClick={() => openMine(selectedSlot)}
+                      className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"
+                    >
+                      <span>
+                        <b className="block text-xs text-[#a6c8ff]">{tx("Перебить ставку", "Outbid placement")}</b>
+                        <small className="mt-0.5 block text-[10px] text-slate-400">
+                          {tx(`От ${formatTon(Math.max(0.1, selectedSlot.bidAmount / 1000 + 0.001))} TON`, `From ${formatTon(Math.max(0.1, selectedSlot.bidAmount / 1000 + 0.001))} TON`)}
+                        </small>
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-[#a6c8ff]" />
+                    </button>
+                  )}
                   {!ownsDetail && detail.group.salePriceTon && (detail.group.listingType === "sale" || detail.group.listingType === "both") && (
                     <div className="mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 p-3">
                       <div className="flex items-baseline justify-between gap-3">
@@ -1446,7 +1440,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           <b className="block text-sm text-slate-100">{tx("Безопасная покупка", "Protected purchase")}</b>
                           <small className="mt-1 block text-[11px] text-slate-400">{tx("Передача owner-прав · до 21 дня", "Owner-rights transfer · up to 21 days")}</small>
                         </span>
-                        <b className="text-sm text-[#a6c8ff]">{detail.group.salePriceTon} TON</b>
+                        <b className="text-sm text-[#a6c8ff]">{formatTon(detail.group.salePriceTon)} TON</b>
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-3">
                         <small className="text-[10px] text-slate-500">{tx("Комиссия TG TOP · 0%", "TG TOP fee · 0%")}</small>
@@ -1461,123 +1455,21 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Metric
-                    label={tx("Участники", "Members")}
-                    value={n(detail.group.membersCount)}
-                    note={tx("последнее измерение", "latest measurement")}
-                  />
-                  <Metric
-                    label={tx("Прирост", "Growth")}
-                    value={
-                      detail.snapshots.length > 1
-                        ? n(
-                            detail.snapshots.at(-1)!.membersCount -
-                              detail.snapshots[0].membersCount
-                          )
-                        : "—"
-                    }
-                    note={
-                      detail.snapshots.length > 1
-                        ? tx("за период наблюдения", "during observation")
-                        : tx("данные накапливаются", "data is accumulating")
-                    }
-                  />
-                  <Metric
-                    label={tx("Вступления", "Joins")}
-                    value={
-                      detail.group.joinedCount
-                        ? n(detail.group.joinedCount)
-                        : "—"
-                    }
-                    note={tx("замеченные ботом", "observed by the bot")}
-                  />
-                  <Metric
-                    label={tx("Выходы", "Leaves")}
-                    value={
-                      detail.group.leavesCount
-                        ? n(detail.group.leavesCount)
-                        : "—"
-                    }
-                    note={tx("замеченные ботом", "observed by the bot")}
-                  />
+                <div className="sticky top-2 z-10 flex items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#101a2a]/95 px-4 py-3 shadow-lg backdrop-blur">
+                  <span>
+                    <small className="block text-[10px] font-medium uppercase tracking-[0.14em] text-[#a6c8ff]">{tx("Участники", "Members")}</small>
+                    <b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.membersCount)}</b>
+                  </span>
+                  <Users className="h-5 w-5 text-[#72a8ff]" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Metric
-                    label={tx("По приглашениям", "Via invites")}
-                    value={
-                      detail.group.invitedCount
-                        ? n(detail.group.invitedCount)
-                        : "—"
-                    }
-                    note={tx("когда Telegram передал ссылку", "when Telegram provided the link")}
-                  />
-                  <Metric
-                    label={tx("Публикации", "Posts")}
-                    value={
-                      detail.group.messagesCount
-                        ? n(detail.group.messagesCount)
-                        : "—"
-                    }
-                    note={tx("увиденные ботом", "observed by the bot")}
-                  />
-                </div>
-                <div className="rounded-2xl border border-white/8 bg-[#111720] p-4">
-                  <div className="flex justify-between">
-                    <span>
-                      <b className="block text-sm">{tx("Динамика аудитории", "Audience dynamics")}</b>
-                      <small className="block mt-1 text-xs text-slate-500">
-                        {tx("Только снимки TG TOP.", "TG TOP snapshots only.")}
-                      </small>
-                    </span>
-                    <BarChart3 className="h-5 w-5 text-slate-500" />
+                {(detail.group.joinedCount > 0 || detail.group.leavesCount > 0 || detail.group.invitedCount > 0 || detail.group.messagesCount > 0) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {detail.group.joinedCount > 0 && <Metric label={tx("Вступления", "Joins")} value={n(detail.group.joinedCount)} note={tx("замеченные ботом", "observed by the bot")} />}
+                    {detail.group.leavesCount > 0 && <Metric label={tx("Выходы", "Leaves")} value={n(detail.group.leavesCount)} note={tx("замеченные ботом", "observed by the bot")} />}
+                    {detail.group.invitedCount > 0 && <Metric label={tx("По приглашениям", "Via invites")} value={n(detail.group.invitedCount)} note={tx("замеченные ботом", "observed by the bot")} />}
+                    {detail.group.messagesCount > 0 && <Metric label={tx("Публикации", "Posts")} value={n(detail.group.messagesCount)} note={tx("увиденные ботом", "observed by the bot")} />}
                   </div>
-                  <div className="mt-4 flex h-16 items-end gap-1 border-b border-white/8">
-                    {detail.snapshots.length ? (
-                      detail.snapshots
-                        .slice(-16)
-                        .map((snapshot, index) => (
-                          <span
-                            key={index}
-                            className="min-w-1 flex-1 rounded-t bg-[#3f8cff]"
-                            style={{
-                              height: `${Math.max(8, (snapshot.membersCount / Math.max(...detail.snapshots.map(item => item.membersCount), 1)) * 100)}%`,
-                            }}
-                          />
-                        ))
-                    ) : (
-                      <p className="text-sm text-slate-500">
-                        {tx("Первый снимок будет создан при следующем обновлении.", "The first snapshot will be created during the next update.")}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Metric
-                    label={tx("В TG TOP с", "On TG TOP since")}
-                    value={date(detail.group.createdAt)}
-                    note={tx("дата подключения", "connection date")}
-                  />
-                  <Metric
-                    label={tx("Возраст площадки", "Community age")}
-                    value="—"
-                    note={tx("Telegram не отдал дату создания", "Telegram did not provide a creation date")}
-                  />
-                  <Metric
-                    label={tx("Просмотры", "Views")}
-                    value={
-                      detail.group.lastPostViews
-                        ? n(detail.group.lastPostViews)
-                        : "—"
-                    }
-                    note={tx("последний доступный пост", "latest available post")}
-                  />
-                  <Metric
-                    label={tx("Обновлено", "Updated")}
-                    value={date(detail.group.lastStatsAt)}
-                    note={tx("последние данные", "latest data")}
-                  />
-                </div>
+                )}
               </>
             ) : (
               <p className="py-16 text-center text-sm text-slate-500">
@@ -1916,26 +1808,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               )}
             </section>
 
-            <section>
-              <div className="mb-2 flex items-baseline justify-between gap-3">
-                <p className="text-xs text-slate-400">{tx("Анимированный аватар", "Animated avatar")}</p>
-                <span className="text-[10px] text-slate-600">MP4 · {tx("до 5 МБ", "up to 5 MB")}</span>
-              </div>
-              {selectedListingGroups.length === 1 ? (
-                <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#0b0f14] p-2">
-                  <label className="min-w-0 flex-1 cursor-pointer rounded-lg border border-dashed border-white/15 px-3 py-2 text-[11px] text-slate-400 transition-colors hover:border-[#3f8cff]/45">
-                    <input type="file" accept="video/mp4" className="sr-only" onChange={event => setAnimatedAvatarFile(event.target.files?.[0] ?? null)} />
-                    <span className="block truncate">{animatedAvatarFile?.name ?? tx("Выбрать MP4", "Choose MP4")}</span>
-                  </label>
-                  <Button type="button" onClick={() => void uploadSelectedAnimatedAvatar()} disabled={!animatedAvatarFile || uploadGroupAnimatedAvatar.isPending} className="h-9 shrink-0 bg-[#3f8cff] px-3 text-[11px] text-white disabled:opacity-60">
-                    {uploadGroupAnimatedAvatar.isPending ? ui.loading : tx("Загрузить", "Upload")}
-                  </Button>
-                </div>
-              ) : (
-                <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] text-slate-500">{tx("Анимированный аватар настраивается для одной выбранной группы.", "An animated avatar is set for one selected community at a time.")}</p>
-              )}
-            </section>
-
             {includesSale && (
               <section>
                 <div className="mb-2 flex items-baseline justify-between">
@@ -2225,6 +2097,28 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         language={language}
         onLanguageChange={setLanguage}
       />
+      <Sheet open={Boolean(adminGuideKind)} onOpenChange={open => !open && setAdminGuideKind(null)}>
+        <SheetContent side="bottom" className="max-h-[52dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-4 text-slate-100">
+          <SheetHeader className="px-4 pb-2">
+            <SheetTitle className="text-base text-slate-100">
+              {tx("Подтвердите права администратора", "Confirm administrator rights")}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="space-y-3 px-4 text-sm leading-5 text-slate-300">
+            <p>{tx("Telegram открыл выбор сообщества. Добавьте @TGTOP_robot, затем обязательно подтвердите для него роль администратора.", "Telegram opened community selection. Add @TGTOP_robot, then explicitly confirm its administrator role.")}</p>
+            <ol className="space-y-2 rounded-xl border border-white/8 bg-black/15 p-3 text-[12px] text-slate-400">
+              <li><b className="mr-1 text-[#a6c8ff]">1.</b>{tx("Выберите свой ", "Select your ")}{adminGuideKind === "channel" ? tx("канал", "channel") : tx("чат", "chat")}.</li>
+              <li><b className="mr-1 text-[#a6c8ff]">2.</b>{tx("В окне Telegram включите «Сделать администратором».", "Enable “Make administrator” in the Telegram confirmation screen.")}</li>
+              <li><b className="mr-1 text-[#a6c8ff]">3.</b>{tx("Вернитесь сюда — группа появится только после подтверждения прав ботом.", "Return here — the community appears only after the bot confirms its rights.")}</li>
+            </ol>
+            <p className="text-[11px] text-slate-500">{tx("Telegram не позволяет приложению выдать права автоматически — это подтверждает только владелец сообщества.", "Telegram requires the community owner to confirm admin rights; the app cannot grant them automatically.")}</p>
+          </div>
+          <SheetFooter className="mt-4 flex-row gap-2 px-4">
+            <Button variant="outline" onClick={() => setAdminGuideKind(null)} className="h-10 flex-1 border-white/10 text-xs text-slate-300">{tx("Понятно", "Got it")}</Button>
+            <Button onClick={() => adminGuideKind && addBot(adminGuideKind)} className="h-10 flex-1 bg-[#3f8cff] text-xs">{tx("Открыть Telegram снова", "Open Telegram again")}</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
