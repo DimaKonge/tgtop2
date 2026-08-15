@@ -114,6 +114,7 @@
 - [ ] Audit every light-theme owner workflow screen and correct remaining dark-only styles in My Groups, listing sheets, profile deals, NFT cards, and transfer surfaces
 - [ ] Add targeted regression coverage for light-theme owner-management and listing states beyond generic CSS selector assertions
 - [ ] Visually verify authenticated light-theme owner-management, listing, NFT, and protected-deal flows before completing the light-theme task
+- [ ] Add rendered light-theme regression coverage for real owner workflow components rather than only synthetic CSS probes
 - [x] Fix the TG TOP brand-mark symbol disappearing against the black logo tile in light mode and add a regression check
 - [x] Add owner-uploaded MP4 animated group avatars with protected ownership checks, marketplace playback, and Telegram image/initials fallbacks
 - [x] Temporarily hide animated group-avatar upload and playback while retaining ordinary Telegram avatars

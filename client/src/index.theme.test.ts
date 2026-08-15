@@ -12,5 +12,10 @@ describe("TG TOP light theme", () => {
     expect(css).toContain('.tg-shell .text-\\[\\#a6c8ff\\]');
     expect(css).toContain('.tg-shell .bg-\\[\\#3f8cff\\]\\/10');
     expect(css).toContain('.tg-shell .border-\\[\\#3f8cff\\]\\/35');
+    expect(css).toContain('.tg-shell .bg-\\[\\#101a2a\\]\\/95');
+    expect(css).toContain('[data-slot="sheet-content"]');
+    expect(css).toContain('[data-slot="sheet-content"] .bg-black\\/10');
+    expect(css).toContain('[data-slot="sheet-content"] .text-slate-100');
+    expect(css).toContain('[data-slot="sheet-content"] .border-white\\/10');
   });
 });

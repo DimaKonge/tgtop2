@@ -85,7 +85,8 @@ html[data-theme="light"] .tg-shell .bg-\[\#0b0f14\],
 html[data-theme="light"] .tg-shell .bg-\[\#111720\],
 html[data-theme="light"] .tg-shell .bg-\[\#141c27\],
 html[data-theme="light"] .tg-shell .bg-\[\#10161f\],
-html[data-theme="light"] .tg-shell .bg-\[\#1b2430\] { background-color: #ffffff !important; }
+html[data-theme="light"] .tg-shell .bg-\[\#1b2430\],
+html[data-theme="light"] .tg-shell .bg-\[\#101a2a\]\/95 { background-color: #ffffff !important; }
 html[data-theme="light"] .tg-shell .border-white\/8,
 html[data-theme="light"] .tg-shell .border-white\/10,
 html[data-theme="light"] .tg-shell .border-white\/12,
@@ -114,6 +115,24 @@ html[data-theme="light"] .tg-shell .border-\[\#3f8cff\]\/25,
 html[data-theme="light"] .tg-shell .border-\[\#3f8cff\]\/35 { border-color: rgba(37, 99, 235, 0.32) !important; }
 html[data-theme="light"] .tg-shell .bg-\[\#0b0f14\] { background-color: #f5f7fb !important; }
 html[data-theme="light"] .bg-\[\#10161f\] { background-color: #ffffff !important; color: #1e293b !important; }
+html[data-theme="light"] [data-slot="sheet-content"] { background-color: #ffffff !important; color: #1e293b !important; border-color: rgba(30, 41, 59, 0.15) !important; }
+html[data-theme="light"] [data-slot="sheet-content"] .bg-\[\#10161f\],
+html[data-theme="light"] [data-slot="sheet-content"] .bg-\[\#111720\],
+html[data-theme="light"] [data-slot="sheet-content"] .bg-\[\#0b0f14\],
+html[data-theme="light"] [data-slot="sheet-content"] .bg-black\/10,
+html[data-theme="light"] [data-slot="sheet-content"] .bg-black\/20 { background-color: #f8fafc !important; }
+html[data-theme="light"] [data-slot="sheet-content"] .border-white\/8,
+html[data-theme="light"] [data-slot="sheet-content"] .border-white\/10,
+html[data-theme="light"] [data-slot="sheet-content"] .border-white\/12,
+html[data-theme="light"] [data-slot="sheet-content"] .border-white\/15,
+html[data-theme="light"] [data-slot="sheet-content"] .border-white\/20 { border-color: rgba(30, 41, 59, 0.14) !important; }
+html[data-theme="light"] [data-slot="sheet-content"] .text-white,
+html[data-theme="light"] [data-slot="sheet-content"] .text-slate-100,
+html[data-theme="light"] [data-slot="sheet-content"] .text-slate-200,
+html[data-theme="light"] [data-slot="sheet-content"] .text-slate-300 { color: #1e293b !important; }
+html[data-theme="light"] [data-slot="sheet-content"] .text-slate-400,
+html[data-theme="light"] [data-slot="sheet-content"] .text-slate-500,
+html[data-theme="light"] [data-slot="sheet-content"] .text-slate-600 { color: #64748b !important; }
 html[data-theme="light"] .brand-mark { border-color: rgba(37, 99, 235, 0.22) !important; box-shadow: 0 6px 16px rgba(63, 140, 255, 0.18) !important; }
 html[data-theme="dark"] .brand-mark-symbol { transform: rotate(180deg); }
 
