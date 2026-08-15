@@ -199,7 +199,7 @@
 - [ ] Add server-verified TON deposit reconciliation and withdrawal requests with idempotency, recipient-address confirmation, limits, and manual approval before payout
 - [x] Add a Telegram Stars payment choice for ranking bids using official invoice confirmation and immutable payment-intent records
 - [x] Add a factual TG TOP leaderboard with transparent ranking criteria and no fabricated point balances
-- [ ] Add a unified account activity history using real credit, deal, NFT-transfer, and verified wallet records
+- [x] Add a unified account activity history using real credit, deal, NFT-transfer, and verified wallet records
 - [ ] Add a verifiable TG TOP tasks program with explicit completion rules and no unearned rewards
 - [x] Make the lower general-list area and empty state clickable, with a clear plus action that opens the personal cabinet to add or list a community
 - [x] Replace the exposed wallet address in the header with a compact connected indicator and visible account balance

@@ -97,6 +97,10 @@ export const appRouter = router({
       return await db.getAccountLedger(ctx.user.openId);
     }),
 
+    getAccountActivity: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getAccountActivity(ctx.user.openId);
+    }),
+
     getGroupDetail: publicProcedure
       .input(z.object({ groupId: z.number() }))
       .query(async ({ input }) => {

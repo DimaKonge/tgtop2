@@ -1,0 +1,15 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+
+describe("account activity policy", () => {
+  it("unifies only persisted TG TOP records and labels recorded bids as distinct from paid Stars", () => {
+    const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+    expect(source).toContain("export async function getAccountActivity");
+    expect(source).toContain("starsRankingPaymentIntents");
+    expect(source).toContain("rankingBidIntents");
+    expect(source).toContain("getUserDeals(openId)");
+    expect(source).toContain("getNftTransferHistory(openId)");
+    expect(source).toContain('currency: "Stars"');
+    expect(source).toContain('title: "ranking_bid"');
+  });
+});

@@ -80,6 +80,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('getOwnerLeaderboard.useQuery');
     expect(source).toContain('Лидерборд владельцев');
     expect(source).toContain('По суммарной аудитории активных площадок в TG TOP.');
+    expect(source).toContain('getAccountActivity.useQuery');
+    expect(source).toContain('История активности');
+    expect(source).toContain('Реальные бонусы, ставки, Stars, сделки и передачи NFT.');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');
     expect(source).toContain('<WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} />');
     expect(source).not.toContain('{ value: "system"');

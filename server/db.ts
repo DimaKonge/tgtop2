@@ -101,6 +101,51 @@ export async function getAccountLedger(openId: string) {
   return { user, transactions, referral };
 }
 
+export async function getAccountActivity(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const [credits, starsPayments, bids, userDeals, transfers] = await Promise.all([
+    db.select({
+      id: creditTransactions.id,
+      amount: creditTransactions.amount,
+      kind: creditTransactions.kind,
+      createdAt: creditTransactions.createdAt,
+      groupTitle: groupsCatalog.title,
+      groupUsername: groupsCatalog.username,
+    }).from(creditTransactions).leftJoin(groupsCatalog, eq(creditTransactions.groupId, groupsCatalog.id))
+      .where(eq(creditTransactions.userOpenId, openId)),
+    db.select({
+      id: starsRankingPaymentIntents.id,
+      starsAmount: starsRankingPaymentIntents.starsAmount,
+      status: starsRankingPaymentIntents.status,
+      createdAt: starsRankingPaymentIntents.createdAt,
+      paidAt: starsRankingPaymentIntents.paidAt,
+      groupTitle: groupsCatalog.title,
+      groupUsername: groupsCatalog.username,
+    }).from(starsRankingPaymentIntents).leftJoin(groupsCatalog, eq(starsRankingPaymentIntents.groupId, groupsCatalog.id))
+      .where(eq(starsRankingPaymentIntents.userOpenId, openId)),
+    db.select({
+      id: rankingBidIntents.id,
+      bidAmount: rankingBidIntents.bidAmount,
+      status: rankingBidIntents.status,
+      createdAt: rankingBidIntents.createdAt,
+      groupTitle: groupsCatalog.title,
+      groupUsername: groupsCatalog.username,
+    }).from(rankingBidIntents).leftJoin(groupsCatalog, eq(rankingBidIntents.groupId, groupsCatalog.id))
+      .where(eq(rankingBidIntents.bidderOpenId, openId)),
+    getUserDeals(openId),
+    getNftTransferHistory(openId),
+  ]);
+  const namedGroup = (groupTitle: string | null, groupUsername: string | null) => groupUsername ? `@${groupUsername}` : (groupTitle ?? "TG TOP");
+  return [
+    ...credits.map(item => ({ id: `credit:${item.id}`, type: "credit" as const, status: item.kind, createdAt: item.createdAt, title: item.kind === "group_connection_bonus" ? "connection_bonus" : "catalog_listing", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.amount / 100, currency: "GRAM", direction: item.amount >= 0 ? "in" as const : "out" as const })),
+    ...starsPayments.map(item => ({ id: `stars:${item.id}`, type: "stars" as const, status: item.status, createdAt: item.paidAt ?? item.createdAt, title: "ranking_stars", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.starsAmount, currency: "Stars", direction: "out" as const })),
+    ...bids.map(item => ({ id: `bid:${item.id}`, type: "bid" as const, status: item.status, createdAt: item.createdAt, title: "ranking_bid", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.bidAmount / 1000, currency: "TON", direction: "neutral" as const })),
+    ...userDeals.map(item => ({ id: `deal:${item.id}`, type: "deal" as const, status: item.status, createdAt: item.createdAt, title: item.dealType, subject: namedGroup(item.groupTitle, item.groupUsername), amount: Number(item.price), currency: "TON", direction: item.buyerOpenId === openId ? "out" as const : "in" as const })),
+    ...transfers.map(item => ({ id: `nft:${item.id}`, type: "nft_transfer" as const, status: item.status, createdAt: item.confirmedAt ?? item.createdAt, title: "nft_transfer", subject: item.username ? `@${item.username}` : "NFT", amount: null, currency: null, direction: item.senderOpenId === openId ? "out" as const : "in" as const })),
+  ].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime()).slice(0, 100);
+}
+
 function createReferralCode() {
   return `TG${randomBytes(5).toString("hex").toUpperCase()}`;
 }

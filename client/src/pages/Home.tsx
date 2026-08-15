@@ -617,6 +617,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const accountQuery = trpc.tgTop.getAccount.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+  const accountActivityQuery = trpc.tgTop.getAccountActivity.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
   const account = accountQuery.data as
     | {
         user?: { bonusBalance: number; mainBalanceTon: string | number };
@@ -811,6 +814,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   ).toFixed(1);
   const mainTon = Number(account?.user?.mainBalanceTon ?? 0).toFixed(2);
   const transactions = account?.transactions ?? [];
+  const accountActivity = (accountActivityQuery.data ?? []) as Array<{
+    id: string;
+    type: "credit" | "stars" | "bid" | "deal" | "nft_transfer";
+    status: string;
+    createdAt: Date;
+    title: string;
+    subject: string;
+    amount: number | null;
+    currency: "GRAM" | "Stars" | "TON" | null;
+    direction: "in" | "out" | "neutral";
+  }>;
   const referral = account?.referral;
   const dealStatusLabel = (status: typeof deals[number]["status"]) => {
     const labels = {
@@ -1630,47 +1644,43 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             </section>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="border-b border-white/8 px-4 py-4">
-                <h2 className="text-sm font-semibold">{tx("История операций", "Transaction history")}</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  {tx("Бонусы и списания по вашим площадкам", "Bonuses and charges for your communities")}
-                </p>
+                <h2 className="text-sm font-semibold">{tx("История активности", "Activity history")}</h2>
+                <p className="mt-1 text-xs text-slate-500">{tx("Реальные бонусы, ставки, Stars, сделки и передачи NFT.", "Real credits, bids, Stars, deals, and NFT transfers.")}</p>
               </div>
-              {transactions.length ? (
+              {accountActivity.length ? (
                 <div className="divide-y divide-white/7">
-                  {transactions.map(transaction => {
-                    const earned = transaction.amount > 0;
-                    const groupName = transaction.groupUsername
-                      ? `@${transaction.groupUsername}`
-                      : (transaction.groupTitle ?? "TG TOP");
-                    return (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between gap-3 px-4 py-3"
-                      >
-                        <span className="min-w-0">
-                          <b className="block truncate text-sm">
-                            {earned
-                              ? tx("Бонус за подключение", "Connection bonus")
-                              : tx("Размещение в каталоге", "Catalog placement")}
-                          </b>
-                          <small className="mt-1 block truncate text-xs text-slate-500">
-                            {groupName} · {date(transaction.createdAt, language)}
-                          </small>
-                        </span>
-                        <b
-                          className={`shrink-0 text-sm ${earned ? "text-[#72a8ff]" : "text-slate-300"}`}
-                        >
-                          {earned ? "+" : ""}
-                          {(transaction.amount / 100).toFixed(1)} GRAM
-                        </b>
-                      </div>
-                    );
+                  {accountActivity.map(item => {
+                    const title = item.title === "connection_bonus" ? tx("Бонус за подключение", "Connection bonus")
+                      : item.title === "catalog_listing" ? tx("Размещение в каталоге", "Catalog listing")
+                      : item.title === "ranking_stars" ? tx("Ставка через Telegram Stars", "Telegram Stars bid")
+                      : item.title === "ranking_bid" ? tx("Зафиксированная ставка", "Recorded bid")
+                      : item.title === "group_buy" ? tx("Защищённая покупка группы", "Protected group purchase")
+                      : item.title === "nft_buy" ? tx("Покупка NFT", "NFT purchase")
+                      : item.title === "nft_rent" ? tx("Аренда NFT", "NFT rental")
+                      : tx("Передача NFT", "NFT transfer");
+                    const status = item.status === "paid" ? tx("Оплачено", "Paid")
+                      : item.status === "recorded" ? tx("Зафиксировано", "Recorded")
+                      : item.status === "completed" ? tx("Завершено", "Completed")
+                      : item.status === "pending" ? tx("Ожидает оплаты", "Awaiting payment")
+                      : item.status === "cancelled" ? tx("Отменено", "Cancelled")
+                      : item.status === "expired" ? tx("Истекло", "Expired")
+                      : item.status;
+                    const amount = item.amount === null || !item.currency ? null : `${item.direction === "in" ? "+" : item.direction === "out" ? "−" : ""}${item.currency === "Stars" ? n(item.amount, language) : formatTon(item.amount)} ${item.currency}`;
+                    return <div key={item.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 text-[11px] font-semibold text-[#a6c8ff]">{item.type === "stars" ? "★" : item.type === "nft_transfer" ? "NFT" : item.type === "deal" ? "D" : item.type === "bid" ? "B" : "G"}</span>
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-sm">{title}</b>
+                        <small className="mt-1 block truncate text-xs text-slate-500">{item.subject} · {date(item.createdAt, language)}</small>
+                      </span>
+                      <span className="shrink-0 text-right">
+                        {amount && <b className={`block text-sm ${item.direction === "in" ? "text-[#72a8ff]" : "text-slate-200"}`}>{amount}</b>}
+                        <small className="mt-1 inline-block rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] text-slate-400">{status}</small>
+                      </span>
+                    </div>;
                   })}
                 </div>
               ) : (
-                <p className="px-4 py-8 text-center text-sm text-slate-500">
-                  {tx("Операций пока нет.", "No transactions yet.")}
-                </p>
+                <p className="px-4 py-8 text-center text-sm text-slate-500">{tx("Операций пока нет.", "No activity yet.")}</p>
               )}
             </section>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
