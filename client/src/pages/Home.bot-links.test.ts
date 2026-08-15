@@ -43,6 +43,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Снять с листинга", "Remove from listing")');
     expect(source).toContain('sticky top-2 z-10 flex items-center justify-between');
     expect(source).not.toContain('tx("Динамика аудитории", "Audience dynamics")');
+    expect(source).not.toContain('{ value: "rent", title: tx("Аренда", "Rent")');
+    expect(source).not.toContain('tx("Условия аренды", "Rental terms")');
     expect(source).toContain('["Каналы", ui.channels]');
     expect(source).toContain('["Чаты", ui.chats]');
     expect(source).toContain('["NFT", "NFT"]');

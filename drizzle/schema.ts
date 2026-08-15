@@ -58,10 +58,7 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   lastStatsAt: timestamp("lastStatsAt"),
   listedAt: timestamp("listedAt"),
   salePriceTon: decimal("salePriceTon", { precision: 20, scale: 9 }),
-  listingType: mysqlEnum("listingType", ["catalog", "sale", "rent", "both"]).default("catalog").notNull(),
-  rentalPriceTon: decimal("rentalPriceTon", { precision: 20, scale: 9 }),
-  minRentalDays: int("minRentalDays"),
-  maxRentalDays: int("maxRentalDays"),
+  listingType: mysqlEnum("listingType", ["catalog", "sale"]).default("catalog").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [
   index("groups_catalog_listing_filters_idx").on(table.status, table.category, table.subcategory, table.country),

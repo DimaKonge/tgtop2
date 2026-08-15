@@ -45,7 +45,7 @@ const date = (value?: Date | null, language: Language = "ru") =>
         year: "numeric",
       })
     : "—";
-type ListingType = "catalog" | "sale" | "rent" | "both";
+type ListingType = "catalog" | "sale";
 type ListingCountry = "Global" | "UA" | "PL" | "DE" | "GB" | "US" | "RU";
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
 const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU"] as const;
@@ -89,9 +89,6 @@ type Group = {
   listedAt: Date | null;
   salePriceTon?: string | null;
   listingType?: ListingType;
-  rentalPriceTon?: string | null;
-  minRentalDays?: number | null;
-  maxRentalDays?: number | null;
   createdAt: Date;
 };
 type Slot = {
@@ -271,7 +268,7 @@ function GroupCard({
               {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="underline decoration-[#4a90ff]/50 underline-offset-2 hover:text-slate-200">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
-            {group.salePriceTon && (group.listingType === "sale" || group.listingType === "both") && (
+            {group.salePriceTon && group.listingType === "sale" && (
               <small className={`mt-1 block truncate text-[10px] text-[#a6c8ff] ${compact ? "hidden" : ""}`}>
                 {language === "en" ? `Sale · ${formatTon(group.salePriceTon)} TON · TG TOP fee · 0%` : `Продажа · ${formatTon(group.salePriceTon)} TON · Комиссия TG TOP · 0%`}
               </small>
@@ -508,9 +505,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [listingCountry, setListingCountry] = useState<ListingCountry>("Global");
   const [listingSubcategory, setListingSubcategory] = useState("General");
   const [salePriceTon, setSalePriceTon] = useState("");
-  const [rentalPriceTon, setRentalPriceTon] = useState("");
-  const [minRentalDays, setMinRentalDays] = useState("7");
-  const [maxRentalDays, setMaxRentalDays] = useState("30");
   const [nftTransferOpen, setNftTransferOpen] = useState(false);
   const [nftTransferStep, setNftTransferStep] = useState<"select" | "review" | "prepared">("select");
   const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
@@ -857,8 +851,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? selectedListingGroups[0]?.category
     : null;
   const listingSubcategoryOptions = listingCategory ? CATEGORY_SUBCATEGORIES[listingCategory] : [];
-  const includesSale = listingType === "sale" || listingType === "both";
-  const includesRent = listingType === "rent" || listingType === "both";
+  const includesSale = listingType === "sale";
   const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
   const reviewedRecipient = nftRecipientQuery.data;
 
@@ -892,28 +885,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     );
     setListingSubcategory(firstGroup?.subcategory ?? "General");
     setSalePriceTon(firstGroup?.salePriceTon ?? "");
-    setRentalPriceTon(firstGroup?.rentalPriceTon ?? "");
-    setMinRentalDays(String(firstGroup?.minRentalDays ?? 7));
-    setMaxRentalDays(String(firstGroup?.maxRentalDays ?? 30));
     setListingOpen(true);
   };
   const saveListing = () => {
     if (!selectedGroupIds.length) return toast.error(tx("Выберите хотя бы одну группу", "Select at least one community."));
-    const isRental = listingType === "rent" || listingType === "both";
-    const minDays = Number(minRentalDays);
-    const maxDays = Number(maxRentalDays);
-    if (isRental && (!rentalPriceTon || !Number.isFinite(minDays) || !Number.isFinite(maxDays) || minDays < 1 || maxDays < minDays)) {
-      return toast.error(tx("Для аренды укажите цену и корректный срок", "Enter a price and a valid rental period."));
-    }
     listWithCredits.mutate({
       groupIds: selectedGroupIds,
       listingType,
       country: listingCountry,
       subcategory: listingSubcategory,
       salePriceTon: salePriceTon || undefined,
-      rentalPriceTon: isRental ? rentalPriceTon : undefined,
-      minRentalDays: isRental ? minDays : undefined,
-      maxRentalDays: isRental ? maxDays : undefined,
     });
   };
   const removeSelectedFromListing = () => {
@@ -1433,7 +1414,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <ChevronRight className="h-4 w-4 text-[#a6c8ff]" />
                     </button>
                   )}
-                  {!ownsDetail && detail.group.salePriceTon && (detail.group.listingType === "sale" || detail.group.listingType === "both") && (
+                  {!ownsDetail && detail.group.salePriceTon && detail.group.listingType === "sale" && (
                     <div className="mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 p-3">
                       <div className="flex items-baseline justify-between gap-3">
                         <span>
@@ -1761,8 +1742,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   [
                     { value: "catalog", title: tx("Каталог", "Catalog"), note: tx("Без цены", "No price") },
                     { value: "sale", title: tx("Продажа", "Sale"), note: tx("Цена по желанию", "Optional price") },
-                    { value: "rent", title: tx("Аренда", "Rent"), note: tx("Цена и срок", "Price and duration") },
-                    { value: "both", title: tx("Продажа + аренда", "Sale + rent"), note: tx("Оба сценария", "Both options") },
                   ] as Array<{ value: ListingType; title: string; note: string }>
                 ).map(item => (
                   <button
@@ -1826,49 +1805,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     className="h-10 border-white/10 bg-[#0b0f14] pr-12 text-sm"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">TON</span>
-                </div>
-              </section>
-            )}
-
-            {includesRent && (
-              <section className="space-y-3">
-                <p className="text-xs text-slate-400">{tx("Условия аренды", "Rental terms")}</p>
-                <div className="relative">
-                  <Input
-                    value={rentalPriceTon}
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.1"
-                    onChange={event => setRentalPriceTon(event.target.value)}
-                    placeholder={tx("Цена за день", "Price per day")}
-                    className="h-10 border-white/10 bg-[#0b0f14] pr-16 text-sm"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">TON / {tx("день", "day")}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="space-y-1.5">
-                    <span className="text-[10px] text-slate-500">{tx("Минимум дней", "Minimum days")}</span>
-                    <Input
-                      value={minRentalDays}
-                      type="number"
-                      min="1"
-                      max="365"
-                      onChange={event => setMinRentalDays(event.target.value)}
-                      className="h-10 border-white/10 bg-[#0b0f14] text-sm"
-                    />
-                  </label>
-                  <label className="space-y-1.5">
-                    <span className="text-[10px] text-slate-500">{tx("Максимум дней", "Maximum days")}</span>
-                    <Input
-                      value={maxRentalDays}
-                      type="number"
-                      min="1"
-                      max="365"
-                      onChange={event => setMaxRentalDays(event.target.value)}
-                      className="h-10 border-white/10 bg-[#0b0f14] text-sm"
-                    />
-                  </label>
                 </div>
               </section>
             )}

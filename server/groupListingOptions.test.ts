@@ -13,20 +13,17 @@ describe("normalizeGroupListingOptions", () => {
     });
   });
 
-  it("retains both sale and rental terms for a combined marketplace listing", () => {
+  it("keeps group and channel listings limited to a sale or catalog", () => {
     expect(normalizeGroupListingOptions({
-      listingType: "both",
+      listingType: "sale",
       salePriceTon: "250",
-      rentalPriceTon: "3.5",
-      minRentalDays: 7,
-      maxRentalDays: 30,
       country: "Global",
     })).toMatchObject({
-      listingType: "both",
+      listingType: "sale",
       salePriceTon: "250",
-      rentalPriceTon: "3.5",
-      minRentalDays: 7,
-      maxRentalDays: 30,
+      rentalPriceTon: null,
+      minRentalDays: null,
+      maxRentalDays: null,
       country: "Global",
     });
   });

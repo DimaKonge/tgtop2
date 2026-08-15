@@ -369,24 +369,21 @@ export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: nu
 }
 
 export type GroupListingOptions = {
-  listingType?: "catalog" | "sale" | "rent" | "both";
+  listingType?: "catalog" | "sale";
   salePriceTon?: string;
-  rentalPriceTon?: string;
-  minRentalDays?: number;
-  maxRentalDays?: number;
   country?: string;
   subcategory?: string;
 };
 
 export function normalizeGroupListingOptions(listing?: GroupListingOptions | string) {
   const options = typeof listing === "string" ? { salePriceTon: listing } : (listing ?? {});
-  const listingType = options.listingType ?? (options.salePriceTon ? "sale" : "catalog");
+  const listingType: "catalog" | "sale" = options.listingType === "sale" || options.salePriceTon ? "sale" : "catalog";
   return {
     listingType,
-    salePriceTon: listingType === "sale" || listingType === "both" ? (options.salePriceTon ?? null) : null,
-    rentalPriceTon: listingType === "rent" || listingType === "both" ? (options.rentalPriceTon ?? null) : null,
-    minRentalDays: listingType === "rent" || listingType === "both" ? (options.minRentalDays ?? null) : null,
-    maxRentalDays: listingType === "rent" || listingType === "both" ? (options.maxRentalDays ?? null) : null,
+    salePriceTon: listingType === "sale" ? (options.salePriceTon ?? null) : null,
+    rentalPriceTon: null,
+    minRentalDays: null,
+    maxRentalDays: null,
     country: options.country,
     subcategory: options.subcategory,
   };
@@ -420,9 +417,6 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       listedAt: new Date(),
       listingType: listingOptions.listingType,
       salePriceTon: listingOptions.salePriceTon,
-      rentalPriceTon: listingOptions.rentalPriceTon,
-      minRentalDays: listingOptions.minRentalDays,
-      maxRentalDays: listingOptions.maxRentalDays,
       ...(listingOptions.country ? { country: listingOptions.country } : {}),
       ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),
     }).where(eq(groupsCatalog.id, groupId))));
@@ -477,9 +471,6 @@ export async function unlistGroups(ownerOpenId: string, groupIds: number[]) {
       listedAt: null,
       listingType: "catalog",
       salePriceTon: null,
-      rentalPriceTon: null,
-      minRentalDays: null,
-      maxRentalDays: null,
     }).where(inArray(groupsCatalog.id, uniqueGroupIds));
   });
 }
@@ -679,7 +670,7 @@ export async function createProtectedGroupDeal(groupId: number, buyerOpenId: str
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const group = await getGroupById(groupId);
-  if (!group || group.status !== "listed" || (group.listingType !== "sale" && group.listingType !== "both") || !group.salePriceTon) {
+  if (!group || group.status !== "listed" || group.listingType !== "sale" || !group.salePriceTon) {
     throw new Error("Группа недоступна для безопасной покупки");
   }
   if (group.ownerOpenId === buyerOpenId) throw new Error("Нельзя купить собственную группу");

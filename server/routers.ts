@@ -9,24 +9,10 @@ import { formatTonAmount } from "./tonFormatting";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
 const groupListingInput = z.object({
-  listingType: z.enum(["catalog", "sale", "rent", "both"]).default("catalog"),
+  listingType: z.enum(["catalog", "sale"]).default("catalog"),
   salePriceTon: tonAmount.optional(),
-  rentalPriceTon: tonAmount.optional(),
-  minRentalDays: z.number().int().min(1).max(365).optional(),
-  maxRentalDays: z.number().int().min(1).max(365).optional(),
   country: z.enum(["Global", "UA", "PL", "DE", "GB", "US", "RU"]).optional(),
   subcategory: z.string().min(2).max(64).optional(),
-}).superRefine((input, ctx) => {
-  const rentalListing = input.listingType === "rent" || input.listingType === "both";
-  if (rentalListing && !input.rentalPriceTon) {
-    ctx.addIssue({ code: "custom", path: ["rentalPriceTon"], message: "Укажите цену аренды в TON" });
-  }
-  if (rentalListing && (!input.minRentalDays || !input.maxRentalDays)) {
-    ctx.addIssue({ code: "custom", path: ["minRentalDays"], message: "Укажите срок аренды" });
-  }
-  if (input.minRentalDays && input.maxRentalDays && input.minRentalDays > input.maxRentalDays) {
-    ctx.addIssue({ code: "custom", path: ["maxRentalDays"], message: "Максимальный срок не может быть меньше минимального" });
-  }
 });
 
 export const appRouter = router({
