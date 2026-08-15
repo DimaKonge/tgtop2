@@ -117,7 +117,10 @@ type Nft = {
   ownershipVerifiedAt?: Date | null;
   listingType: "sale" | "rent" | "both";
   status: "available" | "rented" | "sold";
+  showcaseProfile?: boolean;
+  showcaseGroupId?: number | null;
 };
+type ShowcaseNft = Pick<Nft, "id" | "username" | "price" | "rentalPricePerDay" | "assetClass" | "listingType">;
 type PreparedNftTransfer = {
   transfer: {
     id: number;
@@ -382,6 +385,30 @@ function NftCard({ nft, language }: { nft: Nft; language: Language }) {
   );
 }
 
+function NftShowcase({ nfts, language, title }: { nfts: ShowcaseNft[]; language: Language; title?: string }) {
+  if (!nfts.length) return null;
+  return (
+    <section className="overflow-hidden rounded-2xl border border-[#3f8cff]/25 bg-[#111720]">
+      <div className="flex items-center justify-between gap-3 border-b border-white/8 px-4 py-3">
+        <span>
+          <h2 className="text-sm font-semibold">{title ?? (language === "en" ? "NFT showcase" : "NFT-витрина")}</h2>
+          <p className="mt-0.5 text-[10px] text-slate-500">{language === "en" ? "Selected by the owner" : "Выбрано владельцем"}</p>
+        </span>
+        <span className="rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2 py-1 text-[9px] font-medium uppercase tracking-[0.1em] text-[#a6c8ff]">NFT</span>
+      </div>
+      <div className="grid grid-cols-2 gap-px bg-white/8 sm:grid-cols-3">
+        {nfts.map(nft => (
+          <div key={nft.id} className="min-w-0 bg-[#111720] p-3">
+            <span className="grid h-8 w-8 place-items-center rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/10 text-sm font-semibold text-[#a6c8ff]">@</span>
+            <b className="mt-2 block truncate text-xs text-slate-100">@{nft.username}</b>
+            <small className="mt-1 block truncate text-[10px] text-slate-500">{nft.assetClass === "onchain" ? "On-chain" : "Off-chain"} · {nft.listingType === "rent" ? nft.rentalPricePerDay : nft.price} TON</small>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function BrandMark() {
   return (
     <span
@@ -531,6 +558,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [selectedNftId, setSelectedNftId] = useState<number | null>(null);
   const [recipientInput, setRecipientInput] = useState("");
   const [preparedNftTransfer, setPreparedNftTransfer] = useState<PreparedNftTransfer | null>(null);
+  const [showcaseNftId, setShowcaseNftId] = useState<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem("tg-top-language", language);
@@ -668,7 +696,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     { openId: selectedOwnerOpenId ?? "" },
     { enabled: selectedOwnerOpenId !== null }
   );
-  const publicOwner = publicOwnerQuery.data as { owner: NonNullable<Group["owner"]>; groups: Group[] } | undefined;
+  const publicOwner = publicOwnerQuery.data as { owner: NonNullable<Group["owner"]>; groups: Group[]; nfts: ShowcaseNft[] } | undefined;
   const ownerLeaderboardQuery = trpc.tgTop.getOwnerLeaderboard.useQuery({ limit: 25 });
   const ownerLeaderboard = (ownerLeaderboardQuery.data ?? []) as Array<{
     rank: number;
@@ -685,6 +713,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           joinedCount: number;
           recordedAt: Date;
         }>;
+        ownerNfts: ShowcaseNft[];
       }
     | undefined;
 
@@ -738,6 +767,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         return;
       }
       window.open(result.invoiceLink, "_blank", "noopener,noreferrer");
+    },
+    onError: error => toast.error(error.message),
+  });
+  const setNftShowcase = trpc.tgTop.setNftShowcase.useMutation({
+    onSuccess: () => {
+      toast.success(tx("NFT-витрина обновлена", "NFT showcase updated."));
+      setShowcaseNftId(null);
+      void utils.tgTop.myNfts.invalidate();
+      void utils.tgTop.getNfts.invalidate();
+      void utils.tgTop.getGroupDetail.invalidate();
+      void utils.tgTop.getPublicOwnerProfile.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -951,6 +991,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const listingSubcategoryOptions = listingCategory ? CATEGORY_SUBCATEGORIES[listingCategory] : [];
   const includesSale = listingType === "sale";
   const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
+  const showcaseNft = myNfts.find(nft => nft.id === showcaseNftId) ?? null;
   const reviewedRecipient = nftRecipientQuery.data;
 
   const openGroup = (id: number) => {
@@ -1582,6 +1623,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <Metric label={tx("Приглашения", "Invites")} value={n(detail.group.invitedCount)} note={tx("зафиксировано ботом", "recorded by the bot")} />
                   {detail.group.messagesCount > 0 && <Metric label={tx("Публикации", "Posts")} value={n(detail.group.messagesCount)} note={tx("увиденные ботом", "observed by the bot")} />}
                 </div>
+                <NftShowcase nfts={detail.ownerNfts} language={language} title={tx("NFT-витрина площадки", "Community NFT showcase")} />
               </>
             ) : (
               <p className="py-16 text-center text-sm text-slate-500">
@@ -1612,6 +1654,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <h2 className="px-1 text-sm font-semibold">{tx("Площадки владельца", "Owner communities")}</h2>
                   {publicOwner.groups.map(group => <GroupCard key={group.id} group={group} variant="list" language={language} onClick={() => openGroup(group.id)} />)}
                 </section>
+                <NftShowcase nfts={publicOwner.nfts} language={language} title={tx("NFT-витрина владельца", "Owner NFT showcase")} />
               </>
             ) : (
               <p className="py-16 text-center text-sm text-slate-500">{tx("Загружаем профиль владельца…", "Loading owner profile…")}</p>
@@ -1656,6 +1699,29 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 />
               </div>
             </div>
+            {myNfts.length > 0 && (
+              <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
+                <div className="border-b border-white/8 px-4 py-4">
+                  <h2 className="text-sm font-semibold">{tx("Моя NFT-витрина", "My NFT showcase")}</h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{tx("Показывайте NFT только в профиле или на выбранной подключенной площадке.", "Show an NFT only on your profile or on a selected connected community.")}</p>
+                </div>
+                <div className="divide-y divide-white/7">
+                  {myNfts.map(nft => (
+                    <div key={nft.id} className="px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="min-w-0"><b className="block truncate text-sm">@{nft.username}</b><small className="mt-0.5 block text-[10px] text-slate-500">{nft.assetClass === "onchain" ? "On-chain" : "Off-chain"}</small></span>
+                        <span className="text-[10px] text-slate-500">{nft.showcaseProfile ? tx("В профиле", "On profile") : nft.showcaseGroupId ? tx("На площадке", "On community") : tx("Скрыт", "Hidden")}</span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        <button onClick={() => setNftShowcase.mutate({ nftId: nft.id, target: "profile" })} disabled={setNftShowcase.isPending} className="rounded-md border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2 py-1.5 text-[10px] font-medium text-[#a6c8ff]">{tx("Профиль", "Profile")}</button>
+                        <button onClick={() => setShowcaseNftId(nft.id)} disabled={setNftShowcase.isPending} className="rounded-md border border-white/10 px-2 py-1.5 text-[10px] font-medium text-slate-300">{tx("Площадка", "Community")}</button>
+                        <button onClick={() => setNftShowcase.mutate({ nftId: nft.id, target: "hidden" })} disabled={setNftShowcase.isPending} className="rounded-md border border-white/10 px-2 py-1.5 text-[10px] font-medium text-slate-400">{tx("Скрыть", "Hide")}</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="flex items-start justify-between gap-3 border-b border-white/8 px-4 py-4">
                 <span>
@@ -1918,6 +1984,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           })}
         </div>
       </nav>
+
+      <Sheet open={Boolean(showcaseNft)} onOpenChange={open => !open && setShowcaseNftId(null)}>
+        <SheetContent side="bottom" className="rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4">
+            <SheetTitle className="text-slate-100">{tx("Выберите площадку для NFT", "Choose a community for the NFT")}</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-2 px-4 pb-5 pt-3">
+            {showcaseNft && <p className="text-xs text-slate-400">@{showcaseNft.username} · {tx("будет показан только на выбранной площадке", "will be shown only on the selected community")}</p>}
+            {mine.length ? mine.map(group => (
+              <button key={group.id} onClick={() => showcaseNft && setNftShowcase.mutate({ nftId: showcaseNft.id, target: "group", groupId: group.id })} disabled={setNftShowcase.isPending} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#111720] p-3 text-left transition-colors hover:bg-white/[0.04] disabled:opacity-50">
+                <Avatar group={group} compact />
+                <span className="min-w-0 flex-1"><b className="block truncate text-sm">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : getCategoryLabel(group.category, language)}</small></span>
+                <ChevronRight className="h-4 w-4 text-[#a6c8ff]" />
+              </button>
+            )) : <p className="rounded-xl border border-dashed border-white/12 p-5 text-center text-xs leading-5 text-slate-500">{tx("Сначала подключите свою площадку в личной папке.", "Connect a community in My Groups first.")}</p>}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={Boolean(starsPaymentGroup)} onOpenChange={open => !open && setStarsPaymentGroup(null)}>
         <SheetContent side="bottom" className="rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">

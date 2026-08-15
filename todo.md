@@ -154,8 +154,8 @@
 - [x] Add operable protected-deal stage controls while keeping payment verification and settlement explicitly locked until on-chain safeguards exist
 - [x] Display a subtle “Комісія TG TOP · 0%” disclosure beside sale prices and protected-deal summaries
 - [ ] Design a separate NFT deposit bot that verifies received assets before enabling NFT sale or rental listings
-- [ ] Add Fragment-inspired NFT showcase panels to user profiles and listed community detail pages
-- [ ] Let a verified NFT owner assign or remove an NFT showcase from their connected TG TOP channel or chat
+- [x] Add Fragment-inspired NFT showcase panels to user profiles and listed community detail pages
+- [x] Let a verified NFT owner assign or remove an NFT showcase from their connected TG TOP channel or chat
 - [ ] Support a distinct verified wallet reference per NFT for rental source, payout, and return routing
 - [ ] Automatically discover eligible NFT assets after wallet connection while requiring owner approval before public display or assignment
 - [ ] Let a renter select a connected community for a leased username, show renewal timing, and prepare safe asset return at expiry

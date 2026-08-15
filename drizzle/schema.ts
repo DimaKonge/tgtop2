@@ -1,4 +1,4 @@
-import { decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -174,6 +174,7 @@ export const nftUsernames = mysqlTable("nft_usernames", {
   ownershipVerifiedAt: timestamp("ownershipVerifiedAt"),
   ownershipVerification: varchar("ownershipVerification", { length: 255 }),
   showcaseGroupId: int("showcaseGroupId"),
+  showcaseProfile: boolean("showcaseProfile").default(false).notNull(),
   listingType: mysqlEnum("listingType", ["sale", "rent", "both"]).default("both").notNull(),
   status: mysqlEnum("status", ["available", "rented", "sold"]).default("available").notNull(),
   currentRenterOpenId: varchar("currentRenterOpenId", { length: 64 }),

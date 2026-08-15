@@ -175,6 +175,13 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    setNftShowcase: protectedProcedure
+      .input(z.object({ nftId: z.number().int().positive(), target: z.enum(["profile", "group", "hidden"]), groupId: z.number().int().positive().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.setNftShowcaseTarget(input.nftId, ctx.user.openId, input);
+        return { success: true };
+      }),
+
     createNft: protectedProcedure
       .input(z.object({
         username: z.string(),

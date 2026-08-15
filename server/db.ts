@@ -435,9 +435,22 @@ export async function getPublicOwnerProfile(openId: string) {
     eq(groupsCatalog.ownerOpenId, openId),
     eq(groupsCatalog.status, "listed")
   )).orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
+  const nfts = await db.select({
+    id: nftUsernames.id,
+    username: nftUsernames.username,
+    price: nftUsernames.price,
+    rentalPricePerDay: nftUsernames.rentalPricePerDay,
+    assetClass: nftUsernames.assetClass,
+    listingType: nftUsernames.listingType,
+  }).from(nftUsernames).where(and(
+    eq(nftUsernames.ownerOpenId, openId),
+    eq(nftUsernames.status, "available"),
+    eq(nftUsernames.showcaseProfile, true)
+  )).orderBy(desc(nftUsernames.createdAt));
   return {
     owner,
     groups: groups.map(group => ({ ...group, owner })),
+    nfts,
   };
 }
 
@@ -739,6 +752,10 @@ export async function createNftListing(data: InsertNftUsername) {
 }
 
 export async function setNftShowcaseGroup(nftId: number, ownerOpenId: string, groupId: number | null) {
+  return setNftShowcaseTarget(nftId, ownerOpenId, groupId === null ? { target: "hidden" } : { target: "group", groupId });
+}
+
+export async function setNftShowcaseTarget(nftId: number, ownerOpenId: string, input: { target: "profile" | "group" | "hidden"; groupId?: number }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [nft] = await db.select().from(nftUsernames).where(and(
@@ -746,13 +763,19 @@ export async function setNftShowcaseGroup(nftId: number, ownerOpenId: string, gr
     eq(nftUsernames.ownerOpenId, ownerOpenId)
   )).limit(1);
   if (!nft) throw new Error("NFT недоступен для управления");
-  if (groupId !== null) {
-    const group = await getGroupById(groupId);
+  if (input.target === "group") {
+    if (!input.groupId) throw new Error("Выберите подключенную площадку для витрины");
+    const group = await getGroupById(input.groupId);
     if (!group || group.ownerOpenId !== ownerOpenId) {
       throw new Error("Выберите свою подключенную площадку");
     }
   }
-  await db.update(nftUsernames).set({ showcaseGroupId: groupId }).where(and(
+  const showcase = input.target === "profile"
+    ? { showcaseProfile: true, showcaseGroupId: null }
+    : input.target === "group"
+      ? { showcaseProfile: false, showcaseGroupId: input.groupId! }
+      : { showcaseProfile: false, showcaseGroupId: null };
+  await db.update(nftUsernames).set(showcase).where(and(
     eq(nftUsernames.id, nftId),
     eq(nftUsernames.ownerOpenId, ownerOpenId)
   ));

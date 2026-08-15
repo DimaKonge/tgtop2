@@ -83,6 +83,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('getAccountActivity.useQuery');
     expect(source).toContain('WebApp?.openInvoice');
     expect(source).toContain('Оплата подтверждена Telegram. Позиция обновляется…');
+    expect(source).toContain('function NftShowcase');
+    expect(source).toContain('NFT-витрина площадки');
+    expect(source).toContain('NFT-витрина владельца');
+    expect(source).toContain('Моя NFT-витрина');
+    expect(source).toContain('setNftShowcase.mutate');
     expect(source).toContain('История активности');
     expect(source).toContain('Реальные бонусы, ставки, Stars, сделки и передачи NFT.');
     expect(source).toContain('const verifiedTasks');
