@@ -198,7 +198,7 @@
 - [ ] Build a secure account-wallet foundation with TON Connect, deposit verification, withdrawal requests, immutable transaction states, and no live payout before treasury safeguards are approved
 - [ ] Add server-verified TON deposit reconciliation and withdrawal requests with idempotency, recipient-address confirmation, limits, and manual approval before payout
 - [x] Add a Telegram Stars payment choice for ranking bids using official invoice confirmation and immutable payment-intent records
-- [ ] Add a factual TG TOP leaderboard with transparent ranking criteria and no fabricated point balances
+- [x] Add a factual TG TOP leaderboard with transparent ranking criteria and no fabricated point balances
 - [ ] Add a unified account activity history using real credit, deal, NFT-transfer, and verified wallet records
 - [ ] Add a verifiable TG TOP tasks program with explicit completion rules and no unearned rewards
 - [x] Make the lower general-list area and empty state clickable, with a clear plus action that opens the personal cabinet to add or list a community

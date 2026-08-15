@@ -396,6 +396,37 @@ export async function getPublicOwnerProfile(openId: string) {
   };
 }
 
+export async function getOwnerLeaderboard(limit = 25) {
+  const db = await getDb();
+  if (!db) return [];
+  const totalMembers = sql<number>`COALESCE(SUM(${groupsCatalog.membersCount}), 0)`;
+  const activeListings = sql<number>`COUNT(${groupsCatalog.id})`;
+  const rows = await db.select({
+    openId: groupsCatalog.ownerOpenId,
+    name: users.name,
+    telegramUsername: users.telegramUsername,
+    avatarUrl: users.avatarUrl,
+    activeListings,
+    totalMembers,
+  }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
+    .where(eq(groupsCatalog.status, "listed"))
+    .groupBy(groupsCatalog.ownerOpenId, users.name, users.telegramUsername, users.avatarUrl)
+    .orderBy(desc(totalMembers), desc(activeListings), asc(groupsCatalog.ownerOpenId))
+    .limit(Math.min(Math.max(limit, 1), 100));
+  return rows.map((row, index) => ({
+    rank: index + 1,
+    owner: {
+      openId: row.openId,
+      name: row.name,
+      telegramUsername: row.telegramUsername,
+      avatarUrl: row.avatarUrl,
+    },
+    activeListings: Number(row.activeListings),
+    totalMembers: Number(row.totalMembers),
+  }));
+}
+
 export async function upsertTelegramGroup(data: InsertGroupCatalog): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

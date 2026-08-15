@@ -77,6 +77,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('getPublicOwnerProfile.useQuery');
     expect(source).toContain('Разместил');
     expect(source).toContain('Профиль владельца');
+    expect(source).toContain('getOwnerLeaderboard.useQuery');
+    expect(source).toContain('Лидерборд владельцев');
+    expect(source).toContain('По суммарной аудитории активных площадок в TG TOP.');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');
     expect(source).toContain('<WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} />');
     expect(source).not.toContain('{ value: "system"');

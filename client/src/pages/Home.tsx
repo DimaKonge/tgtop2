@@ -666,6 +666,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     { enabled: selectedOwnerOpenId !== null }
   );
   const publicOwner = publicOwnerQuery.data as { owner: NonNullable<Group["owner"]>; groups: Group[] } | undefined;
+  const ownerLeaderboardQuery = trpc.tgTop.getOwnerLeaderboard.useQuery({ limit: 25 });
+  const ownerLeaderboard = (ownerLeaderboardQuery.data ?? []) as Array<{
+    rank: number;
+    owner: NonNullable<Group["owner"]>;
+    activeListings: number;
+    totalMembers: number;
+  }>;
   const detail = detailQuery.data as
     | {
         group: Group;
@@ -1589,6 +1596,38 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 />
               </div>
             </div>
+            <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
+              <div className="flex items-start justify-between gap-3 border-b border-white/8 px-4 py-4">
+                <span>
+                  <h2 className="text-sm font-semibold">{tx("Лидерборд владельцев", "Owner leaderboard")}</h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{tx("По суммарной аудитории активных площадок в TG TOP.", "By recorded audience across active TG TOP communities.")}</p>
+                </span>
+                <span className="rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">{tx("Данные TG TOP", "TG TOP data")}</span>
+              </div>
+              {ownerLeaderboard.length ? (
+                <div className="divide-y divide-white/7">
+                  {ownerLeaderboard.map(entry => {
+                    const ownerLabel = entry.owner.telegramUsername ? `@${entry.owner.telegramUsername}` : (entry.owner.name ?? tx("Владелец TG TOP", "TG TOP owner"));
+                    return <button key={entry.owner.openId} onClick={() => openOwner(entry.owner.openId)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.025]">
+                      <span className="w-5 text-center text-xs font-semibold text-[#72a8ff]">{entry.rank}</span>
+                      <span className="grid h-8 w-8 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-[10px] font-semibold">
+                        {entry.owner.avatarUrl ? <img src={entry.owner.avatarUrl} alt="" className="h-full w-full object-cover" /> : (ownerLabel.slice(0, 1).toUpperCase())}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-xs text-slate-200">{ownerLabel}</b>
+                        <small className="mt-0.5 block text-[10px] text-slate-500">{entry.activeListings} {tx("площадок", "active listings")}</small>
+                      </span>
+                      <span className="text-right">
+                        <b className="block text-xs text-[#a6c8ff]">{n(entry.totalMembers, language)}</b>
+                        <small className="block text-[9px] text-slate-500">{tx("аудитория", "audience")}</small>
+                      </span>
+                    </button>;
+                  })}
+                </div>
+              ) : (
+                <p className="px-4 py-8 text-center text-sm text-slate-500">{tx("Лидерборд появится после первых активных листингов.", "The leaderboard appears after the first active listings.")}</p>
+              )}
+            </section>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="border-b border-white/8 px-4 py-4">
                 <h2 className="text-sm font-semibold">{tx("История операций", "Transaction history")}</h2>

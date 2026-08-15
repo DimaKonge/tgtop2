@@ -109,6 +109,12 @@ export const appRouter = router({
         return await db.getPublicOwnerProfile(input.openId);
       }),
 
+    getOwnerLeaderboard: publicProcedure
+      .input(z.object({ limit: z.number().int().min(1).max(100).optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getOwnerLeaderboard(input?.limit);
+      }),
+
     listGroupWithCredits: protectedProcedure
       .input(z.object({ groupId: z.number() }).merge(groupListingInput))
       .mutation(async ({ ctx, input }) => {
