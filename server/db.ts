@@ -535,7 +535,12 @@ export async function getGroupDetail(id: number) {
   const ownerNfts = await db.select().from(nftUsernames)
     .where(and(eq(nftUsernames.showcaseGroupId, group.id), eq(nftUsernames.status, "available")))
     .orderBy(desc(nftUsernames.createdAt));
-  return { group, snapshots: snapshots.reverse(), ownerNfts };
+  return {
+    group,
+    snapshots: snapshots.reverse(),
+    ownerNfts,
+    analytics: { source: "tgtop_bot_observed" as const, observedSince: group.createdAt },
+  };
 }
 
 export async function recordGroupSnapshot(groupId: number, membersCount: number, messagesCount: number, joinedCount: number) {

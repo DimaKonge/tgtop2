@@ -90,6 +90,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('setNftShowcase.mutate');
     expect(source).toContain('get("listing")');
     expect(source).toContain('setPage("details")');
+    expect(source).toContain('tgtop_bot_observed');
+    expect(source).toContain('История до подключения бота не моделируется.');
     expect(source).toContain('История активности');
     expect(source).toContain('Реальные бонусы, ставки, Stars, сделки и передачи NFT.');
     expect(source).toContain('const verifiedTasks');

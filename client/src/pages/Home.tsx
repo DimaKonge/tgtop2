@@ -721,6 +721,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           recordedAt: Date;
         }>;
         ownerNfts: ShowcaseNft[];
+        analytics: { source: "tgtop_bot_observed"; observedSince: Date };
       }
     | undefined;
 
@@ -1630,6 +1631,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <Metric label={tx("Приглашения", "Invites")} value={n(detail.group.invitedCount)} note={tx("зафиксировано ботом", "recorded by the bot")} />
                   {detail.group.messagesCount > 0 && <Metric label={tx("Публикации", "Posts")} value={n(detail.group.messagesCount)} note={tx("увиденные ботом", "observed by the bot")} />}
                 </div>
+                <p className="rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/6 px-3 py-2 text-[10px] leading-4 text-slate-400">
+                  {tx("Источник: наблюдения @TGTOP_robot с ", "Source: @TGTOP_robot observations since ")}{date(detail.analytics.observedSince, language)}. {tx("История до подключения бота не моделируется.", "History before the bot was connected is not estimated.")}
+                </p>
                 <NftShowcase nfts={detail.ownerNfts} language={language} title={tx("NFT-витрина площадки", "Community NFT showcase")} />
               </>
             ) : (
