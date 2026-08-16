@@ -88,6 +88,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('NFT-витрина владельца');
     expect(source).toContain('Моя NFT-витрина');
     expect(source).toContain('setNftShowcase.mutate');
+    expect(source).toContain('get("listing")');
+    expect(source).toContain('setPage("details")');
     expect(source).toContain('История активности');
     expect(source).toContain('Реальные бонусы, ставки, Stars, сделки и передачи NFT.');
     expect(source).toContain('const verifiedTasks');

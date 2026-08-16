@@ -563,6 +563,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   useEffect(() => {
     localStorage.setItem("tg-top-language", language);
   }, [language]);
+  useEffect(() => {
+    const listingId = Number(new URLSearchParams(window.location.search).get("listing"));
+    if (Number.isInteger(listingId) && listingId > 0) {
+      setSelectedGroupId(listingId);
+      setPage("details");
+    }
+  }, []);
   const ui =
     language === "en"
       ? {

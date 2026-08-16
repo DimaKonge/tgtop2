@@ -37,6 +37,40 @@ export async function notifyRecordedRankingBid(input: { openId: string; groupTit
   }
 }
 
+export async function notifyCommunityListed(input: {
+  chatId: string;
+  groupId: number;
+  groupTitle: string;
+  listingType: "catalog" | "sale";
+  salePriceTon?: string | null;
+}) {
+  if (!botToken) return false;
+  const separator = miniAppUrl.includes("?") ? "&" : "?";
+  const listingUrl = `${miniAppUrl}${separator}listing=${input.groupId}`;
+  const text = [
+    "✨ Сообщество добавлено в TG TOP",
+    "",
+    `🏷 ${input.groupTitle}`,
+    input.listingType === "sale" && input.salePriceTon
+      ? `💎 Статус: продаётся · ${input.salePriceTon} TON`
+      : "📌 Статус: доступно в каталоге TG TOP",
+    "",
+    "Откройте карточку сообщества, чтобы увидеть актуальные условия и статистику.",
+  ].join("\n");
+  try {
+    const response = await axios.post<{ ok: boolean }>(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: input.chatId,
+      text,
+      disable_web_page_preview: true,
+      reply_markup: { inline_keyboard: [[{ text: "Открыть в TG TOP", web_app: { url: listingUrl } }]] },
+    }, { timeout: 15_000 });
+    return response.data.ok;
+  } catch (error) {
+    console.warn("[Telegram] Could not post community listing announcement:", error);
+    return false;
+  }
+}
+
 export async function createStarsRankingInvoiceLink(input: { payload: string; starsAmount: number; groupTitle: string; slotNumber: number }) {
   if (!botToken) return null;
   try {

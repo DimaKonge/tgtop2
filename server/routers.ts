@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { createStarsRankingInvoiceLink, notifyRecordedRankingBid } from "./telegramNotifications";
+import { createStarsRankingInvoiceLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
 import { formatTonAmount } from "./tonFormatting";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
@@ -120,15 +120,29 @@ export const appRouter = router({
     listGroupWithCredits: protectedProcedure
       .input(z.object({ groupId: z.number() }).merge(groupListingInput))
       .mutation(async ({ ctx, input }) => {
-        await db.listGroupWithCredits(ctx.user.openId, input.groupId, input);
-        return { success: true };
+        const groups = await db.listGroupWithCredits(ctx.user.openId, input.groupId, input);
+        await Promise.all(groups.map(group => notifyCommunityListed({
+          chatId: group.chatId,
+          groupId: group.id,
+          groupTitle: group.title,
+          listingType: group.listingType,
+          salePriceTon: group.salePriceTon,
+        })));
+        return { success: true, announced: groups.length };
       }),
 
     listGroupsWithCredits: protectedProcedure
       .input(z.object({ groupIds: z.array(z.number()).min(1).max(50) }).merge(groupListingInput))
       .mutation(async ({ ctx, input }) => {
-        await db.listGroupsWithCredits(ctx.user.openId, input.groupIds, input);
-        return { success: true };
+        const groups = await db.listGroupsWithCredits(ctx.user.openId, input.groupIds, input);
+        await Promise.all(groups.map(group => notifyCommunityListed({
+          chatId: group.chatId,
+          groupId: group.id,
+          groupTitle: group.title,
+          listingType: group.listingType,
+          salePriceTon: group.salePriceTon,
+        })));
+        return { success: true, announced: groups.length };
       }),
 
     unlistGroups: protectedProcedure

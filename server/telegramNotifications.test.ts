@@ -18,3 +18,13 @@ describe("Stars invoice window delivery", () => {
     expect(source).not.toContain("/sendInvoice");
   });
 });
+
+describe("community listing announcements", () => {
+  it("posts a localized TG TOP listing announcement with a safe Mini App detail link", () => {
+    const source = readFileSync(new URL("./telegramNotifications.ts", import.meta.url), "utf8");
+    expect(source).toContain("notifyCommunityListed");
+    expect(source).toContain("Сообщество добавлено в TG TOP");
+    expect(source).toContain("listing=${input.groupId}");
+    expect(source).toContain("Открыть в TG TOP");
+  });
+});

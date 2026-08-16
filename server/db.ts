@@ -679,6 +679,13 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       }).where(and(eq(auctionSlots.id, assignment.slotId), sql`${auctionSlots.groupId} IS NULL`));
     }
   });
+  return groupsNeedingListing.map(group => ({
+    id: group.id,
+    chatId: group.chatId,
+    title: group.title,
+    listingType: listingOptions.listingType,
+    salePriceTon: listingOptions.salePriceTon ?? null,
+  }));
 }
 
 export async function listGroupWithCredits(ownerOpenId: string, groupId: number, listing?: GroupListingOptions | string, cost = GROUP_CONNECTION_BONUS) {
