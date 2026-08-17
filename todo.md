@@ -215,3 +215,4 @@
 - [x] Add a toggle in group details for the bot to automatically delete Telegram service messages (joins, leaves, pins)
 - [x] Ensure listing announcements consistently dendritic delivery via bot without failing
 - [x] Refine lower catalog list cards for uniform size, right-aligned prominent prices, and removal of commission copy
+- [x] Refine lower catalog cards for more compact height and larger, more prominent avatars

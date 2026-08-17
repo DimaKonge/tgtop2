@@ -1396,18 +1396,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {tx("Фильтр", "Filter")}
               </Button>
             </div>
-            <div className="grid grid-cols-1 gap-2.5">
+            <div className="grid grid-cols-1 gap-2">
               {visibleGroups.map((group, index) => {
                 const isSale = group.listingType === "sale" && group.salePriceTon;
                 return (
                   <button
                     key={group.id}
                     onClick={() => openGroup(group.id)}
-                    style={{ animationDelay: `${index * 40}ms` }}
-                    className="group flex h-[72px] w-full items-center justify-between gap-3 rounded-2xl border border-white/8 bg-[#111720] px-4 py-3 text-left transition-all duration-300 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] hover:shadow-lg hover:shadow-[#3f8cff]/5 active:scale-[0.99] animate-in fade-in slide-in-from-bottom-2"
+                    style={{ animationDelay: `${index * 35}ms` }}
+                    className="group flex h-[62px] w-full items-center justify-between gap-3 rounded-xl border border-white/8 bg-[#111720] px-3.5 py-2 text-left transition-all duration-300 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] hover:shadow-lg hover:shadow-[#3f8cff]/5 active:scale-[0.99] animate-in fade-in slide-in-from-bottom-2"
                   >
-                    <div className="flex min-w-0 flex-1 items-center gap-3.5">
-                      <div className="shrink-0 transition-transform duration-300 group-hover:scale-105">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl transition-transform duration-300 group-hover:scale-105">
                         <Avatar group={group} />
                       </div>
                       <span className="min-w-0 flex-1">
