@@ -16,6 +16,7 @@ describe("TG TOP production bot links", () => {
 
   it("uses the shared GroupCard component for ranked and general catalog placements", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../index.css", import.meta.url), "utf8");
 
     expect(source).toContain('type GroupCardVariant = "lead" | "secondary" | "compact" | "list"');
     expect(source).toMatch(/<GroupCard\s+group=\{leadSlot\.group\}\s+variant="lead"/);
@@ -98,12 +99,19 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
     expect(source).toContain('className="ranking-slot-enter ranking-slot-lead"');
+    expect(styles).toContain('--ranking-slot-offset: 32px');
+    expect(styles).toContain('--ranking-slot-offset: 26px');
+    expect(styles).toContain('--ranking-slot-offset: 20px');
     expect(source).toContain('tx("В листинге", "Listed")');
     expect(source).toContain('tx("Не в листинге", "Unlisted")');
     expect(source).toContain('tx("Продажа", "For sale")');
     expect(source).toContain('ownsDetail && detail.group.category === "Чаты"');
     expect(source).toContain('role="switch"');
     expect(source).toContain('translate-x-5');
+    expect(source).toContain('trpc.tgTop.saveMyGroupsLayout.useMutation');
+    expect(source).toContain('DndContext sensors={myGroupsSensors}');
+    expect(source).toContain('SortableMyGroupTile');
+    expect(source).toContain('tx("Закреплено", "Pinned")');
     expect(source).toContain('Прогресс подтверждается только действиями, зафиксированными в TG TOP. Награды не начисляются автоматически.');
     expect(source).toContain('connect-community');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');

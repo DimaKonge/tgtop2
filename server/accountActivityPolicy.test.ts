@@ -13,5 +13,8 @@ describe("account activity policy", () => {
     expect(source).toContain('title: "ranking_bid"');
     expect(source).toContain('item.kind === "manual_bonus" ? "manual_bonus"');
     expect(source).toContain('if (group.category !== "Чаты") throw new Error("Автоочистка доступна только для чатов")');
+    expect(source).toContain('export async function saveMyGroupsLayout(ownerOpenId: string, orderedGroupIds: number[], pinnedGroupIds: number[])');
+    expect(source).toContain('orderBy(desc(groupsCatalog.ownerPinned), asc(groupsCatalog.ownerSortOrder), desc(groupsCatalog.createdAt))');
+    expect(source).toContain('Порядок должен включать все ваши группы');
   });
 });

@@ -99,6 +99,8 @@ type Group = {
   salePriceTon?: string | null;
   listingType?: ListingType;
   deleteServiceMessages?: boolean;
+  ownerPinned?: boolean;
+  ownerSortOrder?: number;
   createdAt: Date;
   owner?: {
     openId: string;
@@ -195,6 +197,70 @@ function Avatar({
         group.title.slice(0, 1).toUpperCase()
       )}
     </span>
+  );
+}
+
+function SortableMyGroupTile({
+  group,
+  language,
+  disabled,
+  onOpen,
+  onTogglePin,
+}: {
+  group: Group;
+  language: Language;
+  disabled?: boolean;
+  onOpen: () => void;
+  onTogglePin: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id, disabled });
+  const isEnglish = language === "en";
+  const isSale = group.status === "listed" && group.listingType === "sale";
+  const status = isSale ? (isEnglish ? "For sale" : "Продажа") : group.status === "listed" ? (isEnglish ? "Listed" : "В листинге") : (isEnglish ? "Unlisted" : "Не в листинге");
+  const statusClass = isSale
+    ? "border-amber-300/25 bg-amber-300/10 text-amber-200"
+    : group.status === "listed"
+      ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200"
+      : "border-white/10 bg-white/5 text-slate-500";
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`relative min-w-0 rounded-xl border border-white/8 bg-[#111720] p-2.5 shadow-sm ${isDragging ? "z-20 scale-[1.02] border-[#72a8ff]/60 bg-[#182334] shadow-xl opacity-90" : ""}`}
+    >
+      <button type="button" onClick={onOpen} className="block w-full text-left">
+        <div className="flex items-start gap-2">
+          <Avatar group={group} compact />
+          <span className="min-w-0 flex-1">
+            <b className="block truncate text-xs text-slate-100">{group.title}</b>
+            <small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : group.inviteLink ? (isEnglish ? "Private group" : "Приватная группа") : group.category}</small>
+          </span>
+        </div>
+      </button>
+      <div className="mt-2 flex items-center justify-between gap-1">
+        <span className={`rounded-md border px-1.5 py-1 text-[9px] font-semibold leading-none ${statusClass}`}>{status}</span>
+        <span className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={event => { event.stopPropagation(); onTogglePin(); }}
+            aria-label={group.ownerPinned ? (isEnglish ? "Unpin community" : "Открепить группу") : (isEnglish ? "Pin community" : "Закрепить группу")}
+            className={`grid h-6 w-6 place-items-center rounded-md transition-colors ${group.ownerPinned ? "bg-[#3f8cff]/16 text-[#9cc3ff]" : "text-slate-500 hover:bg-white/7 hover:text-slate-200"}`}
+          >
+            {group.ownerPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label={isEnglish ? "Drag to reorder" : "Перетащить для изменения порядка"}
+            className="grid h-6 w-6 touch-none place-items-center rounded-md text-slate-500 hover:bg-white/7 hover:text-slate-200"
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+        </span>
+      </div>
+    </article>
   );
 }
 
@@ -680,6 +746,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     enabled: isAuthenticated,
   });
   const mine = (mineQuery.data ?? []) as Group[];
+  const [myGroupsGridMode, setMyGroupsGridMode] = useState(false);
+  const [myGroupsLayout, setMyGroupsLayout] = useState<Group[]>([]);
+  const myGroupsSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+  useEffect(() => {
+    setMyGroupsLayout(mine);
+  }, [mineQuery.dataUpdatedAt]);
   const accountQuery = trpc.tgTop.getAccount.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -795,6 +870,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.myGroups.invalidate();
     },
     onError: error => toast.error(error.message),
+  });
+  const saveMyGroupsLayoutMutation = trpc.tgTop.saveMyGroupsLayout.useMutation({
+    onSuccess: () => {
+      void utils.tgTop.myGroups.invalidate();
+    },
+    onError: error => {
+      toast.error(error.message);
+      void utils.tgTop.myGroups.invalidate();
+    },
   });
   const placeBid = trpc.tgTop.placeBid.useMutation({
     onSuccess: () => {
@@ -1041,6 +1125,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : undefined;
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
   const selectedListingGroups = mine.filter(group => selectedGroupIds.includes(group.id));
+  const orderedMyGroups = myGroupsLayout.length === mine.length ? myGroupsLayout : mine;
+  const pinnedMyGroups = orderedMyGroups.filter(group => group.ownerPinned);
+  const unpinnedMyGroups = orderedMyGroups.filter(group => !group.ownerPinned);
   const globalSubcategoryCategory = globalDirection === "Каналы" || globalDirection === "Чаты" ? globalDirection : null;
   const globalSubcategoryOptions = globalSubcategoryCategory ? CATEGORY_SUBCATEGORIES[globalSubcategoryCategory] : [];
   const listingCategory = selectedListingGroups.length && selectedListingGroups.every(group => group.category === selectedListingGroups[0]?.category)
@@ -1108,6 +1195,34 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     if (window.confirm(tx("Удалить выбранные группы из кабинета?", "Delete selected communities from account?"))) {
       deleteGroups.mutate({ groupIds: selectedGroupIds });
     }
+  };
+  const persistMyGroupsLayout = (nextGroups: Group[]) => {
+    setMyGroupsLayout(nextGroups);
+    saveMyGroupsLayoutMutation.mutate({
+      orderedGroupIds: nextGroups.map(group => group.id),
+      pinnedGroupIds: nextGroups.filter(group => group.ownerPinned).map(group => group.id),
+    });
+  };
+  const toggleMyGroupPin = (groupId: number) => {
+    const target = orderedMyGroups.find(group => group.id === groupId);
+    if (!target) return;
+    const updated = orderedMyGroups.map(group => group.id === groupId ? { ...group, ownerPinned: !group.ownerPinned } : group);
+    const next = target.ownerPinned
+      ? [...updated.filter(group => group.ownerPinned), ...updated.filter(group => !group.ownerPinned)]
+      : [updated.find(group => group.id === groupId)!, ...updated.filter(group => group.id !== groupId && group.ownerPinned), ...updated.filter(group => !group.ownerPinned)];
+    persistMyGroupsLayout(next);
+  };
+  const handleMyGroupsDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const activeGroup = orderedMyGroups.find(group => group.id === Number(active.id));
+    const overGroup = orderedMyGroups.find(group => group.id === Number(over.id));
+    if (!activeGroup || !overGroup || Boolean(activeGroup.ownerPinned) !== Boolean(overGroup.ownerPinned)) return;
+    const section = activeGroup.ownerPinned ? pinnedMyGroups : unpinnedMyGroups;
+    const from = section.findIndex(group => group.id === activeGroup.id);
+    const to = section.findIndex(group => group.id === overGroup.id);
+    if (from < 0 || to < 0) return;
+    const reorderedSection = arrayMove(section, from, to);
+    persistMyGroupsLayout(activeGroup.ownerPinned ? [...reorderedSection, ...unpinnedMyGroups] : [...pinnedMyGroups, ...reorderedSection]);
   };
   const copyReferralLink = async () => {
     if (!referral?.referralLink) return toast.error(tx("Реферальная ссылка загружается", "Your referral link is still loading."));
@@ -1508,14 +1623,27 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <ArrowLeft className="h-4 w-4" />
               {ui.back}
             </button>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#72a8ff]">
-                {tx("Личная папка", "Personal cabinet")}
-              </p>
-              <h1 className="mt-1 text-2xl font-semibold">{tx("Мои группы", "My groups")}</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                {tx("Подключите бота, чтобы получить статистику и разместить площадку.", "Add the bot as an administrator to get analytics and list your community.")}
-              </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#72a8ff]">
+                  {tx("Личная папка", "Personal cabinet")}
+                </p>
+                <h1 className="mt-1 text-2xl font-semibold">{tx("Мои группы", "My groups")}</h1>
+                <p className="mt-1 text-sm text-slate-500">
+                  {tx("Подключите бота, чтобы получить статистику и разместить площадку.", "Add the bot as an administrator to get analytics and list your community.")}
+                </p>
+              </div>
+              {!targetSlot && mine.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setMyGroupsGridMode(value => !value); setSelectedGroupIds([]); }}
+                  aria-pressed={myGroupsGridMode}
+                  className={`mt-1 flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2 text-[10px] font-semibold transition-colors ${myGroupsGridMode ? "border-[#3f8cff]/50 bg-[#3f8cff]/14 text-[#a6c8ff]" : "border-white/10 bg-white/5 text-slate-400"}`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  {myGroupsGridMode ? tx("Список", "List") : tx("Сетка", "Grid")}
+                </button>
+              )}
             </div>
             {targetSlot && (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-2.5">
@@ -1583,6 +1711,41 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
               </div>
             )}
+            {myGroupsGridMode && !targetSlot ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[11px] text-slate-400">{tx("Тяните за ручку, чтобы менять порядок", "Drag the handle to reorder")}</span>
+                  <span className="text-[10px] text-slate-600">{saveMyGroupsLayoutMutation.isPending ? ui.loading : tx("Сохранено", "Saved")}</span>
+                </div>
+                <DndContext sensors={myGroupsSensors} collisionDetection={closestCenter} onDragEnd={handleMyGroupsDragEnd}>
+                  {pinnedMyGroups.length > 0 && (
+                    <section className="space-y-2">
+                      <div className="flex items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#72a8ff]"><Pin className="h-3 w-3" />{tx("Закреплено", "Pinned")}</div>
+                      <SortableContext items={pinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
+                        <div className="grid grid-cols-2 gap-2">
+                          {pinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} />)}
+                        </div>
+                      </SortableContext>
+                    </section>
+                  )}
+                  <section className="space-y-2">
+                    {pinnedMyGroups.length > 0 && <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{tx("Остальные", "Others")}</div>}
+                    <SortableContext items={unpinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
+                      <div className="grid grid-cols-2 gap-2">
+                        {unpinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} />)}
+                      </div>
+                    </SortableContext>
+                  </section>
+                </DndContext>
+                {mine.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center">
+                    <FolderPlus className="mx-auto h-7 w-7 text-slate-600" />
+                    <p className="mt-3 text-sm">{tx("Групп пока нет", "No groups yet")}</p>
+                    <p className="mt-1 text-xs text-slate-500">{tx("Добавьте @TGTOP_robot в администраторы.", "Add @TGTOP_robot as an administrator.")}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
             <div className="space-y-2">
               {mine.map(group => (
                 <div
@@ -1649,6 +1812,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
               )}
             </div>
+            )}
           </section>
         )}
 
