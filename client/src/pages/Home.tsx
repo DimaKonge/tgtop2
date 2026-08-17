@@ -1702,7 +1702,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   )}
                   {ownsDetail && (
                     <div className="mt-2 flex items-center gap-2">
-                      {detail.group.status === "listed" && (
+                      {detail.group.status === "listed" ? (
                         <button
                           onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
                           disabled={unlistGroups.isPending}
@@ -1710,6 +1710,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         >
                           {tx("Снять с листинга", "Remove from listing")}
                         </button>
+                      ) : (
+                        <div className="flex-1 text-[11px] text-slate-400 px-1">
+                          {tx("Группа не в каталоге", "Not in catalog")}
+                        </div>
                       )}
                       <button
                         onClick={() => {
@@ -1719,10 +1723,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         }}
                         disabled={deleteGroups.isPending}
                         title={tx("Удалить группу", "Delete community")}
-                        className={`rounded-lg border border-red-500/20 bg-red-500/5 p-2 text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50 ${detail.group.status !== "listed" ? "w-full py-2 flex items-center justify-center gap-2 text-xs font-medium" : ""}`}
+                        className="rounded-lg border border-red-500/20 bg-red-500/5 p-2 text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50 flex items-center justify-center"
                       >
                         <Trash2 className="h-4 w-4" />
-                        {detail.group.status !== "listed" && tx("Удалить группу", "Delete community")}
                       </button>
                     </div>
                   )}
