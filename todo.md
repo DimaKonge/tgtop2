@@ -213,4 +213,5 @@
 - [x] Ensure announcement delivery handles newly listed groups robustly with retry/fallback logic
 - [x] Add support for deleting groups from My Groups / catalog
 - [x] Add a toggle in group details for the bot to automatically delete Telegram service messages (joins, leaves, pins)
-- [ ] Ensure listing announcements consistently deliver via bot without failing
+- [x] Ensure listing announcements consistently dendritic delivery via bot without failing
+- [x] Refine lower catalog list cards for uniform size, right-aligned prominent prices, and removal of commission copy

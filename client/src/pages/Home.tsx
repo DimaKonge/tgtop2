@@ -1396,28 +1396,49 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {tx("Фильтр", "Filter")}
               </Button>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720] divide-y divide-white/7">
-              {visibleGroups.map(group => (
-                <button
-                  key={group.id}
-                  onClick={() => openGroup(group.id)}
-                  className="flex w-full items-center gap-3 px-4 py-4 text-left"
-                >
-                  <Avatar group={group} />
-                  <span className="min-w-0 flex-1">
-                    <b className="block truncate text-sm">{group.title}</b>
-                    <small className="mt-1 block text-xs text-slate-500">
-                      {group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : group.category} ·{" "}
-                      {n(group.membersCount)} {tx("участников", "members")}
-                    </small>
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-slate-600" />
-                </button>
-              ))}
+            <div className="grid grid-cols-1 gap-2.5">
+              {visibleGroups.map((group, index) => {
+                const isSale = group.listingType === "sale" && group.salePriceTon;
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => openGroup(group.id)}
+                    style={{ animationDelay: `${index * 40}ms` }}
+                    className="group flex h-[72px] w-full items-center justify-between gap-3 rounded-2xl border border-white/8 bg-[#111720] px-4 py-3 text-left transition-all duration-300 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] hover:shadow-lg hover:shadow-[#3f8cff]/5 active:scale-[0.99] animate-in fade-in slide-in-from-bottom-2"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                      <div className="shrink-0 transition-transform duration-300 group-hover:scale-105">
+                        <Avatar group={group} />
+                      </div>
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-sm font-medium text-white transition-colors group-hover:text-[#a6c8ff]">{group.title}</b>
+                        <small className="mt-1 block truncate text-xs text-slate-500">
+                          {group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : group.category} · {n(group.membersCount)} {tx("участников", "members")}
+                        </small>
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3 text-right">
+                      {isSale ? (
+                        <div className="flex flex-col items-end">
+                          <b className="text-base font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon!)} TON</b>
+                          <small className="text-[10px] text-slate-400">{tx("Продажа", "For sale")}</small>
+                        </div>
+                      ) : (
+                        <span className="rounded-md bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-400">
+                          {tx("Каталог", "Catalog")}
+                        </span>
+                      )}
+                      <ChevronRight className="h-4 w-4 text-slate-600 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-[#3f8cff]" />
+                    </div>
+                  </button>
+                );
+              })}
               {visibleGroups.length === 0 && (
-                <p className="p-8 text-center text-sm text-slate-500">
-                  {tx("По этому фильтру площадок пока нет.", "No communities match this filter yet.")}
-                </p>
+                <div className="rounded-2xl border border-white/8 bg-[#111720] p-8 text-center">
+                  <p className="text-sm text-slate-500">
+                    {tx("По этому фильтру площадок пока нет.", "No communities match this filter yet.")}
+                  </p>
+                </div>
               )}
             </div>
           </section>
