@@ -45,7 +45,7 @@ export async function notifyCommunityListed(input: {
   salePriceTon?: string | null;
 }) {
   if (!botToken) return false;
-  const listingUrl = `https://t.me/TGTOP_robot/app?startapp=listing_${input.groupId}`;
+  const listingUrl = `https://t.me/TGTOP_robot?startapp=listing_${input.groupId}`;
   const text = [
     "✨ Сообщество добавлено в TG TOP",
     "",
@@ -57,11 +57,12 @@ export async function notifyCommunityListed(input: {
     "Откройте карточку сообщества, чтобы увидеть актуальные условия и статистику.",
   ].join("\n");
   try {
+    const miniAppDirectUrl = `https://tgtop.xyz/?listing=${input.groupId}`;
     const response = await axios.post<{ ok: boolean }>(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       chat_id: input.chatId,
       text,
       disable_web_page_preview: true,
-      reply_markup: { inline_keyboard: [[{ text: "Открыть в TG TOP", url: listingUrl }]] },
+      reply_markup: { inline_keyboard: [[{ text: "Открыть в TG TOP", web_app: { url: miniAppDirectUrl } }]] },
     }, { timeout: 15_000 });
     return response.data.ok;
   } catch (error) {

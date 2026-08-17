@@ -24,7 +24,7 @@ describe("community listing announcements", () => {
     const source = readFileSync(new URL("./telegramNotifications.ts", import.meta.url), "utf8");
     expect(source).toContain("notifyCommunityListed");
     expect(source).toContain("Сообщество добавлено в TG TOP");
-    expect(source).toContain("startapp=listing_");
+    expect(source).toContain("listing=");
     expect(source).toContain("Открыть в TG TOP");
   });
 });
