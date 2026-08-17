@@ -240,7 +240,7 @@ function GroupCard({
         }
       }}
       aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
-      className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-colors hover:border-[#3f8cff]/45 active:scale-[0.99] ${cardStyle}`}
+      className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
     >
       {group && rankingPlacement ? (
         <>

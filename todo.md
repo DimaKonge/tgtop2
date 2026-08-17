@@ -207,4 +207,5 @@
 - [x] Replace the exposed wallet address in the header with a compact connected indicator and visible account balance
 - [x] Send one localized informational @TGTOP_robot post to a community after its owner successfully lists it, with a safe TG TOP listing button
 - [x] Add explicit bot-observed analytics provenance and observation-start disclosure to community details; document the approved-provider enrichment path without fabricating historical data
-- [ ] Add a restrained hover/focus effect to group cards so their clickability is visually clear
+- [x] Add a restrained hover/focus effect to group cards so their clickability is visually clear
+- [ ] Export the complete TG TOP source to a private GitHub repository and document the version-saving workflow
