@@ -10,10 +10,11 @@ import "./index.css";
 
 type TelegramWebApp = {
   initData?: string;
-  initDataUnsafe?: { user?: { photo_url?: string } };
+  initDataUnsafe?: { user?: { photo_url?: string }; start_param?: string };
   ready?: () => void;
   expand?: () => void;
   openInvoice?: (url: string, callback?: (status: "paid" | "cancelled" | "failed" | "pending") => void) => void;
+  startParam?: string;
 };
 
 declare global {

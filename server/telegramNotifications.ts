@@ -45,8 +45,7 @@ export async function notifyCommunityListed(input: {
   salePriceTon?: string | null;
 }) {
   if (!botToken) return false;
-  const separator = miniAppUrl.includes("?") ? "&" : "?";
-  const listingUrl = `${miniAppUrl}${separator}listing=${input.groupId}`;
+  const listingUrl = `https://t.me/TGTOP_robot/app?startapp=listing_${input.groupId}`;
   const text = [
     "✨ Сообщество добавлено в TG TOP",
     "",

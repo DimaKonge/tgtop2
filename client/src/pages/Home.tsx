@@ -565,7 +565,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     localStorage.setItem("tg-top-language", language);
   }, [language]);
   useEffect(() => {
-    const listingId = Number(new URLSearchParams(window.location.search).get("listing"));
+    const params = new URLSearchParams(window.location.search);
+    let listingId = Number(params.get("listing"));
+    if (!Number.isInteger(listingId) || listingId <= 0) {
+      const tgWebAppData = window.Telegram?.WebApp;
+      const startParam = tgWebAppData?.startParam || tgWebAppData?.initDataUnsafe?.start_param;
+      if (startParam) {
+        const match = startParam.match(/^listing_(\d+)$/i);
+        if (match) {
+          listingId = Number(match[1]);
+        }
+      }
+    }
     if (Number.isInteger(listingId) && listingId > 0) {
       setSelectedGroupId(listingId);
       setPage("details");
