@@ -96,6 +96,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Реальные бонусы, ставки, Stars, сделки и передачи NFT.');
     expect(source).toContain('const verifiedTasks');
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
+    expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${slotsQuery.dataUpdatedAt ?? 0}:${board.map');
+    expect(source).toContain('className="ranking-slot-enter"');
     expect(source).toContain('Прогресс подтверждается только действиями, зафиксированными в TG TOP. Награды не начисляются автоматически.');
     expect(source).toContain('connect-community');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');

@@ -914,6 +914,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const leadSlot = board[0];
   const secondTier = board.slice(1, 3);
   const thirdTier = board.slice(3, 7);
+  const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${slotsQuery.dataUpdatedAt ?? 0}:${board.map(slot => `${slot.id}-${slot.group?.id ?? "empty"}`).join("|")}`;
   const bonus = (
     (account?.user?.bonusBalance ?? user?.bonusBalance ?? 0) / 100
   ).toFixed(1);
@@ -1303,44 +1304,48 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             ) : (
             <>
-            <div className="space-y-2">
-              <GroupCard
-                group={leadSlot.group}
-                variant="lead"
-                language={language}
-                onClick={() =>
-                  leadSlot.group
-                    ? openGroup(leadSlot.group.id)
-                    : openMine(leadSlot)
-                }
-                onOwnerClick={() => leadSlot.group && openOwner(leadSlot.group.ownerOpenId)}
-              />
+            <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
+              <div className="ranking-slot-enter" style={{ animationDelay: "30ms" }}>
+                <GroupCard
+                  group={leadSlot.group}
+                  variant="lead"
+                  language={language}
+                  onClick={() =>
+                    leadSlot.group
+                      ? openGroup(leadSlot.group.id)
+                      : openMine(leadSlot)
+                  }
+                  onOwnerClick={() => leadSlot.group && openOwner(leadSlot.group.ownerOpenId)}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-2">
-                {secondTier.map(slot => (
-                  <GroupCard
-                    key={slot.slotNumber}
-                    group={slot.group}
-                    variant="secondary"
-                    language={language}
-                    onClick={() =>
-                      slot.group ? openGroup(slot.group.id) : openMine(slot)
-                    }
-                    onOwnerClick={() => slot.group && openOwner(slot.group.ownerOpenId)}
-                  />
+                {secondTier.map((slot, index) => (
+                  <div key={slot.slotNumber} className="ranking-slot-enter" style={{ animationDelay: `${140 + index * 55}ms` }}>
+                    <GroupCard
+                      group={slot.group}
+                      variant="secondary"
+                      language={language}
+                      onClick={() =>
+                        slot.group ? openGroup(slot.group.id) : openMine(slot)
+                      }
+                      onOwnerClick={() => slot.group && openOwner(slot.group.ownerOpenId)}
+                    />
+                  </div>
                 ))}
               </div>
               <div className="grid grid-cols-4 gap-2">
-                {thirdTier.map(slot => (
-                  <GroupCard
-                    key={slot.slotNumber}
-                    group={slot.group}
-                    variant="compact"
-                    language={language}
-                    onClick={() =>
-                      slot.group ? openGroup(slot.group.id) : openMine(slot)
-                    }
-                    onOwnerClick={() => slot.group && openOwner(slot.group.ownerOpenId)}
-                  />
+                {thirdTier.map((slot, index) => (
+                  <div key={slot.slotNumber} className="ranking-slot-enter" style={{ animationDelay: `${270 + index * 40}ms` }}>
+                    <GroupCard
+                      group={slot.group}
+                      variant="compact"
+                      language={language}
+                      onClick={() =>
+                        slot.group ? openGroup(slot.group.id) : openMine(slot)
+                      }
+                      onOwnerClick={() => slot.group && openOwner(slot.group.ownerOpenId)}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
