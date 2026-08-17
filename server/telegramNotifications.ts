@@ -62,7 +62,7 @@ export async function notifyCommunityListed(input: {
       chat_id: input.chatId,
       text,
       disable_web_page_preview: true,
-      reply_markup: { inline_keyboard: [[{ text: "Открыть в TG TOP", web_app: { url: listingUrl } }]] },
+      reply_markup: { inline_keyboard: [[{ text: "Открыть в TG TOP", url: listingUrl }]] },
     }, { timeout: 15_000 });
     return response.data.ok;
   } catch (error) {
