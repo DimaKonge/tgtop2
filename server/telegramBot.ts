@@ -51,6 +51,20 @@ function isActiveMember(status: string): boolean { return ["creator", "administr
 function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { return chat.type === "channel" ? "Каналы" : "Чаты"; }
 function catalogChatId(chatId: number): string { return String(chatId); }
 function publicGroupUrl(chat: TelegramChat): string | undefined { return chat.username ? `https://t.me/${chat.username}` : undefined; }
+async function getChatInviteLink(chatId: number): Promise<string | undefined> {
+  try {
+    const link = await telegramCall<string>("exportChatInviteLink", { chat_id: chatId });
+    return link || undefined;
+  } catch {
+    try {
+      const chat = await getChatProfile(chatId);
+      // @ts-expect-error invite_link might exist on chat object
+      return chat.invite_link || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+}
 export function getReferralCodeFromStartText(text?: string): string | undefined {
   const match = text?.trim().match(/^\/start\s+ref_([A-Za-z0-9]{6,32})$/i);
   return match?.[1]?.toUpperCase();
@@ -109,10 +123,12 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
 
   const profile = await getChatProfile(chat.id);
   const membersCount = await getMemberCount(chat.id);
+  const inviteLink = await getChatInviteLink(chat.id);
   const ownerOpenId = `telegram:${from.id}`;
   await upsertUser({ openId: ownerOpenId, name: from.username ?? from.first_name ?? "Telegram user", telegramUsername: from.username ?? null, loginMethod: "telegram-bot", lastSignedIn: new Date() });
   await upsertTelegramGroup({
     chatId: catalogChatId(chat.id), title: profile.title ?? chat.title ?? "Telegram community", username: profile.username ?? chat.username ?? null,
+    inviteLink: inviteLink ?? null,
     description: profile.description ?? null, avatarFileId: profile.photo?.small_file_id ?? null, membersCount, ownerOpenId,
     category: catalogCategory(chat), country: "Global", status: "pending", messagesCount: 0, joinedCount: 0, lastPostViews: 0, lastStatsAt: new Date(),
   });

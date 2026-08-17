@@ -1,0 +1,1 @@
+ALTER TABLE `groups_catalog` ADD `inviteLink` varchar(512);

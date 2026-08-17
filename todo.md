@@ -209,3 +209,5 @@
 - [x] Add explicit bot-observed analytics provenance and observation-start disclosure to community details; document the approved-provider enrichment path without fabricating historical data
 - [x] Add a restrained hover/focus effect to group cards so their clickability is visually clear
 - [x] Export the complete TG TOP source to a private GitHub repository and document the version-saving workflow
+- [x] Add support for private Telegram groups and channels without public usernames, using invite links and secure chat ID identification
+- [x] Ensure announcement delivery handles newly listed groups robustly with retry/fallback logic

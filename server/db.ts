@@ -647,6 +647,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
     }
   }
   const groupsNeedingListing = groups.filter(group => group.status !== "listed");
+  const targetGroupsForAnnouncement = groups;
   const totalCost = groupsNeedingListing.length * cost;
   const user = await getUserByOpenId(ownerOpenId);
   if (!user || user.bonusBalance < totalCost) throw new Error("Недостаточно бонусных GRAM");
@@ -654,6 +655,8 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
     if (totalCost) {
       await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${totalCost}` }).where(eq(users.openId, ownerOpenId));
       await tx.insert(creditTransactions).values(groupsNeedingListing.map(group => ({ userOpenId: ownerOpenId, groupId: group.id, amount: -cost, kind: "listing_spend" as const })));
+    } else {
+      await tx.insert(creditTransactions).values(groups.map(group => ({ userOpenId: ownerOpenId, groupId: group.id, amount: 0, kind: "listing_spend" as const })).filter((v, i, a) => a.findIndex(t => t.groupId === v.groupId) === i));
     }
     await Promise.all(uniqueGroupIds.map(groupId => tx.update(groupsCatalog).set({
       status: "listed",
@@ -684,7 +687,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       }).where(and(eq(auctionSlots.id, assignment.slotId), sql`${auctionSlots.groupId} IS NULL`));
     }
   });
-  return groupsNeedingListing.map(group => ({
+  return targetGroupsForAnnouncement.map(group => ({
     id: group.id,
     chatId: group.chatId,
     title: group.title,

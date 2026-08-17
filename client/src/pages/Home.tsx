@@ -71,6 +71,7 @@ type Group = {
   chatId: string;
   title: string;
   username: string | null;
+  inviteLink: string | null;
   description: string | null;
   avatarFileId: string | null;
   membersCount: number;
@@ -227,7 +228,7 @@ function GroupCard({
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
     : "flex h-full items-center gap-3";
   const avatarSrc = group ? getTelegramAvatarSrc(group) : null;
-  const groupUrl = group?.username ? `https://t.me/${group.username}` : null;
+  const groupUrl = group?.username ? `https://t.me/${group.username}` : (group?.inviteLink || null);
   return (
     <div
       role="button"
@@ -1370,7 +1371,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <span className="min-w-0 flex-1">
                     <b className="block truncate text-sm">{group.title}</b>
                     <small className="mt-1 block text-xs text-slate-500">
-                      {group.username ? `@${group.username}` : group.category} ·{" "}
+                      {group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : group.category} ·{" "}
                       {n(group.membersCount)} {tx("участников", "members")}
                     </small>
                   </span>
@@ -1486,7 +1487,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-sm">{group.title}</b>
                         <small className="mt-1 block text-xs text-slate-500">
-                          {group.username ? `@${group.username}` : group.category} · {n(group.membersCount)} {tx("участников", "members")}
+                          {group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : group.category} · {n(group.membersCount)} {tx("участников", "members")}
                         </small>
                       </span>
                       <ChevronRight className="h-4 w-4 text-slate-600" />
@@ -1545,6 +1546,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       {detail.group.username ? (
                         <a href={`https://t.me/${detail.group.username}`} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm text-[#72a8ff] underline decoration-[#72a8ff]/50 underline-offset-4 hover:text-[#a6c8ff]">
                           @{detail.group.username}
+                        </a>
+                      ) : detail.group.inviteLink ? (
+                        <a href={detail.group.inviteLink} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm text-[#72a8ff] underline decoration-[#72a8ff]/50 underline-offset-4 hover:text-[#a6c8ff]">
+                          {tx("Приватная ссылка · Войти", "Private invite · Join")}
                         </a>
                       ) : (
                         <p className="mt-1 text-sm text-[#72a8ff]">{detail.group.category}</p>

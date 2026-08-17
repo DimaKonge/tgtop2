@@ -38,6 +38,7 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   chatId: varchar("chatId", { length: 64 }).notNull().unique(),
   title: varchar("title", { length: 255 }).notNull(),
   username: varchar("username", { length: 128 }),
+  inviteLink: varchar("inviteLink", { length: 512 }),
   description: text("description"),
   avatarFileId: varchar("avatarFileId", { length: 255 }),
   animatedAvatarKey: varchar("animatedAvatarKey", { length: 512 }),
