@@ -1345,21 +1345,48 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             </div>
             <section className="pt-2">
               <div className="space-y-2">
-                {generalList.map((group, index) => (
-                  <div
-                    key={group.id}
-                    style={{ animationDelay: `${index * 35}ms` }}
-                    className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300"
-                  >
-                    <GroupCard
-                      group={group}
-                      variant="list"
-                      language={language}
-                      onClick={() => openGroup(group.id)}
-                      onOwnerClick={() => openOwner(group.ownerOpenId)}
-                    />
-                  </div>
-                ))}
+                {generalList.map((group, index) => {
+                  const isSale = group.listingType === "sale" && group.salePriceTon;
+                  return (
+                    <div
+                      key={group.id}
+                      style={{ animationDelay: `${index * 35}ms` }}
+                      className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300"
+                    >
+                      <button
+                        onClick={() => openGroup(group.id)}
+                        className="group flex h-[52px] w-full items-center justify-between gap-3 rounded-xl border border-white/8 bg-[#111720] px-3.5 py-2 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
+                            <Avatar group={group} />
+                          </div>
+                          <span className="min-w-0 flex-1">
+                            <b className="block truncate text-xs font-medium text-white transition-colors group-hover:text-[#a6c8ff]">
+                              {group.title}
+                            </b>
+                            <small className="block truncate text-[11px] text-slate-500">
+                              {group.username ? `@${group.username}` : group.inviteLink ? (language === "en" ? "Private group" : "Приватная группа") : getCategoryLabel(group.category, language)} · {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
+                            </small>
+                          </span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2.5 text-right">
+                          {isSale ? (
+                            <div className="flex flex-col items-end">
+                              <b className="text-xs font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon!)} TON</b>
+                              <small className="text-[9px] text-slate-400">{language === "en" ? "For sale" : "Продажа"}</small>
+                            </div>
+                          ) : (
+                            <span className="rounded bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                              {language === "en" ? "Catalog" : "Каталог"}
+                            </span>
+                          )}
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600 transition-transform group-hover:translate-x-0.5 group-hover:text-[#3f8cff]" />
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
                 {generalList.length > 0 && (
                   <button
                     onClick={() => openMine()}
