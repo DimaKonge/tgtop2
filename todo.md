@@ -225,3 +225,13 @@
 - [x] Add a personal My Groups management grid with pinned communities and persisted drag-and-drop ordering
 - [x] Restrict service-message auto-cleanup to chats and replace the checkbox with a polished toggle
 - [x] Add compact listing-status badges to My Groups rows for listed, sale, and unlisted communities
+- [ ] Rework My Groups grid mode into three compact community cells per mobile row
+- [ ] Enable long-press drag-and-drop across My Groups cells without a visible drag handle
+- [ ] Add selectable empty My Groups grid cells with a plus action for placing a new community
+- [ ] Add a compact My Groups status filter for all, listed, and unlisted communities
+- [ ] Redesign the public catalog into a Telegram-native lead card plus compact three-column community grid
+- [ ] Add smooth catalog-card cascade motion with an emphasized first card and tightened following cells
+- [ ] Add List, compact Grid, and Showcase catalog views while retaining the existing 1→2→4 pyramid as Top
+- [x] Add a prominent direct-entry button to group details for public links and private invite links
+- [x] Add a visible navigable owner block to group details with profile identity
+- [x] Open the owner’s TG TOP profile from the group detail owner block

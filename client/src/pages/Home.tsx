@@ -1124,6 +1124,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? slots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
+  const detailEntryUrl = detail?.group.username
+    ? `https://t.me/${detail.group.username}`
+    : detail?.group.inviteLink ?? null;
+  const detailOwner = detail?.group.owner ?? null;
   const selectedListingGroups = mine.filter(group => selectedGroupIds.includes(group.id));
   const orderedMyGroups = myGroupsLayout.length === mine.length ? myGroupsLayout : mine;
   const pinnedMyGroups = orderedMyGroups.filter(group => group.ownerPinned);
@@ -1835,13 +1839,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         {detail.group.title}
                       </h1>
                       {detail.group.username ? (
-                        <a href={`https://t.me/${detail.group.username}`} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm text-[#72a8ff] underline decoration-[#72a8ff]/50 underline-offset-4 hover:text-[#a6c8ff]">
+                        <p className="mt-1 truncate text-sm text-[#72a8ff]">
                           @{detail.group.username}
-                        </a>
+                        </p>
                       ) : detail.group.inviteLink ? (
-                        <a href={detail.group.inviteLink} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm text-[#72a8ff] underline decoration-[#72a8ff]/50 underline-offset-4 hover:text-[#a6c8ff]">
-                          {tx("Приватная группа · Войти в чат", "Private group · Join chat")}
-                        </a>
+                        <p className="mt-1 text-sm text-[#72a8ff]">
+                          {tx("Приватная группа", "Private group")}
+                        </p>
                       ) : (
                         <p className="mt-1 text-sm text-[#72a8ff]">
                           {detail.group.chatId && detail.group.chatId.startsWith("-100")
@@ -1855,6 +1859,33 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </p>
                     </span>
                   </div>
+                  {detailEntryUrl && (
+                    <a
+                      href={detailEntryUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
+                    >
+                      <span>{tx("Перейти в группу", "Open community")}</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </a>
+                  )}
+                  {detailOwner && (
+                    <button
+                      type="button"
+                      onClick={() => openOwner(detailOwner.openId)}
+                      className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] p-3 text-left transition-colors hover:bg-white/[0.07] active:scale-[0.99]"
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-200">
+                        {detailOwner.avatarUrl ? <img src={detailOwner.avatarUrl} alt="" className="h-full w-full object-cover" /> : (detailOwner.name ?? detailOwner.telegramUsername ?? "T").slice(0, 1).toUpperCase()}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Владелец", "Owner")}</small>
+                        <b className="mt-0.5 block truncate text-xs text-slate-200">{detailOwner.telegramUsername ? `@${detailOwner.telegramUsername}` : (detailOwner.name ?? tx("Пользователь TG TOP", "TG TOP user"))}</b>
+                      </span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
+                    </button>
+                  )}
                   <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-white/8 pt-4 text-xs">
                     <span className="rounded-md bg-white/5 px-2 py-1 text-slate-300">
                       {detail.group.status === "listed"
