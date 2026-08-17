@@ -229,9 +229,9 @@
 - [x] Enable long-press drag-and-drop across My Groups cells without a visible drag handle
 - [x] Add selectable empty My Groups grid cells with a plus action for placing a new community
 - [x] Add a compact My Groups status filter for all, listed, and unlisted communities
-- [ ] Redesign the public catalog into a Telegram-native lead card plus compact three-column community grid
-- [ ] Add smooth catalog-card cascade motion with an emphasized first card and tightened following cells
-- [ ] Add List, compact Grid, and Showcase catalog views while retaining the existing 1→2→4 pyramid as Top
+- [x] Redesign the public catalog into a Telegram-native lead card plus compact three-column community grid
+- [x] Add smooth catalog-card cascade motion with an emphasized first card and tightened following cells
+- [x] Add List, compact Grid, and Showcase catalog views while retaining the existing 1→2→4 pyramid as Top
 - [x] Add a prominent direct-entry button to group details for public links and private invite links
 - [x] Add a visible navigable owner block to group details with profile identity
 - [x] Open the owner’s TG TOP profile from the group detail owner block

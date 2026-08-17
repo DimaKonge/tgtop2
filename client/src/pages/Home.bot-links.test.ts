@@ -103,6 +103,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
     expect(source).toContain('className="ranking-slot-enter ranking-slot-lead"');
+    expect(source).toContain('type CatalogViewMode = "top" | "list" | "grid" | "showcase"');
+    expect(source).toContain('const [catalogViewMode, setCatalogViewMode] = useState<CatalogViewMode>("top")');
+    expect(source).toContain('tx("Витрина", "Showcase")');
+    expect(source).toContain('catalogViewMode === "grid"');
     expect(styles).toContain('--ranking-slot-offset: 32px');
     expect(styles).toContain('--ranking-slot-offset: 26px');
     expect(styles).toContain('--ranking-slot-offset: 20px');

@@ -55,6 +55,7 @@ const date = (value?: Date | null, language: Language = "ru") =>
 type ListingType = "catalog" | "sale";
 type ListingCountry = "Global" | "UA" | "PL" | "DE" | "GB" | "US" | "RU" | "FR" | "ES" | "IT" | "NL" | "CZ" | "RO" | "TR" | "CA" | "AU" | "AE" | "KZ";
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
+type CatalogViewMode = "top" | "list" | "grid" | "showcase";
 const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const;
 const COUNTRY_LABELS: Record<string, { ru: string; en: string }> = {
   Global: { ru: "Весь мир", en: "Worldwide" },
@@ -644,6 +645,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [page, setPage] = useState<Page>("top");
   const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
   const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
+  const [catalogViewMode, setCatalogViewMode] = useState<CatalogViewMode>("top");
   const [subcategory, setSubcategory] = useState("Все");
   const [country, setCountry] = useState("Все");
   const [city, setCity] = useState("Все");
@@ -1453,6 +1455,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             ) : (
             <>
+            <div className="grid grid-cols-4 rounded-lg border border-white/8 bg-[#111720] p-0.5">
+              {([
+                ["top", tx("Топ", "Top")],
+                ["list", tx("Список", "List")],
+                ["grid", tx("Сетка", "Grid")],
+                ["showcase", tx("Витрина", "Showcase")],
+              ] as const).map(([value, label]) => (
+                <button key={value} type="button" onClick={() => setCatalogViewMode(value)} className={`h-8 rounded-md text-[10px] font-medium transition-colors ${catalogViewMode === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:text-slate-200"}`}>{label}</button>
+              ))}
+            </div>
+            {catalogViewMode === "top" ? <>
             <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
               <div className="ranking-slot-enter ranking-slot-lead" style={{ animationDelay: "0ms" }}>
                 <GroupCard
@@ -1570,6 +1583,54 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 )}
               </div>
             </section>
+            </> : (
+              <section key={`${catalogViewMode}:${rankingMotionKey}`} className="pt-1">
+                {catalogViewMode === "list" ? (
+                  <div className="space-y-2">
+                    {visibleGroups.map((group, index) => {
+                      const isSale = group.listingType === "sale" && group.salePriceTon;
+                      return <button key={group.id} onClick={() => openGroup(group.id)} style={{ animationDelay: `${index * 32}ms` }} className="group flex h-[56px] w-full items-center gap-3 rounded-xl border border-white/8 bg-[#111720] px-3 text-left animate-in fade-in slide-in-from-bottom-2 transition-colors hover:border-[#3f8cff]/35 hover:bg-[#151e2b] active:scale-[0.99]">
+                        <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg"><Avatar group={group} /></span>
+                        <span className="min-w-0 flex-1"><b className="block truncate text-xs text-slate-100 group-hover:text-[#a6c8ff]">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : getCategoryLabel(group.category, language)} · {n(group.membersCount, language)}</small></span>
+                        {isSale ? <b className="shrink-0 text-xs text-[#72a8ff]">{formatTon(group.salePriceTon!)} TON</b> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600 group-hover:text-[#72a8ff]" />}
+                      </button>;
+                    })}
+                  </div>
+                ) : catalogViewMode === "grid" ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {visibleGroups.map((group, index) => {
+                      const isSale = group.listingType === "sale" && group.salePriceTon;
+                      return <button key={group.id} onClick={() => openGroup(group.id)} style={{ animationDelay: `${index * 36}ms` }} className="group aspect-square min-w-0 rounded-xl border border-white/8 bg-[#111720] p-2 text-center animate-in fade-in slide-in-from-bottom-2 transition-colors hover:border-[#3f8cff]/45 hover:bg-[#151e2b] active:scale-[0.98]">
+                        <span className="mx-auto block h-10 w-10 overflow-hidden rounded-xl"><Avatar group={group} /></span>
+                        <b className="mt-2 line-clamp-2 block text-[10px] leading-3 text-slate-100 group-hover:text-[#a6c8ff]">{group.title}</b>
+                        <small className="mt-1 block truncate text-[9px] text-slate-500">{isSale ? `${formatTon(group.salePriceTon!)} TON` : group.username ? `@${group.username}` : tx("Каталог", "Catalog")}</small>
+                      </button>;
+                    })}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {visibleGroups.slice(0, 1).map(group => {
+                      const isSale = group.listingType === "sale" && group.salePriceTon;
+                      return <button key={group.id} onClick={() => openGroup(group.id)} className="group col-span-2 row-span-2 aspect-square overflow-hidden rounded-2xl border border-[#3f8cff]/24 bg-[radial-gradient(circle_at_50%_15%,rgba(63,140,255,.2),rgba(17,23,32,1)_58%)] p-4 text-center ranking-slot-enter ranking-slot-lead hover:border-[#72a8ff]/55 active:scale-[0.99]">
+                        <span className="mx-auto block h-20 w-20 overflow-hidden rounded-2xl shadow-lg shadow-black/30"><Avatar group={group} /></span>
+                        <b className="mt-3 line-clamp-2 block text-sm leading-4 text-white">{group.title}</b>
+                        <small className="mt-1 block truncate text-[10px] text-slate-400">{group.username ? `@${group.username}` : tx("Приватная группа", "Private group")}</small>
+                        <span className="mt-3 inline-block rounded-md border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-[#a6c8ff]">{isSale ? `${formatTon(group.salePriceTon!)} TON` : tx("В каталоге", "In catalog")}</span>
+                      </button>;
+                    })}
+                    {visibleGroups.slice(1).map((group, index) => {
+                      const isSale = group.listingType === "sale" && group.salePriceTon;
+                      return <button key={group.id} onClick={() => openGroup(group.id)} style={{ animationDelay: `${90 + index * 42}ms` }} className="group aspect-square min-w-0 rounded-xl border border-white/8 bg-[#111720] p-2 text-center ranking-slot-enter ranking-slot-secondary hover:border-[#3f8cff]/45 hover:bg-[#151e2b] active:scale-[0.98]">
+                        <span className="mx-auto block h-9 w-9 overflow-hidden rounded-lg"><Avatar group={group} /></span>
+                        <b className="mt-1.5 line-clamp-2 block text-[10px] leading-3 text-slate-100 group-hover:text-[#a6c8ff]">{group.title}</b>
+                        <small className="mt-1 block truncate text-[9px] text-slate-500">{isSale ? `${formatTon(group.salePriceTon!)} TON` : group.username ? `@${group.username}` : tx("Каталог", "Catalog")}</small>
+                      </button>;
+                    })}
+                  </div>
+                )}
+                {visibleGroups.length === 0 && <button onClick={() => openMine()} className="w-full rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#111720] p-6 text-center text-xs text-[#a6c8ff]"><Plus className="mx-auto mb-2 h-5 w-5" />{tx("Добавить свою группу", "Add your community")}</button>}
+              </section>
+            )}
             </>
             )}
           </section>
