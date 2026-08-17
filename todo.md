@@ -217,3 +217,4 @@
 - [x] Refine lower catalog list cards for uniform size, right-aligned prominent prices, and removal of commission copy
 - [x] Refine lower catalog cards for more compact height and larger, more prominent avatars
 - [ ] Redesign GroupCard lower catalog items for uniform compact size, larger avatar, right-aligned price, and removal of commission copy
+- [ ] Trace the exact Telegram Mini App URL, active VPS service, and authenticated profile data path so production UI and bonus balances match deployed code

@@ -685,7 +685,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       transactions: Array<{
           id: number;
           amount: number;
-          kind: "group_connection_bonus" | "listing_spend";
+          kind: "group_connection_bonus" | "listing_spend" | "manual_bonus";
           createdAt: Date;
           groupId: number | null;
           groupTitle: string | null;
@@ -1935,6 +1935,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <div className="divide-y divide-white/7">
                   {accountActivity.map(item => {
                     const title = item.title === "connection_bonus" ? tx("Бонус за подключение", "Connection bonus")
+                      : item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")
                       : item.title === "catalog_listing" ? tx("Размещение в каталоге", "Catalog listing")
                       : item.title === "ranking_stars" ? tx("Ставка через Telegram Stars", "Telegram Stars bid")
                       : item.title === "ranking_bid" ? tx("Зафиксированная ставка", "Recorded bid")

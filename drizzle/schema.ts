@@ -90,7 +90,7 @@ export const creditTransactions = mysqlTable("credit_transactions", {
   groupId: int("groupId"),
   telegramChatId: varchar("telegramChatId", { length: 64 }),
   amount: int("amount").notNull(),
-  kind: mysqlEnum("kind", ["group_connection_bonus", "listing_spend"]).notNull(),
+  kind: mysqlEnum("kind", ["group_connection_bonus", "listing_spend", "manual_bonus"]).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [
   uniqueIndex("credit_transactions_kind_telegram_chat_unique").on(table.kind, table.telegramChatId),

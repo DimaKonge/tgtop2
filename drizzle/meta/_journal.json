@@ -169,6 +169,13 @@
       "when": 1786966972174,
       "tag": "0023_loose_mephisto",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1786985758782,
+      "tag": "0024_uneven_lester",
+      "breakpoints": true
     }
   ]
 }
