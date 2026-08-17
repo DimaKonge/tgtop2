@@ -34,7 +34,16 @@ type ChatMemberUpdate = {
 type TelegramActivity = { chat: TelegramChat; views?: number };
 type TelegramUpdate = {
   update_id: number;
-  message?: TelegramActivity & { from?: TelegramUser; text?: string; new_chat_members?: TelegramUser[]; successful_payment?: { currency: string; total_amount: number; invoice_payload: string; telegram_payment_charge_id: string } };
+  message?: TelegramActivity & {
+    message_id: number;
+    from?: TelegramUser;
+    text?: string;
+    new_chat_members?: TelegramUser[];
+    left_chat_member?: TelegramUser;
+    new_chat_title?: string;
+    pinned_message?: unknown;
+    successful_payment?: { currency: string; total_amount: number; invoice_payload: string; telegram_payment_charge_id: string };
+  };
   channel_post?: TelegramActivity;
   chat_member?: ChatMemberUpdate;
   my_chat_member?: { chat: TelegramChat; from: TelegramUser; old_chat_member: ChatMember; new_chat_member: ChatMember };
@@ -198,6 +207,14 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
   const activity = message ?? update.channel_post;
   if (activity && (activity.chat.type === "group" || activity.chat.type === "supergroup" || activity.chat.type === "channel")) {
     await recordGroupActivity(catalogChatId(activity.chat.id), activity.views ?? 0);
+    const chatIdStr = catalogChatId(activity.chat.id);
+    const group = await getGroupByChatId(chatIdStr);
+    if (group?.deleteServiceMessages && message && (message.new_chat_members || message.left_chat_member || message.new_chat_title || message.pinned_message)) {
+      await telegramCall<boolean>("deleteMessage", {
+        chat_id: activity.chat.id,
+        message_id: message.message_id,
+      }).catch(() => {});
+    }
   }
   if (message?.text?.startsWith("/terms")) {
     await telegramCall<boolean>("sendMessage", {

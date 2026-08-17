@@ -152,6 +152,20 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    deleteGroups: protectedProcedure
+      .input(z.object({ groupIds: z.array(z.number()).min(1).max(50) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteGroups(ctx.user.openId, input.groupIds);
+        return { success: true };
+      }),
+
+    toggleServiceMessages: protectedProcedure
+      .input(z.object({ groupId: z.number(), deleteServiceMessages: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.toggleServiceMessages(ctx.user.openId, input.groupId, input.deleteServiceMessages);
+        return { success: true };
+      }),
+
     getNfts: publicProcedure.query(async () => {
       return await db.getNftUsernames();
     }),

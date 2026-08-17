@@ -90,6 +90,7 @@ type Group = {
   listedAt: Date | null;
   salePriceTon?: string | null;
   listingType?: ListingType;
+  deleteServiceMessages?: boolean;
   createdAt: Date;
   owner?: {
     openId: string;
@@ -759,6 +760,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     },
     onError: error => toast.error(error.message),
   });
+  const deleteGroups = trpc.tgTop.deleteGroups.useMutation({
+    onSuccess: () => {
+      toast.success(tx("Группы удалены из кабинета", "Communities deleted from account."));
+      setSelectedGroupIds([]);
+      void utils.tgTop.myGroups.invalidate();
+      void utils.tgTop.getGroups.invalidate();
+      void utils.tgTop.getSlots.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const toggleServiceMessagesMutation = trpc.tgTop.toggleServiceMessages.useMutation({
+    onSuccess: () => {
+      toast.success(tx("Настройки автоочистки сохранены", "Auto-cleanup settings saved."));
+      void utils.tgTop.getGroupDetail.invalidate();
+      void utils.tgTop.myGroups.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
   const placeBid = trpc.tgTop.placeBid.useMutation({
     onSuccess: () => {
       toast.success(tx("Ставка зафиксирована в журнале TG TOP. TON не отправлялся.", "Bid recorded in the TG TOP journal. No TON was sent."));
@@ -1064,6 +1083,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const listedIds = mine.filter(group => selectedGroupIds.includes(group.id) && group.status === "listed").map(group => group.id);
     if (!listedIds.length) return toast.error(tx("Выберите группу, которая уже находится в каталоге", "Select a community that is already listed."));
     unlistGroups.mutate({ groupIds: listedIds });
+  };
+  const deleteSelectedGroups = () => {
+    if (!selectedGroupIds.length) return toast.error(tx("Выберите группы для удаления", "Select communities to delete."));
+    if (window.confirm(tx("Удалить выбранные группы из кабинета?", "Delete selected communities from account?"))) {
+      deleteGroups.mutate({ groupIds: selectedGroupIds });
+    }
   };
   const copyReferralLink = async () => {
     if (!referral?.referralLink) return toast.error(tx("Реферальная ссылка загружается", "Your referral link is still loading."));
@@ -1466,6 +1491,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       {tx("Снять", "Unlist")}
                     </button>
                     <button
+                      onClick={deleteSelectedGroups}
+                      disabled={deleteGroups.isPending}
+                      className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-medium text-red-300 disabled:opacity-50"
+                    >
+                      {tx("Удалить", "Delete")}
+                    </button>
+                    <button
                       onClick={() => openListing(selectedGroupIds)}
                       className="rounded-lg bg-[#3f8cff] px-2.5 py-1.5 text-[11px] font-semibold text-white"
                     >
@@ -1582,6 +1614,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       {tx("Управлять этой группой", "Manage this group")}
                     </button>
                   )}
+                  {ownsDetail && (
+                    <div className="mt-3 rounded-xl border border-white/8 bg-white/4 p-3 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs">
+                          <b className="block text-slate-200">{tx("Автоочистка чата", "Chat auto-cleanup")}</b>
+                          <small className="mt-0.5 block text-[11px] text-slate-400">
+                            {tx("Удалять системные уведомления (вход, выход, закреп)", "Delete service messages (joins, leaves, pins)")}
+                          </small>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(detail.group.deleteServiceMessages)}
+                          onChange={e => toggleServiceMessagesMutation.mutate({ groupId: detail.group.id, deleteServiceMessages: e.target.checked })}
+                          className="h-4 w-4 rounded border-white/20 bg-black/40 text-[#3f8cff] focus:ring-0 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  )}
                   {ownsDetail && detail.group.status === "listed" && (
                     <button
                       onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
@@ -1589,6 +1639,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       className="mt-2 w-full rounded-lg border border-rose-300/20 bg-rose-300/5 py-2 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50"
                     >
                       {tx("Снять с листинга", "Remove from listing")}
+                    </button>
+                  )}
+                  {ownsDetail && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(tx("Удалить группу из кабинета?", "Delete community from account?"))) {
+                          deleteGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") });
+                        }
+                      }}
+                      disabled={deleteGroups.isPending}
+                      className="mt-2 w-full rounded-lg border border-red-500/20 bg-red-500/5 py-2 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      {tx("Удалить группу", "Delete community")}
                     </button>
                   )}
                   {!ownsDetail && selectedSlot && isAuthenticated && (

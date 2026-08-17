@@ -700,6 +700,38 @@ export async function listGroupWithCredits(ownerOpenId: string, groupId: number,
   return listGroupsWithCredits(ownerOpenId, [groupId], listing, cost);
 }
 
+export async function deleteGroups(ownerOpenId: string, groupIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const uniqueGroupIds = Array.from(new Set(groupIds));
+  if (!uniqueGroupIds.length) throw new Error("Выберите хотя бы одну группу");
+  const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
+  if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) {
+    throw new Error("Группа недоступна для удаления");
+  }
+  await db.transaction(async tx => {
+    await tx.update(auctionSlots).set({
+      groupId: null,
+      leaderUserId: null,
+      leaderUsername: "-",
+      currentBid: "0 TON",
+      bidAmount: 0,
+      title: "Свободное место",
+      subtitle: "Ждет листинга",
+      updatedAt: new Date(),
+    }).where(inArray(auctionSlots.groupId, uniqueGroupIds));
+    await tx.delete(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
+  });
+}
+
+export async function toggleServiceMessages(ownerOpenId: string, groupId: number, deleteServiceMessages: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.id, groupId));
+  if (!group || group.ownerOpenId !== ownerOpenId) throw new Error("Группа не найдена");
+  await db.update(groupsCatalog).set({ deleteServiceMessages }).where(eq(groupsCatalog.id, groupId));
+}
+
 export async function unlistGroups(ownerOpenId: string, groupIds: number[]) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

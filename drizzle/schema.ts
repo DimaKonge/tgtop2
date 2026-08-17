@@ -60,6 +60,7 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   listedAt: timestamp("listedAt"),
   salePriceTon: decimal("salePriceTon", { precision: 20, scale: 9 }),
   listingType: mysqlEnum("listingType", ["catalog", "sale"]).default("catalog").notNull(),
+  deleteServiceMessages: boolean("deleteServiceMessages").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [
   index("groups_catalog_listing_filters_idx").on(table.status, table.category, table.subcategory, table.country),

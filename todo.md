@@ -211,3 +211,5 @@
 - [x] Export the complete TG TOP source to a private GitHub repository and document the version-saving workflow
 - [x] Add support for private Telegram groups and channels without public usernames, using invite links and secure chat ID identification
 - [x] Ensure announcement delivery handles newly listed groups robustly with retry/fallback logic
+- [x] Add support for deleting groups from My Groups / catalog
+- [x] Add a toggle in group details for the bot to automatically delete Telegram service messages (joins, leaves, pins)
