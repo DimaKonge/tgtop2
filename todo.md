@@ -254,3 +254,9 @@
 - [x] Show only the raw matching-group count in the Top header
 - [x] Add a filter-aware title and username search below the Top ranking cards
 - [x] Replace whole-card drag activation with a dedicated My Groups drag handle beside pinning and block native avatar callouts
+- [x] Redesign My Groups status badges as Telegram-inspired green sale, blue catalog, and gray not-in-catalog corner ribbons
+- [x] Move My Groups search above the results and show a direct relevant list instead of Top cards while searching
+- [x] Compact the My Groups view and status filter controls, then redesign Top mode as one larger square card above two smaller cards
+- [x] Show filter-aware totals for displayed groups and their combined subscriber count beneath the My Groups controls
+- [x] Replace the Top country-selector grid with a compact vertical scrolling list of countries
+- [x] Keep the Top geography heading on one line with a compact country label and smaller subdued city label

@@ -266,12 +266,12 @@ function SortableMyGroupTile({
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: group.id, disabled });
   const isEnglish = language === "en";
   const isSale = group.status === "listed" && group.listingType === "sale";
-  const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "Catalog" : "Каталог") : (isEnglish ? "Draft" : "Черновик");
+  const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "In catalog" : "В каталоге") : (isEnglish ? "Not in catalog" : "Не в каталоге");
   const statusClass = isSale
-    ? "border-amber-300/25 bg-amber-300/10 text-amber-200"
+    ? "border-emerald-200/40 bg-emerald-400/90 text-emerald-950 shadow-emerald-950/25"
     : group.status === "listed"
-      ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200"
-      : "border-white/10 bg-white/5 text-slate-500";
+      ? "border-blue-200/35 bg-[#3f8cff]/90 text-white shadow-blue-950/25"
+      : "border-slate-300/15 bg-slate-600/85 text-slate-100 shadow-black/25";
 
   return (
     <article
@@ -289,7 +289,7 @@ function SortableMyGroupTile({
           <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{group.username ? `@${group.username}` : group.inviteLink ? (isEnglish ? "Private" : "Приватная") : group.category}</small>
         </span>
       </button>
-      <span className={`absolute right-0 top-3 z-10 max-w-[72%] truncate rounded-l-md border-y border-l px-2 py-1 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm ${statusClass}`}>{status}</span>
+      <span className={`absolute right-0 top-0 z-10 max-w-[82%] truncate border-b border-l px-3 pb-1.5 pt-1.5 text-[8px] font-bold leading-none shadow-lg [clip-path:polygon(11px_0,100%_0,100%_100%,0_100%,0_11px)] ${statusClass}`}>{status}</span>
       <button
         ref={setActivatorNodeRef}
         type="button"
@@ -805,6 +805,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list");
   const [myGroupsLayout, setMyGroupsLayout] = useState<Group[]>([]);
   const [myGroupsStatusFilter, setMyGroupsStatusFilter] = useState<"all" | "listed" | "unlisted">("all");
+  const [myGroupsSearchQuery, setMyGroupsSearchQuery] = useState("");
   const [myGroupsAddOpen, setMyGroupsAddOpen] = useState(false);
   const [myGroupsDragActiveId, setMyGroupsDragActiveId] = useState<number | null>(null);
   const myGroupsSensors = useSensors(
@@ -1178,9 +1179,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         ? tx("Все сообщества", "All communities")
         : getCategoryLabel(globalDirection, language),
     globalDirection !== "NFT" && subcategory !== "Все" ? getSubcategoryLabel(subcategory, language) : null,
-    globalDirection !== "NFT" && country !== "Все" ? getCountryLabel(country, language) : null,
-    globalDirection !== "NFT" && city !== "Все" ? getCityLabel(country, city, language) : null,
   ].filter((part): part is string => Boolean(part)).join(" · ");
+  const currentTopCountry = globalDirection !== "NFT" && country !== "Все" ? getCountryLabel(country, language) : null;
+  const currentTopCity = globalDirection !== "NFT" && city !== "Все" ? getCityLabel(country, city, language) : null;
   const telegramAvatar =
     typeof window !== "undefined"
       ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
@@ -1199,9 +1200,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const unpinnedMyGroups = orderedMyGroups.filter(group => !group.ownerPinned);
   const myGroupsMatchStatus = (group: Group) =>
     myGroupsStatusFilter === "all" || (myGroupsStatusFilter === "listed" ? group.status === "listed" : group.status !== "listed");
-  const visiblePinnedMyGroups = pinnedMyGroups.filter(myGroupsMatchStatus);
-  const visibleUnpinnedMyGroups = unpinnedMyGroups.filter(myGroupsMatchStatus);
-  const visibleMyGroups = orderedMyGroups.filter(myGroupsMatchStatus);
+  const normalizedMyGroupsSearch = myGroupsSearchQuery.trim().toLocaleLowerCase();
+  const myGroupsMatchSearch = (group: Group) =>
+    !normalizedMyGroupsSearch || [group.title, group.username, group.category, group.subcategory]
+      .filter((value): value is string => Boolean(value))
+      .some(value => value.toLocaleLowerCase().includes(normalizedMyGroupsSearch));
+  const myGroupsMatchFilters = (group: Group) => myGroupsMatchStatus(group) && myGroupsMatchSearch(group);
+  const visiblePinnedMyGroups = pinnedMyGroups.filter(myGroupsMatchFilters);
+  const visibleUnpinnedMyGroups = unpinnedMyGroups.filter(myGroupsMatchFilters);
+  const visibleMyGroups = orderedMyGroups.filter(myGroupsMatchFilters);
+  const isMyGroupsSearchActive = normalizedMyGroupsSearch.length > 0;
+  const visibleMyGroupsMembers = visibleMyGroups.reduce((sum, group) => sum + Math.max(0, group.membersCount || 0), 0);
   const myGroupsDragActiveGroup = myGroupsDragActiveId ? orderedMyGroups.find(group => group.id === myGroupsDragActiveId) : undefined;
   const globalSubcategoryCategory = globalDirection === "Каналы" || globalDirection === "Чаты" ? globalDirection : null;
   const globalSubcategoryOptions = globalSubcategoryCategory ? CATEGORY_SUBCATEGORIES[globalSubcategoryCategory] : [];
@@ -1438,8 +1447,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <section className="space-y-2">
             <div className="border-b border-white/8 pb-1.5">
               <div className="flex min-w-0 items-center justify-between gap-2 px-0.5">
-                <span className="flex min-w-0 flex-1 items-baseline gap-2">
-                  <h1 className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight text-white">{currentTopTitle}</h1>
+                <span className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden whitespace-nowrap">
+                  <h1 className="min-w-0 shrink text-[clamp(14px,4.7vw,18px)] font-semibold tracking-tight text-white">{currentTopTitle}</h1>
+                  {currentTopCountry && <span className="shrink-0 text-[10px] font-medium text-slate-400">· {currentTopCountry}</span>}
+                  {currentTopCity && <span className="max-w-[48px] shrink truncate text-[9px] font-medium text-[#7697c7]">· {currentTopCity}</span>}
                   <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
                 </span>
                 {globalDirection !== "NFT" && (
@@ -1450,13 +1461,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <span className="truncate">{city !== "Все" ? getCityLabel(country, city, language) : country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}</span>
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" className="w-[min(360px,calc(100vw-24px))] rounded-xl border-white/10 bg-[#10161f] p-3 text-slate-100 shadow-2xl shadow-black/45">
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tx("Страна", "Country")}</p>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {["Все", ...COUNTRY_OPTIONS.filter(item => item !== "Global")].map(item => <button key={item} type="button" onClick={() => { setCountry(item); setCity("Все"); }} className={`min-h-8 rounded-md border px-1.5 py-1 text-[9px] transition-colors ${country === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#a6c8ff]" : "border-white/10 text-slate-400 hover:text-slate-200"}`}>{item === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(item, language)}</button>)}
+                    <PopoverContent align="end" className="w-[min(320px,calc(100vw-24px))] rounded-xl border-white/10 bg-[#10161f] p-2.5 text-slate-100 shadow-2xl shadow-black/45">
+                      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tx("Страна", "Country")}</p>
+                      <div className="max-h-[264px] space-y-1 overflow-y-auto pr-1">
+                        {["Все", ...COUNTRY_OPTIONS.filter(item => item !== "Global")].map(item => <button key={item} type="button" onClick={() => { setCountry(item); setCity("Все"); }} className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-[11px] font-medium transition-colors ${country === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#b8d1ff]" : "border-white/8 text-slate-400 hover:border-white/15 hover:bg-white/[0.035] hover:text-slate-200"}`}><span>{item === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(item, language)}</span>{country === item && <Check className="h-3.5 w-3.5 shrink-0 text-[#79a7ff]" />}</button>)}
                       </div>
                       {(CITY_OPTIONS[country] ?? []).length > 0 && <>
-                        <p className="mb-2 mt-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tx("Город", "City")}</p>
+                        <p className="mb-2 mt-3 px-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#637b9d]">{tx("Город", "City")}</p>
                         <div className="flex flex-wrap gap-1.5">
                           <button type="button" onClick={() => setCity("Все")} className={`rounded-md border px-2 py-1 text-[10px] ${city === "Все" ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{tx("Все города", "All cities")}</button>
                           {CITY_OPTIONS[country].map(item => <button key={item.value} type="button" onClick={() => setCity(item.value)} className={`rounded-md border px-2 py-1 text-[10px] ${city === item.value ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{item[language]}</button>)}
@@ -1736,6 +1747,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </button>
               </div>
             )}
+            {!targetSlot && mine.length > 0 && (
+              <Input
+                value={myGroupsSearchQuery}
+                onChange={event => setMyGroupsSearchQuery(event.target.value)}
+                aria-label={tx("Поиск в моих группах", "Search my groups")}
+                placeholder={tx("Поиск по названию или @username", "Search by name or @username")}
+                className="h-8 rounded-lg border-white/10 bg-[#111720] px-3 text-[11px] text-slate-200 placeholder:text-slate-600"
+              />
+            )}
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => startBotAdminSetup("channel")}
@@ -1751,13 +1771,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </button>
             </div>
             {!targetSlot && mine.length > 0 && (
-              <div className="grid grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
+              <div className="grid grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
                 {([
                   ["list", tx("Список", "List")],
                   ["grid", tx("Сетка", "Grid")],
                   ["top", tx("Топ", "Top")],
                 ] as const).map(([value, label]) => (
-                  <button key={value} type="button" onClick={() => { setMyGroupsViewMode(value); setSelectedGroupIds([]); }} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${myGroupsViewMode === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                  <button key={value} type="button" onClick={() => { setMyGroupsViewMode(value); setSelectedGroupIds([]); }} className={`h-7 rounded-md text-[9px] font-semibold transition-colors ${myGroupsViewMode === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
                 ))}
               </div>
             )}
@@ -1765,11 +1785,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="grid grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
                 {([
                   ["all", tx("Все", "All")],
-                  ["listed", tx("В листинге", "Listed")],
-                  ["unlisted", tx("Не в листинге", "Unlisted")],
+                  ["listed", tx("В каталоге", "In catalog")],
+                  ["unlisted", tx("Не в каталоге", "Not in catalog")],
                 ] as const).map(([value, label]) => (
-                  <button key={value} type="button" onClick={() => setMyGroupsStatusFilter(value)} className={`h-8 rounded-md text-[10px] font-medium transition-colors ${myGroupsStatusFilter === value ? "bg-[#3f8cff] text-white" : "text-slate-500 hover:text-slate-200"}`}>{label}</button>
+                  <button key={value} type="button" onClick={() => setMyGroupsStatusFilter(value)} className={`h-7 rounded-md text-[9px] font-medium transition-colors ${myGroupsStatusFilter === value ? "bg-[#3f8cff] text-white" : "text-slate-500 hover:text-slate-200"}`}>{label}</button>
                 ))}
+              </div>
+            )}
+            {!targetSlot && mine.length > 0 && (
+              <div className="flex items-center justify-between px-1 text-[10px] text-slate-500">
+                <span>{n(visibleMyGroups.length, language)} {tx("групп", "groups")}</span>
+                <span className="flex items-center gap-1"><Users className="h-3 w-3 text-slate-600" />{n(visibleMyGroupsMembers, language)} {tx("подписчиков", "subscribers")}</span>
               </div>
             )}
             {!targetSlot && selectedGroupIds.length > 0 && (
@@ -1803,7 +1829,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
               </div>
             )}
-            {myGroupsViewMode === "grid" && !targetSlot ? (
+            {myGroupsViewMode === "grid" && !targetSlot && !isMyGroupsSearchActive ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-[11px] text-slate-400">{tx("Тяните за ручку, чтобы менять порядок", "Drag the grip to reorder")}</span>
@@ -1858,25 +1884,33 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </div>
                 )}
               </div>
-            ) : myGroupsViewMode === "top" && !targetSlot ? (
+            ) : myGroupsViewMode === "top" && !targetSlot && !isMyGroupsSearchActive ? (
               <section className="space-y-2">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-[11px] text-slate-400">{tx("Ваш приоритет", "Your priority")}</span>
                   <span className="text-[10px] text-slate-600">{tx("Закрепленные выше", "Pinned first")}</span>
                 </div>
-                {visibleMyGroups.map((group, index) => {
+                <div className="grid grid-cols-2 gap-2">
+                  {visibleMyGroups.map((group, index) => {
                   const isSale = group.status === "listed" && group.listingType === "sale";
-                  const status = isSale ? tx("На продаже", "For sale") : group.status === "listed" ? tx("Каталог", "Catalog") : tx("Черновик", "Draft");
-                  const statusClass = isSale ? "border-amber-300/25 bg-amber-300/10 text-amber-200" : group.status === "listed" ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200" : "border-white/10 bg-white/5 text-slate-500";
-                  return <button key={group.id} onClick={() => openGroup(group.id)} className={`group flex w-full items-center gap-3 rounded-xl border text-left transition-colors active:scale-[0.99] ${index === 0 ? "min-h-[82px] border-[#3f8cff]/35 bg-[radial-gradient(circle_at_8%_20%,rgba(63,140,255,.18),rgba(17,23,32,1)_58%)] p-3.5" : "h-[58px] border-white/8 bg-[#111720] px-3 hover:border-[#3f8cff]/35 hover:bg-[#151e2b]"}`}>
-                    <span className={`${index === 0 ? "h-14 w-14 rounded-xl" : "h-9 w-9 rounded-lg"} shrink-0 overflow-hidden`}><Avatar group={group} /></span>
-                    <span className="min-w-0 flex-1"><b className={`block truncate ${index === 0 ? "text-sm text-white" : "text-xs text-slate-100"}`}>{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : group.category}</small></span>
-                    <span className={`shrink-0 rounded-md border px-1.5 py-1 text-[9px] font-semibold ${statusClass}`}>{status}</span>
+                  const status = isSale ? tx("На продаже", "For sale") : group.status === "listed" ? tx("В каталоге", "In catalog") : tx("Не в каталоге", "Not in catalog");
+                  const statusClass = isSale ? "border-emerald-200/40 bg-emerald-400/90 text-emerald-950" : group.status === "listed" ? "border-blue-200/35 bg-[#3f8cff]/90 text-white" : "border-slate-300/15 bg-slate-600/85 text-slate-100";
+                  return <button key={group.id} onClick={() => openGroup(group.id)} className={`group relative aspect-square overflow-hidden rounded-xl border border-white/8 bg-[#111720] text-left shadow-sm transition-[transform,border-color,box-shadow] hover:border-[#3f8cff]/45 hover:shadow-lg hover:shadow-black/30 active:scale-[0.98] ${index === 0 ? "col-span-2 mx-auto w-full max-w-[260px] border-[#3f8cff]/30" : ""}`}>
+                    <FullBleedGroupArtwork group={group} />
+                    <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,9,15,.04)_22%,rgba(5,9,15,.24)_46%,rgba(5,9,15,.9)_100%)]" />
+                    <span className={`absolute right-0 top-0 z-10 max-w-[82%] truncate border-b border-l px-3 pb-1.5 pt-1.5 text-[8px] font-bold leading-none shadow-lg [clip-path:polygon(11px_0,100%_0,100%_100%,0_100%,0_11px)] ${statusClass}`}>{status}</span>
+                    <span className="absolute inset-x-0 bottom-0 z-10 p-2.5">
+                      <b className={`line-clamp-2 block text-white drop-shadow-sm ${index === 0 ? "text-sm leading-4" : "text-[11px] leading-3.5"}`}>{group.title}</b>
+                      <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная", "Private") : group.category}</small>
+                    </span>
                   </button>;
                 })}
+                </div>
+                {visibleMyGroups.length === 0 && <div className="rounded-xl border border-dashed border-white/12 px-4 py-7 text-center text-xs text-slate-500">{tx("По этому фильтру групп нет", "No groups match this filter")}</div>}
               </section>
             ) : (
             <div className="space-y-2">
+              {isMyGroupsSearchActive && !targetSlot && <p className="px-1 text-[10px] font-medium text-[#8fb9ff]">{tx("Результаты поиска", "Search results")}</p>}
               {(targetSlot ? orderedMyGroups : visibleMyGroups).map(group => (
                 <div
                   key={group.id}
@@ -2225,10 +2259,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <button onClick={() => setNftShowcase.mutate({ nftId: nft.id, target: "profile" })} disabled={setNftShowcase.isPending} className="rounded-md border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2 py-1.5 text-[10px] font-medium text-[#a6c8ff]">{tx("Профиль", "Profile")}</button>
                         <button onClick={() => setShowcaseNftId(nft.id)} disabled={setNftShowcase.isPending} className="rounded-md border border-white/10 px-2 py-1.5 text-[10px] font-medium text-slate-300">{tx("Площадка", "Community")}</button>
                         <button onClick={() => setNftShowcase.mutate({ nftId: nft.id, target: "hidden" })} disabled={setNftShowcase.isPending} className="rounded-md border border-white/10 px-2 py-1.5 text-[10px] font-medium text-slate-400">{tx("Скрыть", "Hide")}</button>
-                      </div>
-                    </div>
-                  ))}
+                  </div>
                 </div>
+              ))}
+              {isMyGroupsSearchActive && visibleMyGroups.length === 0 && (
+                <div className="rounded-xl border border-dashed border-white/12 px-4 py-7 text-center text-xs text-slate-500">
+                  {tx("Подходящих групп не найдено", "No matching groups found")}
+                </div>
+              )}
+            </div>
               </section>
             )}
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">

@@ -29,7 +29,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('h-[84px]');
     expect(source).toContain('max-w-full truncate');
     expect(source).toContain('max-w-[132px]');
-    expect(source).toContain('min-w-0 flex-1 truncate text-lg');
+    expect(source).toContain('lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"');
     expect(source).toMatch(/<GroupCard\s+key=\{group\.id\}\s+group=\{group\}\s+variant="list"/);
     expect(source).toContain('В TG TOP пока нет площадок');
     expect(source).toContain('https://t.me/i/userpic/320/${group.username}.jpg');
@@ -113,8 +113,8 @@ describe("TG TOP production bot links", () => {
     expect(styles).toContain('--ranking-slot-offset: 26px');
     expect(styles).toContain('--ranking-slot-offset: 20px');
     expect(source).toContain('isEnglish ? "For sale" : "На продаже"');
-    expect(source).toContain('isEnglish ? "Catalog" : "Каталог"');
-    expect(source).toContain('isEnglish ? "Draft" : "Черновик"');
+    expect(source).toContain('isEnglish ? "In catalog" : "В каталоге"');
+    expect(source).toContain('isEnglish ? "Not in catalog" : "Не в каталоге"');
     expect(source).toContain('ownsDetail && detail.group.category === "Чаты"');
     expect(source).toContain('role="switch"');
     expect(source).toContain('translate-x-5');
@@ -124,6 +124,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Закреплено", "Pinned")');
     expect(source).toContain('activationConstraint: { delay: 320, tolerance: 10 }');
     expect(source).toContain('myGroupsStatusFilter');
+    expect(source).toContain('const [myGroupsSearchQuery, setMyGroupsSearchQuery] = useState("")');
+    expect(source).toContain('const isMyGroupsSearchActive = normalizedMyGroupsSearch.length > 0');
+    expect(source).toContain('myGroupsViewMode === "top" && !targetSlot && !isMyGroupsSearchActive');
+    expect(source).toContain('visibleMyGroupsMembers');
     expect(source).toContain('setMyGroupsAddOpen(true)');
     expect(source).toContain('grid grid-cols-3 gap-2');
     expect(source).toContain('Тяните за ручку, чтобы менять порядок');
@@ -161,7 +165,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const currentTopTitle = [');
     expect(source).toContain('tx("Все сообщества", "All communities")');
     expect(source).toContain('getSubcategoryLabel(subcategory, language)');
-    expect(source).toContain('<h1 className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight text-white">{currentTopTitle}</h1>');
+    expect(source).toContain('const currentTopCountry = globalDirection !== "NFT" && country !== "Все"');
+    expect(source).toContain('const currentTopCity = globalDirection !== "NFT" && city !== "Все"');
+    expect(source).toContain('max-h-[264px] space-y-1 overflow-y-auto pr-1');
     expect(source).toContain('tx("Каталог групп", "Community catalog")');
     expect(source).toContain('tx("По этому фильтру площадок пока нет.", "No communities match this filter yet.")');
     expect(source).toContain('tx("Участники", "Members")');
