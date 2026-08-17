@@ -249,3 +249,7 @@
 - [x] Make My Groups avatars full-bleed card imagery with readable overlaid title and ribbon status
 - [x] Remove List, Grid, and Showcase modes from the public Top screen while retaining the ranking pyramid and catalog list
 - [x] Add List, Grid, and Top modes to My Groups management and remove Showcase entirely
+- [x] Remove the detailed Top filter sheet and duplicate filter row
+- [x] Put country and country-scoped city selection inside the Top World button dropdown
+- [x] Show only the raw matching-group count in the Top header
+- [x] Add a filter-aware title and username search below the Top ranking cards

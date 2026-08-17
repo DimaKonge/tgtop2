@@ -13,6 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useTheme, type Appearance } from "@/contexts/ThemeContext";
 import {
@@ -663,6 +664,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [city, setCity] = useState("Все");
   const [audience, setAudience] = useState<Audience>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [topSearchQuery, setTopSearchQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
   const [language, setLanguage] = useState<Language>(() =>
@@ -1049,6 +1051,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     board.map(slot => slot.group?.id).filter((id): id is number => Boolean(id))
   );
   const generalList = visibleGroups.filter(group => !occupiedIds.has(group.id));
+  const searchedGeneralList = generalList.filter(group => {
+    const query = topSearchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return `${group.title} ${group.username ?? ""}`.toLowerCase().includes(query);
+  });
   const leadSlot = board[0];
   const secondTier = board.slice(1, 3);
   const thirdTier = board.slice(3, 7);
@@ -1423,23 +1430,32 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="flex min-w-0 items-center justify-between gap-2 px-0.5">
                 <span className="flex min-w-0 flex-1 items-baseline gap-2">
                   <h1 className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight text-white">{currentTopTitle}</h1>
-                  <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)} {globalDirection === "NFT" ? "NFT" : ui.groups}</span>
+                  <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
                 </span>
                 {globalDirection !== "NFT" && (
-                  <button onClick={() => setFiltersOpen(true)} className="flex h-7 max-w-[112px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-white/10 bg-white/5 px-2 text-[10px] text-slate-400 transition-colors hover:text-slate-100">
-                    <Globe2 className="h-3.5 w-3.5 shrink-0 text-[#79a7ff]" />
-                    <span className="truncate">{country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}</span>
-                  </button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="flex h-7 max-w-[132px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-white/10 bg-white/5 px-2 text-[10px] text-slate-400 transition-colors hover:border-[#3f8cff]/35 hover:text-slate-100">
+                        <Globe2 className="h-3.5 w-3.5 shrink-0 text-[#79a7ff]" />
+                        <span className="truncate">{city !== "Все" ? getCityLabel(country, city, language) : country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}</span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-[min(360px,calc(100vw-24px))] rounded-xl border-white/10 bg-[#10161f] p-3 text-slate-100 shadow-2xl shadow-black/45">
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tx("Страна", "Country")}</p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {["Все", ...COUNTRY_OPTIONS.filter(item => item !== "Global")].map(item => <button key={item} type="button" onClick={() => { setCountry(item); setCity("Все"); }} className={`min-h-8 rounded-md border px-1.5 py-1 text-[9px] transition-colors ${country === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#a6c8ff]" : "border-white/10 text-slate-400 hover:text-slate-200"}`}>{item === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(item, language)}</button>)}
+                      </div>
+                      {(CITY_OPTIONS[country] ?? []).length > 0 && <>
+                        <p className="mb-2 mt-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tx("Город", "City")}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button type="button" onClick={() => setCity("Все")} className={`rounded-md border px-2 py-1 text-[10px] ${city === "Все" ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{tx("Все города", "All cities")}</button>
+                          {CITY_OPTIONS[country].map(item => <button key={item.value} type="button" onClick={() => setCity(item.value)} className={`rounded-md border px-2 py-1 text-[10px] ${city === item.value ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{item[language]}</button>)}
+                        </div>
+                      </>}
+                    </PopoverContent>
+                  </Popover>
                 )}
               </div>
-              {globalDirection !== "NFT" && (
-                <button onClick={() => setFiltersOpen(true)} className="mt-1.5 flex h-7 max-w-full items-center gap-1.5 overflow-hidden rounded-md border border-white/8 bg-white/5 px-2 text-[10px] text-slate-500 transition-colors hover:text-slate-200">
-                  <Filter className="h-3.5 w-3.5 shrink-0" />
-                  <span className="min-w-0 truncate">{tx("Настроить выдачу", "Refine results")}</span>
-                  <span className="shrink-0 text-slate-700">·</span>
-                  <span className="shrink-0 truncate">{city !== "Все" ? getCityLabel(country, city, language) : country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}</span>
-                </button>
-              )}
             </div>
             <div className="grid grid-cols-4 rounded-xl border border-white/8 bg-[#111720] p-0.5">
               {([
@@ -1529,7 +1545,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             </div>
             <section className="pt-2">
               <div className="space-y-2">
-                {generalList.map((group, index) => {
+                <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={tx("Поиск группы", "Search communities")} placeholder={tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />
+                {searchedGeneralList.map((group, index) => {
                   const isSale = group.listingType === "sale" && group.salePriceTon;
                   return (
                     <div
@@ -1571,7 +1588,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   );
                 })}
-                {generalList.length > 0 && (
+                {searchedGeneralList.length > 0 && (
                   <button
                     onClick={() => openMine()}
                     className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#3f8cff]/6 px-4 py-4 text-sm font-medium text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"
@@ -1580,7 +1597,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     {tx("Добавить свою группу в список", "Add your community to the list")}
                   </button>
                 )}
-                {generalList.length === 0 && (
+                {searchedGeneralList.length === 0 && (
                   <button
                     onClick={() => openMine()}
                     className="w-full rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#111720] p-6 text-center transition-colors hover:bg-[#151d28]"
@@ -1588,9 +1605,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <span className="mx-auto grid h-10 w-10 place-items-center rounded-full border border-[#3f8cff]/35 bg-[#3f8cff]/10 text-[#a6c8ff]">
                       <Plus className="h-5 w-5" />
                     </span>
-                    <p className="text-sm font-medium text-slate-300">
-                      {ui.globalEmptyTitle}
-                    </p>
+                    <p className="text-sm font-medium text-slate-300">{topSearchQuery ? tx("Ничего не найдено", "Nothing found") : ui.globalEmptyTitle}</p>
                     <p className="mt-1 text-xs text-slate-500">
                       {ui.globalEmptyBody}
                     </p>

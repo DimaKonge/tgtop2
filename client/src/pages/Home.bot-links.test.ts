@@ -28,7 +28,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('h-[116px]');
     expect(source).toContain('h-[84px]');
     expect(source).toContain('max-w-full truncate');
-    expect(source).toContain('max-w-[112px]');
+    expect(source).toContain('max-w-[132px]');
     expect(source).toContain('min-w-0 flex-1 truncate text-lg');
     expect(source).toMatch(/<GroupCard\s+key=\{group\.id\}\s+group=\{group\}\s+variant="list"/);
     expect(source).toContain('В TG TOP пока нет площадок');
@@ -64,7 +64,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('accept="video/mp4"');
     expect(source).not.toContain('uploadSelectedAnimatedAvatar');
     expect(source).toContain('aria-live="polite"');
-    expect(source).toContain('{n(globalCount, language)} {globalDirection === "NFT" ? "NFT" : ui.groups}');
+    expect(source).toContain('{n(globalCount, language)}</span>');
     expect(source).toContain('Connect wallet');
     expect(source).toContain('useTonConnectUI');
     expect(source).toContain('tonConnectUi.openModal()');
