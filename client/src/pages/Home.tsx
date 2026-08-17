@@ -224,7 +224,7 @@ function GroupCard({
       ? "h-[116px] border-white/10 bg-[#111720] p-3 sm:h-[140px] sm:p-4"
       : compact
         ? "h-[84px] border-white/8 bg-[#111720] p-2 sm:h-[106px]"
-        : "h-[62px] border-white/8 bg-[#111720] px-3.5 py-2";
+        : "h-[52px] border-white/8 bg-[#111720] px-3 py-1.5";
   const shellStyle = compact
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
     : "flex h-full items-center gap-3";
@@ -279,17 +279,17 @@ function GroupCard({
       ) : group ? (
         <span className={rankingPlacement ? shellStyle : "flex h-full w-full items-center justify-between gap-3"}>
           <span className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl">
+            <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
               <Avatar group={group} large={lead} compact={compact} />
             </span>
             <span className="min-w-0 flex-1">
               <b
-                className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} block truncate font-medium text-white`}
+                className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-xs"} block truncate font-medium text-white`}
               >
                 {group.title}
               </b>
               <small
-                className={`mt-0.5 block truncate text-xs text-slate-500 ${compact ? "hidden" : ""}`}
+                className={`block truncate text-[11px] text-slate-500 ${compact ? "hidden" : ""}`}
               >
                 {group.username ? `@${group.username}` : group.inviteLink ? (language === "en" ? "Private group" : "Приватная группа") : getCategoryLabel(group.category, language)} ·{" "}
                 {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
@@ -299,15 +299,15 @@ function GroupCard({
           <span className="flex shrink-0 items-center gap-3 text-right">
             {group.salePriceTon && group.listingType === "sale" ? (
               <div className="flex flex-col items-end">
-                <b className="text-base font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon)} TON</b>
+                <b className="text-sm font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon)} TON</b>
                 <small className="text-[10px] text-slate-400">{language === "en" ? "For sale" : "Продажа"}</small>
               </div>
             ) : !rankingPlacement ? (
-              <span className="rounded-md bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-400">
+              <span className="rounded bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-400">
                 {language === "en" ? "Catalog" : "Каталог"}
               </span>
             ) : null}
-            <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
           </span>
         </span>
       ) : rankingPlacement ? (
