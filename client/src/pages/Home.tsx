@@ -24,6 +24,7 @@ import {
   Plus,
   Settings2,
   Sun,
+  Trash2,
   Trophy,
   UserRound,
   Users,
@@ -1648,10 +1649,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         </a>
                       ) : detail.group.inviteLink ? (
                         <a href={detail.group.inviteLink} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm text-[#72a8ff] underline decoration-[#72a8ff]/50 underline-offset-4 hover:text-[#a6c8ff]">
-                          {tx("Приватная ссылка · Войти", "Private invite · Join")}
+                          {tx("Приватная группа · Войти в чат", "Private group · Join chat")}
                         </a>
                       ) : (
-                        <p className="mt-1 text-sm text-[#72a8ff]">{detail.group.category}</p>
+                        <p className="mt-1 text-sm text-[#72a8ff]">
+                          {detail.group.chatId && detail.group.chatId.startsWith("-100")
+                            ? tx("Приватная группа", "Private group")
+                            : detail.group.category}
+                        </p>
                       )}
                       <p className="mt-3 text-sm leading-5 text-slate-400">
                         {detail.group.description ||
@@ -1695,27 +1700,31 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                     </div>
                   )}
-                  {ownsDetail && detail.group.status === "listed" && (
-                    <button
-                      onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
-                      disabled={unlistGroups.isPending}
-                      className="mt-2 w-full rounded-lg border border-rose-300/20 bg-rose-300/5 py-2 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50"
-                    >
-                      {tx("Снять с листинга", "Remove from listing")}
-                    </button>
-                  )}
                   {ownsDetail && (
-                    <button
-                      onClick={() => {
-                        if (window.confirm(tx("Удалить группу из кабинета?", "Delete community from account?"))) {
-                          deleteGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") });
-                        }
-                      }}
-                      disabled={deleteGroups.isPending}
-                      className="mt-2 w-full rounded-lg border border-red-500/20 bg-red-500/5 py-2 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
-                    >
-                      {tx("Удалить группу", "Delete community")}
-                    </button>
+                    <div className="mt-2 flex items-center gap-2">
+                      {detail.group.status === "listed" && (
+                        <button
+                          onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
+                          disabled={unlistGroups.isPending}
+                          className="flex-1 rounded-lg border border-rose-300/20 bg-rose-300/5 py-2 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50"
+                        >
+                          {tx("Снять с листинга", "Remove from listing")}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (window.confirm(tx("Удалить группу из кабинета?", "Delete community from account?"))) {
+                            deleteGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") });
+                          }
+                        }}
+                        disabled={deleteGroups.isPending}
+                        title={tx("Удалить группу", "Delete community")}
+                        className={`rounded-lg border border-red-500/20 bg-red-500/5 p-2 text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50 ${detail.group.status !== "listed" ? "w-full py-2 flex items-center justify-center gap-2 text-xs font-medium" : ""}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {detail.group.status !== "listed" && tx("Удалить группу", "Delete community")}
+                      </button>
+                    </div>
                   )}
                   {!ownsDetail && selectedSlot && isAuthenticated && (
                     <button
@@ -1766,9 +1775,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <Metric label={tx("Приглашения", "Invites")} value={n(detail.group.invitedCount)} note={tx("зафиксировано ботом", "recorded by the bot")} />
                   {detail.group.messagesCount > 0 && <Metric label={tx("Публикации", "Posts")} value={n(detail.group.messagesCount)} note={tx("увиденные ботом", "observed by the bot")} />}
                 </div>
-                <p className="rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/6 px-3 py-2 text-[10px] leading-4 text-slate-400">
-                  {tx("Источник: наблюдения @TGTOP_robot с ", "Source: @TGTOP_robot observations since ")}{date(detail.analytics.observedSince, language)}. {tx("История до подключения бота не моделируется.", "History before the bot was connected is not estimated.")}
-                </p>
+
                 <NftShowcase nfts={detail.ownerNfts} language={language} title={tx("NFT-витрина площадки", "Community NFT showcase")} />
               </>
             ) : (
