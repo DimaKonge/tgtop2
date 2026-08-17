@@ -220,3 +220,4 @@
 - [ ] Trace the exact Telegram Mini App URL, active VPS service, and authenticated profile data path so production UI and bonus balances match deployed code
 - [x] Animate the ranking pyramid top-to-bottom: lead slot first, second row next, then lower slots with staggered entrance motion
 - [x] Replay the ranking-pyramid entrance sequence whenever category, country, or subcategory filters change
+- [x] Smooth the ranking-pyramid transition to remove visible flicker during filter changes

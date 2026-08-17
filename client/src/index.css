@@ -170,10 +170,10 @@ html[data-theme="dark"] .brand-mark-symbol { transform: rotate(180deg); }
 @keyframes tg-cube-rise { to { opacity: 1; transform: translateY(0) scale(1) rotate(0); } }
 @keyframes tg-progress { from { width: 0; } to { width: 100%; } }
 @keyframes ranking-slot-enter {
-  from { opacity: 0; transform: translateY(14px) scale(0.975); }
+  from { opacity: 0.88; transform: translateY(6px) scale(0.992); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
-.ranking-slot-enter { animation: ranking-slot-enter 360ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+.ranking-slot-enter { animation: ranking-slot-enter 280ms cubic-bezier(0.23, 1, 0.32, 1) both; will-change: transform, opacity; }
 @media (prefers-reduced-motion: reduce) {
   .tg-launch-cube, .tg-launch-progress span, .ranking-slot-enter { animation: none; opacity: 1; transform: none; width: 100%; }
 }
