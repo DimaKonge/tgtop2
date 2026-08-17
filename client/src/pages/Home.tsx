@@ -220,11 +220,11 @@ function GroupCard({
   const rankingPlacement = variant !== "list";
   const cardStyle = lead
     ? "h-[286px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[42vh] sm:p-6"
-    : variant === "secondary"
+          : variant === "secondary"
       ? "h-[116px] border-white/10 bg-[#111720] p-3 sm:h-[140px] sm:p-4"
       : compact
         ? "h-[84px] border-white/8 bg-[#111720] p-2 sm:h-[106px]"
-        : "border-white/8 bg-[#111720] p-3";
+        : "h-[62px] border-white/8 bg-[#111720] px-3.5 py-2";
   const shellStyle = compact
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
     : "flex h-full items-center gap-3";
@@ -277,28 +277,38 @@ function GroupCard({
           </span>
         </>
       ) : group ? (
-        <span className={shellStyle}>
-          <Avatar group={group} large={lead} compact={compact} />
-          <span className={compact ? "w-full min-w-0" : "min-w-0 flex-1"}>
-            <b
-              className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} block truncate font-semibold text-slate-100`}
-            >
-              {group.title}
-            </b>
-            <small
-              className={`mt-1 block truncate text-xs text-slate-500 ${compact ? "hidden" : ""}`}
-            >
-              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="no-underline hover:text-slate-200">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
-              {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
-            </small>
-            {!compact && <OwnerEntry group={group} language={language} onOpen={onOwnerClick} />}
-            {group.salePriceTon && group.listingType === "sale" && (
-              <small className={`mt-1 block truncate text-[10px] text-[#a6c8ff] ${compact ? "hidden" : ""}`}>
-                {language === "en" ? `Sale · ${formatTon(group.salePriceTon)} TON · TG TOP fee · 0%` : `Продажа · ${formatTon(group.salePriceTon)} TON · Комиссия TG TOP · 0%`}
+        <span className={rankingPlacement ? shellStyle : "flex h-full w-full items-center justify-between gap-3"}>
+          <span className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl">
+              <Avatar group={group} large={lead} compact={compact} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <b
+                className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} block truncate font-medium text-white`}
+              >
+                {group.title}
+              </b>
+              <small
+                className={`mt-0.5 block truncate text-xs text-slate-500 ${compact ? "hidden" : ""}`}
+              >
+                {group.username ? `@${group.username}` : group.inviteLink ? (language === "en" ? "Private group" : "Приватная группа") : getCategoryLabel(group.category, language)} ·{" "}
+                {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
               </small>
-            )}
+            </span>
           </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
+          <span className="flex shrink-0 items-center gap-3 text-right">
+            {group.salePriceTon && group.listingType === "sale" ? (
+              <div className="flex flex-col items-end">
+                <b className="text-base font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon)} TON</b>
+                <small className="text-[10px] text-slate-400">{language === "en" ? "For sale" : "Продажа"}</small>
+              </div>
+            ) : !rankingPlacement ? (
+              <span className="rounded-md bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-400">
+                {language === "en" ? "Catalog" : "Каталог"}
+              </span>
+            ) : null}
+            <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
+          </span>
         </span>
       ) : rankingPlacement ? (
         <span className="absolute inset-0 grid place-items-center">
