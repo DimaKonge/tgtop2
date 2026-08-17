@@ -1345,15 +1345,20 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             </div>
             <section className="pt-2">
               <div className="space-y-2">
-                {generalList.map(group => (
-                  <GroupCard
+                {generalList.map((group, index) => (
+                  <div
                     key={group.id}
-                    group={group}
-                    variant="list"
-                    language={language}
-                    onClick={() => openGroup(group.id)}
-                    onOwnerClick={() => openOwner(group.ownerOpenId)}
-                  />
+                    style={{ animationDelay: `${index * 35}ms` }}
+                    className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300"
+                  >
+                    <GroupCard
+                      group={group}
+                      variant="list"
+                      language={language}
+                      onClick={() => openGroup(group.id)}
+                      onOwnerClick={() => openOwner(group.ownerOpenId)}
+                    />
+                  </div>
                 ))}
                 {generalList.length > 0 && (
                   <button
