@@ -126,10 +126,13 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('myGroupsStatusFilter');
     expect(source).toContain('setMyGroupsAddOpen(true)');
     expect(source).toContain('grid grid-cols-3 gap-2');
-    expect(source).toContain('Удерживайте карточку, чтобы менять порядок');
+    expect(source).toContain('Тяните за ручку, чтобы менять порядок');
     expect(source).toContain('DragOverlay dropAnimation');
     expect(source).toContain('setMyGroupsDragActiveId(Number(active.id))');
     expect(source).toContain('tx("Перемещение", "Moving")');
+    expect(source).toContain('setActivatorNodeRef');
+    expect(source).toContain('GripVertical');
+    expect(source).toContain('[-webkit-touch-callout:none]');
     expect(source).toContain('selectGlobalDirection(value)');
     expect(source).toContain('tx("Выставить на продажу", "Offer for sale")');
     expect(source).toContain('isListingForSale && (');

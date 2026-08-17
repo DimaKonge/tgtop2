@@ -253,3 +253,4 @@
 - [x] Put country and country-scoped city selection inside the Top World button dropdown
 - [x] Show only the raw matching-group count in the Top header
 - [x] Add a filter-aware title and username search below the Top ranking cards
+- [x] Replace whole-card drag activation with a dedicated My Groups drag handle beside pinning and block native avatar callouts

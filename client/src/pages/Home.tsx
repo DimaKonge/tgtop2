@@ -24,6 +24,7 @@ import {
   Filter,
   FolderPlus,
   Globe2,
+  GripVertical,
   LayoutGrid,
   Moon,
   Plus,
@@ -241,7 +242,7 @@ function FullBleedGroupArtwork({ group }: { group: Group }) {
   return (
     <span className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_20%,#253a58_0%,#111720_68%)]">
       {avatarSrc && !failed ? (
-        <img src={avatarSrc} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" onError={() => setFailed(true)} />
+        <img src={avatarSrc} alt="" draggable={false} className="pointer-events-none h-full w-full select-none object-cover transition-transform duration-300 group-hover:scale-105 [-webkit-touch-callout:none]" onError={() => setFailed(true)} />
       ) : (
         <span className="grid h-full w-full place-items-center text-4xl font-semibold text-white/28">{group.title.slice(0, 1).toUpperCase()}</span>
       )}
@@ -262,7 +263,7 @@ function SortableMyGroupTile({
   onOpen: () => void;
   onTogglePin: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id, disabled });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: group.id, disabled });
   const isEnglish = language === "en";
   const isSale = group.status === "listed" && group.listingType === "sale";
   const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "Catalog" : "Каталог") : (isEnglish ? "Draft" : "Черновик");
@@ -275,9 +276,8 @@ function SortableMyGroupTile({
   return (
     <article
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
       style={{ transform: CSS.Transform.toString(transform), transition }}
+      onContextMenu={event => event.preventDefault()}
       aria-label={isEnglish ? `${group.title}. Hold and drag to reorder.` : `${group.title}. Удерживайте и перетаскивайте для изменения порядка.`}
       className={`group relative aspect-square min-w-0 touch-manipulation overflow-hidden rounded-xl border border-white/8 bg-[#111720] shadow-sm transition-[opacity,transform,border-color,box-shadow] ${isDragging ? "z-20 scale-[.96] border-[#72a8ff]/60 bg-[#182334] opacity-30" : ""}`}
     >
@@ -290,6 +290,16 @@ function SortableMyGroupTile({
         </span>
       </button>
       <span className={`absolute right-0 top-3 z-10 max-w-[72%] truncate rounded-l-md border-y border-l px-2 py-1 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm ${statusClass}`}>{status}</span>
+      <button
+        ref={setActivatorNodeRef}
+        type="button"
+        {...attributes}
+        {...listeners}
+        aria-label={isEnglish ? `Drag ${group.title}` : `Перетащить ${group.title}`}
+        className="absolute bottom-2 left-2 z-20 grid h-6 w-6 touch-none place-items-center rounded-md bg-black/20 text-slate-200/80 backdrop-blur-sm transition-colors hover:bg-white/15 hover:text-white active:bg-[#3f8cff]/30"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
       <div className="absolute bottom-2 right-2 z-20">
           <button
             type="button"
@@ -1796,7 +1806,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             {myGroupsViewMode === "grid" && !targetSlot ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
-                  <span className="text-[11px] text-slate-400">{tx("Удерживайте карточку, чтобы менять порядок", "Hold a card to reorder")}</span>
+                  <span className="text-[11px] text-slate-400">{tx("Тяните за ручку, чтобы менять порядок", "Drag the grip to reorder")}</span>
                   <span className="text-[10px] text-slate-600">{saveMyGroupsLayoutMutation.isPending ? ui.loading : tx("Сохранено", "Saved")}</span>
                 </div>
                 <DndContext
