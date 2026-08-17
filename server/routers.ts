@@ -91,6 +91,16 @@ export const appRouter = router({
       return await db.getMyGroups(ctx.user.openId);
     }),
 
+    saveMyGroupsLayout: protectedProcedure
+      .input(z.object({
+        orderedGroupIds: z.array(z.number().int().positive()).min(1).max(100),
+        pinnedGroupIds: z.array(z.number().int().positive()).max(100),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.saveMyGroupsLayout(ctx.user.openId, input.orderedGroupIds, input.pinnedGroupIds);
+        return { success: true } as const;
+      }),
+
     getAccount: protectedProcedure.query(async ({ ctx }) => {
       return await db.getAccountLedger(ctx.user.openId);
     }),

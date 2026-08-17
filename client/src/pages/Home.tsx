@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, type DragEndEvent, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -19,9 +22,13 @@ import {
   ChevronRight,
   Filter,
   FolderPlus,
+  GripVertical,
   Globe2,
+  LayoutGrid,
   Moon,
   Plus,
+  Pin,
+  PinOff,
   Settings2,
   Sun,
   Trash2,
@@ -1305,7 +1312,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             ) : (
             <>
             <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
-              <div className="ranking-slot-enter" style={{ animationDelay: "0ms" }}>
+              <div className="ranking-slot-enter ranking-slot-lead" style={{ animationDelay: "0ms" }}>
                 <GroupCard
                   group={leadSlot.group}
                   variant="lead"
@@ -1320,7 +1327,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {secondTier.map((slot, index) => (
-                  <div key={slot.slotNumber} className="ranking-slot-enter" style={{ animationDelay: `${75 + index * 40}ms` }}>
+                  <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-secondary" style={{ animationDelay: `${90 + index * 45}ms` }}>
                     <GroupCard
                       group={slot.group}
                       variant="secondary"
@@ -1335,7 +1342,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {thirdTier.map((slot, index) => (
-                  <div key={slot.slotNumber} className="ranking-slot-enter" style={{ animationDelay: `${155 + index * 28}ms` }}>
+                  <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-compact" style={{ animationDelay: `${185 + index * 34}ms` }}>
                     <GroupCard
                       group={slot.group}
                       variant="compact"
@@ -1602,6 +1609,21 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           {group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : group.category} · {n(group.membersCount)} {tx("участников", "members")}
                         </small>
                       </span>
+                      <span
+                        className={`shrink-0 rounded-md border px-1.5 py-1 text-[9px] font-semibold leading-none ${
+                          group.status === "listed" && group.listingType === "sale"
+                            ? "border-amber-300/25 bg-amber-300/10 text-amber-200"
+                            : group.status === "listed"
+                              ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200"
+                              : "border-white/10 bg-white/5 text-slate-500"
+                        }`}
+                      >
+                        {group.status === "listed" && group.listingType === "sale"
+                          ? tx("Продажа", "For sale")
+                          : group.status === "listed"
+                            ? tx("В листинге", "Listed")
+                            : tx("Не в листинге", "Unlisted")}
+                      </span>
                       <ChevronRight className="h-4 w-4 text-slate-600" />
                     </button>
                   </div>
@@ -1687,7 +1709,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       {tx("Управлять этой группой", "Manage this group")}
                     </button>
                   )}
-                  {ownsDetail && (
+                  {ownsDetail && detail.group.category === "Чаты" && (
                     <div className="mt-3 rounded-xl border border-white/8 bg-white/4 p-3 space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-xs">
@@ -1696,12 +1718,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             {tx("Удалять системные уведомления (вход, выход, закреп)", "Delete service messages (joins, leaves, pins)")}
                           </small>
                         </span>
-                        <input
-                          type="checkbox"
-                          checked={Boolean(detail.group.deleteServiceMessages)}
-                          onChange={e => toggleServiceMessagesMutation.mutate({ groupId: detail.group.id, deleteServiceMessages: e.target.checked })}
-                          className="h-4 w-4 rounded border-white/20 bg-black/40 text-[#3f8cff] focus:ring-0 cursor-pointer"
-                        />
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={Boolean(detail.group.deleteServiceMessages)}
+                          aria-label={tx("Переключить автоочистку чата", "Toggle chat auto-cleanup")}
+                          onClick={() => toggleServiceMessagesMutation.mutate({ groupId: detail.group.id, deleteServiceMessages: !detail.group.deleteServiceMessages })}
+                          disabled={toggleServiceMessagesMutation.isPending}
+                          className={`relative h-6 w-10 shrink-0 rounded-full border transition-colors disabled:opacity-50 ${detail.group.deleteServiceMessages ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}
+                        >
+                          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detail.group.deleteServiceMessages ? "translate-x-5" : "translate-x-0.5"}`} />
+                        </button>
                       </div>
                     </div>
                   )}

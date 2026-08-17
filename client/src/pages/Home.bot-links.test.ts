@@ -97,7 +97,13 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const verifiedTasks');
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
-    expect(source).toContain('className="ranking-slot-enter"');
+    expect(source).toContain('className="ranking-slot-enter ranking-slot-lead"');
+    expect(source).toContain('tx("В листинге", "Listed")');
+    expect(source).toContain('tx("Не в листинге", "Unlisted")');
+    expect(source).toContain('tx("Продажа", "For sale")');
+    expect(source).toContain('ownsDetail && detail.group.category === "Чаты"');
+    expect(source).toContain('role="switch"');
+    expect(source).toContain('translate-x-5');
     expect(source).toContain('Прогресс подтверждается только действиями, зафиксированными в TG TOP. Награды не начисляются автоматически.');
     expect(source).toContain('connect-community');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');

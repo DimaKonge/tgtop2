@@ -221,3 +221,7 @@
 - [x] Animate the ranking pyramid top-to-bottom: lead slot first, second row next, then lower slots with staggered entrance motion
 - [x] Replay the ranking-pyramid entrance sequence whenever category, country, or subcategory filters change
 - [x] Smooth the ranking-pyramid transition to remove visible flicker during filter changes
+- [ ] Increase the visible upward travel of ranking-slot entrance motion while retaining smooth fades
+- [ ] Add a personal My Groups management grid with pinned communities and persisted drag-and-drop ordering
+- [x] Restrict service-message auto-cleanup to chats and replace the checkbox with a polished toggle
+- [ ] Add compact listing-status badges to My Groups rows for listed, sale, and unlisted communities

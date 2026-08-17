@@ -12,5 +12,6 @@ describe("account activity policy", () => {
     expect(source).toContain('currency: "Stars"');
     expect(source).toContain('title: "ranking_bid"');
     expect(source).toContain('item.kind === "manual_bonus" ? "manual_bonus"');
+    expect(source).toContain('if (group.category !== "Чаты") throw new Error("Автоочистка доступна только для чатов")');
   });
 });

@@ -521,9 +521,44 @@ export async function getGroupByChatId(chatId: string) {
 export async function getMyGroups(ownerOpenId: string) {
   const db = await getDb();
   if (!db) return [];
-  const groups = await db.select().from(groupsCatalog).where(eq(groupsCatalog.ownerOpenId, ownerOpenId)).orderBy(desc(groupsCatalog.createdAt));
+  const groups = await db.select().from(groupsCatalog)
+    .where(eq(groupsCatalog.ownerOpenId, ownerOpenId))
+    .orderBy(desc(groupsCatalog.ownerPinned), asc(groupsCatalog.ownerSortOrder), desc(groupsCatalog.createdAt));
   for (const group of groups) await grantGroupConnectionBonus(ownerOpenId, group.id);
   return groups;
+}
+
+export async function saveMyGroupsLayout(ownerOpenId: string, orderedGroupIds: number[], pinnedGroupIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const uniqueOrderedIds = Array.from(new Set(orderedGroupIds));
+  const uniquePinnedIds = Array.from(new Set(pinnedGroupIds));
+  if (uniqueOrderedIds.length !== orderedGroupIds.length || uniquePinnedIds.length !== pinnedGroupIds.length) {
+    throw new Error("Порядок групп содержит повторяющиеся записи");
+  }
+
+  const orderedSet = new Set(uniqueOrderedIds);
+  if (uniquePinnedIds.some(id => !orderedSet.has(id))) {
+    throw new Error("Закрепить можно только группу из личного списка");
+  }
+
+  const ownedGroups = await db.select({ id: groupsCatalog.id }).from(groupsCatalog)
+    .where(eq(groupsCatalog.ownerOpenId, ownerOpenId));
+  if (ownedGroups.length !== uniqueOrderedIds.length || ownedGroups.some(group => !orderedSet.has(group.id))) {
+    throw new Error("Порядок должен включать все ваши группы");
+  }
+
+  const pinnedSet = new Set(uniquePinnedIds);
+  await db.transaction(async tx => {
+    for (let index = 0; index < uniqueOrderedIds.length; index += 1) {
+      const groupId = uniqueOrderedIds[index];
+      await tx.update(groupsCatalog).set({
+        ownerPinned: pinnedSet.has(groupId),
+        ownerSortOrder: index,
+      }).where(and(eq(groupsCatalog.id, groupId), eq(groupsCatalog.ownerOpenId, ownerOpenId)));
+    }
+  });
 }
 
 export async function getGroupDetail(id: number) {
@@ -729,6 +764,7 @@ export async function toggleServiceMessages(ownerOpenId: string, groupId: number
   if (!db) throw new Error("Database not available");
   const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.id, groupId));
   if (!group || group.ownerOpenId !== ownerOpenId) throw new Error("Группа не найдена");
+  if (group.category !== "Чаты") throw new Error("Автоочистка доступна только для чатов");
   await db.update(groupsCatalog).set({ deleteServiceMessages }).where(eq(groupsCatalog.id, groupId));
 }
 
