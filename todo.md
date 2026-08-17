@@ -260,3 +260,11 @@
 - [x] Show filter-aware totals for displayed groups and their combined subscriber count beneath the My Groups controls
 - [x] Replace the Top country-selector grid with a compact vertical scrolling list of countries
 - [x] Keep the Top geography heading on one line with a compact country label and smaller subdued city label
+- [x] Place public Top search before category controls and hide ranking cards while a query is active
+- [x] Remove the My Groups Top presentation mode and retain only List and drag-sortable Grid views
+- [x] Restyle My Groups view and status controls as smaller compact chip toggles
+- [x] Show private channels and chats as «Приватный» instead of a username or invite link in My Groups cards
+- [x] Refine My Groups status ribbons as subdued translucent diagonal Telegram-style badges
+- [x] Replace the TG TOP brand mark with a compact 1-to-2-to-4 ranking pyramid symbol
+- [x] Make the public Top lead and second-tier ranking cards more square on mobile
+- [x] Keep country and category filters usable and applied while public Top search is active

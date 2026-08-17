@@ -43,7 +43,7 @@ import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@toncon
 
 type Page = "top" | "catalog" | "mine" | "details" | "owner" | "profile";
 type Audience = "all" | "small" | "medium" | "large";
-type MyGroupsViewMode = "list" | "grid" | "top";
+type MyGroupsViewMode = "list" | "grid";
 type Language = "ru" | "en";
 const n = (value: number, language: Language = "ru") =>
   new Intl.NumberFormat(language === "en" ? "en-US" : "ru-RU").format(value);
@@ -268,10 +268,10 @@ function SortableMyGroupTile({
   const isSale = group.status === "listed" && group.listingType === "sale";
   const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "In catalog" : "В каталоге") : (isEnglish ? "Not in catalog" : "Не в каталоге");
   const statusClass = isSale
-    ? "border-emerald-200/40 bg-emerald-400/90 text-emerald-950 shadow-emerald-950/25"
+    ? "border-emerald-200/20 bg-emerald-500/30 text-emerald-50"
     : group.status === "listed"
-      ? "border-blue-200/35 bg-[#3f8cff]/90 text-white shadow-blue-950/25"
-      : "border-slate-300/15 bg-slate-600/85 text-slate-100 shadow-black/25";
+      ? "border-blue-200/20 bg-[#3f8cff]/30 text-blue-50"
+      : "border-slate-200/10 bg-slate-500/35 text-slate-100";
 
   return (
     <article
@@ -286,10 +286,10 @@ function SortableMyGroupTile({
       <button type="button" onClick={onOpen} className="relative z-10 flex h-full w-full flex-col justify-end p-2.5 text-left">
         <span className="min-w-0 w-full">
           <b className="line-clamp-2 text-[11px] leading-3.5 text-white drop-shadow-sm">{group.title}</b>
-          <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{group.username ? `@${group.username}` : group.inviteLink ? (isEnglish ? "Private" : "Приватная") : group.category}</small>
+          <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{group.inviteLink ? (isEnglish ? "Private" : "Приватный") : group.username ? `@${group.username}` : group.category}</small>
         </span>
       </button>
-      <span className={`absolute right-0 top-0 z-10 max-w-[82%] truncate border-b border-l px-3 pb-1.5 pt-1.5 text-[8px] font-bold leading-none shadow-lg [clip-path:polygon(11px_0,100%_0,100%_100%,0_100%,0_11px)] ${statusClass}`}>{status}</span>
+      <span className={`absolute right-0 top-1 z-10 max-w-[76%] truncate border-b border-l px-2.5 pb-1 pt-1 text-[7px] font-semibold leading-none shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${statusClass}`}>{status}</span>
       <button
         ref={setActivatorNodeRef}
         type="button"
@@ -344,11 +344,11 @@ function GroupCard({
   const compact = variant === "compact";
   const rankingPlacement = variant !== "list";
   const cardStyle = lead
-    ? "h-[286px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[42vh] sm:p-6"
+    ? "aspect-square border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[42vh] sm:aspect-auto sm:p-6"
           : variant === "secondary"
-      ? "h-[116px] border-white/10 bg-[#111720] p-3 sm:h-[140px] sm:p-4"
+      ? "aspect-square border-white/10 bg-[#111720] p-3 sm:h-[140px] sm:aspect-auto sm:p-4"
       : compact
-        ? "h-[84px] border-white/8 bg-[#111720] p-2 sm:h-[106px]"
+        ? "aspect-square border-white/8 bg-[#111720] p-2 sm:h-[106px] sm:aspect-auto"
         : "h-[52px] border-white/8 bg-[#111720] px-3 py-1.5";
   const shellStyle = compact
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
@@ -416,7 +416,7 @@ function GroupCard({
               <small
                 className={`block truncate text-[11px] text-slate-500 ${compact ? "hidden" : ""}`}
               >
-                {group.username ? `@${group.username}` : group.inviteLink ? (language === "en" ? "Private group" : "Приватная группа") : getCategoryLabel(group.category, language)} ·{" "}
+                {group.inviteLink ? (language === "en" ? "Private" : "Приватный") : group.username ? `@${group.username}` : getCategoryLabel(group.category, language)} ·{" "}
                 {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
               </small>
             </span>
@@ -550,12 +550,15 @@ function BrandMark() {
   return (
     <span
       aria-label="TG TOP"
-      className="brand-mark relative grid h-8 w-8 place-items-center overflow-hidden rounded-[10px] border border-white/20 bg-black shadow-[0_6px_16px_rgba(0,0,0,0.32)]"
+      className="brand-mark grid h-8 w-8 grid-cols-4 grid-rows-3 gap-[2px] overflow-hidden rounded-[10px] border border-white/15 bg-[#0d1520] p-1.5 shadow-[0_6px_16px_rgba(0,0,0,0.32)]"
     >
-      <span className="absolute -right-2 -top-3 h-7 w-7 rounded-full bg-white/12 blur-[1px]" />
-      <b className="brand-mark-symbol relative text-[16px] font-black leading-none tracking-[-0.12em] text-white">
-        T
-      </b>
+      <span className="col-start-2 row-start-1 rounded-[2px] border border-[#a9c7ff]/35 bg-[#3f8cff] shadow-[0_0_8px_rgba(63,140,255,0.55)]" />
+      <span className="col-start-2 row-start-2 rounded-[2px] border border-[#a9c7ff]/25 bg-[#4c91ff]" />
+      <span className="col-start-3 row-start-2 rounded-[2px] border border-[#a9c7ff]/25 bg-[#4c91ff]" />
+      <span className="col-start-1 row-start-3 rounded-[2px] border border-[#a9c7ff]/20 bg-[#5c9bff]" />
+      <span className="col-start-2 row-start-3 rounded-[2px] border border-[#a9c7ff]/20 bg-[#5c9bff]" />
+      <span className="col-start-3 row-start-3 rounded-[2px] border border-[#a9c7ff]/20 bg-[#5c9bff]" />
+      <span className="col-start-4 row-start-3 rounded-[2px] border border-[#a9c7ff]/20 bg-[#5c9bff]" />
     </span>
   );
 }
@@ -1478,6 +1481,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 )}
               </div>
             </div>
+            {globalDirection !== "NFT" && <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={tx("Поиск группы", "Search communities")} placeholder={tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />}
             <div className="grid grid-cols-4 rounded-xl border border-white/8 bg-[#111720] p-0.5">
               {([
                 ["Все", tx("Все", "All")],
@@ -1519,7 +1523,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             ) : (
             <>
-            <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
+            <div className="space-y-2">
+              {!topSearchQuery.trim() && <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
               <div className="ranking-slot-enter ranking-slot-lead" style={{ animationDelay: "0ms" }}>
                 <GroupCard
                   group={leadSlot.group}
@@ -1563,10 +1568,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </div>
                 ))}
               </div>
+              </div>}
             </div>
             <section className="pt-2">
               <div className="space-y-2">
-                <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={tx("Поиск группы", "Search communities")} placeholder={tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />
                 {searchedGeneralList.map((group, index) => {
                   const isSale = group.listingType === "sale" && group.salePriceTon;
                   return (
@@ -1588,7 +1593,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                               {group.title}
                             </b>
                             <small className="block truncate text-[11px] text-slate-500">
-                              {group.username ? `@${group.username}` : group.inviteLink ? (language === "en" ? "Private group" : "Приватная группа") : getCategoryLabel(group.category, language)} · {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
+                              {group.inviteLink ? (language === "en" ? "Private" : "Приватный") : group.username ? `@${group.username}` : getCategoryLabel(group.category, language)} · {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
                             </small>
                           </span>
                         </div>
@@ -1675,7 +1680,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-sm font-medium text-white transition-colors group-hover:text-[#a6c8ff]">{group.title}</b>
                         <small className="mt-1 block truncate text-xs text-slate-500">
-                          {group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : group.category} · {n(group.membersCount)} {tx("участников", "members")}
+                          {group.inviteLink ? tx("Приватный", "Private") : group.username ? `@${group.username}` : group.category} · {n(group.membersCount)} {tx("участников", "members")}
                         </small>
                       </span>
                     </div>
@@ -1771,24 +1776,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </button>
             </div>
             {!targetSlot && mine.length > 0 && (
-              <div className="grid grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
+              <div className="flex flex-wrap items-center gap-1.5 px-0.5">
                 {([
                   ["list", tx("Список", "List")],
                   ["grid", tx("Сетка", "Grid")],
-                  ["top", tx("Топ", "Top")],
                 ] as const).map(([value, label]) => (
-                  <button key={value} type="button" onClick={() => { setMyGroupsViewMode(value); setSelectedGroupIds([]); }} className={`h-7 rounded-md text-[9px] font-semibold transition-colors ${myGroupsViewMode === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                  <button key={value} type="button" onClick={() => { setMyGroupsViewMode(value); setSelectedGroupIds([]); }} className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-[9px] font-semibold transition-colors ${myGroupsViewMode === value ? "border-[#3f8cff]/50 bg-[#3f8cff]/14 text-[#b8d1ff]" : "border-white/10 bg-white/[0.025] text-slate-500 hover:border-white/20 hover:text-slate-200"}`}><span className={`h-1 w-1 rounded-full ${myGroupsViewMode === value ? "bg-[#72a8ff]" : "bg-slate-600"}`} />{label}</button>
                 ))}
               </div>
             )}
             {!targetSlot && mine.length > 0 && (
-              <div className="grid grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
+              <div className="flex flex-wrap items-center gap-1.5 px-0.5">
                 {([
                   ["all", tx("Все", "All")],
                   ["listed", tx("В каталоге", "In catalog")],
                   ["unlisted", tx("Не в каталоге", "Not in catalog")],
                 ] as const).map(([value, label]) => (
-                  <button key={value} type="button" onClick={() => setMyGroupsStatusFilter(value)} className={`h-7 rounded-md text-[9px] font-medium transition-colors ${myGroupsStatusFilter === value ? "bg-[#3f8cff] text-white" : "text-slate-500 hover:text-slate-200"}`}>{label}</button>
+                  <button key={value} type="button" onClick={() => setMyGroupsStatusFilter(value)} className={`inline-flex h-6 items-center rounded-full border px-2.5 text-[9px] font-medium transition-colors ${myGroupsStatusFilter === value ? "border-[#3f8cff]/45 bg-[#3f8cff]/12 text-[#b8d1ff]" : "border-white/10 bg-white/[0.025] text-slate-500 hover:border-white/20 hover:text-slate-200"}`}>{label}</button>
                 ))}
               </div>
             )}
@@ -1884,30 +1888,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </div>
                 )}
               </div>
-            ) : myGroupsViewMode === "top" && !targetSlot && !isMyGroupsSearchActive ? (
-              <section className="space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[11px] text-slate-400">{tx("Ваш приоритет", "Your priority")}</span>
-                  <span className="text-[10px] text-slate-600">{tx("Закрепленные выше", "Pinned first")}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {visibleMyGroups.map((group, index) => {
-                  const isSale = group.status === "listed" && group.listingType === "sale";
-                  const status = isSale ? tx("На продаже", "For sale") : group.status === "listed" ? tx("В каталоге", "In catalog") : tx("Не в каталоге", "Not in catalog");
-                  const statusClass = isSale ? "border-emerald-200/40 bg-emerald-400/90 text-emerald-950" : group.status === "listed" ? "border-blue-200/35 bg-[#3f8cff]/90 text-white" : "border-slate-300/15 bg-slate-600/85 text-slate-100";
-                  return <button key={group.id} onClick={() => openGroup(group.id)} className={`group relative aspect-square overflow-hidden rounded-xl border border-white/8 bg-[#111720] text-left shadow-sm transition-[transform,border-color,box-shadow] hover:border-[#3f8cff]/45 hover:shadow-lg hover:shadow-black/30 active:scale-[0.98] ${index === 0 ? "col-span-2 mx-auto w-full max-w-[260px] border-[#3f8cff]/30" : ""}`}>
-                    <FullBleedGroupArtwork group={group} />
-                    <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,9,15,.04)_22%,rgba(5,9,15,.24)_46%,rgba(5,9,15,.9)_100%)]" />
-                    <span className={`absolute right-0 top-0 z-10 max-w-[82%] truncate border-b border-l px-3 pb-1.5 pt-1.5 text-[8px] font-bold leading-none shadow-lg [clip-path:polygon(11px_0,100%_0,100%_100%,0_100%,0_11px)] ${statusClass}`}>{status}</span>
-                    <span className="absolute inset-x-0 bottom-0 z-10 p-2.5">
-                      <b className={`line-clamp-2 block text-white drop-shadow-sm ${index === 0 ? "text-sm leading-4" : "text-[11px] leading-3.5"}`}>{group.title}</b>
-                      <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная", "Private") : group.category}</small>
-                    </span>
-                  </button>;
-                })}
-                </div>
-                {visibleMyGroups.length === 0 && <div className="rounded-xl border border-dashed border-white/12 px-4 py-7 text-center text-xs text-slate-500">{tx("По этому фильтру групп нет", "No groups match this filter")}</div>}
-              </section>
             ) : (
             <div className="space-y-2">
               {isMyGroupsSearchActive && !targetSlot && <p className="px-1 text-[10px] font-medium text-[#8fb9ff]">{tx("Результаты поиска", "Search results")}</p>}
@@ -1933,23 +1913,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-sm">{group.title}</b>
                         <small className="mt-1 block text-xs text-slate-500">
-                          {group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : group.category} · {n(group.membersCount)} {tx("участников", "members")}
+                          {group.inviteLink ? tx("Приватный", "Private") : group.username ? `@${group.username}` : group.category} · {n(group.membersCount)} {tx("участников", "members")}
                         </small>
                       </span>
                       <span
-                        className={`shrink-0 rounded-md border px-1.5 py-1 text-[9px] font-semibold leading-none ${
+                        className={`shrink-0 rounded-full border px-2 py-1 text-[9px] font-medium leading-none backdrop-blur-sm ${
                           group.status === "listed" && group.listingType === "sale"
-                            ? "border-amber-300/25 bg-amber-300/10 text-amber-200"
+                            ? "border-emerald-200/15 bg-emerald-500/15 text-emerald-100"
                             : group.status === "listed"
-                              ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200"
-                              : "border-white/10 bg-white/5 text-slate-500"
+                              ? "border-blue-200/15 bg-[#3f8cff]/15 text-blue-100"
+                              : "border-slate-200/10 bg-slate-400/10 text-slate-400"
                         }`}
                       >
                         {group.status === "listed" && group.listingType === "sale"
-                          ? tx("Продажа", "For sale")
+                          ? tx("На продаже", "For sale")
                           : group.status === "listed"
-                            ? tx("В листинге", "Listed")
-                            : tx("Не в листинге", "Unlisted")}
+                            ? tx("В каталоге", "In catalog")
+                            : tx("Не в каталоге", "Not in catalog")}
                       </span>
                       <ChevronRight className="h-4 w-4 text-slate-600" />
                     </button>
@@ -2544,7 +2524,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             {mine.length ? mine.map(group => (
               <button key={group.id} onClick={() => showcaseNft && setNftShowcase.mutate({ nftId: showcaseNft.id, target: "group", groupId: group.id })} disabled={setNftShowcase.isPending} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#111720] p-3 text-left transition-colors hover:bg-white/[0.04] disabled:opacity-50">
                 <Avatar group={group} compact />
-                <span className="min-w-0 flex-1"><b className="block truncate text-sm">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : getCategoryLabel(group.category, language)}</small></span>
+                <span className="min-w-0 flex-1"><b className="block truncate text-sm">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.inviteLink ? tx("Приватный", "Private") : group.username ? `@${group.username}` : getCategoryLabel(group.category, language)}</small></span>
                 <ChevronRight className="h-4 w-4 text-[#a6c8ff]" />
               </button>
             )) : <p className="rounded-xl border border-dashed border-white/12 p-5 text-center text-xs leading-5 text-slate-500">{tx("Сначала подключите свою площадку в личной папке.", "Connect a community in My Groups first.")}</p>}

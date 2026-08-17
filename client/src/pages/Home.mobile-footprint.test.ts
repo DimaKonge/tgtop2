@@ -2,16 +2,13 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("TG TOP Global mobile featured board", () => {
-  it("allocates a 1→2→4 board that fits within a 390×844 viewport budget", () => {
+  it("uses the requested square geometry for the 1→2→4 featured board", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
-    const viewportHeight = 844;
-    const mobileBudget = 54 + 86 + Math.ceil(viewportHeight * 0.34) + 116 + 84 + 16 + 72;
 
-    expect(source).toContain('h-[286px]');
-    expect(source).toContain('h-[116px]');
-    expect(source).toContain('h-[84px]');
+    expect(source).toContain('aspect-square border-[#3f8cff]/35 bg-[#141c27] p-5');
+    expect(source).toContain('aspect-square border-white/10 bg-[#111720] p-3');
+    expect(source).toContain('aspect-square border-white/8 bg-[#111720] p-2');
     expect(source).toContain('!targetSlot && selectedGroupIds.length > 0');
     expect(source).toContain('Выбрать для ставки');
-    expect(mobileBudget).toBeLessThan(viewportHeight);
   });
 });
