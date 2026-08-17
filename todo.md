@@ -241,3 +241,8 @@
 - [x] Add country-scoped city filtering with a compact active geography label
 - [x] Prevent accidental selection of app text while preserving input, link, and control interactions
 - [x] Add a sale toggle that reveals the TON price field only when a group is being offered for sale
+- [x] Make the four public catalog modes explicit and easy to find on the Top screen
+- [x] Strengthen My Groups long-press drag feedback so cards visibly lift and follow the finger
+- [x] Replace My Groups status text with concise corner ribbons for sale, catalog, and draft states
+- [x] Restore a synchronized Top quick filter for all communities, channels, chats, and NFT
+- [x] Make My Groups avatars full-bleed card imagery with readable overlaid title and ribbon status

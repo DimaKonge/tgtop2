@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { closestCenter, DndContext, KeyboardSensor, PointerSensor, type DragEndEvent, useSensor, useSensors } from "@dnd-kit/core";
+import { closestCenter, DndContext, DragOverlay, KeyboardSensor, PointerSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -234,6 +234,20 @@ function Avatar({
   );
 }
 
+function FullBleedGroupArtwork({ group }: { group: Group }) {
+  const [failed, setFailed] = useState(false);
+  const avatarSrc = getTelegramAvatarSrc(group);
+  return (
+    <span className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_20%,#253a58_0%,#111720_68%)]">
+      {avatarSrc && !failed ? (
+        <img src={avatarSrc} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" onError={() => setFailed(true)} />
+      ) : (
+        <span className="grid h-full w-full place-items-center text-4xl font-semibold text-white/28">{group.title.slice(0, 1).toUpperCase()}</span>
+      )}
+    </span>
+  );
+}
+
 function SortableMyGroupTile({
   group,
   language,
@@ -250,7 +264,7 @@ function SortableMyGroupTile({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id, disabled });
   const isEnglish = language === "en";
   const isSale = group.status === "listed" && group.listingType === "sale";
-  const status = isSale ? (isEnglish ? "For sale" : "Продажа") : group.status === "listed" ? (isEnglish ? "Listed" : "В листинге") : (isEnglish ? "Unlisted" : "Не в листинге");
+  const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "Catalog" : "Каталог") : (isEnglish ? "Draft" : "Черновик");
   const statusClass = isSale
     ? "border-amber-300/25 bg-amber-300/10 text-amber-200"
     : group.status === "listed"
@@ -264,18 +278,18 @@ function SortableMyGroupTile({
       {...listeners}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       aria-label={isEnglish ? `${group.title}. Hold and drag to reorder.` : `${group.title}. Удерживайте и перетаскивайте для изменения порядка.`}
-      className={`relative aspect-square min-w-0 touch-manipulation rounded-xl border border-white/8 bg-[#111720] p-2 shadow-sm ${isDragging ? "z-20 scale-[1.04] border-[#72a8ff]/60 bg-[#182334] shadow-xl opacity-90" : ""}`}
+      className={`group relative aspect-square min-w-0 touch-manipulation overflow-hidden rounded-xl border border-white/8 bg-[#111720] shadow-sm transition-[opacity,transform,border-color,box-shadow] ${isDragging ? "z-20 scale-[.96] border-[#72a8ff]/60 bg-[#182334] opacity-30" : ""}`}
     >
-      <button type="button" onClick={onOpen} className="flex h-full w-full flex-col items-center justify-center gap-1 text-center">
-        <Avatar group={group} compact />
-        <span className="min-w-0 w-full px-0.5">
-          <b className="line-clamp-2 text-[10px] leading-3 text-slate-100">{group.title}</b>
-          <small className="mt-0.5 block truncate text-[9px] text-slate-500">{group.username ? `@${group.username}` : group.inviteLink ? (isEnglish ? "Private" : "Приватная") : group.category}</small>
+      <FullBleedGroupArtwork group={group} />
+      <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,9,15,.05)_18%,rgba(5,9,15,.28)_45%,rgba(5,9,15,.92)_100%)]" />
+      <button type="button" onClick={onOpen} className="relative z-10 flex h-full w-full flex-col justify-end p-2.5 text-left">
+        <span className="min-w-0 w-full">
+          <b className="line-clamp-2 text-[11px] leading-3.5 text-white drop-shadow-sm">{group.title}</b>
+          <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{group.username ? `@${group.username}` : group.inviteLink ? (isEnglish ? "Private" : "Приватная") : group.category}</small>
         </span>
       </button>
-      <div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-1">
-        <span className={`truncate rounded-md border px-1.5 py-1 text-[8px] font-semibold leading-none ${statusClass}`}>{status}</span>
-        <span>
+      <span className={`absolute right-0 top-3 z-10 max-w-[72%] truncate rounded-l-md border-y border-l px-2 py-1 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm ${statusClass}`}>{status}</span>
+      <div className="absolute bottom-2 right-2 z-20">
           <button
             type="button"
             onPointerDown={event => event.stopPropagation()}
@@ -285,7 +299,6 @@ function SortableMyGroupTile({
           >
             {group.ownerPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
           </button>
-        </span>
       </div>
     </article>
   );
@@ -782,8 +795,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [myGroupsLayout, setMyGroupsLayout] = useState<Group[]>([]);
   const [myGroupsStatusFilter, setMyGroupsStatusFilter] = useState<"all" | "listed" | "unlisted">("all");
   const [myGroupsAddOpen, setMyGroupsAddOpen] = useState(false);
+  const [myGroupsDragActiveId, setMyGroupsDragActiveId] = useState<number | null>(null);
   const myGroupsSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 240, tolerance: 7 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 320, tolerance: 10 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   useEffect(() => {
@@ -1172,6 +1186,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const visiblePinnedMyGroups = pinnedMyGroups.filter(myGroupsMatchStatus);
   const visibleUnpinnedMyGroups = unpinnedMyGroups.filter(myGroupsMatchStatus);
   const visibleMyGroups = orderedMyGroups.filter(myGroupsMatchStatus);
+  const myGroupsDragActiveGroup = myGroupsDragActiveId ? orderedMyGroups.find(group => group.id === myGroupsDragActiveId) : undefined;
   const globalSubcategoryCategory = globalDirection === "Каналы" || globalDirection === "Чаты" ? globalDirection : null;
   const globalSubcategoryOptions = globalSubcategoryCategory ? CATEGORY_SUBCATEGORIES[globalSubcategoryCategory] : [];
   const listingCategory = selectedListingGroups.length && selectedListingGroups.every(group => group.category === selectedListingGroups[0]?.category)
@@ -1424,6 +1439,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </button>
               )}
             </div>
+            <div className="grid grid-cols-4 rounded-xl border border-white/8 bg-[#111720] p-0.5">
+              {([
+                ["Все", tx("Все", "All")],
+                ["Каналы", tx("Каналы", "Channels")],
+                ["Чаты", tx("Чаты", "Chats")],
+                ["NFT", "NFT"],
+              ] as const).map(([value, label]) => (
+                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${globalDirection === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+              ))}
+            </div>
             {globalDirection === "NFT" ? (
               <section className="space-y-2 pt-1">
                 <div className="flex items-baseline justify-between px-1">
@@ -1455,15 +1480,21 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             ) : (
             <>
-            <div className="grid grid-cols-4 rounded-lg border border-white/8 bg-[#111720] p-0.5">
-              {([
-                ["top", tx("Топ", "Top")],
-                ["list", tx("Список", "List")],
-                ["grid", tx("Сетка", "Grid")],
-                ["showcase", tx("Витрина", "Showcase")],
-              ] as const).map(([value, label]) => (
-                <button key={value} type="button" onClick={() => setCatalogViewMode(value)} className={`h-8 rounded-md text-[10px] font-medium transition-colors ${catalogViewMode === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:text-slate-200"}`}>{label}</button>
-              ))}
+            <div className="rounded-xl border border-white/8 bg-[#111720] p-1">
+              <div className="mb-1 flex items-center justify-between px-1.5 text-[9px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                <span>{tx("Режим каталога", "Catalog view")}</span>
+                <span>{tx("переключить", "switch")}</span>
+              </div>
+              <div className="grid grid-cols-4 gap-0.5">
+                {([
+                  ["top", tx("Топ", "Top")],
+                  ["list", tx("Список", "List")],
+                  ["grid", tx("Сетка", "Grid")],
+                  ["showcase", tx("Витрина", "Showcase")],
+                ] as const).map(([value, label]) => (
+                  <button key={value} type="button" onClick={() => setCatalogViewMode(value)} className={`h-9 rounded-lg text-[10px] font-semibold transition-colors ${catalogViewMode === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                ))}
+              </div>
             </div>
             {catalogViewMode === "top" ? <>
             <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
@@ -1816,7 +1847,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <span className="text-[11px] text-slate-400">{tx("Удерживайте карточку, чтобы менять порядок", "Hold a card to reorder")}</span>
                   <span className="text-[10px] text-slate-600">{saveMyGroupsLayoutMutation.isPending ? ui.loading : tx("Сохранено", "Saved")}</span>
                 </div>
-                <DndContext sensors={myGroupsSensors} collisionDetection={closestCenter} onDragEnd={handleMyGroupsDragEnd}>
+                <DndContext
+                  sensors={myGroupsSensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={({ active }: DragStartEvent) => setMyGroupsDragActiveId(Number(active.id))}
+                  onDragCancel={() => setMyGroupsDragActiveId(null)}
+                  onDragEnd={event => { handleMyGroupsDragEnd(event); setMyGroupsDragActiveId(null); }}
+                >
                   {visiblePinnedMyGroups.length > 0 && (
                     <section className="space-y-2">
                       <div className="flex items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#72a8ff]"><Pin className="h-3 w-3" />{tx("Закреплено", "Pinned")}</div>
@@ -1841,6 +1878,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                     </SortableContext>
                   </section>
+                  <DragOverlay dropAnimation={{ duration: 190, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }}>
+                    {myGroupsDragActiveGroup ? (
+                      <article className="aspect-square w-[calc((100vw-48px)/3)] max-w-[142px] rounded-xl border border-[#72a8ff]/70 bg-[#182334] p-2.5 shadow-2xl shadow-black/45 ring-2 ring-[#3f8cff]/30">
+                        <span className="mx-auto block h-11 w-11 overflow-hidden rounded-xl"><Avatar group={myGroupsDragActiveGroup} /></span>
+                        <b className="mt-2 line-clamp-2 block text-center text-[10px] leading-3 text-white">{myGroupsDragActiveGroup.title}</b>
+                        <small className="mt-1 block truncate text-center text-[9px] text-[#a6c8ff]">{tx("Перемещение", "Moving")}</small>
+                      </article>
+                    ) : null}
+                  </DragOverlay>
                 </DndContext>
                 {visibleMyGroups.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center">
