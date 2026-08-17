@@ -225,10 +225,10 @@
 - [x] Add a personal My Groups management grid with pinned communities and persisted drag-and-drop ordering
 - [x] Restrict service-message auto-cleanup to chats and replace the checkbox with a polished toggle
 - [x] Add compact listing-status badges to My Groups rows for listed, sale, and unlisted communities
-- [ ] Rework My Groups grid mode into three compact community cells per mobile row
-- [ ] Enable long-press drag-and-drop across My Groups cells without a visible drag handle
-- [ ] Add selectable empty My Groups grid cells with a plus action for placing a new community
-- [ ] Add a compact My Groups status filter for all, listed, and unlisted communities
+- [x] Rework My Groups grid mode into three compact community cells per mobile row
+- [x] Enable long-press drag-and-drop across My Groups cells without a visible drag handle
+- [x] Add selectable empty My Groups grid cells with a plus action for placing a new community
+- [x] Add a compact My Groups status filter for all, listed, and unlisted communities
 - [ ] Redesign the public catalog into a Telegram-native lead card plus compact three-column community grid
 - [ ] Add smooth catalog-card cascade motion with an emphasized first card and tightened following cells
 - [ ] Add List, compact Grid, and Showcase catalog views while retaining the existing 1→2→4 pyramid as Top
@@ -240,3 +240,4 @@
 - [x] Move category, subcategory, country, and expanded country choices into one slide-out filter panel
 - [x] Add country-scoped city filtering with a compact active geography label
 - [x] Prevent accidental selection of app text while preserving input, link, and control interactions
+- [x] Add a sale toggle that reveals the TON price field only when a group is being offered for sale

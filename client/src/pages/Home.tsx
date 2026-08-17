@@ -22,7 +22,6 @@ import {
   ChevronRight,
   Filter,
   FolderPlus,
-  GripVertical,
   Globe2,
   LayoutGrid,
   Moon,
@@ -260,37 +259,30 @@ function SortableMyGroupTile({
   return (
     <article
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`relative min-w-0 rounded-xl border border-white/8 bg-[#111720] p-2.5 shadow-sm ${isDragging ? "z-20 scale-[1.02] border-[#72a8ff]/60 bg-[#182334] shadow-xl opacity-90" : ""}`}
+      aria-label={isEnglish ? `${group.title}. Hold and drag to reorder.` : `${group.title}. Удерживайте и перетаскивайте для изменения порядка.`}
+      className={`relative aspect-square min-w-0 touch-manipulation rounded-xl border border-white/8 bg-[#111720] p-2 shadow-sm ${isDragging ? "z-20 scale-[1.04] border-[#72a8ff]/60 bg-[#182334] shadow-xl opacity-90" : ""}`}
     >
-      <button type="button" onClick={onOpen} className="block w-full text-left">
-        <div className="flex items-start gap-2">
-          <Avatar group={group} compact />
-          <span className="min-w-0 flex-1">
-            <b className="block truncate text-xs text-slate-100">{group.title}</b>
-            <small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : group.inviteLink ? (isEnglish ? "Private group" : "Приватная группа") : group.category}</small>
-          </span>
-        </div>
+      <button type="button" onClick={onOpen} className="flex h-full w-full flex-col items-center justify-center gap-1 text-center">
+        <Avatar group={group} compact />
+        <span className="min-w-0 w-full px-0.5">
+          <b className="line-clamp-2 text-[10px] leading-3 text-slate-100">{group.title}</b>
+          <small className="mt-0.5 block truncate text-[9px] text-slate-500">{group.username ? `@${group.username}` : group.inviteLink ? (isEnglish ? "Private" : "Приватная") : group.category}</small>
+        </span>
       </button>
-      <div className="mt-2 flex items-center justify-between gap-1">
-        <span className={`rounded-md border px-1.5 py-1 text-[9px] font-semibold leading-none ${statusClass}`}>{status}</span>
-        <span className="flex items-center gap-0.5">
+      <div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-1">
+        <span className={`truncate rounded-md border px-1.5 py-1 text-[8px] font-semibold leading-none ${statusClass}`}>{status}</span>
+        <span>
           <button
             type="button"
+            onPointerDown={event => event.stopPropagation()}
             onClick={event => { event.stopPropagation(); onTogglePin(); }}
             aria-label={group.ownerPinned ? (isEnglish ? "Unpin community" : "Открепить группу") : (isEnglish ? "Pin community" : "Закрепить группу")}
             className={`grid h-6 w-6 place-items-center rounded-md transition-colors ${group.ownerPinned ? "bg-[#3f8cff]/16 text-[#9cc3ff]" : "text-slate-500 hover:bg-white/7 hover:text-slate-200"}`}
           >
             {group.ownerPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-          </button>
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            aria-label={isEnglish ? "Drag to reorder" : "Перетащить для изменения порядка"}
-            className="grid h-6 w-6 touch-none place-items-center rounded-md text-slate-500 hover:bg-white/7 hover:text-slate-200"
-          >
-            <GripVertical className="h-3.5 w-3.5" />
           </button>
         </span>
       </div>
@@ -673,6 +665,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [listingCity, setListingCity] = useState("Все");
   const [listingSubcategory, setListingSubcategory] = useState("General");
   const [salePriceTon, setSalePriceTon] = useState("");
+  const [isListingForSale, setIsListingForSale] = useState(false);
   const [anonymousListing, setAnonymousListing] = useState(false);
   const [nftTransferOpen, setNftTransferOpen] = useState(false);
   const [nftTransferStep, setNftTransferStep] = useState<"select" | "review" | "prepared">("select");
@@ -785,8 +778,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const mine = (mineQuery.data ?? []) as Group[];
   const [myGroupsGridMode, setMyGroupsGridMode] = useState(false);
   const [myGroupsLayout, setMyGroupsLayout] = useState<Group[]>([]);
+  const [myGroupsStatusFilter, setMyGroupsStatusFilter] = useState<"all" | "listed" | "unlisted">("all");
+  const [myGroupsAddOpen, setMyGroupsAddOpen] = useState(false);
   const myGroupsSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 240, tolerance: 7 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   useEffect(() => {
@@ -1170,6 +1165,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const orderedMyGroups = myGroupsLayout.length === mine.length ? myGroupsLayout : mine;
   const pinnedMyGroups = orderedMyGroups.filter(group => group.ownerPinned);
   const unpinnedMyGroups = orderedMyGroups.filter(group => !group.ownerPinned);
+  const myGroupsMatchStatus = (group: Group) =>
+    myGroupsStatusFilter === "all" || (myGroupsStatusFilter === "listed" ? group.status === "listed" : group.status !== "listed");
+  const visiblePinnedMyGroups = pinnedMyGroups.filter(myGroupsMatchStatus);
+  const visibleUnpinnedMyGroups = unpinnedMyGroups.filter(myGroupsMatchStatus);
+  const visibleMyGroups = orderedMyGroups.filter(myGroupsMatchStatus);
   const globalSubcategoryCategory = globalDirection === "Каналы" || globalDirection === "Чаты" ? globalDirection : null;
   const globalSubcategoryOptions = globalSubcategoryCategory ? CATEGORY_SUBCATEGORIES[globalSubcategoryCategory] : [];
   const listingCategory = selectedListingGroups.length && selectedListingGroups.every(group => group.category === selectedListingGroups[0]?.category)
@@ -1214,6 +1214,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingCity(firstGroup?.city ?? "Все");
     setListingSubcategory(firstGroup?.subcategory ?? "General");
     setSalePriceTon(firstGroup?.salePriceTon ?? "");
+    setIsListingForSale(Boolean(firstGroup?.salePriceTon));
     setAnonymousListing(Boolean(firstGroup?.anonymousListing));
     setListingOpen(true);
   };
@@ -1224,7 +1225,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       country: listingCountry,
       city: listingCity === "Все" ? undefined : listingCity,
       subcategory: listingSubcategory,
-      salePriceTon: salePriceTon || undefined,
+      salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
       anonymousListing,
     });
   };
@@ -1706,6 +1707,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {tx("+ Чат", "+ Chat")}
               </button>
             </div>
+            {!targetSlot && mine.length > 0 && (
+              <div className="grid grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
+                {([
+                  ["all", tx("Все", "All")],
+                  ["listed", tx("В листинге", "Listed")],
+                  ["unlisted", tx("Не в листинге", "Unlisted")],
+                ] as const).map(([value, label]) => (
+                  <button key={value} type="button" onClick={() => setMyGroupsStatusFilter(value)} className={`h-8 rounded-md text-[10px] font-medium transition-colors ${myGroupsStatusFilter === value ? "bg-[#3f8cff] text-white" : "text-slate-500 hover:text-slate-200"}`}>{label}</button>
+                ))}
+              </div>
+            )}
             {!targetSlot && selectedGroupIds.length > 0 && (
               <div className="sticky top-[62px] z-20 rounded-xl border border-[#3f8cff]/30 bg-[#101a2a]/95 p-2.5 shadow-lg backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
@@ -1740,40 +1752,46 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             {myGroupsGridMode && !targetSlot ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
-                  <span className="text-[11px] text-slate-400">{tx("Тяните за ручку, чтобы менять порядок", "Drag the handle to reorder")}</span>
+                  <span className="text-[11px] text-slate-400">{tx("Удерживайте карточку, чтобы менять порядок", "Hold a card to reorder")}</span>
                   <span className="text-[10px] text-slate-600">{saveMyGroupsLayoutMutation.isPending ? ui.loading : tx("Сохранено", "Saved")}</span>
                 </div>
                 <DndContext sensors={myGroupsSensors} collisionDetection={closestCenter} onDragEnd={handleMyGroupsDragEnd}>
-                  {pinnedMyGroups.length > 0 && (
+                  {visiblePinnedMyGroups.length > 0 && (
                     <section className="space-y-2">
                       <div className="flex items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#72a8ff]"><Pin className="h-3 w-3" />{tx("Закреплено", "Pinned")}</div>
-                      <SortableContext items={pinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
-                        <div className="grid grid-cols-2 gap-2">
-                          {pinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} />)}
+                      <SortableContext items={visiblePinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
+                        <div className="grid grid-cols-3 gap-2">
+                          {visiblePinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} />)}
                         </div>
                       </SortableContext>
                     </section>
                   )}
                   <section className="space-y-2">
-                    {pinnedMyGroups.length > 0 && <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{tx("Остальные", "Others")}</div>}
-                    <SortableContext items={unpinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
-                      <div className="grid grid-cols-2 gap-2">
-                        {unpinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} />)}
+                    {visiblePinnedMyGroups.length > 0 && <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{tx("Остальные", "Others")}</div>}
+                    <SortableContext items={visibleUnpinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
+                      <div className="grid grid-cols-3 gap-2">
+                        {visibleUnpinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} />)}
+                        {Array.from({ length: Math.max(1, 3 - (visibleUnpinnedMyGroups.length % 3)) }).map((_, index) => (
+                          <button key={`add-group-${index}`} type="button" onClick={() => setMyGroupsAddOpen(true)} className="aspect-square rounded-xl border border-dashed border-[#3f8cff]/28 bg-[#3f8cff]/[0.035] p-2 text-center text-[#8fb9ff] transition-colors hover:bg-[#3f8cff]/10 active:scale-[0.98]">
+                            <Plus className="mx-auto h-4 w-4" />
+                            <span className="mt-1 block text-[9px] font-medium leading-3">{tx("Добавить", "Add")}</span>
+                          </button>
+                        ))}
                       </div>
                     </SortableContext>
                   </section>
                 </DndContext>
-                {mine.length === 0 && (
+                {visibleMyGroups.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center">
                     <FolderPlus className="mx-auto h-7 w-7 text-slate-600" />
-                    <p className="mt-3 text-sm">{tx("Групп пока нет", "No groups yet")}</p>
-                    <p className="mt-1 text-xs text-slate-500">{tx("Добавьте @TGTOP_robot в администраторы.", "Add @TGTOP_robot as an administrator.")}</p>
+                    <p className="mt-3 text-sm">{mine.length ? tx("По этому фильтру групп нет", "No groups match this filter") : tx("Групп пока нет", "No groups yet")}</p>
+                    <p className="mt-1 text-xs text-slate-500">{mine.length ? tx("Смените фильтр или добавьте новую группу.", "Change the filter or add a new community.") : tx("Добавьте @TGTOP_robot в администраторы.", "Add @TGTOP_robot as an administrator.")}</p>
                   </div>
                 )}
               </div>
             ) : (
             <div className="space-y-2">
-              {mine.map(group => (
+              {(targetSlot ? orderedMyGroups : visibleMyGroups).map(group => (
                 <div
                   key={group.id}
                   className="rounded-xl border border-white/8 bg-[#111720] p-3"
@@ -2499,25 +2517,39 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               )}
             </section>
 
-            <section>
-              <div className="mb-2 flex items-baseline justify-between">
-                <p className="text-xs text-slate-400">{tx("Цена в TON", "Price in TON")}</p>
-                <span className="text-[10px] text-slate-600">{tx("Необязательно", "Optional")}</span>
-              </div>
-              <div className="relative">
-                <Input
-                  value={salePriceTon}
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.1"
-                  onChange={event => setSalePriceTon(event.target.value)}
-                  placeholder={tx("Оставьте пустым для обычного каталога", "Leave empty for a regular catalog listing")}
-                  className="h-11 border-white/10 bg-[#0b0f14] pr-12 text-sm"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">TON</span>
+            <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs">
+                  <b className="block text-slate-200">{tx("Выставить на продажу", "Offer for sale")}</b>
+                  <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("После включения укажите цену в TON", "Set a TON price after enabling")}</small>
+                </span>
+                <button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-10 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-5" : "translate-x-0.5"}`} />
+                </button>
               </div>
             </section>
+
+            {isListingForSale && (
+              <section>
+                <div className="mb-2 flex items-baseline justify-between">
+                  <p className="text-xs text-slate-400">{tx("Цена в TON", "Price in TON")}</p>
+                  <span className="text-[10px] text-slate-600">{tx("Необязательно", "Optional")}</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    value={salePriceTon}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.1"
+                    onChange={event => setSalePriceTon(event.target.value)}
+                    placeholder={tx("Например, 250", "For example, 250")}
+                    className="h-11 border-white/10 bg-[#0b0f14] pr-12 text-sm"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">TON</span>
+                </div>
+              </section>
+            )}
 
             {selectedListingGroups.length > 0 && selectedListingGroups.every(group => group.category === "Чаты") && (
               <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
@@ -2553,6 +2585,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               {listWithCredits.isPending ? ui.loading : tx("Сохранить листинг", "Save listing")}
             </Button>
           </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={myGroupsAddOpen} onOpenChange={setMyGroupsAddOpen}>
+        <SheetContent side="bottom" className="rounded-t-[22px] border-white/10 bg-[#10161f] pb-5 text-slate-100">
+          <SheetHeader className="px-4">
+            <SheetTitle className="text-slate-100">{tx("Добавить площадку", "Add community")}</SheetTitle>
+            <p className="text-xs leading-5 text-slate-500">{tx("Выберите тип — Telegram предложит добавить @TGTOP_robot администратором.", "Choose a type — Telegram will offer to add @TGTOP_robot as an administrator.")}</p>
+          </SheetHeader>
+          <div className="grid grid-cols-2 gap-2 px-4">
+            <button type="button" onClick={() => { setMyGroupsAddOpen(false); startBotAdminSetup("channel"); }} className="rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 p-4 text-left transition-colors hover:bg-[#3f8cff]/18">
+              <b className="block text-sm text-[#a6c8ff]">{tx("+ Канал", "+ Channel")}</b>
+              <small className="mt-1 block text-[10px] leading-4 text-slate-400">{tx("Публичный или приватный", "Public or private")}</small>
+            </button>
+            <button type="button" onClick={() => { setMyGroupsAddOpen(false); startBotAdminSetup("group"); }} className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-left transition-colors hover:bg-white/[0.08]">
+              <b className="block text-sm text-slate-200">{tx("+ Чат", "+ Chat")}</b>
+              <small className="mt-1 block text-[10px] leading-4 text-slate-400">{tx("С настройками модерации", "With moderation settings")}</small>
+            </button>
+          </div>
         </SheetContent>
       </Sheet>
 

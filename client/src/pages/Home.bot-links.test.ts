@@ -116,6 +116,13 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('DndContext sensors={myGroupsSensors}');
     expect(source).toContain('SortableMyGroupTile');
     expect(source).toContain('tx("Закреплено", "Pinned")');
+    expect(source).toContain('activationConstraint: { delay: 240, tolerance: 7 }');
+    expect(source).toContain('myGroupsStatusFilter');
+    expect(source).toContain('setMyGroupsAddOpen(true)');
+    expect(source).toContain('grid grid-cols-3 gap-2');
+    expect(source).toContain('Удерживайте карточку, чтобы менять порядок');
+    expect(source).toContain('tx("Выставить на продажу", "Offer for sale")');
+    expect(source).toContain('isListingForSale && (');
     expect(source).toContain('Прогресс подтверждается только действиями, зафиксированными в TG TOP. Награды не начисляются автоматически.');
     expect(source).toContain('connect-community');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');
