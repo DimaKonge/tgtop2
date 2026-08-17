@@ -1493,23 +1493,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <ChevronRight className="h-4 w-4 text-slate-600" />
                     </button>
                   </div>
-                  <div className="mt-3">
-                    {targetSlot ? (
+                  {targetSlot && (
+                    <div className="mt-3">
                       <button
                         onClick={() => openStarsPayment(group)}
                         className="w-full rounded-lg bg-[#3f8cff] py-2 text-xs font-semibold"
                       >
                         {tx("Выбрать для ставки", "Choose for placement")}
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => openListing([group.id])}
-                        className="w-full rounded-lg border border-white/10 py-2 text-xs font-semibold text-slate-200"
-                      >
-                        {group.status === "listed" ? tx("Настроить листинг", "Configure listing") : tx("Выставить на листинг", "Create listing")}
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               ))}
               {mine.length === 0 && (
