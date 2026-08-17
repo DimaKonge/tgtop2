@@ -41,6 +41,7 @@ import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@toncon
 
 type Page = "top" | "catalog" | "mine" | "details" | "owner" | "profile";
 type Audience = "all" | "small" | "medium" | "large";
+type MyGroupsViewMode = "list" | "grid" | "top";
 type Language = "ru" | "en";
 const n = (value: number, language: Language = "ru") =>
   new Intl.NumberFormat(language === "en" ? "en-US" : "ru-RU").format(value);
@@ -55,7 +56,6 @@ const date = (value?: Date | null, language: Language = "ru") =>
 type ListingType = "catalog" | "sale";
 type ListingCountry = "Global" | "UA" | "PL" | "DE" | "GB" | "US" | "RU" | "FR" | "ES" | "IT" | "NL" | "CZ" | "RO" | "TR" | "CA" | "AU" | "AE" | "KZ";
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
-type CatalogViewMode = "top" | "list" | "grid" | "showcase";
 const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const;
 const COUNTRY_LABELS: Record<string, { ru: string; en: string }> = {
   Global: { ru: "Весь мир", en: "Worldwide" },
@@ -658,7 +658,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [page, setPage] = useState<Page>("top");
   const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
   const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
-  const [catalogViewMode, setCatalogViewMode] = useState<CatalogViewMode>("top");
   const [subcategory, setSubcategory] = useState("Все");
   const [country, setCountry] = useState("Все");
   const [city, setCity] = useState("Все");
@@ -791,7 +790,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     enabled: isAuthenticated,
   });
   const mine = (mineQuery.data ?? []) as Group[];
-  const [myGroupsGridMode, setMyGroupsGridMode] = useState(false);
+  const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list");
   const [myGroupsLayout, setMyGroupsLayout] = useState<Group[]>([]);
   const [myGroupsStatusFilter, setMyGroupsStatusFilter] = useState<"all" | "listed" | "unlisted">("all");
   const [myGroupsAddOpen, setMyGroupsAddOpen] = useState(false);
@@ -1294,11 +1293,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       toast.error(tx("Не удалось скопировать ссылку. Скопируйте ее вручную.", "Could not copy the link. Please copy it manually."));
     }
   };
-  const addBot = (kind: "channel" | "group") =>
-    window.open(
-      `https://t.me/TGTOP_robot?${kind === "channel" ? "startchannel=admin" : "startgroup=admin"}`,
-      "_blank"
-    );
+  const addBot = (kind: "channel" | "group") => {
+    const groupAdminRights = "change_info+delete_messages+invite_users+pin_messages+manage_chat";
+    const channelAdminRights = "change_info+post_messages+edit_messages+delete_messages+invite_users+manage_chat";
+    const query = kind === "channel"
+      ? `startchannel&admin=${channelAdminRights}`
+      : `startgroup=tgtop_admin&admin=${groupAdminRights}`;
+    window.open(`https://t.me/TGTOP_robot?${query}`, "_blank");
+  };
   const startBotAdminSetup = (kind: "channel" | "group") => {
     setAdminGuideKind(kind);
     addBot(kind);
@@ -1480,23 +1482,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             ) : (
             <>
-            <div className="rounded-xl border border-white/8 bg-[#111720] p-1">
-              <div className="mb-1 flex items-center justify-between px-1.5 text-[9px] font-medium uppercase tracking-[0.12em] text-slate-500">
-                <span>{tx("Режим каталога", "Catalog view")}</span>
-                <span>{tx("переключить", "switch")}</span>
-              </div>
-              <div className="grid grid-cols-4 gap-0.5">
-                {([
-                  ["top", tx("Топ", "Top")],
-                  ["list", tx("Список", "List")],
-                  ["grid", tx("Сетка", "Grid")],
-                  ["showcase", tx("Витрина", "Showcase")],
-                ] as const).map(([value, label]) => (
-                  <button key={value} type="button" onClick={() => setCatalogViewMode(value)} className={`h-9 rounded-lg text-[10px] font-semibold transition-colors ${catalogViewMode === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
-                ))}
-              </div>
-            </div>
-            {catalogViewMode === "top" ? <>
             <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
               <div className="ranking-slot-enter ranking-slot-lead" style={{ animationDelay: "0ms" }}>
                 <GroupCard
@@ -1614,54 +1599,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 )}
               </div>
             </section>
-            </> : (
-              <section key={`${catalogViewMode}:${rankingMotionKey}`} className="pt-1">
-                {catalogViewMode === "list" ? (
-                  <div className="space-y-2">
-                    {visibleGroups.map((group, index) => {
-                      const isSale = group.listingType === "sale" && group.salePriceTon;
-                      return <button key={group.id} onClick={() => openGroup(group.id)} style={{ animationDelay: `${index * 32}ms` }} className="group flex h-[56px] w-full items-center gap-3 rounded-xl border border-white/8 bg-[#111720] px-3 text-left animate-in fade-in slide-in-from-bottom-2 transition-colors hover:border-[#3f8cff]/35 hover:bg-[#151e2b] active:scale-[0.99]">
-                        <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg"><Avatar group={group} /></span>
-                        <span className="min-w-0 flex-1"><b className="block truncate text-xs text-slate-100 group-hover:text-[#a6c8ff]">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : getCategoryLabel(group.category, language)} · {n(group.membersCount, language)}</small></span>
-                        {isSale ? <b className="shrink-0 text-xs text-[#72a8ff]">{formatTon(group.salePriceTon!)} TON</b> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600 group-hover:text-[#72a8ff]" />}
-                      </button>;
-                    })}
-                  </div>
-                ) : catalogViewMode === "grid" ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {visibleGroups.map((group, index) => {
-                      const isSale = group.listingType === "sale" && group.salePriceTon;
-                      return <button key={group.id} onClick={() => openGroup(group.id)} style={{ animationDelay: `${index * 36}ms` }} className="group aspect-square min-w-0 rounded-xl border border-white/8 bg-[#111720] p-2 text-center animate-in fade-in slide-in-from-bottom-2 transition-colors hover:border-[#3f8cff]/45 hover:bg-[#151e2b] active:scale-[0.98]">
-                        <span className="mx-auto block h-10 w-10 overflow-hidden rounded-xl"><Avatar group={group} /></span>
-                        <b className="mt-2 line-clamp-2 block text-[10px] leading-3 text-slate-100 group-hover:text-[#a6c8ff]">{group.title}</b>
-                        <small className="mt-1 block truncate text-[9px] text-slate-500">{isSale ? `${formatTon(group.salePriceTon!)} TON` : group.username ? `@${group.username}` : tx("Каталог", "Catalog")}</small>
-                      </button>;
-                    })}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {visibleGroups.slice(0, 1).map(group => {
-                      const isSale = group.listingType === "sale" && group.salePriceTon;
-                      return <button key={group.id} onClick={() => openGroup(group.id)} className="group col-span-2 row-span-2 aspect-square overflow-hidden rounded-2xl border border-[#3f8cff]/24 bg-[radial-gradient(circle_at_50%_15%,rgba(63,140,255,.2),rgba(17,23,32,1)_58%)] p-4 text-center ranking-slot-enter ranking-slot-lead hover:border-[#72a8ff]/55 active:scale-[0.99]">
-                        <span className="mx-auto block h-20 w-20 overflow-hidden rounded-2xl shadow-lg shadow-black/30"><Avatar group={group} /></span>
-                        <b className="mt-3 line-clamp-2 block text-sm leading-4 text-white">{group.title}</b>
-                        <small className="mt-1 block truncate text-[10px] text-slate-400">{group.username ? `@${group.username}` : tx("Приватная группа", "Private group")}</small>
-                        <span className="mt-3 inline-block rounded-md border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-[#a6c8ff]">{isSale ? `${formatTon(group.salePriceTon!)} TON` : tx("В каталоге", "In catalog")}</span>
-                      </button>;
-                    })}
-                    {visibleGroups.slice(1).map((group, index) => {
-                      const isSale = group.listingType === "sale" && group.salePriceTon;
-                      return <button key={group.id} onClick={() => openGroup(group.id)} style={{ animationDelay: `${90 + index * 42}ms` }} className="group aspect-square min-w-0 rounded-xl border border-white/8 bg-[#111720] p-2 text-center ranking-slot-enter ranking-slot-secondary hover:border-[#3f8cff]/45 hover:bg-[#151e2b] active:scale-[0.98]">
-                        <span className="mx-auto block h-9 w-9 overflow-hidden rounded-lg"><Avatar group={group} /></span>
-                        <b className="mt-1.5 line-clamp-2 block text-[10px] leading-3 text-slate-100 group-hover:text-[#a6c8ff]">{group.title}</b>
-                        <small className="mt-1 block truncate text-[9px] text-slate-500">{isSale ? `${formatTon(group.salePriceTon!)} TON` : group.username ? `@${group.username}` : tx("Каталог", "Catalog")}</small>
-                      </button>;
-                    })}
-                  </div>
-                )}
-                {visibleGroups.length === 0 && <button onClick={() => openMine()} className="w-full rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#111720] p-6 text-center text-xs text-[#a6c8ff]"><Plus className="mx-auto mb-2 h-5 w-5" />{tx("Добавить свою группу", "Add your community")}</button>}
-              </section>
-            )}
             </>
             )}
           </section>
@@ -1752,17 +1689,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {tx("Подключите бота, чтобы получить статистику и разместить площадку.", "Add the bot as an administrator to get analytics and list your community.")}
                 </p>
               </div>
-              {!targetSlot && mine.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => { setMyGroupsGridMode(value => !value); setSelectedGroupIds([]); }}
-                  aria-pressed={myGroupsGridMode}
-                  className={`mt-1 flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2 text-[10px] font-semibold transition-colors ${myGroupsGridMode ? "border-[#3f8cff]/50 bg-[#3f8cff]/14 text-[#a6c8ff]" : "border-white/10 bg-white/5 text-slate-400"}`}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  {myGroupsGridMode ? tx("Список", "List") : tx("Сетка", "Grid")}
-                </button>
-              )}
             </div>
             {targetSlot && (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-2.5">
@@ -1799,6 +1725,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {tx("+ Чат", "+ Chat")}
               </button>
             </div>
+            {!targetSlot && mine.length > 0 && (
+              <div className="grid grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
+                {([
+                  ["list", tx("Список", "List")],
+                  ["grid", tx("Сетка", "Grid")],
+                  ["top", tx("Топ", "Top")],
+                ] as const).map(([value, label]) => (
+                  <button key={value} type="button" onClick={() => { setMyGroupsViewMode(value); setSelectedGroupIds([]); }} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${myGroupsViewMode === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                ))}
+              </div>
+            )}
             {!targetSlot && mine.length > 0 && (
               <div className="grid grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
                 {([
@@ -1841,7 +1778,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
               </div>
             )}
-            {myGroupsGridMode && !targetSlot ? (
+            {myGroupsViewMode === "grid" && !targetSlot ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-[11px] text-slate-400">{tx("Удерживайте карточку, чтобы менять порядок", "Hold a card to reorder")}</span>
@@ -1896,6 +1833,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </div>
                 )}
               </div>
+            ) : myGroupsViewMode === "top" && !targetSlot ? (
+              <section className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[11px] text-slate-400">{tx("Ваш приоритет", "Your priority")}</span>
+                  <span className="text-[10px] text-slate-600">{tx("Закрепленные выше", "Pinned first")}</span>
+                </div>
+                {visibleMyGroups.map((group, index) => {
+                  const isSale = group.status === "listed" && group.listingType === "sale";
+                  const status = isSale ? tx("На продаже", "For sale") : group.status === "listed" ? tx("Каталог", "Catalog") : tx("Черновик", "Draft");
+                  const statusClass = isSale ? "border-amber-300/25 bg-amber-300/10 text-amber-200" : group.status === "listed" ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200" : "border-white/10 bg-white/5 text-slate-500";
+                  return <button key={group.id} onClick={() => openGroup(group.id)} className={`group flex w-full items-center gap-3 rounded-xl border text-left transition-colors active:scale-[0.99] ${index === 0 ? "min-h-[82px] border-[#3f8cff]/35 bg-[radial-gradient(circle_at_8%_20%,rgba(63,140,255,.18),rgba(17,23,32,1)_58%)] p-3.5" : "h-[58px] border-white/8 bg-[#111720] px-3 hover:border-[#3f8cff]/35 hover:bg-[#151e2b]"}`}>
+                    <span className={`${index === 0 ? "h-14 w-14 rounded-xl" : "h-9 w-9 rounded-lg"} shrink-0 overflow-hidden`}><Avatar group={group} /></span>
+                    <span className="min-w-0 flex-1"><b className={`block truncate ${index === 0 ? "text-sm text-white" : "text-xs text-slate-100"}`}>{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : group.inviteLink ? tx("Приватная группа", "Private group") : group.category}</small></span>
+                    <span className={`shrink-0 rounded-md border px-1.5 py-1 text-[9px] font-semibold ${statusClass}`}>{status}</span>
+                  </button>;
+                })}
+              </section>
             ) : (
             <div className="space-y-2">
               {(targetSlot ? orderedMyGroups : visibleMyGroups).map(group => (
@@ -2946,10 +2900,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             </SheetTitle>
           </SheetHeader>
           <div className="space-y-3 px-4 text-sm leading-5 text-slate-300">
-            <p>{tx("Telegram открыл выбор сообщества. Добавьте @TGTOP_robot, затем обязательно подтвердите для него роль администратора.", "Telegram opened community selection. Add @TGTOP_robot, then explicitly confirm its administrator role.")}</p>
+            <p>{tx("Telegram открыл добавление администратора с заранее выбранными правами TG TOP. Проверьте их и подтвердите добавление.", "Telegram opened the administrator flow with TG TOP permissions preselected. Review them and confirm the addition.")}</p>
             <ol className="space-y-2 rounded-xl border border-white/8 bg-black/15 p-3 text-[12px] text-slate-400">
               <li><b className="mr-1 text-[#a6c8ff]">1.</b>{tx("Выберите свой ", "Select your ")}{adminGuideKind === "channel" ? tx("канал", "channel") : tx("чат", "chat")}.</li>
-              <li><b className="mr-1 text-[#a6c8ff]">2.</b>{tx("В окне Telegram включите «Сделать администратором».", "Enable “Make administrator” in the Telegram confirmation screen.")}</li>
+              <li><b className="mr-1 text-[#a6c8ff]">2.</b>{tx("В Telegram должна быть кнопка добавления как администратора, а не как участника. Не отключайте права удаления сообщений и управления группой.", "Telegram should show Add as administrator, not Add as member. Keep message deletion and group-management rights enabled.")}</li>
               <li><b className="mr-1 text-[#a6c8ff]">3.</b>{tx("Вернитесь сюда — группа появится только после подтверждения прав ботом.", "Return here — the community appears only after the bot confirms its rights.")}</li>
             </ol>
             <p className="text-[11px] text-slate-500">{tx("Telegram не позволяет приложению выдать права автоматически — это подтверждает только владелец сообщества.", "Telegram requires the community owner to confirm admin rights; the app cannot grant them automatically.")}</p>

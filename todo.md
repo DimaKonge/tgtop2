@@ -121,6 +121,7 @@
 - [x] Format all displayed TON prices and recorded-bid thresholds without trailing zeroes or unnecessary decimals
 - [x] Replace every remaining hard-coded fixed-decimal TON label with concise formatter-backed copy
 - [x] Fix chat onboarding so adding @TGTOP_robot explicitly guides the owner to grant administrator rights instead of silently leaving the bot as a member
+- [x] Generate @TGTOP_robot chat-add links that open Telegram’s administrator confirmation with required rights preselected
 - [x] Simplify group details by removing the raw analytics graph and unavailable metrics, pinning the member count, and adding direct owner unlisting
 - [x] Add initials fallback to ranked cards when animated and static group avatar media both fail
 - [x] Show a clear client-side error if animated-avatar file reading fails before upload
@@ -246,3 +247,5 @@
 - [x] Replace My Groups status text with concise corner ribbons for sale, catalog, and draft states
 - [x] Restore a synchronized Top quick filter for all communities, channels, chats, and NFT
 - [x] Make My Groups avatars full-bleed card imagery with readable overlaid title and ribbon status
+- [x] Remove List, Grid, and Showcase modes from the public Top screen while retaining the ranking pyramid and catalog list
+- [x] Add List, Grid, and Top modes to My Groups management and remove Showcase entirely

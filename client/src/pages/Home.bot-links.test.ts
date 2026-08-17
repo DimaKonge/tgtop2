@@ -6,11 +6,12 @@ describe("TG TOP production bot links", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 
     expect(source).toContain("https://t.me/TGTOP_robot?");
-    expect(source).toContain("startchannel=admin");
-    expect(source).toContain("startgroup=admin");
+    expect(source).toContain('startchannel&admin=${channelAdminRights}');
+    expect(source).toContain('startgroup=tgtop_admin&admin=${groupAdminRights}');
+    expect(source).toContain('delete_messages+invite_users+pin_messages+manage_chat');
     expect(source).toContain('setAdminGuideKind(kind)');
     expect(source).toContain('tx("Подтвердите права администратора", "Confirm administrator rights")');
-    expect(source).toContain('tx("В окне Telegram включите «Сделать администратором»."');
+    expect(source).toContain('Telegram should show Add as administrator, not Add as member.');
     expect(source).not.toContain("GiftsLabBot");
   });
 
@@ -103,10 +104,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
     expect(source).toContain('className="ranking-slot-enter ranking-slot-lead"');
-    expect(source).toContain('type CatalogViewMode = "top" | "list" | "grid" | "showcase"');
-    expect(source).toContain('const [catalogViewMode, setCatalogViewMode] = useState<CatalogViewMode>("top")');
-    expect(source).toContain('tx("Витрина", "Showcase")');
-    expect(source).toContain('catalogViewMode === "grid"');
+    expect(source).toContain('type MyGroupsViewMode = "list" | "grid" | "top"');
+    expect(source).toContain('const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list")');
+    expect(source).toContain('myGroupsViewMode === "grid"');
+    expect(source).toContain('myGroupsViewMode === "top"');
+    expect(source).not.toContain('CatalogViewMode');
     expect(styles).toContain('--ranking-slot-offset: 32px');
     expect(styles).toContain('--ranking-slot-offset: 26px');
     expect(styles).toContain('--ranking-slot-offset: 20px');
