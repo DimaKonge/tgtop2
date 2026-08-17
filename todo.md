@@ -235,3 +235,8 @@
 - [x] Add a prominent direct-entry button to group details for public links and private invite links
 - [x] Add a visible navigable owner block to group details with profile identity
 - [x] Open the owner’s TG TOP profile from the group detail owner block
+- [x] Simplify listing configuration to a single optional TON price field without catalog or sale mode buttons
+- [x] Add a chat-only anonymous listing preference that hides the owner on public TG TOP cards
+- [x] Move category, subcategory, country, and expanded country choices into one slide-out filter panel
+- [x] Add country-scoped city filtering with a compact active geography label
+- [x] Prevent accidental selection of app text while preserving input, link, and control interactions

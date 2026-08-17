@@ -76,7 +76,19 @@ button, input { font: inherit; }
 button:not(:disabled) { cursor: pointer; }
 button:active { transform: scale(0.98); }
 @media (prefers-reduced-motion: no-preference) { button { transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, transform 120ms ease; } }
-.tg-shell { min-height: 100dvh; }
+.tg-shell {
+  min-height: 100dvh;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.tg-shell input,
+.tg-shell textarea,
+.tg-shell [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
 
 html[data-theme="light"] .tg-shell { background: #f5f7fb !important; color: #152033 !important; }
 html[data-theme="light"] .tg-shell header,

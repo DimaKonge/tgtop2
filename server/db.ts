@@ -192,7 +192,7 @@ export async function attributeTelegramReferral(telegramUserId: number, referral
 }
 
 // TG TOP specific queries
-export async function getAuctionSlots(category?: string, country?: string, subcategory?: string) {
+export async function getAuctionSlots(category?: string, country?: string, subcategory?: string, city?: string) {
   const db = await getDb();
   if (!db) return [];
 
@@ -206,6 +206,7 @@ export async function getAuctionSlots(category?: string, country?: string, subca
   if (category && category !== "Все") groupConditions.push(eq(groupsCatalog.category, category as "Каналы" | "Чаты"));
   if (country && country !== "Все" && country !== "Global") groupConditions.push(eq(groupsCatalog.country, country));
   if (subcategory && subcategory !== "Все") groupConditions.push(eq(groupsCatalog.subcategory, subcategory));
+  if (city && city !== "Все") groupConditions.push(eq(groupsCatalog.city, city));
   const groups = await db.select({
     group: groupsCatalog,
     ownerName: users.name,
@@ -218,7 +219,7 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     group.id,
     {
       ...group,
-      owner: {
+      owner: group.anonymousListing ? undefined : {
         openId: group.ownerOpenId,
         name: ownerName,
         telegramUsername: ownerTelegramUsername,
@@ -394,13 +395,14 @@ export async function settleStarsRankingPayment(input: { payload: string; telegr
   }
 }
 
-export async function getGroupsCatalog(category?: string, country?: string, subcategory?: string) {
+export async function getGroupsCatalog(category?: string, country?: string, subcategory?: string, city?: string) {
   const db = await getDb();
   if (!db) return [];
   const conditions = [eq(groupsCatalog.status, "listed")];
   if (category && category !== "Все") conditions.push(eq(groupsCatalog.category, category as "Каналы" | "Чаты"));
   if (subcategory && subcategory !== "Все") conditions.push(eq(groupsCatalog.subcategory, subcategory));
   if (country && country !== "Все" && country !== "Global") conditions.push(eq(groupsCatalog.country, country));
+  if (city && city !== "Все") conditions.push(eq(groupsCatalog.city, city));
   const groups = await db.select({
     group: groupsCatalog,
     ownerName: users.name,
@@ -412,7 +414,7 @@ export async function getGroupsCatalog(category?: string, country?: string, subc
     .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
   return groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => ({
     ...group,
-    owner: {
+    owner: group.anonymousListing ? undefined : {
       openId: group.ownerOpenId,
       name: ownerName,
       telegramUsername: ownerTelegramUsername,
@@ -647,23 +649,27 @@ export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: nu
 }
 
 export type GroupListingOptions = {
-  listingType?: "catalog" | "sale";
   salePriceTon?: string;
   country?: string;
+  city?: string;
   subcategory?: string;
+  anonymousListing?: boolean;
 };
 
 export function normalizeGroupListingOptions(listing?: GroupListingOptions | string) {
   const options = typeof listing === "string" ? { salePriceTon: listing } : (listing ?? {});
-  const listingType: "catalog" | "sale" = options.listingType === "sale" || options.salePriceTon ? "sale" : "catalog";
+  const salePriceTon = options.salePriceTon?.trim() || null;
+  const listingType: "catalog" | "sale" = salePriceTon ? "sale" : "catalog";
   return {
     listingType,
-    salePriceTon: listingType === "sale" ? (options.salePriceTon ?? null) : null,
+    salePriceTon,
     rentalPriceTon: null,
     minRentalDays: null,
     maxRentalDays: null,
     country: options.country,
+    city: options.city,
     subcategory: options.subcategory,
+    anonymousListing: options.anonymousListing,
   };
 }
 
@@ -680,6 +686,9 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
     if (categories.length !== 1 || !isCatalogSubcategory(categories[0], listingOptions.subcategory)) {
       throw new Error("Подкатегория не соответствует выбранным группам");
     }
+  }
+  if (listingOptions.anonymousListing && groups.some(group => group.category !== "Чаты")) {
+    throw new Error("Анонимное размещение доступно только для чатов");
   }
   const groupsNeedingListing = groups.filter(group => group.status !== "listed");
   const targetGroupsForAnnouncement = groups;
@@ -699,7 +708,9 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       listingType: listingOptions.listingType,
       salePriceTon: listingOptions.salePriceTon,
       ...(listingOptions.country ? { country: listingOptions.country } : {}),
+      ...(listingOptions.city !== undefined ? { city: listingOptions.city || null } : {}),
       ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),
+      ...(listingOptions.anonymousListing !== undefined ? { anonymousListing: listingOptions.anonymousListing } : {}),
     }).where(eq(groupsCatalog.id, groupId))));
 
     const board = await tx.select().from(auctionSlots).where(and(

@@ -9,10 +9,11 @@ import { formatTonAmount } from "./tonFormatting";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
 const groupListingInput = z.object({
-  listingType: z.enum(["catalog", "sale"]).default("catalog"),
   salePriceTon: tonAmount.optional(),
-  country: z.enum(["Global", "UA", "PL", "DE", "GB", "US", "RU"]).optional(),
+  country: z.enum(["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"]).optional(),
+  city: z.string().trim().max(96).optional(),
   subcategory: z.string().min(2).max(64).optional(),
+  anonymousListing: z.boolean().optional(),
 });
 
 export const appRouter = router({
@@ -28,9 +29,9 @@ export const appRouter = router({
 
   tgTop: router({
     getSlots: publicProcedure
-      .input(z.object({ category: z.string().optional(), country: z.string().optional(), subcategory: z.string().optional() }).optional())
+      .input(z.object({ category: z.string().optional(), country: z.string().optional(), subcategory: z.string().optional(), city: z.string().optional() }).optional())
       .query(async ({ input }) => {
-        return await db.getAuctionSlots(input?.category, input?.country, input?.subcategory);
+        return await db.getAuctionSlots(input?.category, input?.country, input?.subcategory, input?.city);
       }),
 
     placeBid: protectedProcedure
@@ -82,9 +83,9 @@ export const appRouter = router({
       }),
 
     getGroups: publicProcedure
-      .input(z.object({ category: z.string().optional(), country: z.string().optional(), subcategory: z.string().optional() }).optional())
+      .input(z.object({ category: z.string().optional(), country: z.string().optional(), subcategory: z.string().optional(), city: z.string().optional() }).optional())
       .query(async ({ input }) => {
-        return await db.getGroupsCatalog(input?.category, input?.country, input?.subcategory);
+        return await db.getGroupsCatalog(input?.category, input?.country, input?.subcategory, input?.city);
       }),
 
     myGroups: protectedProcedure.query(async ({ ctx }) => {

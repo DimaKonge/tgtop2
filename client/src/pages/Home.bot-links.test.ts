@@ -123,12 +123,16 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('{ value: "system"');
     expect(source).toContain('setFiltersOpen(true)');
     expect(source).toContain('side="bottom"');
-    expect(source).toContain('max-h-[62dvh] rounded-t-[22px]');
+    expect(source).toContain('max-h-[82dvh] rounded-t-[22px]');
     expect(source).toContain('Настроить выдачу');
+    expect(source).toContain('const CITY_OPTIONS');
+    expect(source).toContain('setCity("Все")');
+    expect(source).toContain('tx("Анонимное размещение", "Anonymous listing")');
+    expect(source).toContain('tx("Цена в TON", "Price in TON")');
     expect(source).toContain('max-h-[34dvh] rounded-t-[20px]');
     expect(source).toContain('min-w-10 border-0 px-2 text-[10px]');
     expect(source).toContain('tx("Весь мир", "Worldwide")');
-    expect(source).toContain('const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU"] as const');
+    expect(source).toContain('const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const');
     expect(source).toContain('PL: { ru: "Польша", en: "Poland" }');
     expect(source).toContain('DE: { ru: "Германия", en: "Germany" }');
     expect(source).toContain('GB: { ru: "Великобритания", en: "United Kingdom" }');
@@ -155,7 +159,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const [subcategory, setSubcategory] = useState("Все")');
     expect(source).toContain('getSlots.useQuery({');
     expect(source).toContain('subcategory,');
-    expect(source).toContain('getGroups.useQuery({ category, country, subcategory })');
+    expect(source).toContain('getGroups.useQuery({ category, country, subcategory, city })');
     expect(source).toContain('CATEGORY_SUBCATEGORIES');
     expect(source).toContain('setCountry(item)');
     expect(source).toContain('CATEGORY_SUBCATEGORIES[category].map(item =>');
