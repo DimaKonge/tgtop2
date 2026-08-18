@@ -32,7 +32,7 @@ export function TgTopLaunchScreen({ ready, onComplete }: { ready: boolean; onCom
         <div className="tg-launch-pyramid" aria-hidden="true">
           {Array.from({ length: 7 }, (_, index) => <span key={index} className={`tg-launch-cube cube-${index + 1}`} />)}
         </div>
-        <p>{isEnglish ? "Opening marketplace" : "Открываем маркетплейс"}</p>
+        <p>{isEnglish ? "Opening catalog" : "Открываем каталог"}</p>
         <div className="tg-launch-progress"><span onAnimationEnd={complete} /></div>
       </div>
       <small>{isEnglish ? "Channels · Chats · NFT" : "Каналы · Чаты · NFT"}</small>

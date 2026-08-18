@@ -12,5 +12,6 @@ describe("TG TOP launch readiness", () => {
     expect(app).not.toContain('setTimeout(() => setIsLaunching(false)');
     expect(home).toContain('!slotsQuery.isFetched || !groupsQuery.isFetched');
     expect(launch).toContain('data-ready={showCompletion ? "true" : "false"}');
+    expect(launch).toContain('isEnglish ? "Opening catalog" : "Открываем каталог"');
   });
 });

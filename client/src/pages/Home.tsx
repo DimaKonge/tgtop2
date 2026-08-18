@@ -356,7 +356,7 @@ function GroupCard({
       ? "h-[128px] border-white/10 bg-[#111720] p-3 sm:h-[160px] sm:p-4"
       : compact
         ? "h-[78px] border-white/8 bg-[#111720] p-2 sm:h-[116px]"
-        : "h-[52px] border-white/8 bg-[#111720] px-3 py-1.5";
+        : "h-[68px] border-white/8 bg-[#111720] px-3 py-2";
   const shellStyle = compact
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
     : "flex h-full items-center gap-3";
@@ -1942,7 +1942,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               {(targetSlot ? orderedMyGroups : visibleMyGroups).map(group => (
                 <div
                   key={group.id}
-                  className="relative h-[80px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2"
+                  className="relative h-[64px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2"
                 >
                   <div className="flex items-center gap-2">
                     {!targetSlot && myGroupsSelectionMode && <button

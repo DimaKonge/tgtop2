@@ -15,7 +15,7 @@ describe("TG TOP Global rendered mobile featured board", () => {
     });
     page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-    await page.getByText("Открываем маркетплейс").waitFor({ state: "hidden", timeout: 25_000 });
+    await page.getByText("Открываем каталог").waitFor({ state: "hidden", timeout: 25_000 });
   }, 45_000);
 
   afterAll(async () => {

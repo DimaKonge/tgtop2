@@ -295,3 +295,11 @@
 - [x] Allow mixed group selections to save without a subcategory mismatch when no subcategory is chosen
 - [x] Further reduce My Groups list-card height while keeping selection-mode dimensions stable
 - [x] Remove the My Groups back action and personal-folder label from the header
+- [x] Change the launch-screen status copy to «Открываем каталог»
+- [x] Restore normal lower-list card size on Top and make My Groups rows more compact
+- [ ] Credit an internal invitation bonus to the acting user when they manually add a new participant to a bot-administered group without an invite link
+- [ ] Let ordinary TG TOP users earn internal credits from verified community-defined subscriber, invite-referral, and manual-addition rewards
+- [ ] Add an owner-controlled reward-campaign section to listing configuration with an enable switch, an internal-GRAM budget, and a per-subscriber reward amount
+- [ ] Add owner-funded community reward budgets and a simple public card-star indicator without displaying the reward amount on the card
+- [ ] Show the reward amount and «Подписаться и получить» action only inside the community detail screen
+- [ ] Automatically deactivate exhausted reward campaigns and hide their public reward-star indicator until budget is replenished
