@@ -129,7 +129,7 @@
 - [x] Redesign Settings language and appearance controls as smaller compact selectors that match the streamlined Global filtering style
 - [x] Reduce and verify the 390×844 mobile vertical footprint of the Global 1 → 2 → 4 pyramid
 - [x] Add a rendered acceptance check proving the Global 1→2→4 featured board fits and remains usable at 390×844
-- [ ] Record visual verification of the 390×844 TG TOP top screen after the compact pyramid refinement
+- [x] Record visual verification of the 390×844 TG TOP top screen after the compact pyramid refinement
 - [ ] Stabilize mobile card dimensions and prevent Global text, labels, and controls from shifting or overflowing outside their containers
 - [x] Remove rental listing options and rental terms from groups and channels while retaining NFT rental mechanics
 - [x] Simplify the settings panel into compact language and theme rows with minimal explanatory copy
