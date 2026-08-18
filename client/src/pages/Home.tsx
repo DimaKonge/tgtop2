@@ -1766,19 +1766,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
         {page === "mine" && (
           <section className="space-y-4">
-            <button
-              onClick={() => setPage(targetSlot ? "top" : "profile")}
-              className="flex items-center gap-1 text-xs text-slate-400"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              {ui.back}
-            </button>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#72a8ff]">
-                  {tx("Личная папка", "Personal cabinet")}
-                </p>
-                <h1 className="mt-1 text-2xl font-semibold">{tx("Мои группы", "My groups")}</h1>
+                <h1 className="text-2xl font-semibold">{tx("Мои группы", "My groups")}</h1>
                 <p className="mt-1 text-sm text-slate-500">
                   {tx("Подключите бота, чтобы получить статистику и разместить площадку.", "Add the bot as an administrator to get analytics and list your community.")}
                 </p>

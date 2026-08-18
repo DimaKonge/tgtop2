@@ -294,3 +294,4 @@
 - [x] Compact My Groups list rows and rename fixed selection-bar actions to clearer catalog wording
 - [x] Allow mixed group selections to save without a subcategory mismatch when no subcategory is chosen
 - [x] Further reduce My Groups list-card height while keeping selection-mode dimensions stable
+- [x] Remove the My Groups back action and personal-folder label from the header

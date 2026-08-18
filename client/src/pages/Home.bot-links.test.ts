@@ -84,7 +84,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const getCommunityAccessLabel = (group: Pick<Group, "username">, language: Language)');
     expect(source).toContain('group.username ? `@${group.username}` : language === "en" ? "Private" : "Приватный"');
     expect(source).toContain('detailOwner &&');
-    expect(source).toContain('tx("Владелец", "Owner")');
+    expect(source).toContain('tx("Мои группы", "My groups")');
+    expect(source).not.toContain('tx("Личная папка", "Personal cabinet")');
     expect(source).not.toContain('Разместил');
     expect(source).not.toContain('onOwnerClick');
     expect(source).toContain('Профиль владельца');
