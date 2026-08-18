@@ -268,3 +268,6 @@
 - [x] Replace the TG TOP brand mark with a compact 1-to-2-to-4 ranking pyramid symbol
 - [x] Make the public Top lead and second-tier ranking cards more square on mobile
 - [x] Keep country and category filters usable and applied while public Top search is active
+- [x] Reduce the public Top lead, second-tier, and lower-tier card sizes so more of the ranking board fits on mobile
+- [x] Include matching ranking-slot communities in public search results without duplicating them in the normal list
+- [x] Keep one shared Top search field visible across Channels, Chats, and NFT, with NFT name and username matching

@@ -1043,8 +1043,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     [listedGroups, audience]
   );
   const visibleNfts = useMemo(
-    () => nftAssetFilter === "all" ? nfts : nfts.filter(nft => nft.assetClass === nftAssetFilter),
-    [nfts, nftAssetFilter]
+    () => {
+      const byAssetClass = nftAssetFilter === "all" ? nfts : nfts.filter(nft => nft.assetClass === nftAssetFilter);
+      const query = topSearchQuery.trim().toLowerCase();
+      return query
+        ? byAssetClass.filter(nft => `${nft.username} ${nft.ownerUsername}`.toLowerCase().includes(query))
+        : byAssetClass;
+    },
+    [nfts, nftAssetFilter, topSearchQuery]
   );
   const board = useMemo(
     () =>
@@ -1065,7 +1071,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     board.map(slot => slot.group?.id).filter((id): id is number => Boolean(id))
   );
   const generalList = visibleGroups.filter(group => !occupiedIds.has(group.id));
-  const searchedGeneralList = generalList.filter(group => {
+  const rankedGroups = board.flatMap(slot => slot.group ? [slot.group] : []);
+  const searchCandidates = topSearchQuery.trim() ? [...rankedGroups, ...generalList] : generalList;
+  const searchedGeneralList = searchCandidates.filter(group => {
     const query = topSearchQuery.trim().toLowerCase();
     if (!query) return true;
     return `${group.title} ${group.username ?? ""}`.toLowerCase().includes(query);
@@ -1481,7 +1489,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 )}
               </div>
             </div>
-            {globalDirection !== "NFT" && <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={tx("Поиск группы", "Search communities")} placeholder={tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />}
+            <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={globalDirection === "NFT" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={globalDirection === "NFT" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />
             <div className="grid grid-cols-4 rounded-xl border border-white/8 bg-[#111720] p-0.5">
               {([
                 ["Все", tx("Все", "All")],
@@ -1525,7 +1533,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <>
             <div className="space-y-2">
               {!topSearchQuery.trim() && <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
-              <div className="ranking-slot-enter ranking-slot-lead" style={{ animationDelay: "0ms" }}>
+              <div className="ranking-slot-enter ranking-slot-lead mx-auto w-full max-w-[320px]" style={{ animationDelay: "0ms" }}>
                 <GroupCard
                   group={leadSlot.group}
                   variant="lead"
@@ -1538,7 +1546,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   onOwnerClick={() => leadSlot.group && openOwner(leadSlot.group.ownerOpenId)}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="mx-auto grid w-full max-w-[320px] grid-cols-2 gap-2">
                 {secondTier.map((slot, index) => (
                   <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-secondary" style={{ animationDelay: `${90 + index * 45}ms` }}>
                     <GroupCard
@@ -1553,7 +1561,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="mx-auto grid w-full max-w-[320px] grid-cols-4 gap-1.5">
                 {thirdTier.map((slot, index) => (
                   <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-compact" style={{ animationDelay: `${185 + index * 34}ms` }}>
                     <GroupCard

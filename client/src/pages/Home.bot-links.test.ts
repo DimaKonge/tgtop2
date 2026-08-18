@@ -103,7 +103,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const verifiedTasks');
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
-    expect(source).toContain('className="ranking-slot-enter ranking-slot-lead"');
+    expect(source).toContain('className="ranking-slot-enter ranking-slot-lead mx-auto w-full max-w-[320px]"');
     expect(source).toContain('type MyGroupsViewMode = "list" | "grid"');
     expect(source).toContain('const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list")');
     expect(source).toContain('myGroupsViewMode === "grid"');
@@ -157,7 +157,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('max-h-[34dvh] rounded-t-[20px]');
     expect(source).toContain('min-w-10 border-0 px-2 text-[10px]');
     expect(source).toContain('tx("Весь мир", "Worldwide")');
-    expect(source).toContain('globalDirection !== "NFT" && <Input value={topSearchQuery}');
+    expect(source).toContain('<Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)}');
+    expect(source).toContain('globalDirection === "NFT" ? tx("Поиск NFT", "Search NFT")');
+    expect(source).toContain('`${nft.username} ${nft.ownerUsername}`.toLowerCase().includes(query)');
     expect(source).toContain('!topSearchQuery.trim() && <div key={rankingMotionKey}');
     expect(source).toContain('bg-emerald-500/30 text-emerald-50');
     expect(source).toContain('clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)');

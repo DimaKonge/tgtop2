@@ -8,6 +8,9 @@ describe("TG TOP Global mobile featured board", () => {
     expect(source).toContain('aspect-square border-[#3f8cff]/35 bg-[#141c27] p-5');
     expect(source).toContain('aspect-square border-white/10 bg-[#111720] p-3');
     expect(source).toContain('aspect-square border-white/8 bg-[#111720] p-2');
+    expect(source).toContain('ranking-slot-lead mx-auto w-full max-w-[320px]');
+    expect(source).toContain('mx-auto grid w-full max-w-[320px] grid-cols-2 gap-2');
+    expect(source).toContain('mx-auto grid w-full max-w-[320px] grid-cols-4 gap-1.5');
     expect(source).toContain('!targetSlot && selectedGroupIds.length > 0');
     expect(source).toContain('Выбрать для ставки');
   });
