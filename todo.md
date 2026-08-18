@@ -272,3 +272,12 @@
 - [x] Include matching ranking-slot communities in public search results without duplicating them in the normal list
 - [x] Keep one shared Top search field visible across Channels, Chats, and NFT, with NFT name and username matching
 - [x] Restore full-width public ranking tiers while reducing only their heights to reveal the third row on mobile
+- [ ] Move listing-owner information from public ranking cards into the community detail view
+- [ ] Show «Приватный» on public cards whenever a community has neither a public username nor an invite link
+- [ ] Label the detail-view entry action «Перейти в приватную группу» for private communities
+- [ ] Add management-panel controls for paid private-entry links with price, expiry, usage limits, payment confirmation, and invite delivery
+- [ ] Add «Сделать вход платным», Stars price, and native Telegram paid-link generation controls to eligible private-channel listing settings
+- [ ] Restrict Telegram monthly Stars subscription-link controls to managed channels, not chats or groups
+- [x] Add My Groups bulk-selection mode with a visible control, long-press activation, and shared batch actions
+- [x] Replace My Groups List/Grid chips with one toggle button and use the «Не в листинге» / «Unlisted» filter label
+- [x] Tune public ranking-board tier widths to fully use the available mobile content width

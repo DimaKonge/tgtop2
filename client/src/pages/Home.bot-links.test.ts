@@ -103,7 +103,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const verifiedTasks');
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
-    expect(source).toContain('className="ranking-slot-enter ranking-slot-lead"');
+    expect(source).toContain('className="ranking-slot-enter ranking-slot-lead w-full"');
     expect(source).toContain('type MyGroupsViewMode = "list" | "grid"');
     expect(source).toContain('const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list")');
     expect(source).toContain('myGroupsViewMode === "grid"');
@@ -115,7 +115,7 @@ describe("TG TOP production bot links", () => {
     expect(styles).toContain('--ranking-slot-offset: 20px');
     expect(source).toContain('isEnglish ? "For sale" : "На продаже"');
     expect(source).toContain('isEnglish ? "In catalog" : "В каталоге"');
-    expect(source).toContain('isEnglish ? "Not in catalog" : "Не в каталоге"');
+    expect(source).toContain('isEnglish ? "Unlisted" : "Не в листинге"');
     expect(source).toContain('ownsDetail && detail.group.category === "Чаты"');
     expect(source).toContain('role="switch"');
     expect(source).toContain('translate-x-5');
@@ -125,6 +125,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Закреплено", "Pinned")');
     expect(source).toContain('activationConstraint: { delay: 320, tolerance: 10 }');
     expect(source).toContain('myGroupsStatusFilter');
+    expect(source).toContain('const [myGroupsSelectionMode, setMyGroupsSelectionMode] = useState(false)');
+    expect(source).toContain('tx("Выбрать", "Select")');
+    expect(source).toContain('beginMyGroupsSelectionHold(group.id)');
     expect(source).toContain('const [myGroupsSearchQuery, setMyGroupsSearchQuery] = useState("")');
     expect(source).toContain('const isMyGroupsSearchActive = normalizedMyGroupsSearch.length > 0');
     expect(source).toContain('myGroupsViewMode === "grid" && !targetSlot && !isMyGroupsSearchActive');

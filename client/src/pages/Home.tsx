@@ -26,6 +26,7 @@ import {
   Globe2,
   GripVertical,
   LayoutGrid,
+  List,
   Moon,
   Plus,
   Pin,
@@ -256,61 +257,71 @@ function SortableMyGroupTile({
   disabled,
   onOpen,
   onTogglePin,
+  selectionMode,
+  selected,
+  onSelect,
 }: {
   group: Group;
   language: Language;
   disabled?: boolean;
   onOpen: () => void;
   onTogglePin: () => void;
+  selectionMode: boolean;
+  selected: boolean;
+  onSelect: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: group.id, disabled });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: group.id, disabled: disabled || selectionMode });
+  const selectionHoldTimer = useRef<number | null>(null);
+  const selectionTriggered = useRef(false);
   const isEnglish = language === "en";
   const isSale = group.status === "listed" && group.listingType === "sale";
-  const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "In catalog" : "В каталоге") : (isEnglish ? "Not in catalog" : "Не в каталоге");
+  const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "In catalog" : "В каталоге") : (isEnglish ? "Unlisted" : "Не в листинге");
   const statusClass = isSale
     ? "border-emerald-200/20 bg-emerald-500/30 text-emerald-50"
     : group.status === "listed"
       ? "border-blue-200/20 bg-[#3f8cff]/30 text-blue-50"
       : "border-slate-200/10 bg-slate-500/35 text-slate-100";
+  const clearSelectionHold = () => {
+    if (selectionHoldTimer.current !== null) window.clearTimeout(selectionHoldTimer.current);
+    selectionHoldTimer.current = null;
+  };
+  const beginSelectionHold = () => {
+    if (selectionMode) return;
+    clearSelectionHold();
+    selectionHoldTimer.current = window.setTimeout(() => {
+      selectionTriggered.current = true;
+      onSelect();
+      (window.Telegram?.WebApp as unknown as { HapticFeedback?: { impactOccurred: (style: "medium") => void } } | undefined)?.HapticFeedback?.impactOccurred("medium");
+    }, 420);
+  };
 
   return (
     <article
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       onContextMenu={event => event.preventDefault()}
-      aria-label={isEnglish ? `${group.title}. Hold and drag to reorder.` : `${group.title}. Удерживайте и перетаскивайте для изменения порядка.`}
-      className={`group relative aspect-square min-w-0 touch-manipulation overflow-hidden rounded-xl border border-white/8 bg-[#111720] shadow-sm transition-[opacity,transform,border-color,box-shadow] ${isDragging ? "z-20 scale-[.96] border-[#72a8ff]/60 bg-[#182334] opacity-30" : ""}`}
+      aria-label={selectionMode ? (isEnglish ? `Select ${group.title}` : `Выбрать ${group.title}`) : (isEnglish ? `${group.title}. Hold to select or drag the handle to reorder.` : `${group.title}. Удерживайте для выбора или тяните за ручку для изменения порядка.`)}
+      className={`group relative aspect-square min-w-0 touch-manipulation overflow-hidden rounded-xl border border-white/8 bg-[#111720] shadow-sm transition-[opacity,transform,border-color,box-shadow] ${selected ? "border-[#72a8ff]/70 ring-2 ring-[#3f8cff]/35" : ""} ${isDragging ? "z-20 scale-[.96] border-[#72a8ff]/60 bg-[#182334] opacity-30" : ""}`}
     >
       <FullBleedGroupArtwork group={group} />
       <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,9,15,.05)_18%,rgba(5,9,15,.28)_45%,rgba(5,9,15,.92)_100%)]" />
-      <button type="button" onClick={onOpen} className="relative z-10 flex h-full w-full flex-col justify-end p-2.5 text-left">
+      <button type="button" onPointerDown={beginSelectionHold} onPointerUp={clearSelectionHold} onPointerCancel={clearSelectionHold} onPointerLeave={clearSelectionHold} onClick={() => { clearSelectionHold(); if (selectionTriggered.current) { selectionTriggered.current = false; return; } if (selectionMode) onSelect(); else onOpen(); }} className="relative z-10 flex h-full w-full flex-col justify-end p-2.5 text-left">
         <span className="min-w-0 w-full">
           <b className="line-clamp-2 text-[11px] leading-3.5 text-white drop-shadow-sm">{group.title}</b>
           <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{group.inviteLink ? (isEnglish ? "Private" : "Приватный") : group.username ? `@${group.username}` : group.category}</small>
         </span>
       </button>
       <span className={`absolute right-0 top-1 z-10 max-w-[76%] truncate border-b border-l px-2.5 pb-1 pt-1 text-[7px] font-semibold leading-none shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${statusClass}`}>{status}</span>
-      <button
-        ref={setActivatorNodeRef}
-        type="button"
-        {...attributes}
-        {...listeners}
-        aria-label={isEnglish ? `Drag ${group.title}` : `Перетащить ${group.title}`}
-        className="absolute bottom-2 left-2 z-20 grid h-6 w-6 touch-none place-items-center rounded-md bg-black/20 text-slate-200/80 backdrop-blur-sm transition-colors hover:bg-white/15 hover:text-white active:bg-[#3f8cff]/30"
-      >
-        <GripVertical className="h-3.5 w-3.5" />
-      </button>
-      <div className="absolute bottom-2 right-2 z-20">
-          <button
-            type="button"
-            onPointerDown={event => event.stopPropagation()}
-            onClick={event => { event.stopPropagation(); onTogglePin(); }}
-            aria-label={group.ownerPinned ? (isEnglish ? "Unpin community" : "Открепить группу") : (isEnglish ? "Pin community" : "Закрепить группу")}
-            className={`grid h-6 w-6 place-items-center rounded-md transition-colors ${group.ownerPinned ? "bg-[#3f8cff]/16 text-[#9cc3ff]" : "text-slate-500 hover:bg-white/7 hover:text-slate-200"}`}
-          >
-            {group.ownerPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-          </button>
-      </div>
+      {selectionMode ? (
+        <span className={`absolute left-2 top-2 z-20 grid h-6 w-6 place-items-center rounded-full border backdrop-blur-sm ${selected ? "border-[#a6c8ff]/70 bg-[#3f8cff] text-white" : "border-white/25 bg-black/25 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+      ) : (
+        <>
+          <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} aria-label={isEnglish ? `Drag ${group.title}` : `Перетащить ${group.title}`} className="absolute bottom-2 left-2 z-20 grid h-6 w-6 touch-none place-items-center rounded-md bg-black/20 text-slate-200/80 backdrop-blur-sm transition-colors hover:bg-white/15 hover:text-white active:bg-[#3f8cff]/30"><GripVertical className="h-3.5 w-3.5" /></button>
+          <div className="absolute bottom-2 right-2 z-20">
+            <button type="button" onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onTogglePin(); }} aria-label={group.ownerPinned ? (isEnglish ? "Unpin community" : "Открепить группу") : (isEnglish ? "Pin community" : "Закрепить группу")} className={`grid h-6 w-6 place-items-center rounded-md transition-colors ${group.ownerPinned ? "bg-[#3f8cff]/16 text-[#9cc3ff]" : "text-slate-500 hover:bg-white/7 hover:text-slate-200"}`}>{group.ownerPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}</button>
+          </div>
+        </>
+      )}
     </article>
   );
 }
@@ -689,6 +700,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [amount, setAmount] = useState("0.1");
   const [starsPaymentGroup, setStarsPaymentGroup] = useState<Group | null>(null);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+  const [myGroupsSelectionMode, setMyGroupsSelectionMode] = useState(false);
+  const myGroupsSelectionHoldTimer = useRef<number | null>(null);
+  const myGroupsSelectionHoldTriggered = useRef(false);
   const [listingOpen, setListingOpen] = useState(false);
   const [listingCountry, setListingCountry] = useState<ListingCountry>("Global");
   const [listingCity, setListingCity] = useState("Все");
@@ -899,6 +913,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       toast.success(tx("Настройки листинга сохранены", "Listing settings saved."));
       setListingOpen(false);
       setSelectedGroupIds([]);
+      setMyGroupsSelectionMode(false);
       void utils.tgTop.myGroups.invalidate();
       void utils.tgTop.getGroups.invalidate();
       void utils.tgTop.getSlots.invalidate();
@@ -910,6 +925,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     onSuccess: () => {
       toast.success(tx("Группы сняты с листинга", "Communities removed from listings."));
       setSelectedGroupIds([]);
+      setMyGroupsSelectionMode(false);
       void utils.tgTop.myGroups.invalidate();
       void utils.tgTop.getGroups.invalidate();
       void utils.tgTop.getSlots.invalidate();
@@ -920,6 +936,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     onSuccess: () => {
       toast.success(tx("Группы удалены из кабинета", "Communities deleted from account."));
       setSelectedGroupIds([]);
+      setMyGroupsSelectionMode(false);
       void utils.tgTop.myGroups.invalidate();
       void utils.tgTop.getGroups.invalidate();
       void utils.tgTop.getSlots.invalidate();
@@ -1256,6 +1273,27 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         : [...current, groupId]
     );
   };
+  const selectMyGroup = (groupId: number) => {
+    setMyGroupsSelectionMode(true);
+    setSelectedGroupIds(current => current.includes(groupId) ? current : [...current, groupId]);
+  };
+  const exitMyGroupsSelection = () => {
+    setMyGroupsSelectionMode(false);
+    setSelectedGroupIds([]);
+  };
+  const beginMyGroupsSelectionHold = (groupId: number) => {
+    if (myGroupsSelectionMode) return;
+    if (myGroupsSelectionHoldTimer.current !== null) window.clearTimeout(myGroupsSelectionHoldTimer.current);
+    myGroupsSelectionHoldTimer.current = window.setTimeout(() => {
+      myGroupsSelectionHoldTriggered.current = true;
+      selectMyGroup(groupId);
+      (window.Telegram?.WebApp as unknown as { HapticFeedback?: { impactOccurred: (style: "medium") => void } } | undefined)?.HapticFeedback?.impactOccurred("medium");
+    }, 420);
+  };
+  const endMyGroupsSelectionHold = () => {
+    if (myGroupsSelectionHoldTimer.current !== null) window.clearTimeout(myGroupsSelectionHoldTimer.current);
+    myGroupsSelectionHoldTimer.current = null;
+  };
   const openListing = (groupIds: number[]) => {
     const firstGroup = mine.find(group => group.id === groupIds[0]);
     setSelectedGroupIds(Array.from(new Set(groupIds)));
@@ -1531,9 +1569,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             ) : (
             <>
-            <div className="space-y-2">
-              {!topSearchQuery.trim() && <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
-              <div className="ranking-slot-enter ranking-slot-lead" style={{ animationDelay: "0ms" }}>
+            <div className="w-full space-y-2">
+              {!topSearchQuery.trim() && <div key={rankingMotionKey} className="w-full space-y-2" aria-live="polite">
+              <div className="ranking-slot-enter ranking-slot-lead w-full" style={{ animationDelay: "0ms" }}>
                 <GroupCard
                   group={leadSlot.group}
                   variant="lead"
@@ -1546,7 +1584,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   onOwnerClick={() => leadSlot.group && openOwner(leadSlot.group.ownerOpenId)}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid w-full grid-cols-2 gap-2">
                 {secondTier.map((slot, index) => (
                   <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-secondary" style={{ animationDelay: `${90 + index * 45}ms` }}>
                     <GroupCard
@@ -1561,7 +1599,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid w-full grid-cols-4 gap-2">
                 {thirdTier.map((slot, index) => (
                   <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-compact" style={{ animationDelay: `${185 + index * 34}ms` }}>
                     <GroupCard
@@ -1785,12 +1823,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             </div>
             {!targetSlot && mine.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 px-0.5">
-                {([
-                  ["list", tx("Список", "List")],
-                  ["grid", tx("Сетка", "Grid")],
-                ] as const).map(([value, label]) => (
-                  <button key={value} type="button" onClick={() => { setMyGroupsViewMode(value); setSelectedGroupIds([]); }} className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-[9px] font-semibold transition-colors ${myGroupsViewMode === value ? "border-[#3f8cff]/50 bg-[#3f8cff]/14 text-[#b8d1ff]" : "border-white/10 bg-white/[0.025] text-slate-500 hover:border-white/20 hover:text-slate-200"}`}><span className={`h-1 w-1 rounded-full ${myGroupsViewMode === value ? "bg-[#72a8ff]" : "bg-slate-600"}`} />{label}</button>
-                ))}
+                <button type="button" onClick={() => { setMyGroupsViewMode(mode => mode === "list" ? "grid" : "list"); exitMyGroupsSelection(); }} aria-label={myGroupsViewMode === "grid" ? tx("Показать список", "Show list") : tx("Показать сетку", "Show grid")} className="inline-flex h-6 items-center gap-1.5 rounded-full border border-[#3f8cff]/45 bg-[#3f8cff]/12 px-2.5 text-[9px] font-semibold text-[#b8d1ff] transition-colors hover:bg-[#3f8cff]/20">
+                  {myGroupsViewMode === "grid" ? <LayoutGrid className="h-3 w-3" /> : <List className="h-3 w-3" />}
+                  {myGroupsViewMode === "grid" ? tx("Сетка", "Grid") : tx("Список", "List")}
+                </button>
+                <button type="button" onClick={() => myGroupsSelectionMode ? exitMyGroupsSelection() : setMyGroupsSelectionMode(true)} className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-[9px] font-semibold transition-colors ${myGroupsSelectionMode ? "border-[#72a8ff]/55 bg-[#3f8cff]/16 text-[#b8d1ff]" : "border-white/10 bg-white/[0.025] text-slate-500 hover:border-white/20 hover:text-slate-200"}`}><Check className="h-3 w-3" />{myGroupsSelectionMode ? tx("Готово", "Done") : tx("Выбрать", "Select")}</button>
               </div>
             )}
             {!targetSlot && mine.length > 0 && (
@@ -1798,7 +1835,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {([
                   ["all", tx("Все", "All")],
                   ["listed", tx("В каталоге", "In catalog")],
-                  ["unlisted", tx("Не в каталоге", "Not in catalog")],
+                  ["unlisted", tx("Не в листинге", "Unlisted")],
                 ] as const).map(([value, label]) => (
                   <button key={value} type="button" onClick={() => setMyGroupsStatusFilter(value)} className={`inline-flex h-6 items-center rounded-full border px-2.5 text-[9px] font-medium transition-colors ${myGroupsStatusFilter === value ? "border-[#3f8cff]/45 bg-[#3f8cff]/12 text-[#b8d1ff]" : "border-white/10 bg-white/[0.025] text-slate-500 hover:border-white/20 hover:text-slate-200"}`}>{label}</button>
                 ))}
@@ -1810,30 +1847,31 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <span className="flex items-center gap-1"><Users className="h-3 w-3 text-slate-600" />{n(visibleMyGroupsMembers, language)} {tx("подписчиков", "subscribers")}</span>
               </div>
             )}
-            {!targetSlot && selectedGroupIds.length > 0 && (
+            {!targetSlot && myGroupsSelectionMode && (
               <div className="sticky top-[62px] z-20 rounded-xl border border-[#3f8cff]/30 bg-[#101a2a]/95 p-2.5 shadow-lg backdrop-blur">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] text-slate-300">
                     {tx("Выбрано:", "Selected:")} <b className="text-white">{selectedGroupIds.length}</b>
                   </span>
                   <div className="flex gap-2">
+                    <button onClick={exitMyGroupsSelection} className="rounded-lg border border-white/12 px-2.5 py-1.5 text-[11px] font-medium text-slate-300">{tx("Отмена", "Cancel")}</button>
                     <button
                       onClick={removeSelectedFromListing}
-                      disabled={unlistGroups.isPending}
+                      disabled={unlistGroups.isPending || !selectedGroupIds.length}
                       className="rounded-lg border border-white/12 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 disabled:opacity-50"
                     >
                       {tx("Снять", "Unlist")}
                     </button>
                     <button
                       onClick={deleteSelectedGroups}
-                      disabled={deleteGroups.isPending}
+                      disabled={deleteGroups.isPending || !selectedGroupIds.length}
                       className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-medium text-red-300 disabled:opacity-50"
                     >
                       {tx("Удалить", "Delete")}
                     </button>
                     <button
-                      onClick={() => openListing(selectedGroupIds)}
-                      className="rounded-lg bg-[#3f8cff] px-2.5 py-1.5 text-[11px] font-semibold text-white"
+                      onClick={() => openListing(selectedGroupIds)} disabled={!selectedGroupIds.length}
+                      className="rounded-lg bg-[#3f8cff] px-2.5 py-1.5 text-[11px] font-semibold text-white disabled:opacity-50"
                     >
                       {ui.listing}
                     </button>
@@ -1844,7 +1882,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             {myGroupsViewMode === "grid" && !targetSlot && !isMyGroupsSearchActive ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
-                  <span className="text-[11px] text-slate-400">{tx("Тяните за ручку, чтобы менять порядок", "Drag the grip to reorder")}</span>
+                  <span className="text-[11px] text-slate-400">{myGroupsSelectionMode ? tx("Выберите нужные группы", "Select the communities you need") : tx("Тяните за ручку, чтобы менять порядок", "Drag the grip to reorder")}</span>
                   <span className="text-[10px] text-slate-600">{saveMyGroupsLayoutMutation.isPending ? ui.loading : tx("Сохранено", "Saved")}</span>
                 </div>
                 <DndContext
@@ -1859,7 +1897,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <div className="flex items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#72a8ff]"><Pin className="h-3 w-3" />{tx("Закреплено", "Pinned")}</div>
                       <SortableContext items={visiblePinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
                         <div className="grid grid-cols-3 gap-2">
-                          {visiblePinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} />)}
+                          {visiblePinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
                         </div>
                       </SortableContext>
                     </section>
@@ -1868,8 +1906,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     {visiblePinnedMyGroups.length > 0 && <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{tx("Остальные", "Others")}</div>}
                     <SortableContext items={visibleUnpinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
                       <div className="grid grid-cols-3 gap-2">
-                        {visibleUnpinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} />)}
-                        {Array.from({ length: Math.max(1, 3 - (visibleUnpinnedMyGroups.length % 3)) }).map((_, index) => (
+                        {visibleUnpinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
+                        {!myGroupsSelectionMode && Array.from({ length: Math.max(1, 3 - (visibleUnpinnedMyGroups.length % 3)) }).map((_, index) => (
                           <button key={`add-group-${index}`} type="button" onClick={() => setMyGroupsAddOpen(true)} className="aspect-square rounded-xl border border-dashed border-[#3f8cff]/28 bg-[#3f8cff]/[0.035] p-2 text-center text-[#8fb9ff] transition-colors hover:bg-[#3f8cff]/10 active:scale-[0.98]">
                             <Plus className="mx-auto h-4 w-4" />
                             <span className="mt-1 block text-[9px] font-medium leading-3">{tx("Добавить", "Add")}</span>
@@ -1905,7 +1943,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   className="rounded-xl border border-white/8 bg-[#111720] p-3"
                 >
                   <div className="flex items-center gap-2">
-                    {!targetSlot && <button
+                    {!targetSlot && myGroupsSelectionMode && <button
                       onClick={() => toggleGroupSelection(group.id)}
                       aria-label={tx(`Выбрать ${group.title}`, `Select ${group.title}`)}
                       aria-pressed={selectedGroupIds.includes(group.id)}
@@ -1914,7 +1952,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <Check className="h-3.5 w-3.5" />
                     </button>}
                     <button
-                      onClick={() => openGroup(group.id)}
+                      onPointerDown={() => beginMyGroupsSelectionHold(group.id)}
+                      onPointerUp={endMyGroupsSelectionHold}
+                      onPointerCancel={endMyGroupsSelectionHold}
+                      onPointerLeave={endMyGroupsSelectionHold}
+                      onClick={() => {
+                        endMyGroupsSelectionHold();
+                        if (myGroupsSelectionHoldTriggered.current) {
+                          myGroupsSelectionHoldTriggered.current = false;
+                          return;
+                        }
+                        if (myGroupsSelectionMode) toggleGroupSelection(group.id);
+                        else openGroup(group.id);
+                      }}
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
                     >
                       <Avatar group={group} />
@@ -1937,7 +1987,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           ? tx("На продаже", "For sale")
                           : group.status === "listed"
                             ? tx("В каталоге", "In catalog")
-                            : tx("Не в каталоге", "Not in catalog")}
+                            : tx("Не в листинге", "Unlisted")}
                       </span>
                       <ChevronRight className="h-4 w-4 text-slate-600" />
                     </button>
@@ -2087,7 +2137,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         </button>
                       ) : (
                         <div className="flex-1 text-[11px] text-slate-400 px-1">
-                          {tx("Группа не в каталоге", "Not in catalog")}
+                          {tx("Группа не в листинге", "Unlisted")}
                         </div>
                       )}
                       <button
