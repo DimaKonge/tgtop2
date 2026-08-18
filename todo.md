@@ -313,8 +313,11 @@
 - [x] Eliminate flicker and standardize the card-transition speed for All, Channels, Chats, and NFT filter changes
 - [x] Add an owner-only «Разместить в каталоге» button below the main entry action for an unlisted community detail screen
 - [ ] Correct the community-detail hierarchy: compact anonymous identity, contextual market actions only when applicable, primary entry then reward action, and statistics fully visible above bottom navigation
+- [ ] Reorder community details as entry, reward, compact ranking market, conditional sale action, owner controls, and then analytics
 - [ ] Redesign «Перебить ставку» as a compact secondary ranking-market card that does not compete with community entry or purchase actions
 - [ ] Display each occupied ranking lot’s current TON bid directly on its public main-card pyramid cell
+- [ ] Show a compact current or minimum GRAM price badge on every occupied and empty ranking cell
+- [ ] Display separate clearly labelled GRAM badges for ranking placement and optional community sale prices
 - [ ] Add a compact per-cell bid popover with plus/minus controls that change the proposed ranking bid by 0.1 TON
 - [ ] Keep the bid popover open for repeated plus/minus taps and animate each 0.1 TON amount change smoothly
 - [ ] Replace repeated bid-stepper taps with a compact accelerated bid slider: 0.1 TON precision near the current bid and 1 / 2 / 4 / 8 TON fast ranges
@@ -332,10 +335,12 @@
 - [ ] Credit the exact owner-configured GRAM amount to a participant’s bonus wallet only after bot-observed membership verification
 - [x] Validate and deploy the completed GRAM reward-card and simplified listing-settings changes to tgtop.xyz
 - [ ] When @TGTOP_robot loses admin access to a ranked community, remove it idempotently from the ranking cell and refund the owner’s exact placed GRAM amount
+- [ ] Lock the verified entry link for every ranked community and automatically remove it from Top if that link changes or required bot access is lost
 - [ ] Superseded: keep a paid ranking position and public entry link active after bot removal, while pausing bot-verified analytics and automatic GRAM reward payouts
 - [ ] Keep live ranking updates lightweight and resilient for high concurrent Mini App traffic
 - [ ] Show a clear live cascade when an outbid shifts each affected community down one ranking cell and returns only the last community to the catalog
 - [ ] Resolve equal ranking prices by placing the community with the newest recorded bid above earlier equal-price placements
+- [ ] Order all ranking and lower-list placements by GRAM price descending, while allowing 0.1 GRAM entries below higher prices and preserving first-listed order on equal prices
 - [ ] Build the low-cost lower row as a lightweight first-come live feed with smooth card movement under high concurrent placement traffic
 - [ ] Design a free-entry giveaways block with visible prizes, rules, participation counts, and end times before adding any draw mechanics
 - [ ] Use a compact Telegram-native giveaway layout: prize card, rule toggles, countdown, participant count, and one clear create or join action
@@ -344,7 +349,25 @@
 - [ ] Replace the bottom navigation with four primary sections: «Каталог», «Розыгрыши», «Заработать» and «Мой кабинет»
 - [ ] Add an owner-facing «Добавить свой розыгрыш» action with owned-community selection, prize, end time, and participation conditions
 - [ ] Add a prefilled «Создать розыгрыш» action to owned-community cards in «Моём кабинете» and their detail screens
+- [x] Add a private-by-default public-account switch that opts an owner into profile visibility and the owner leaderboard
+- [x] Restrict the owner leaderboard to public-account opt-ins and allow an anonymous listing to expose only its configured contact
+- [x] Place the private-by-default public-profile switch directly above the owner leaderboard with opt-in explanatory copy
+- [x] Build a balance dashboard from real account records with a GRAM earnings chart, wallet status, and safely gated deposit and withdrawal controls
+- [x] Add an optional «Показать контакт владельца» listing setting that exposes only a detail contact while preserving anonymous profile visibility
+- [x] Use the public-account setting as the default for new listing visibility while allowing the owner to hide any individual community
+- [x] Add an optional «Показать контакт владельца» listing setting that exposes only a detail contact while preserving anonymous profile visibility
+- [ ] Move account activity to the bottom of Profile and show a compact recent view with a «Показать предыдущие» pagination action
 - [ ] Show channel owners every bot-created invite link with its creation time, join count, and verified users who entered through it
 - [ ] Let channel owners create paid Telegram Stars invite links with a Stars price, link name, and owner-visible attribution
+- [ ] Show the paid-entry settings prominently for eligible channels and an explicit Telegram limitation message for chats
+- [ ] On bot-verified ownership transfer, immediately remove the former owner’s My Groups access and refresh public leaderboard totals for both owners
+- [ ] Send concise immediate @TGTOP_robot notifications with a relevant action button for listing, delisting, bid changes, rewards, link creation, ownership changes, and bot-rights errors
+- [ ] Redesign @TGTOP_robot event messages as compact status cards with essential values and no more than two focused action buttons
 - [x] Use the bot-generated official Telegram Stars subscription invite link as the paid channel’s main «Перейти» action
 - [ ] Add dynamic motion to the ranking bid flow: smooth price feedback, brief lot highlight, and an origin-aware panel entrance
+- [x] Add a Telegram mobile safe-area inset to confirmation drawers so primary buttons remain visible above the native bottom bar
+- [x] Add the wallet connect control inside the profile balance dashboard and simplify the header wallet treatment
+- [x] Render a non-anonymous listing owner’s avatar and @username as a clickable entry to their public TG TOP profile only after a successful catalog listing
+- [x] Raise the fixed bulk-action bar above Telegram’s native bottom bar and reserve bottom scroll clearance for selectable My Groups cards
+- [x] Hide the My Groups status ribbon completely for communities that are not listed; retain only catalog and sale ribbons
+- [x] Finish the Profile as a coherent personal cabinet: real GRAM balance graph, in-profile wallet connection, public-account visibility, and compact paginated activity history

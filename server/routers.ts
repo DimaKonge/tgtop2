@@ -14,6 +14,7 @@ const groupListingInput = z.object({
   city: z.string().trim().max(96).optional(),
   subcategory: z.string().min(2).max(64).optional(),
   anonymousListing: z.boolean().optional(),
+  showOwnerContact: z.boolean().optional(),
   monthlyEntryEnabled: z.boolean().optional(),
   monthlyEntryStars: z.number().int().min(1).max(10_000).optional(),
   monthlyEntryLinkName: z.string().trim().max(64).optional(),
@@ -134,6 +135,13 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().int().min(1).max(100).optional() }).optional())
       .query(async ({ input }) => {
         return await db.getOwnerLeaderboard(input?.limit);
+      }),
+
+    setPublicProfile: protectedProcedure
+      .input(z.object({ publicProfile: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.setPublicProfile(ctx.user.openId, input.publicProfile);
+        return { publicProfile: input.publicProfile };
       }),
 
     listGroupWithCredits: protectedProcedure

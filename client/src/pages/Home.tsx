@@ -145,6 +145,7 @@ type Group = {
   salePriceTon?: string | null;
   listingType?: ListingType;
   anonymousListing?: boolean;
+  showOwnerContact?: boolean;
   monthlyEntryEnabled?: boolean;
   monthlyEntryStars?: number | null;
   monthlyEntryLinkName?: string | null;
@@ -304,12 +305,10 @@ function SortableMyGroupTile({
   const selectionTriggered = useRef(false);
   const isEnglish = language === "en";
   const isSale = group.status === "listed" && group.listingType === "sale";
-  const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "In catalog" : "В каталоге") : (isEnglish ? "Unlisted" : "Не в листинге");
+  const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "In catalog" : "В каталоге") : null;
   const statusClass = isSale
     ? "border-emerald-200/20 bg-emerald-500/30 text-emerald-50"
-    : group.status === "listed"
-      ? "border-blue-200/20 bg-[#3f8cff]/30 text-blue-50"
-      : "border-slate-200/10 bg-slate-500/35 text-slate-100";
+      : "border-blue-200/20 bg-[#3f8cff]/30 text-blue-50";
   const clearSelectionHold = () => {
     if (selectionHoldTimer.current !== null) window.clearTimeout(selectionHoldTimer.current);
     selectionHoldTimer.current = null;
@@ -340,7 +339,7 @@ function SortableMyGroupTile({
           <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{getCommunityAccessLabel(group, language)}</small>
         </span>
       </button>
-      <span className={`absolute right-0 top-1 z-10 max-w-[76%] truncate border-b border-l px-2.5 pb-1 pt-1 text-[7px] font-semibold leading-none shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${statusClass}`}>{status}</span>
+      {status && <span className={`absolute right-0 top-1 z-10 max-w-[76%] truncate border-b border-l px-2.5 pb-1 pt-1 text-[7px] font-semibold leading-none shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${statusClass}`}>{status}</span>}
       {selectionMode ? (
         <span className={`absolute left-2 top-2 z-20 grid h-6 w-6 place-items-center rounded-full border backdrop-blur-sm ${selected ? "border-[#a6c8ff]/70 bg-[#3f8cff] text-white" : "border-white/25 bg-black/25 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
       ) : (
@@ -362,16 +361,22 @@ function GroupCard({
   variant = "list",
   onClick,
   language = "ru",
+  bidAmount = 0,
 }: {
   group?: Group | null;
   variant?: GroupCardVariant;
   onClick: () => void;
   language?: Language;
+  bidAmount?: number;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const lead = variant === "lead";
   const compact = variant === "compact";
   const rankingPlacement = variant !== "list";
+  const rankingFloor = compact ? 0.1 : 0.3;
+  const rankingPriceLabel = bidAmount > 0
+    ? `${formatTon(bidAmount / 1000)} GRAM`
+    : `от ${formatTon(rankingFloor)} GRAM`;
   const cardStyle = lead
     ? "h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[46vh] sm:p-6"
           : variant === "secondary"
@@ -398,6 +403,11 @@ function GroupCard({
       aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
       className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
     >
+      {rankingPlacement && (
+        <span className={`absolute left-0 top-0 z-10 rounded-br-lg border-b border-r border-white/10 bg-black/45 px-2 py-1 font-semibold leading-none text-white backdrop-blur-md ${lead ? "text-[11px]" : compact ? "text-[7px]" : "text-[9px]"}`}>
+          {rankingPriceLabel}
+        </span>
+      )}
       {group?.rewardActive && (group.rewardAmount ?? 0) > 0 && (
         <span aria-label={language === "en" ? `Earn +${formatGram(group.rewardAmount!)} GRAM` : `Получите +${formatGram(group.rewardAmount!)} GRAM`} className={`absolute right-0 top-0 z-10 border-b border-l border-amber-100/25 bg-amber-300/15 px-2.5 py-1 text-[9px] font-bold leading-none text-amber-100 shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${lead ? "px-3 py-1.5 text-[11px]" : compact ? "px-1.5 py-1 text-[7px]" : "px-2 py-1 text-[8px]"}`}>
           +{formatGram(group.rewardAmount)}
@@ -592,7 +602,7 @@ function BrandMark() {
   );
 }
 
-function WalletConnectControl({ language, balanceTon }: { language: Language; balanceTon: string }) {
+function WalletConnectControl({ language, balanceTon, variant = "compact" }: { language: Language; balanceTon: string; variant?: "compact" | "profile" }) {
   const [tonConnectUi] = useTonConnectUI();
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
@@ -602,7 +612,46 @@ function WalletConnectControl({ language, balanceTon }: { language: Language; ba
       ? "Connect wallet"
       : "Кошелёк";
 
+  if (variant === "profile") {
+    const walletLabel = address
+      ? `${address.slice(0, 5)}…${address.slice(-4)}`
+      : language === "en" ? "Connect wallet" : "Подключить кошелёк";
+    return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className={`mt-3 flex min-h-11 w-full items-center justify-between rounded-xl border px-3.5 text-left transition-colors disabled:opacity-60 ${address ? "border-white/10 bg-white/[0.035] text-slate-200 hover:bg-white/[0.07]" : "border-[#3f8cff]/45 bg-[#3f8cff]/14 text-[#c8ddff] hover:bg-[#3f8cff]/22"}`}><span className="flex min-w-0 items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-current/20 bg-black/10"><WalletCards className="h-3.5 w-3.5" /></span><span className="min-w-0"><b className="block text-xs">{restored ? walletLabel : language === "en" ? "Loading wallet…" : "Загрузка кошелька…"}</b><small className="mt-0.5 block truncate text-[10px] text-slate-400">{address ? `${balanceTon} TON` : language === "en" ? "No transfer or signature is requested" : "Перевод и подпись не запрашиваются"}</small></span></span><ChevronRight className="h-4 w-4 shrink-0" /></button>;
+  }
+
   return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? <><span>{label}</span>{address && <span className="rounded-md bg-[#0b0f14]/70 px-1.5 py-0.5 text-[10px] text-white">{balanceTon} TON</span>}</> : language === "en" ? "Loading…" : "Загрузка…"}</button>;
+}
+
+function GramBalanceChart({ transactions, currentBalance, language }: { transactions: Array<{ amount: number; createdAt: Date }>; currentBalance: number; language: Language }) {
+  const points = useMemo(() => {
+    const actualTransactions = transactions.slice(0, 24).reverse().map(item => ({ amount: item.amount / 100, createdAt: new Date(item.createdAt) }));
+    const startingBalance = currentBalance - actualTransactions.reduce((total, item) => total + item.amount, 0);
+    let runningBalance = startingBalance;
+    return actualTransactions.map(item => {
+      runningBalance += item.amount;
+      return { balance: runningBalance, createdAt: item.createdAt };
+    });
+  }, [transactions, currentBalance]);
+  const values = points.length ? points.map(point => point.balance) : [currentBalance];
+  const minimum = Math.min(...values);
+  const maximum = Math.max(...values);
+  const range = Math.max(maximum - minimum, 0.01);
+  const toY = (value: number) => 58 - ((value - minimum) / range) * 38;
+  const linePoints = points.length > 1
+    ? points.map((point, index) => `${16 + (index / (points.length - 1)) * 232},${toY(point.balance)}`).join(" ")
+    : `16,${toY(currentBalance)} 248,${toY(currentBalance)}`;
+  const displayBalance = currentBalance.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+
+  return <div className="mt-4 rounded-xl border border-white/8 bg-[#0b1017] p-3">
+    <div className="flex items-start justify-between gap-3"><span><small className="block text-[10px] uppercase tracking-[0.12em] text-slate-500">{language === "en" ? "GRAM balance dynamics" : "Динамика GRAM"}</small><b className="mt-1 block text-xl font-semibold text-slate-100">{displayBalance} GRAM</b></span><span className="grid h-8 w-8 place-items-center rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/10 text-[#a6c8ff]"><BarChart3 className="h-4 w-4" /></span></div>
+    <svg viewBox="0 0 264 74" preserveAspectRatio="none" className="mt-3 h-20 w-full overflow-visible" role="img" aria-label={language === "en" ? "GRAM balance chart based on recorded operations" : "График GRAM на основе зафиксированных операций"}>
+      <defs><linearGradient id="gram-balance-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#4b97ff" stopOpacity="0.28" /><stop offset="100%" stopColor="#4b97ff" stopOpacity="0" /></linearGradient></defs>
+      <path d={`M 16 66 L ${linePoints.split(" ").join(" L ")} L 248 66 Z`} fill="url(#gram-balance-fill)" />
+      <polyline points={linePoints} fill="none" stroke="#64b5ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {points.length > 0 && <circle cx="248" cy={toY(points.at(-1)!.balance)} r="2.75" fill="#b8d8ff" />}
+    </svg>
+    <div className="mt-1 flex items-center justify-between text-[9px] text-slate-600"><span>{points[0] ? date(points[0].createdAt, language) : language === "en" ? "No operations yet" : "Операций пока нет"}</span><span>{points.at(-1) ? date(points.at(-1)!.createdAt, language) : language === "en" ? "Current" : "Сейчас"}</span></div>
+  </div>;
 }
 
 function SettingsSheet({
@@ -728,6 +777,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [salePriceTon, setSalePriceTon] = useState("");
   const [isListingForSale, setIsListingForSale] = useState(false);
   const [anonymousListing, setAnonymousListing] = useState(true);
+  const [showOwnerContact, setShowOwnerContact] = useState(false);
   const [monthlyEntryEnabled, setMonthlyEntryEnabled] = useState(false);
   const [monthlyEntryStars, setMonthlyEntryStars] = useState("");
   const [monthlyEntryLinkName, setMonthlyEntryLinkName] = useState("");
@@ -743,6 +793,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [recipientInput, setRecipientInput] = useState("");
   const [preparedNftTransfer, setPreparedNftTransfer] = useState<PreparedNftTransfer | null>(null);
   const [showcaseNftId, setShowcaseNftId] = useState<number | null>(null);
+  const [visibleActivityCount, setVisibleActivityCount] = useState(5);
 
   useEffect(() => {
     localStorage.setItem("tg-top-language", language);
@@ -866,7 +917,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const account = accountQuery.data as
     | {
-        user?: { bonusBalance: number; mainBalanceTon: string | number };
+        user?: { bonusBalance: number; mainBalanceTon: string | number; publicProfile?: boolean };
       transactions: Array<{
           id: number;
           amount: number;
@@ -920,6 +971,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     activeListings: number;
     totalMembers: number;
   }>;
+  const setPublicProfile = trpc.tgTop.setPublicProfile.useMutation({
+    onSuccess: () => {
+      toast.success("Публичность профиля обновлена");
+      void utils.tgTop.getAccount.invalidate();
+      void utils.tgTop.getOwnerLeaderboard.invalidate();
+      void utils.tgTop.getPublicOwnerProfile.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
   const detail = detailQuery.data as
     | {
         group: Group;
@@ -929,6 +989,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           joinedCount: number;
           recordedAt: Date;
         }>;
+        owner?: Group["owner"];
         ownerNfts: ShowcaseNft[];
         analytics: { source: "tgtop_bot_observed"; observedSince: Date };
       }
@@ -944,6 +1005,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.getGroups.invalidate();
       void utils.tgTop.getSlots.invalidate();
       void utils.tgTop.getAccount.invalidate();
+      void utils.tgTop.getGroupDetail.invalidate();
+      void utils.tgTop.getPublicOwnerProfile.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -1161,6 +1224,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     currency: "GRAM" | "Stars" | "TON" | null;
     direction: "in" | "out" | "neutral";
   }>;
+  const visibleAccountActivity = accountActivity.slice(0, visibleActivityCount);
   const referral = account?.referral;
   const verifiedTasks = [
     {
@@ -1263,12 +1327,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const selectedSlot = detail
     ? slots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
+  const detailMinimumBid = selectedSlot
+    ? Math.max(0.1, selectedSlot.bidAmount / 1000 + 0.001)
+    : null;
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
   const detailEntryUrl = detail?.group.monthlyEntryInviteLink ?? (detail?.group.username
     ? `https://t.me/${detail.group.username}`
     : detail?.group.inviteLink ?? null);
   const detailHasPaidEntry = Boolean(detail?.group.monthlyEntryInviteLink && detail.group.monthlyEntryStars);
-  const detailOwner = detail?.group.owner ?? null;
+  const detailOwner = detail?.owner ?? null;
   const subscriptionReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.subscriptionAmount ?? 0 : 0;
   const inviteReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.inviteAmount ?? 0 : 0;
   const manualAddReward = !ownsDetail && detail?.group.category === "Чаты" ? detail.group.reward?.manualAddAmount ?? 0 : 0;
@@ -1300,6 +1367,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const monthlyEntryEligibleGroup = selectedListingGroups.length === 1 && selectedListingGroups[0]?.category === "Каналы" && !selectedListingGroups[0]?.username
     ? selectedListingGroups[0]
     : null;
+  const selectedListingGroup = selectedListingGroups.length === 1 ? selectedListingGroups[0] : null;
+  const paidEntryUnavailableReason = selectedListingGroup?.category === "Чаты"
+    ? "Telegram поддерживает платный вход Stars только для каналов."
+    : selectedListingGroup?.category === "Каналы" && selectedListingGroup.username
+      ? "Для платного входа сделайте канал приватным: публичная ссылка обходит оплату."
+      : null;
   const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
   const showcaseNft = myNfts.find(nft => nft.id === showcaseNftId) ?? null;
   const reviewedRecipient = nftRecipientQuery.data;
@@ -1362,7 +1435,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "");
     setSalePriceTon(firstGroup?.salePriceTon ?? "");
     setIsListingForSale(Boolean(firstGroup?.salePriceTon));
-    setAnonymousListing(firstGroup?.anonymousListing ?? true);
+    setAnonymousListing(firstGroup?.anonymousListing ?? !Boolean(account?.user?.publicProfile));
+    setShowOwnerContact(Boolean(firstGroup?.showOwnerContact));
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
     setMonthlyEntryStars(firstGroup?.monthlyEntryStars ? String(firstGroup.monthlyEntryStars) : "");
     setMonthlyEntryLinkName(firstGroup?.monthlyEntryLinkName ?? "");
@@ -1391,6 +1465,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined,
       salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
       anonymousListing: selectedListingGroups.length ? anonymousListing : undefined,
+      showOwnerContact: selectedListingGroups.length ? showOwnerContact : undefined,
       monthlyEntryEnabled,
       monthlyEntryStars: monthlyEntryEnabled ? Number(monthlyEntryStars) : undefined,
       monthlyEntryLinkName: monthlyEntryEnabled ? monthlyEntryLinkName.trim() || undefined : undefined,
@@ -1538,7 +1613,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <b className="text-sm tracking-tight">TG TOP</b>
           </button>
           <div className="flex items-center gap-2">
-              <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} />
             <button
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
@@ -1574,7 +1648,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 pb-28 pt-2">
+      <main className="mx-auto max-w-3xl px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
         {page === "top" && (
           <section className="space-y-2">
             <div className="border-b border-white/8 pb-1.5">
@@ -1659,6 +1733,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   group={leadSlot.group}
                   variant="lead"
                   language={language}
+                  bidAmount={leadSlot.bidAmount}
                   onClick={() =>
                     leadSlot.group
                       ? openGroup(leadSlot.group.id)
@@ -1673,6 +1748,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       group={slot.group}
                       variant="secondary"
                       language={language}
+                      bidAmount={slot.bidAmount}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id) : openMine(slot)
                       }
@@ -1687,6 +1763,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       group={slot.group}
                       variant="compact"
                       language={language}
+                      bidAmount={slot.bidAmount}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id) : openMine(slot)
                       }
@@ -1838,7 +1915,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         )}
 
         {page === "mine" && (
-          <section className="space-y-4">
+          <section className={`space-y-4 ${myGroupsSelectionMode ? "pb-[12rem]" : ""}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-semibold">{tx("Мои группы", "My groups")}</h1>
@@ -1918,7 +1995,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>
             )}
             {!targetSlot && myGroupsSelectionMode && (
-              <div className="fixed inset-x-3 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-md rounded-2xl border border-[#3f8cff]/30 bg-[#101a2a]/95 p-2 shadow-2xl shadow-black/35 backdrop-blur-xl">
+              <div className="fixed inset-x-3 bottom-[calc(6.75rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-md rounded-2xl border border-[#3f8cff]/30 bg-[#101a2a]/95 p-2 shadow-2xl shadow-black/35 backdrop-blur-xl">
                 <div className="flex items-center justify-between gap-2 px-1 pb-2">
                   <span className="flex items-center gap-2 text-[11px] font-medium text-slate-300">
                     <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#3f8cff] px-1 text-[10px] font-bold text-white">{selectedGroupIds.length}</span>
@@ -2049,21 +2126,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           {getCommunityAccessLabel(group, language)} · {n(group.membersCount)} {tx("участников", "members")}
                         </small>
                       </span>
-                      <span
+                      {group.status === "listed" && <span
                         className={`shrink-0 rounded-full border px-2 py-1 text-[9px] font-medium leading-none backdrop-blur-sm ${
                           group.status === "listed" && group.listingType === "sale"
                             ? "border-emerald-200/15 bg-emerald-500/15 text-emerald-100"
                             : group.status === "listed"
                               ? "border-blue-200/15 bg-[#3f8cff]/15 text-blue-100"
-                              : "border-slate-200/10 bg-slate-400/10 text-slate-400"
+                              : ""
                         }`}
                       >
                         {group.status === "listed" && group.listingType === "sale"
                           ? tx("На продаже", "For sale")
-                          : group.status === "listed"
-                            ? tx("В каталоге", "In catalog")
-                            : tx("Не в листинге", "Unlisted")}
-                      </span>
+                          : tx("В каталоге", "In catalog")}
+                      </span>}
                       <ChevronRight className={`h-4 w-4 text-slate-600 ${myGroupsSelectionMode ? "opacity-0" : ""}`} />
                     </button>
                   </div>
@@ -2285,19 +2360,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </button>
                     </div>
                   )}
-                  {!ownsDetail && selectedSlot && isAuthenticated && (
-                    <button
-                      onClick={() => openMine(selectedSlot)}
-                      className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"
-                    >
-                      <span>
-                        <b className="block text-xs text-[#a6c8ff]">{tx("Перебить ставку", "Outbid placement")}</b>
-                        <small className="mt-0.5 block text-[10px] text-slate-400">
-                          {tx(`От ${formatTon(Math.max(0.1, selectedSlot.bidAmount / 1000 + 0.001))} TON`, `From ${formatTon(Math.max(0.1, selectedSlot.bidAmount / 1000 + 0.001))} TON`)}
-                        </small>
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-[#a6c8ff]" />
-                    </button>
+                  {selectedSlot && (
+                    <section className="mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
+                      <div className="flex items-start justify-between gap-3"><span><small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[#8fb9ff]">{tx("Рынок позиции", "Position market")}</small><b className="mt-1 block text-sm text-slate-100">{tx(`Актуально: ${formatTon(selectedSlot.bidAmount / 1000)} GRAM`, `Current: ${formatTon(selectedSlot.bidAmount / 1000)} GRAM`)}</b></span><span className="rounded-md border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-slate-300">{tx(`от ${formatTon(detailMinimumBid)} GRAM`, `from ${formatTon(detailMinimumBid)} GRAM`)}</span></div>
+                      {!ownsDetail && isAuthenticated && <button onClick={() => openMine(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Перебить ставку", "Outbid placement")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM`, `Minimum bid: ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
+                    </section>
                   )}
                   {!ownsDetail && detail.group.salePriceTon && detail.group.listingType === "sale" && (
                     <div className="mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 p-3">
@@ -2411,6 +2478,21 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 />
               </div>
             </div>
+            <section className="rounded-2xl border border-white/8 bg-[#111720] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <span>
+                  <h2 className="text-sm font-semibold">{tx("Баланс", "Balance")}</h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{tx("Реальные начисления и списания внутреннего GRAM.", "Recorded internal GRAM credits and debits.")}</p>
+                </span>
+                <span className="rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">GRAM</span>
+              </div>
+              <GramBalanceChart transactions={transactions} currentBalance={Number(bonus)} language={language} />
+              <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" />
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button type="button" disabled aria-label={tx("Пополнение пока недоступно", "Deposit is not available yet")} className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-left opacity-65"><b className="block text-[11px] text-slate-300">{tx("Пополнить", "Deposit")}</b><small className="mt-0.5 block text-[9px] text-slate-500">{tx("Скоро", "Coming soon")}</small></button>
+                <button type="button" disabled aria-label={tx("Вывод пока недоступен", "Withdrawal is not available yet")} className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-left opacity-65"><b className="block text-[11px] text-slate-300">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-slate-500">{tx("После проверки", "After verification")}</small></button>
+              </div>
+            </section>
             {myNfts.length > 0 && (
               <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
                 <div className="border-b border-white/8 px-4 py-4">
@@ -2439,6 +2521,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             </div>
               </section>
             )}
+            <section className="rounded-2xl border border-white/8 bg-[#111720] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs">
+                  <b className="block text-slate-200">Публичный аккаунт</b>
+                  <small className="mt-1 block max-w-[240px] text-[11px] leading-4 text-slate-500">Вы появитесь в списке, только если сделаете профиль публичным.</small>
+                </span>
+                <button type="button" role="switch" aria-checked={Boolean(account?.user?.publicProfile)} onClick={() => setPublicProfile.mutate({ publicProfile: !account?.user?.publicProfile })} disabled={setPublicProfile.isPending} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-50 ${account?.user?.publicProfile ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
+                  <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${account?.user?.publicProfile ? "translate-x-6" : "translate-x-0"}`} />
+                </button>
+              </div>
+            </section>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="flex items-start justify-between gap-3 border-b border-white/8 px-4 py-4">
                 <span>
@@ -2494,7 +2587,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>
               {accountActivity.length ? (
                 <div className="divide-y divide-white/7">
-                  {accountActivity.map(item => {
+                  {visibleAccountActivity.map(item => {
                     const title = item.title === "connection_bonus" ? tx("Бонус за подключение", "Connection bonus")
                       : item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")
                       : item.title === "reward_campaign_reserve" ? tx("Резерв кампании вознаграждений", "Reward campaign reserve")
@@ -2532,6 +2625,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
               ) : (
                 <p className="px-4 py-8 text-center text-sm text-slate-500">{tx("Операций пока нет.", "No activity yet.")}</p>
+              )}
+              {accountActivity.length > visibleActivityCount && (
+                <button type="button" onClick={() => setVisibleActivityCount(count => count + 5)} className="m-3 w-[calc(100%-1.5rem)] rounded-lg border border-white/10 bg-white/[0.025] py-2 text-xs font-medium text-slate-300 transition-colors hover:bg-white/[0.06]">
+                  {tx("Показать предыдущие", "Show previous")}
+                </button>
               )}
             </section>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
@@ -2823,7 +2921,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs">
                   <b className="block text-slate-200">{tx("Выставить на продажу", "Offer for sale")}</b>
-                  <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("После включения укажите цену в TON", "Set a TON price after enabling")}</small>
+                  <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("После включения укажите цену в GRAM", "Set a GRAM price after enabling")}</small>
                 </span>
                 <button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
                   <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} />
@@ -2834,7 +2932,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             {isListingForSale && (
               <section>
                 <div className="mb-2 flex items-baseline justify-between">
-                  <p className="text-xs text-slate-400">{tx("Цена в TON", "Price in TON")}</p>
+                  <p className="text-xs text-slate-400">{tx("Цена в GRAM", "Price in GRAM")}</p>
                   <span className="text-[10px] text-slate-600">{tx("Необязательно", "Optional")}</span>
                 </div>
                 <div className="relative">
@@ -2848,7 +2946,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     placeholder={tx("Например, 250", "For example, 250")}
                     className="h-11 border-white/10 bg-[#0b0f14] pr-12 text-sm"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">TON</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">GRAM</span>
                 </div>
               </section>
             )}
@@ -2882,6 +2980,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     )}
                   </div>
                 )}
+              </section>
+            )}
+
+            {paidEntryUnavailableReason && (
+              <section className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+                <b className="block text-xs text-slate-300">Платный вход недоступен</b>
+                <small className="mt-1 block text-[11px] leading-4 text-slate-500">{paidEntryUnavailableReason}</small>
               </section>
             )}
 
@@ -2947,11 +3052,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             )}
 
+            {selectedListingGroups.length > 0 && (
+              <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs">
+                    <b className="block text-slate-200">{tx("Показать контакт владельца", "Show owner contact")}</b>
+                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Показывает только @username в деталях площадки, даже если сам профиль скрыт.", "Shows only the @username in community details even when the profile stays hidden.")}</small>
+                  </span>
+                  <button type="button" role="switch" aria-checked={showOwnerContact} aria-label={tx("Переключить контакт владельца", "Toggle owner contact")} onClick={() => setShowOwnerContact(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${showOwnerContact ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
+                    <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${showOwnerContact ? "translate-x-6" : "translate-x-0"}`} />
+                  </button>
+                </div>
+              </section>
+            )}
+
             <div className="rounded-xl border border-[#3f8cff]/18 bg-[#3f8cff]/8 p-3 text-[11px] leading-4 text-slate-400">
               {tx("Новая публикация использует", "A new publication uses")} <b className="font-medium text-[#a6c8ff]">0.1 GRAM</b> {tx("за группу. Повторное редактирование уже опубликованного листинга не списывает бонусы. Оплата TON и передача прав пока не запускаются автоматически.", "per community. Editing an existing listing does not spend more bonuses. TON payments and ownership transfers do not start automatically yet.")}
             </div>
           </div>
-          <SheetFooter className="sticky bottom-0 border-t border-white/8 bg-[#10161f] px-4 py-3 sm:flex-row">
+          <SheetFooter className="sticky bottom-0 border-t border-white/8 bg-[#10161f] px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:flex-row">
             <Button
               variant="outline"
               onClick={() => setListingOpen(false)}
@@ -3214,7 +3333,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         onLanguageChange={setLanguage}
       />
       <Sheet open={Boolean(adminGuideKind)} onOpenChange={open => !open && setAdminGuideKind(null)}>
-        <SheetContent side="bottom" className="max-h-[52dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-4 text-slate-100">
+        <SheetContent side="bottom" className="!bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[52dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-[calc(1rem+env(safe-area-inset-bottom))] text-slate-100">
           <SheetHeader className="px-4 pb-2">
             <SheetTitle className="text-base text-slate-100">
               {tx("Подтвердите права администратора", "Confirm administrator rights")}

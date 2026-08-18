@@ -114,6 +114,12 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+export async function setPublicProfile(openId: string, publicProfile: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ publicProfile }).where(eq(users.openId, openId));
+}
+
 export async function getAccountLedger(openId: string) {
   const db = await getDb();
   if (!db) return { user: undefined, transactions: [], referral: undefined };
@@ -500,8 +506,9 @@ export async function getPublicOwnerProfile(openId: string) {
     name: users.name,
     telegramUsername: users.telegramUsername,
     avatarUrl: users.avatarUrl,
+    publicProfile: users.publicProfile,
   }).from(users).where(eq(users.openId, openId)).limit(1);
-  if (!owner) return undefined;
+  if (!owner || !owner.publicProfile) return undefined;
   const nfts = await db.select({
     id: nftUsernames.id,
     username: nftUsernames.username,
@@ -538,7 +545,7 @@ export async function getOwnerLeaderboard(limit = 25) {
     totalMembers,
   }).from(groupsCatalog)
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
-    .where(and(eq(groupsCatalog.status, "listed"), eq(groupsCatalog.anonymousListing, false)))
+    .where(and(eq(groupsCatalog.status, "listed"), eq(groupsCatalog.anonymousListing, false), eq(users.publicProfile, true)))
     .groupBy(groupsCatalog.ownerOpenId, users.name, users.telegramUsername, users.avatarUrl)
     .orderBy(desc(totalMembers), desc(activeListings), asc(groupsCatalog.ownerOpenId))
     .limit(Math.min(Math.max(limit, 1), 100));
@@ -657,6 +664,9 @@ export async function getGroupDetail(id: number) {
       telegramUsername: ownerTelegramUsername,
       avatarUrl: ownerAvatarUrl,
     },
+    ownerContact: group.showOwnerContact && ownerTelegramUsername ? {
+      telegramUsername: ownerTelegramUsername,
+    } : undefined,
     snapshots: snapshots.reverse(),
     ownerNfts,
     analytics: { source: "tgtop_bot_observed" as const, observedSince: group.createdAt },
@@ -854,6 +864,7 @@ export type GroupListingOptions = {
   city?: string;
   subcategory?: string;
   anonymousListing?: boolean;
+  showOwnerContact?: boolean;
   monthlyEntryEnabled?: boolean;
   monthlyEntryStars?: number;
   monthlyEntryLinkName?: string;
@@ -878,6 +889,7 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
     city: options.city,
     subcategory: options.subcategory,
     anonymousListing: options.anonymousListing ?? true,
+    showOwnerContact: options.showOwnerContact ?? false,
     monthlyEntryEnabled: options.monthlyEntryEnabled,
     monthlyEntryStars: options.monthlyEntryStars,
     monthlyEntryLinkName: options.monthlyEntryLinkName?.trim() || null,
@@ -965,6 +977,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       ...(listingOptions.city !== undefined ? { city: listingOptions.city || null } : {}),
       ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),
       ...(listingOptions.anonymousListing !== undefined ? { anonymousListing: listingOptions.anonymousListing } : {}),
+      ...(listingOptions.showOwnerContact !== undefined ? { showOwnerContact: listingOptions.showOwnerContact } : {}),
       ...(listingOptions.monthlyEntryEnabled !== undefined ? {
         monthlyEntryEnabled: listingOptions.monthlyEntryEnabled,
         monthlyEntryStars: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryStars ?? null : null,

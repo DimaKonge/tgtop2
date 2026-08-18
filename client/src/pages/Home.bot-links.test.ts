@@ -84,6 +84,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('ownsDetail && detail.group.status !== "listed"');
     expect(source).toContain('tx("Разместить в каталоге", "List in catalog")');
     expect(source).toContain('onClick={() => openListing([detail.group.id])}');
+    expect(source).toContain('const detailMinimumBid = selectedSlot');
+    expect(source).toContain('Рынок позиции');
+    expect(source).toContain('tx(`Актуально: ${formatTon(selectedSlot.bidAmount / 1000)} GRAM`');
+    expect(source).toContain('detail.group.anonymousListing ? (');
+    expect(source).toContain('tx("Аноним", "Anonymous")');
     expect(source).toContain('const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0');
     expect(source).toContain('rewardPerInvite: isChatRewardCampaign ? 0 : joinRewardUnits');
     expect(source).toContain('Одна ставка применяется и к подписке, и к вступлению по персональной ссылке.');
@@ -128,7 +133,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Подписаться и получить +${formatGram(subscriptionReward)} GRAM');
     expect(source).toContain('<Select value={listingCountry}');
     expect(source).toContain('<Select value={listingSubcategory}');
-    expect(source).toContain('fixed inset-x-3 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-50');
+    expect(source).toContain('fixed inset-x-3 bottom-[calc(6.75rem+env(safe-area-inset-bottom))] z-50');
     expect(source).toContain('tx("Снять выделение", "Clear selection")');
     expect(source).toContain('tx("Отменить", "Cancel")');
     expect(source).toContain('tx("Снять с каталога", "Remove from catalog")');
@@ -154,7 +159,7 @@ describe("TG TOP production bot links", () => {
     expect(styles).toContain('.ranking-slot-enter { animation: ranking-slot-enter 360ms');
     expect(source).toContain('isEnglish ? "For sale" : "На продаже"');
     expect(source).toContain('isEnglish ? "In catalog" : "В каталоге"');
-    expect(source).toContain('isEnglish ? "Unlisted" : "Не в листинге"');
+    expect(source).not.toContain('isEnglish ? "Unlisted" : "Не в листинге"');
     expect(source).toContain('ownsDetail && detail.group.category === "Чаты"');
     expect(source).toContain('role="switch"');
     expect(source).toContain('translate-x-6');
@@ -186,7 +191,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Прогресс подтверждается только действиями, зафиксированными в TG TOP. Награды не начисляются автоматически.');
     expect(source).toContain('connect-community');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');
-    expect(source).toContain('<WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} />');
+    expect(source).toContain('<WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" />');
     expect(source).not.toContain('{ value: "system"');
     expect(source).toContain('setFiltersOpen(true)');
     expect(source).toContain('side="bottom"');
@@ -195,6 +200,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const CITY_OPTIONS');
     expect(source).toContain('setCity("Все")');
     expect(source).toContain('tx("Анонимное размещение", "Anonymous listing")');
+    expect(source).toContain('Показать контакт владельца');
+    expect(source).toContain('setPublicProfile.mutate({ publicProfile: !account?.user?.publicProfile })');
+    expect(source).toContain('Вы появитесь в списке, только если сделаете профиль публичным.');
     expect(source).toContain('tx("Вознаграждения", "Rewards")');
     expect(source).toContain('rewardCampaignEnabled');
     expect(source).toContain('rewardBudget: budgetUnits');
@@ -202,7 +210,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('rewardPerInvite: isChatRewardCampaign ? 0 : joinRewardUnits');
     expect(source).toContain('rewardPerManualAdd: isChatRewardCampaign ? joinRewardUnits : 0');
     expect(source).toContain('className="group relative flex h-[68px] w-full items-center justify-between gap-3 overflow-hidden rounded-xl');
-    expect(source).toContain('tx("Цена в TON", "Price in TON")');
+    expect(source).toContain('tx("Цена в GRAM", "Price in GRAM")');
+    expect(source).toContain('Telegram поддерживает платный вход Stars только для каналов.');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('detailHasPaidEntry');
     expect(source).toContain('tx(`Войти за ${detail.group.monthlyEntryStars} Stars`');
@@ -216,6 +225,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('!topSearchQuery.trim() && <div key={rankingMotionKey}');
     expect(source).toContain('bg-emerald-500/30 text-emerald-50');
     expect(source).toContain('clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)');
+    expect(source).toContain('const rankingPriceLabel = bidAmount > 0');
+    expect(source).toContain('`${formatTon(bidAmount / 1000)} GRAM`');
+    expect(source).toContain('bidAmount={leadSlot.bidAmount}');
     expect(source).toContain('grid-cols-4 grid-rows-3 gap-[2px]');
     expect(source).toContain('col-start-2 row-start-1');
     expect(source).toContain('const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const');
