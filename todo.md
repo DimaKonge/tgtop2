@@ -289,3 +289,5 @@
 - [x] Redesign bulk-selection actions as a compact fixed bottom bar that does not shift My Groups cards
 - [x] Ensure bulk anonymous listing applies to both channels and chats, including mixed selections
 - [x] Keep listing-sheet switch thumbs inside their tracks and remove redundant mixed-subcategory explanatory copy
+- [x] Keep My Groups list-card dimensions unchanged in selection mode and refine bulk action controls
+- [x] Explicitly anchor listing-sheet switch thumbs to prevent on-state overflow

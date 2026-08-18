@@ -1854,33 +1854,37 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             )}
             {!targetSlot && myGroupsSelectionMode && (
               <div className="fixed inset-x-3 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-md rounded-2xl border border-[#3f8cff]/30 bg-[#101a2a]/95 p-2 shadow-2xl shadow-black/35 backdrop-blur-xl">
-                <div className="flex items-center justify-between gap-3 px-1 pb-2">
+                <div className="flex items-center justify-between gap-2 px-1 pb-2">
                   <span className="flex items-center gap-2 text-[11px] font-medium text-slate-300">
                     <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#3f8cff] px-1 text-[10px] font-bold text-white">{selectedGroupIds.length}</span>
                     {tx("выбрано", "selected")}
                   </span>
-                  <button onClick={exitMyGroupsSelection} className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-400 transition-colors hover:bg-white/8 hover:text-white">{tx("Готово", "Done")}</button>
+                  <span className="flex items-center gap-1">
+                    <button onClick={() => setSelectedGroupIds([])} disabled={!selectedGroupIds.length} className="rounded-lg px-2 py-1 text-[10px] font-medium text-slate-400 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-40">{tx("Снять выделение", "Clear selection")}</button>
+                    <button onClick={exitMyGroupsSelection} className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:bg-white/8 hover:text-white">{tx("Готово", "Done")}</button>
+                  </span>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => openListing(selectedGroupIds)} disabled={!selectedGroupIds.length}
+                    className="h-10 min-w-0 flex-1 rounded-xl bg-[#3f8cff] px-3 text-[11px] font-semibold text-white shadow-[0_6px_18px_rgba(63,140,255,0.24)] transition-colors hover:bg-[#4b97ff] disabled:opacity-45"
+                  >
+                    {ui.listing}
+                  </button>
                   <button
                     onClick={removeSelectedFromListing}
                     disabled={unlistGroups.isPending || !selectedGroupIds.length}
-                    className="h-10 rounded-xl border border-white/10 bg-white/[0.035] px-2 text-[11px] font-medium text-slate-200 transition-colors hover:bg-white/[0.08] disabled:opacity-45"
+                    className="h-10 shrink-0 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-[11px] font-medium text-slate-200 transition-colors hover:bg-white/[0.08] disabled:opacity-45"
                   >
-                    {tx("Снять", "Unlist")}
+                    {tx("Убрать", "Remove")}
                   </button>
                   <button
                     onClick={deleteSelectedGroups}
                     disabled={deleteGroups.isPending || !selectedGroupIds.length}
-                    className="h-10 rounded-xl border border-red-400/20 bg-red-500/[0.08] px-2 text-[11px] font-medium text-red-200 transition-colors hover:bg-red-500/[0.14] disabled:opacity-45"
+                    aria-label={tx("Удалить выбранные группы", "Delete selected communities")}
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-400/20 bg-red-500/[0.08] text-red-200 transition-colors hover:bg-red-500/[0.14] disabled:opacity-45"
                   >
-                    {tx("Удалить", "Delete")}
-                  </button>
-                  <button
-                    onClick={() => openListing(selectedGroupIds)} disabled={!selectedGroupIds.length}
-                    className="h-10 rounded-xl bg-[#3f8cff] px-2 text-[11px] font-semibold text-white shadow-[0_6px_18px_rgba(63,140,255,0.24)] transition-colors hover:bg-[#4b97ff] disabled:opacity-45"
-                  >
-                    {ui.listing}
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -1946,14 +1950,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               {(targetSlot ? orderedMyGroups : visibleMyGroups).map(group => (
                 <div
                   key={group.id}
-                  className="rounded-xl border border-white/8 bg-[#111720] p-3"
+                  className="relative h-[96px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-3"
                 >
                   <div className="flex items-center gap-2">
                     {!targetSlot && myGroupsSelectionMode && <button
                       onClick={() => toggleGroupSelection(group.id)}
                       aria-label={tx(`Выбрать ${group.title}`, `Select ${group.title}`)}
                       aria-pressed={selectedGroupIds.includes(group.id)}
-                      className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selectedGroupIds.includes(group.id) ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}
+                      className={`absolute right-3 top-1/2 z-10 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-md border ${selectedGroupIds.includes(group.id) ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 bg-[#111720]/85 text-transparent"}`}
                     >
                       <Check className="h-3.5 w-3.5" />
                     </button>}
@@ -1976,7 +1980,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <Avatar group={group} />
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-sm">{group.title}</b>
-                        <small className="mt-1 block text-xs text-slate-500">
+                        <small className="mt-1 block truncate text-xs text-slate-500">
                           {getCommunityAccessLabel(group, language)} · {n(group.membersCount)} {tx("участников", "members")}
                         </small>
                       </span>
@@ -1995,7 +1999,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             ? tx("В каталоге", "In catalog")
                             : tx("Не в листинге", "Unlisted")}
                       </span>
-                      <ChevronRight className="h-4 w-4 text-slate-600" />
+                      <ChevronRight className={`h-4 w-4 text-slate-600 ${myGroupsSelectionMode ? "opacity-0" : ""}`} />
                     </button>
                   </div>
                   {targetSlot && (
@@ -2126,7 +2130,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           disabled={toggleServiceMessagesMutation.isPending}
                           className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-50 ${detail.group.deleteServiceMessages ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}
                         >
-                          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detail.group.deleteServiceMessages ? "translate-x-5" : "translate-x-0.5"}`} />
+                          <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detail.group.deleteServiceMessages ? "translate-x-6" : "translate-x-0"}`} />
                         </button>
                       </div>
                     </div>
@@ -2696,7 +2700,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("После включения укажите цену в TON", "Set a TON price after enabling")}</small>
                 </span>
                 <button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
-                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-5" : "translate-x-0.5"}`} />
+                  <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} />
                 </button>
               </div>
             </section>
@@ -2731,7 +2735,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Telegram будет списывать Stars каждый месяц за доступ к каналу", "Telegram will charge Stars monthly for channel access")}</small>
                   </span>
                   <button type="button" role="switch" aria-checked={monthlyEntryEnabled} onClick={() => setMonthlyEntryEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${monthlyEntryEnabled ? "border-amber-200/70 bg-amber-400" : "border-white/15 bg-white/8"}`}>
-                    <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${monthlyEntryEnabled ? "translate-x-5" : "translate-x-0.5"}`} />
+                    <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${monthlyEntryEnabled ? "translate-x-6" : "translate-x-0"}`} />
                   </button>
                 </div>
                 {monthlyEntryEnabled && (
@@ -2767,7 +2771,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Не показывать владельца в карточках TG TOP для всех выбранных площадок", "Do not show the owner on TG TOP cards for all selected communities")}</small>
                   </span>
                   <button type="button" role="switch" aria-checked={anonymousListing} aria-label={tx("Переключить анонимное размещение", "Toggle anonymous listing")} onClick={() => setAnonymousListing(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${anonymousListing ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
-                    <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${anonymousListing ? "translate-x-5" : "translate-x-0.5"}`} />
+                    <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${anonymousListing ? "translate-x-6" : "translate-x-0"}`} />
                   </button>
                 </div>
               </section>

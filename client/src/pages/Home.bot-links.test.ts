@@ -115,7 +115,13 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('<Select value={listingCountry}');
     expect(source).toContain('<Select value={listingSubcategory}');
     expect(source).toContain('fixed inset-x-3 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-50');
+    expect(source).toContain('tx("Снять выделение", "Clear selection")');
+    expect(source).toContain('tx("Убрать", "Remove")');
+    expect(source).toContain('h-[96px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-3');
+    expect(source).toContain('absolute right-3 top-1/2 z-10 grid h-5 w-5 -translate-y-1/2');
     expect(source).toContain('relative h-6 w-11 shrink-0 rounded-full border transition-colors');
+    expect(source).toContain('absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform');
+    expect(source).toContain('translate-x-6');
     expect(source).not.toContain('Подкатегории задаются отдельно для каналов и чатов.');
     expect(source).toContain('className="ranking-slot-enter ranking-slot-lead w-full"');
     expect(source).toContain('type MyGroupsViewMode = "list" | "grid"');
@@ -132,7 +138,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('isEnglish ? "Unlisted" : "Не в листинге"');
     expect(source).toContain('ownsDetail && detail.group.category === "Чаты"');
     expect(source).toContain('role="switch"');
-    expect(source).toContain('translate-x-5');
+    expect(source).toContain('translate-x-6');
     expect(source).toContain('trpc.tgTop.saveMyGroupsLayout.useMutation');
     expect(source).toContain('<DndContext\n                  sensors={myGroupsSensors}');
     expect(source).toContain('SortableMyGroupTile');
