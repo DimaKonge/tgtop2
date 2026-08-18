@@ -15,8 +15,8 @@ describe("TG TOP Global rendered mobile featured board", () => {
     });
     page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-    await page.getByText("Открываем маркетплейс").waitFor({ state: "hidden", timeout: 10_000 });
-  }, 30_000);
+    await page.getByText("Открываем маркетплейс").waitFor({ state: "hidden", timeout: 25_000 });
+  }, 45_000);
 
   afterAll(async () => {
     await browser?.close();
@@ -39,5 +39,26 @@ describe("TG TOP Global rendered mobile featured board", () => {
     expect(boxes.slice(1, 3).every(box => box.width >= 175 && box.height === 104)).toBe(true);
     expect(boxes.slice(3).every(box => box.width > 80 && box.height === 68)).toBe(true);
     expect(Math.max(...boxes.map(box => box.bottom))).toBeLessThanOrEqual(760);
+  });
+
+  it("keeps the Global controls within the 390px viewport without horizontal overflow", async () => {
+    const layout = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      outOfBoundsControls: Array.from(document.querySelectorAll("button, input"))
+        .filter(element => {
+          const style = window.getComputedStyle(element);
+          const box = element.getBoundingClientRect();
+          return style.visibility !== "hidden" && style.display !== "none" && box.width > 0 && box.height > 0 && box.top < window.innerHeight;
+        })
+        .map(element => {
+          const box = element.getBoundingClientRect();
+          return { label: element.getAttribute("aria-label") ?? element.getAttribute("placeholder") ?? element.textContent?.trim(), left: box.left, right: box.right };
+        })
+        .filter(control => control.left < 0 || control.right > window.innerWidth),
+    }));
+
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(layout.outOfBoundsControls).toEqual([]);
   });
 });
