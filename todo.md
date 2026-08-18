@@ -272,7 +272,7 @@
 - [x] Include matching ranking-slot communities in public search results without duplicating them in the normal list
 - [x] Keep one shared Top search field visible across Channels, Chats, and NFT, with NFT name and username matching
 - [x] Restore full-width public ranking tiers while reducing only their heights to reveal the third row on mobile
-- [ ] Move listing-owner information from public ranking cards into the community detail view
+- [x] Move listing-owner information from public ranking cards into the community detail view
 - [ ] Show «Приватный» on public cards whenever a community has neither a public username nor an invite link
 - [ ] Label the detail-view entry action «Перейти в приватную группу» for private communities
 - [ ] Add management-panel controls for paid private-entry links with price, expiry, usage limits, payment confirmation, and invite delivery

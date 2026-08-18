@@ -75,13 +75,14 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Record a TON bid without payment');
     expect(source).toContain('Добавить свою группу в список');
     expect(source).toContain('Добавить свою группу');
-    expect(source).toContain('function OwnerEntry');
+    expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('getPublicOwnerProfile.useQuery');
     expect(source).toContain('const detailEntryUrl = detail?.group.username');
     expect(source).toContain('tx("Перейти в группу", "Open community")');
     expect(source).toContain('detailOwner &&');
     expect(source).toContain('tx("Владелец", "Owner")');
-    expect(source).toContain('Разместил');
+    expect(source).not.toContain('Разместил');
+    expect(source).not.toContain('onOwnerClick');
     expect(source).toContain('Профиль владельца');
     expect(source).toContain('getOwnerLeaderboard.useQuery');
     expect(source).toContain('Лидерборд владельцев');

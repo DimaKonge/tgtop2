@@ -330,28 +330,17 @@ function SortableMyGroupTile({
   );
 }
 
-function OwnerEntry({ group, language, onOpen, inverse = false }: { group: Group; language: Language; onOpen?: () => void; inverse?: boolean }) {
-  const owner = group.owner;
-  if (!owner) return null;
-  const label = owner.telegramUsername ? `@${owner.telegramUsername}` : (owner.name ?? (language === "en" ? "TG TOP user" : "Пользователь TG TOP"));
-  const content = <>{language === "en" ? "Listed by" : "Разместил"} <b className="font-medium">{label}</b></>;
-  if (!onOpen) return <small className={`mt-1 block truncate text-[10px] ${inverse ? "text-slate-200/65" : "text-slate-500"}`}>{content}</small>;
-  return <button type="button" onClick={event => { event.stopPropagation(); onOpen(); }} onKeyDown={event => event.stopPropagation()} className={`mt-1 block max-w-full truncate text-left text-[10px] no-underline transition-colors ${inverse ? "text-slate-200/75 hover:text-white" : "text-slate-500 hover:text-[#a6c8ff]"}`}>{content}</button>;
-}
-
 type GroupCardVariant = "lead" | "secondary" | "compact" | "list";
 
 function GroupCard({
   group,
   variant = "list",
   onClick,
-  onOwnerClick,
   language = "ru",
 }: {
   group?: Group | null;
   variant?: GroupCardVariant;
   onClick: () => void;
-  onOwnerClick?: () => void;
   language?: Language;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -413,7 +402,6 @@ function GroupCard({
               {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="no-underline hover:text-white">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
-            {!compact && <OwnerEntry group={group} language={language} onOpen={onOwnerClick} inverse />}
           </span>
         </>
       ) : group ? (
@@ -1605,7 +1593,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       ? openGroup(leadSlot.group.id)
                       : openMine(leadSlot)
                   }
-                  onOwnerClick={() => leadSlot.group && openOwner(leadSlot.group.ownerOpenId)}
                 />
               </div>
               <div className="grid w-full grid-cols-2 gap-2">
@@ -1618,7 +1605,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id) : openMine(slot)
                       }
-                      onOwnerClick={() => slot.group && openOwner(slot.group.ownerOpenId)}
                     />
                   </div>
                 ))}
@@ -1633,7 +1619,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id) : openMine(slot)
                       }
-                      onOwnerClick={() => slot.group && openOwner(slot.group.ownerOpenId)}
                     />
                   </div>
                 ))}
