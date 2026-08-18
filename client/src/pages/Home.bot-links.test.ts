@@ -115,6 +115,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('<Select value={listingCountry}');
     expect(source).toContain('<Select value={listingSubcategory}');
     expect(source).toContain('fixed inset-x-3 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-50');
+    expect(source).toContain('relative h-6 w-11 shrink-0 rounded-full border transition-colors');
+    expect(source).not.toContain('Подкатегории задаются отдельно для каналов и чатов.');
     expect(source).toContain('className="ranking-slot-enter ranking-slot-lead w-full"');
     expect(source).toContain('type MyGroupsViewMode = "list" | "grid"');
     expect(source).toContain('const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list")');

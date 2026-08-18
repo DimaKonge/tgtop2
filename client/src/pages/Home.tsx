@@ -2124,7 +2124,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           aria-label={tx("Переключить автоочистку чата", "Toggle chat auto-cleanup")}
                           onClick={() => toggleServiceMessagesMutation.mutate({ groupId: detail.group.id, deleteServiceMessages: !detail.group.deleteServiceMessages })}
                           disabled={toggleServiceMessagesMutation.isPending}
-                          className={`relative h-6 w-10 shrink-0 rounded-full border transition-colors disabled:opacity-50 ${detail.group.deleteServiceMessages ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}
+                          className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-50 ${detail.group.deleteServiceMessages ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}
                         >
                           <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detail.group.deleteServiceMessages ? "translate-x-5" : "translate-x-0.5"}`} />
                         </button>
@@ -2686,9 +2686,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     {listingSubcategoryOptions.map(item => <SelectItem key={item} value={item} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{getSubcategoryLabel(item, language)}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              ) : (
-                <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] text-slate-500">{tx("Подкатегории задаются отдельно для каналов и чатов.", "Subcategories are configured separately for channels and chats.")}</p>
-              )}
+              ) : null}
             </section>
 
             <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
@@ -2697,7 +2695,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <b className="block text-slate-200">{tx("Выставить на продажу", "Offer for sale")}</b>
                   <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("После включения укажите цену в TON", "Set a TON price after enabling")}</small>
                 </span>
-                <button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-10 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
+                <button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
                   <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-5" : "translate-x-0.5"}`} />
                 </button>
               </div>
@@ -2732,7 +2730,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <b className="block text-slate-200">{tx("Ежемесячный вход", "Monthly entry")}</b>
                     <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Telegram будет списывать Stars каждый месяц за доступ к каналу", "Telegram will charge Stars monthly for channel access")}</small>
                   </span>
-                  <button type="button" role="switch" aria-checked={monthlyEntryEnabled} onClick={() => setMonthlyEntryEnabled(value => !value)} className={`relative h-6 w-10 shrink-0 rounded-full border transition-colors ${monthlyEntryEnabled ? "border-amber-200/70 bg-amber-400" : "border-white/15 bg-white/8"}`}>
+                  <button type="button" role="switch" aria-checked={monthlyEntryEnabled} onClick={() => setMonthlyEntryEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${monthlyEntryEnabled ? "border-amber-200/70 bg-amber-400" : "border-white/15 bg-white/8"}`}>
                     <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${monthlyEntryEnabled ? "translate-x-5" : "translate-x-0.5"}`} />
                   </button>
                 </div>
@@ -2768,7 +2766,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <b className="block text-slate-200">{tx("Анонимное размещение", "Anonymous listing")}</b>
                     <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Не показывать владельца в карточках TG TOP для всех выбранных площадок", "Do not show the owner on TG TOP cards for all selected communities")}</small>
                   </span>
-                  <button type="button" role="switch" aria-checked={anonymousListing} aria-label={tx("Переключить анонимное размещение", "Toggle anonymous listing")} onClick={() => setAnonymousListing(value => !value)} className={`relative h-6 w-10 shrink-0 rounded-full border transition-colors ${anonymousListing ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
+                  <button type="button" role="switch" aria-checked={anonymousListing} aria-label={tx("Переключить анонимное размещение", "Toggle anonymous listing")} onClick={() => setAnonymousListing(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${anonymousListing ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
                     <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${anonymousListing ? "translate-x-5" : "translate-x-0.5"}`} />
                   </button>
                 </div>
