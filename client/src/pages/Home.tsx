@@ -1861,7 +1861,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </span>
                   <span className="flex items-center gap-1">
                     <button onClick={() => setSelectedGroupIds([])} disabled={!selectedGroupIds.length} className="rounded-lg px-2 py-1 text-[10px] font-medium text-slate-400 transition-colors hover:bg-white/8 hover:text-white disabled:opacity-40">{tx("Снять выделение", "Clear selection")}</button>
-                    <button onClick={exitMyGroupsSelection} className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:bg-white/8 hover:text-white">{tx("Готово", "Done")}</button>
+                    <button onClick={exitMyGroupsSelection} className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:bg-white/8 hover:text-white">{tx("Отменить", "Cancel")}</button>
                   </span>
                 </div>
                 <div className="flex gap-1.5">
@@ -1876,7 +1876,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     disabled={unlistGroups.isPending || !selectedGroupIds.length}
                     className="h-10 shrink-0 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-[11px] font-medium text-slate-200 transition-colors hover:bg-white/[0.08] disabled:opacity-45"
                   >
-                    {tx("Убрать", "Remove")}
+                    {tx("Снять с каталога", "Remove from catalog")}
                   </button>
                   <button
                     onClick={deleteSelectedGroups}
@@ -1950,7 +1950,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               {(targetSlot ? orderedMyGroups : visibleMyGroups).map(group => (
                 <div
                   key={group.id}
-                  className="relative h-[96px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-3"
+                  className="relative h-[88px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2.5"
                 >
                   <div className="flex items-center gap-2">
                     {!targetSlot && myGroupsSelectionMode && <button
