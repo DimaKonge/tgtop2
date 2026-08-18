@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { createStarsRankingInvoiceLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
+import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
 import { formatTonAmount } from "./tonFormatting";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
@@ -14,6 +14,9 @@ const groupListingInput = z.object({
   city: z.string().trim().max(96).optional(),
   subcategory: z.string().min(2).max(64).optional(),
   anonymousListing: z.boolean().optional(),
+  monthlyEntryEnabled: z.boolean().optional(),
+  monthlyEntryStars: z.number().int().min(1).max(10_000).optional(),
+  monthlyEntryLinkName: z.string().trim().max(64).optional(),
 });
 
 export const appRouter = router({
@@ -154,6 +157,23 @@ export const appRouter = router({
           salePriceTon: group.salePriceTon,
         })));
         return { success: true, announced: groups.length };
+      }),
+
+    createMonthlyEntryLink: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.ownerOpenId !== ctx.user.openId) throw new Error("Канал недоступен для настройки");
+        if (group.category !== "Каналы" || group.username || !group.monthlyEntryEnabled || !group.monthlyEntryStars) {
+          throw new Error("Ежемесячный вход доступен только для приватного канала с указанной ценой");
+        }
+        const inviteLink = await createTelegramMonthlySubscriptionInviteLink({
+          chatId: group.chatId,
+          starsAmount: group.monthlyEntryStars,
+          linkName: group.monthlyEntryLinkName,
+        });
+        await db.saveMonthlyEntryInviteLink(ctx.user.openId, group.id, inviteLink);
+        return { success: true, inviteLink };
       }),
 
     unlistGroups: protectedProcedure

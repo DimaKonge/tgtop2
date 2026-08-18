@@ -133,6 +133,10 @@ type Group = {
   salePriceTon?: string | null;
   listingType?: ListingType;
   anonymousListing?: boolean;
+  monthlyEntryEnabled?: boolean;
+  monthlyEntryStars?: number | null;
+  monthlyEntryLinkName?: string | null;
+  monthlyEntryInviteLink?: string | null;
   deleteServiceMessages?: boolean;
   ownerPinned?: boolean;
   ownerSortOrder?: number;
@@ -710,6 +714,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [salePriceTon, setSalePriceTon] = useState("");
   const [isListingForSale, setIsListingForSale] = useState(false);
   const [anonymousListing, setAnonymousListing] = useState(false);
+  const [monthlyEntryEnabled, setMonthlyEntryEnabled] = useState(false);
+  const [monthlyEntryStars, setMonthlyEntryStars] = useState("");
+  const [monthlyEntryLinkName, setMonthlyEntryLinkName] = useState("");
   const [nftTransferOpen, setNftTransferOpen] = useState(false);
   const [nftTransferStep, setNftTransferStep] = useState<"select" | "review" | "prepared">("select");
   const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
@@ -918,6 +925,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.getGroups.invalidate();
       void utils.tgTop.getSlots.invalidate();
       void utils.tgTop.getAccount.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const createMonthlyEntryLink = trpc.tgTop.createMonthlyEntryLink.useMutation({
+    onSuccess: ({ inviteLink }) => {
+      void utils.tgTop.myGroups.invalidate();
+      window.open(inviteLink, "_blank", "noopener,noreferrer");
+      toast.success(tx("Платная ссылка создана и открыта", "Paid link created and opened."));
     },
     onError: error => toast.error(error.message),
   });
@@ -1246,6 +1261,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? selectedListingGroups[0]?.category
     : null;
   const listingSubcategoryOptions = listingCategory ? CATEGORY_SUBCATEGORIES[listingCategory] : [];
+  const monthlyEntryEligibleGroup = selectedListingGroups.length === 1 && selectedListingGroups[0]?.category === "Каналы" && !selectedListingGroups[0]?.username
+    ? selectedListingGroups[0]
+    : null;
   const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
   const showcaseNft = myNfts.find(nft => nft.id === showcaseNftId) ?? null;
   const reviewedRecipient = nftRecipientQuery.data;
@@ -1307,6 +1325,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setSalePriceTon(firstGroup?.salePriceTon ?? "");
     setIsListingForSale(Boolean(firstGroup?.salePriceTon));
     setAnonymousListing(Boolean(firstGroup?.anonymousListing));
+    setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
+    setMonthlyEntryStars(firstGroup?.monthlyEntryStars ? String(firstGroup.monthlyEntryStars) : "");
+    setMonthlyEntryLinkName(firstGroup?.monthlyEntryLinkName ?? "");
     setListingOpen(true);
   };
   const saveListing = () => {
@@ -1318,6 +1339,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       subcategory: listingSubcategory,
       salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
       anonymousListing,
+      monthlyEntryEnabled,
+      monthlyEntryStars: monthlyEntryEnabled ? Number(monthlyEntryStars) : undefined,
+      monthlyEntryLinkName: monthlyEntryEnabled ? monthlyEntryLinkName.trim() || undefined : undefined,
     });
   };
   const removeSelectedFromListing = () => {
@@ -2712,6 +2736,42 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">TON</span>
                 </div>
               </section>
+            )}
+
+            {monthlyEntryEligibleGroup && (
+              <section className="rounded-xl border border-amber-300/15 bg-amber-300/[0.035] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs">
+                    <b className="block text-slate-200">{tx("Ежемесячный вход", "Monthly entry")}</b>
+                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Telegram будет списывать Stars каждый месяц за доступ к каналу", "Telegram will charge Stars monthly for channel access")}</small>
+                  </span>
+                  <button type="button" role="switch" aria-checked={monthlyEntryEnabled} onClick={() => setMonthlyEntryEnabled(value => !value)} className={`relative h-6 w-10 shrink-0 rounded-full border transition-colors ${monthlyEntryEnabled ? "border-amber-200/70 bg-amber-400" : "border-white/15 bg-white/8"}`}>
+                    <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${monthlyEntryEnabled ? "translate-x-5" : "translate-x-0.5"}`} />
+                  </button>
+                </div>
+                {monthlyEntryEnabled && (
+                  <div className="mt-3 space-y-2.5">
+                    <div className="relative">
+                      <Input value={monthlyEntryStars} type="number" inputMode="numeric" min="1" max="10000" step="1" onChange={event => setMonthlyEntryStars(event.target.value)} placeholder={tx("Цена за месяц", "Monthly price")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-amber-100/80">★ / {tx("мес.", "mo.")}</span>
+                    </div>
+                    <Input value={monthlyEntryLinkName} maxLength={64} onChange={event => setMonthlyEntryLinkName(event.target.value)} placeholder={tx("Название ссылки (необязательно)", "Link name (optional)")} className="h-10 border-white/10 bg-[#0b0f14] text-sm" />
+                    <button type="button" onClick={() => createMonthlyEntryLink.mutate({ groupId: monthlyEntryEligibleGroup.id })} disabled={createMonthlyEntryLink.isPending || !monthlyEntryEligibleGroup.monthlyEntryEnabled || monthlyEntryEligibleGroup.monthlyEntryStars !== Number(monthlyEntryStars) || (monthlyEntryEligibleGroup.monthlyEntryLinkName ?? "") !== monthlyEntryLinkName.trim()} className="flex w-full items-center justify-between rounded-lg border border-amber-200/20 bg-amber-300/10 px-3 py-2 text-left text-[11px] font-semibold text-amber-100 disabled:opacity-45">
+                      <span>{createMonthlyEntryLink.isPending ? ui.loading : tx("Создать платную ссылку", "Create paid link")}</span>
+                      <span>★</span>
+                    </button>
+                    {monthlyEntryEligibleGroup.monthlyEntryInviteLink ? (
+                      <a href={monthlyEntryEligibleGroup.monthlyEntryInviteLink} target="_blank" rel="noreferrer" className="block truncate text-[10px] font-medium text-[#9cc3ff] hover:text-white">{tx("Открыть активную платную ссылку", "Open active paid link")}</a>
+                    ) : (
+                      <p className="text-[10px] leading-4 text-slate-500">{tx("Сначала сохраните цену, затем создайте ссылку Telegram.", "Save the price first, then create the Telegram link.")}</p>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {selectedListingGroups.length === 1 && selectedListingGroups[0]?.category === "Каналы" && selectedListingGroups[0]?.username && (
+              <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] leading-4 text-slate-500">{tx("Ежемесячный вход в Stars доступен после перевода канала в приватный режим.", "Monthly Stars entry is available after the channel becomes private.")}</p>
             )}
 
             {selectedListingGroups.length > 0 && selectedListingGroups.every(group => group.category === "Чаты") && (

@@ -89,3 +89,22 @@ export async function createStarsRankingInvoiceLink(input: { payload: string; st
     return null;
   }
 }
+
+export async function createTelegramMonthlySubscriptionInviteLink(input: { chatId: string; starsAmount: number; linkName?: string | null }) {
+  if (!botToken) throw new Error("TG TOP bot token is not configured");
+  try {
+    const response = await axios.post<{ ok: boolean; result?: { invite_link?: string }; description?: string }>(`https://api.telegram.org/bot${botToken}/createChatSubscriptionInviteLink`, {
+      chat_id: input.chatId,
+      subscription_period: 2_592_000,
+      subscription_price: input.starsAmount,
+      ...(input.linkName ? { name: input.linkName } : {}),
+    }, { timeout: 15_000 });
+    if (!response.data.ok || !response.data.result?.invite_link) {
+      throw new Error(response.data.description ?? "Telegram не создал платную ссылку");
+    }
+    return response.data.result.invite_link;
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error("Не удалось создать платную ссылку Telegram");
+  }
+}

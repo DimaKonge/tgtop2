@@ -17,6 +17,14 @@ describe("Stars invoice window delivery", () => {
     expect(source).toContain("/createInvoiceLink");
     expect(source).not.toContain("/sendInvoice");
   });
+
+  it("uses Telegram's native monthly subscription invite endpoint for paid channel access", () => {
+    const source = readFileSync(new URL("./telegramNotifications.ts", import.meta.url), "utf8");
+    expect(source).toContain("createTelegramMonthlySubscriptionInviteLink");
+    expect(source).toContain("/createChatSubscriptionInviteLink");
+    expect(source).toContain("subscription_period: 2_592_000");
+    expect(source).toContain("subscription_price: input.starsAmount");
+  });
 });
 
 describe("community listing announcements", () => {

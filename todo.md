@@ -276,8 +276,8 @@
 - [ ] Show «Приватный» on public cards whenever a community has neither a public username nor an invite link
 - [ ] Label the detail-view entry action «Перейти в приватную группу» for private communities
 - [ ] Add management-panel controls for paid private-entry links with price, expiry, usage limits, payment confirmation, and invite delivery
-- [ ] Add «Сделать вход платным», Stars price, and native Telegram paid-link generation controls to eligible private-channel listing settings
-- [ ] Restrict Telegram monthly Stars subscription-link controls to managed channels, not chats or groups
+- [x] Add «Сделать вход платным», Stars price, and native Telegram paid-link generation controls to eligible private-channel listing settings
+- [x] Restrict Telegram monthly Stars subscription-link controls to managed channels, not chats or groups
 - [x] Add My Groups bulk-selection mode with a visible control, long-press activation, and shared batch actions
 - [x] Replace My Groups List/Grid chips with one toggle button and use the «Не в листинге» / «Unlisted» filter label
 - [x] Tune public ranking-board tier widths to fully use the available mobile content width

@@ -215,10 +215,12 @@ export async function getAuctionSlots(category?: string, country?: string, subca
   }).from(groupsCatalog)
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
     .where(and(...groupConditions));
-  const groupMap = new Map(groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => [
+  const groupMap = new Map(groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => {
+    const { monthlyEntryInviteLink: _monthlyEntryInviteLink, ...publicGroup } = group;
+    return [
     group.id,
     {
-      ...group,
+      ...publicGroup,
       owner: group.anonymousListing ? undefined : {
         openId: group.ownerOpenId,
         name: ownerName,
@@ -226,7 +228,8 @@ export async function getAuctionSlots(category?: string, country?: string, subca
         avatarUrl: ownerAvatarUrl,
       },
     },
-  ]));
+  ];
+  }));
   return slots.map(slot => ({ ...slot, group: slot.groupId ? groupMap.get(slot.groupId) ?? null : null }));
 }
 
@@ -412,15 +415,18 @@ export async function getGroupsCatalog(category?: string, country?: string, subc
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
     .where(and(...conditions))
     .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
-  return groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => ({
-    ...group,
-    owner: group.anonymousListing ? undefined : {
-      openId: group.ownerOpenId,
-      name: ownerName,
-      telegramUsername: ownerTelegramUsername,
-      avatarUrl: ownerAvatarUrl,
-    },
-  }));
+  return groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => {
+    const { monthlyEntryInviteLink: _monthlyEntryInviteLink, ...publicGroup } = group;
+    return {
+      ...publicGroup,
+      owner: group.anonymousListing ? undefined : {
+        openId: group.ownerOpenId,
+        name: ownerName,
+        telegramUsername: ownerTelegramUsername,
+        avatarUrl: ownerAvatarUrl,
+      },
+    };
+  });
 }
 
 export async function getPublicOwnerProfile(openId: string) {
@@ -451,7 +457,10 @@ export async function getPublicOwnerProfile(openId: string) {
   )).orderBy(desc(nftUsernames.createdAt));
   return {
     owner,
-    groups: groups.map(group => ({ ...group, owner })),
+    groups: groups.map(group => {
+      const { monthlyEntryInviteLink: _monthlyEntryInviteLink, ...publicGroup } = group;
+      return { ...publicGroup, owner };
+    }),
     nfts,
   };
 }
@@ -572,8 +581,9 @@ export async function getGroupDetail(id: number) {
   const ownerNfts = await db.select().from(nftUsernames)
     .where(and(eq(nftUsernames.showcaseGroupId, group.id), eq(nftUsernames.status, "available")))
     .orderBy(desc(nftUsernames.createdAt));
+  const { monthlyEntryInviteLink: _monthlyEntryInviteLink, ...publicGroup } = group;
   return {
-    group,
+    group: publicGroup,
     snapshots: snapshots.reverse(),
     ownerNfts,
     analytics: { source: "tgtop_bot_observed" as const, observedSince: group.createdAt },
@@ -654,6 +664,9 @@ export type GroupListingOptions = {
   city?: string;
   subcategory?: string;
   anonymousListing?: boolean;
+  monthlyEntryEnabled?: boolean;
+  monthlyEntryStars?: number;
+  monthlyEntryLinkName?: string;
 };
 
 export function normalizeGroupListingOptions(listing?: GroupListingOptions | string) {
@@ -670,6 +683,9 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
     city: options.city,
     subcategory: options.subcategory,
     anonymousListing: options.anonymousListing,
+    monthlyEntryEnabled: options.monthlyEntryEnabled,
+    monthlyEntryStars: options.monthlyEntryStars,
+    monthlyEntryLinkName: options.monthlyEntryLinkName?.trim() || null,
   };
 }
 
@@ -689,6 +705,14 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
   }
   if (listingOptions.anonymousListing && groups.some(group => group.category !== "Чаты")) {
     throw new Error("Анонимное размещение доступно только для чатов");
+  }
+  if (listingOptions.monthlyEntryEnabled) {
+    if (groups.length !== 1 || groups[0].category !== "Каналы" || groups[0].username) {
+      throw new Error("Ежемесячный вход в Stars доступен только для одного приватного канала");
+    }
+    if (!Number.isInteger(listingOptions.monthlyEntryStars) || (listingOptions.monthlyEntryStars ?? 0) < 1 || (listingOptions.monthlyEntryStars ?? 0) > 10000) {
+      throw new Error("Укажите цену от 1 до 10000 Stars в месяц");
+    }
   }
   const groupsNeedingListing = groups.filter(group => group.status !== "listed");
   const targetGroupsForAnnouncement = groups;
@@ -711,6 +735,13 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       ...(listingOptions.city !== undefined ? { city: listingOptions.city || null } : {}),
       ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),
       ...(listingOptions.anonymousListing !== undefined ? { anonymousListing: listingOptions.anonymousListing } : {}),
+      ...(listingOptions.monthlyEntryEnabled !== undefined ? {
+        monthlyEntryEnabled: listingOptions.monthlyEntryEnabled,
+        monthlyEntryStars: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryStars ?? null : null,
+        monthlyEntryLinkName: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryLinkName : null,
+        monthlyEntryInviteLink: null,
+        monthlyEntryUpdatedAt: null,
+      } : {}),
     }).where(eq(groupsCatalog.id, groupId))));
 
     const board = await tx.select().from(auctionSlots).where(and(
@@ -739,7 +770,20 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
     title: group.title,
     listingType: listingOptions.listingType,
     salePriceTon: listingOptions.salePriceTon ?? null,
+    monthlyEntryEnabled: listingOptions.monthlyEntryEnabled ?? false,
+    monthlyEntryStars: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryStars ?? null : null,
   }));
+}
+
+export async function saveMonthlyEntryInviteLink(ownerOpenId: string, groupId: number, inviteLink: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(and(eq(groupsCatalog.id, groupId), eq(groupsCatalog.ownerOpenId, ownerOpenId))).limit(1);
+  if (!group) throw new Error("Канал недоступен для настройки");
+  if (!group.monthlyEntryEnabled || group.category !== "Каналы" || group.username || !group.monthlyEntryStars) {
+    throw new Error("Ежемесячный вход доступен только для приватного канала с указанной ценой");
+  }
+  await db.update(groupsCatalog).set({ monthlyEntryInviteLink: inviteLink, monthlyEntryUpdatedAt: new Date() }).where(eq(groupsCatalog.id, groupId));
 }
 
 export async function listGroupWithCredits(ownerOpenId: string, groupId: number, listing?: GroupListingOptions | string, cost = GROUP_CONNECTION_BONUS) {

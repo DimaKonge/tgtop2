@@ -46,4 +46,18 @@ describe("normalizeGroupListingOptions", () => {
       subcategory: "General",
     });
   });
+
+  it("retains monthly Stars entry settings for an eligible private channel listing", () => {
+    expect(normalizeGroupListingOptions({
+      listingType: "catalog",
+      country: "Global",
+      monthlyEntryEnabled: true,
+      monthlyEntryStars: 11,
+      monthlyEntryLinkName: "TG TOP monthly",
+    })).toMatchObject({
+      monthlyEntryEnabled: true,
+      monthlyEntryStars: 11,
+      monthlyEntryLinkName: "TG TOP monthly",
+    });
+  });
 });
