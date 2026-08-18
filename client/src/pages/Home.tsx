@@ -2138,6 +2138,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <ChevronRight className="h-4 w-4" />
                     </a>
                   )}
+                  {ownsDetail && detail.group.status !== "listed" && (
+                    <button
+                      type="button"
+                      onClick={() => openListing([detail.group.id])}
+                      className="mt-3 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-4 text-sm font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/16 active:scale-[0.99]"
+                    >
+                      <span>{tx("Разместить в каталоге", "List in catalog")}</span>
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  )}
                   {detailEntryUrl && subscriptionReward > 0 && (
                     <a
                       href={detailEntryUrl}

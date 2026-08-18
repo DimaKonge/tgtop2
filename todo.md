@@ -308,6 +308,7 @@
 - [ ] Design and implement a clear guest journey from a reward-star card through Telegram action back to confirmed earned GRAM feedback in TG TOP
 - [ ] Replace the reward star with a Telegram-style card-corner badge that displays the available +GRAM amount, and keep one subscribe-and-earn action in details
 - [ ] Simplify reward listing settings around one entry-bonus toggle, total GRAM budget, and one per-subscriber reward amount
-- [ ] Make anonymous listing the default, hide all anonymous owner identity and profile access, and require anonymous mode to be disabled before ranking placement
-- [ ] Ensure anonymous listings never expose owner identity, profile access, or other owner communities, while public profiles show only deliberately non-anonymous listings
+- [x] Superseded: require anonymous mode to be disabled before ranking placement; the confirmed behavior instead permits anonymous communities in rankings
+- [x] Make anonymous listing the default, hide all anonymous owner identity and profile access, and ensure public profiles show only deliberately non-anonymous listings
 - [x] Eliminate flicker and standardize the card-transition speed for All, Channels, Chats, and NFT filter changes
+- [x] Add an owner-only «Разместить в каталоге» button below the main entry action for an unlisted community detail screen
