@@ -122,6 +122,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "")');
     expect(source).toContain('subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined');
     expect(source).toContain('h-[68px] border-white/8 bg-[#111720] px-3 py-2');
+    expect(source).toContain('group flex h-14 w-full items-center justify-between gap-3 rounded-xl');
+    expect(source).toContain('flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-dashed');
     expect(source).toContain('h-[64px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2');
     expect(source).toContain('absolute right-3 top-1/2 z-10 grid h-5 w-5 -translate-y-1/2');
     expect(source).toContain('relative h-6 w-11 shrink-0 rounded-full border transition-colors');

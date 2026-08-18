@@ -1639,7 +1639,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     >
                       <button
                         onClick={() => openGroup(group.id)}
-                        className="group flex h-[52px] w-full items-center justify-between gap-3 rounded-xl border border-white/8 bg-[#111720] px-3.5 py-2 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
+                        className="group flex h-14 w-full items-center justify-between gap-3 rounded-xl border border-white/8 bg-[#111720] px-3.5 py-2 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-3">
                           <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
@@ -1670,7 +1670,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {searchedGeneralList.length > 0 && (
                   <button
                     onClick={() => openMine()}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#3f8cff]/6 px-4 py-4 text-sm font-medium text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"
+                    className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#3f8cff]/6 px-4 text-sm font-medium text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"
                   >
                     <Plus className="h-4 w-4" />
                     {tx("Добавить свою группу в список", "Add your community to the list")}
