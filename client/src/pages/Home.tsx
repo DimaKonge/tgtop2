@@ -1143,7 +1143,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const leadSlot = board[0];
   const secondTier = board.slice(1, 3);
   const thirdTier = board.slice(3, 7);
-  const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map(slot => `${slot.id}-${slot.group?.id ?? "empty"}`).join("|")}`;
+  const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}`;
   const bonus = (
     (account?.user?.bonusBalance ?? user?.bonusBalance ?? 0) / 100
   ).toFixed(1);

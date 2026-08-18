@@ -108,7 +108,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Реальные бонусы, ставки, Stars, сделки и передачи NFT.');
     expect(source).toContain('const verifiedTasks');
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
-    expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
+    expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}`');
     expect(source).toContain('import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"');
     expect(source).toContain('const canApplyAnonymousListing = selectedListingGroups.length > 0');
     expect(source).toContain('anonymousListing: selectedListingGroups.length ? anonymousListing : undefined');
@@ -137,9 +137,8 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('myGroupsViewMode === "top"');
     expect(source).toContain('rounded-full border px-2.5 text-[9px]');
     expect(source).not.toContain('CatalogViewMode');
-    expect(styles).toContain('--ranking-slot-offset: 32px');
     expect(styles).toContain('--ranking-slot-offset: 26px');
-    expect(styles).toContain('--ranking-slot-offset: 20px');
+    expect(styles).toContain('.ranking-slot-enter { animation: ranking-slot-enter 360ms');
     expect(source).toContain('isEnglish ? "For sale" : "На продаже"');
     expect(source).toContain('isEnglish ? "In catalog" : "В каталоге"');
     expect(source).toContain('isEnglish ? "Unlisted" : "Не в листинге"');
