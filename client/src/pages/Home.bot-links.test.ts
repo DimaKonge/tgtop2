@@ -23,10 +23,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toMatch(/<GroupCard\s+group=\{leadSlot\.group\}\s+variant="lead"/);
     expect(source).toContain('variant="secondary"');
     expect(source).toContain('variant="compact"');
-    expect(source).toContain('aspect-square border-[#3f8cff]/35 bg-[#141c27] p-5');
+    expect(source).toContain('h-[252px] border-[#3f8cff]/35 bg-[#141c27] p-5');
     expect(source).toContain('sm:h-[42vh]');
-    expect(source).toContain('aspect-square border-white/10 bg-[#111720] p-3');
-    expect(source).toContain('aspect-square border-white/8 bg-[#111720] p-2');
+    expect(source).toContain('h-[104px] border-white/10 bg-[#111720] p-3');
+    expect(source).toContain('h-[68px] border-white/8 bg-[#111720] p-2');
     expect(source).toContain('max-w-full truncate');
     expect(source).toContain('max-w-[132px]');
     expect(source).toContain('lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"');
@@ -103,7 +103,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const verifiedTasks');
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
-    expect(source).toContain('className="ranking-slot-enter ranking-slot-lead mx-auto w-full max-w-[320px]"');
+    expect(source).toContain('className="ranking-slot-enter ranking-slot-lead"');
     expect(source).toContain('type MyGroupsViewMode = "list" | "grid"');
     expect(source).toContain('const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list")');
     expect(source).toContain('myGroupsViewMode === "grid"');

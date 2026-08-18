@@ -271,3 +271,4 @@
 - [x] Reduce the public Top lead, second-tier, and lower-tier card sizes so more of the ranking board fits on mobile
 - [x] Include matching ranking-slot communities in public search results without duplicating them in the normal list
 - [x] Keep one shared Top search field visible across Channels, Chats, and NFT, with NFT name and username matching
+- [x] Restore full-width public ranking tiers while reducing only their heights to reveal the third row on mobile

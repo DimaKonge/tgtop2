@@ -344,11 +344,11 @@ function GroupCard({
   const compact = variant === "compact";
   const rankingPlacement = variant !== "list";
   const cardStyle = lead
-    ? "aspect-square border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[42vh] sm:aspect-auto sm:p-6"
+    ? "h-[252px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[42vh] sm:p-6"
           : variant === "secondary"
-      ? "aspect-square border-white/10 bg-[#111720] p-3 sm:h-[140px] sm:aspect-auto sm:p-4"
+      ? "h-[104px] border-white/10 bg-[#111720] p-3 sm:h-[140px] sm:p-4"
       : compact
-        ? "aspect-square border-white/8 bg-[#111720] p-2 sm:h-[106px] sm:aspect-auto"
+        ? "h-[68px] border-white/8 bg-[#111720] p-2 sm:h-[106px]"
         : "h-[52px] border-white/8 bg-[#111720] px-3 py-1.5";
   const shellStyle = compact
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
@@ -1533,7 +1533,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <>
             <div className="space-y-2">
               {!topSearchQuery.trim() && <div key={rankingMotionKey} className="space-y-2" aria-live="polite">
-              <div className="ranking-slot-enter ranking-slot-lead mx-auto w-full max-w-[320px]" style={{ animationDelay: "0ms" }}>
+              <div className="ranking-slot-enter ranking-slot-lead" style={{ animationDelay: "0ms" }}>
                 <GroupCard
                   group={leadSlot.group}
                   variant="lead"
@@ -1546,7 +1546,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   onOwnerClick={() => leadSlot.group && openOwner(leadSlot.group.ownerOpenId)}
                 />
               </div>
-              <div className="mx-auto grid w-full max-w-[320px] grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {secondTier.map((slot, index) => (
                   <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-secondary" style={{ animationDelay: `${90 + index * 45}ms` }}>
                     <GroupCard
@@ -1561,7 +1561,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </div>
                 ))}
               </div>
-              <div className="mx-auto grid w-full max-w-[320px] grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-4 gap-2">
                 {thirdTier.map((slot, index) => (
                   <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-compact" style={{ animationDelay: `${185 + index * 34}ms` }}>
                     <GroupCard
