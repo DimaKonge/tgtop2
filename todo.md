@@ -298,6 +298,7 @@
 - [x] Change the launch-screen status copy to «Открываем каталог»
 - [x] Restore normal lower-list card size on Top and make My Groups rows more compact
 - [x] Make the lower public catalog-list card on Top exactly match the height of the «+ Добавить свою группу» control below it, without changing the ranking pyramid or My Groups rows
+- [x] Restore the intended larger 68px height of the lower public catalog cell on Top without changing the add-community button
 - [x] Credit an internal invitation bonus to the acting user when they manually add a new participant to a bot-administered group without an invite link
 - [x] Let ordinary TG TOP users earn internal credits from verified community-defined subscriber, invite-referral, and manual-addition rewards
 - [x] Add an owner-controlled reward-campaign section funded solely in internal GRAM, with an enable switch, a budget, and a per-subscriber reward amount

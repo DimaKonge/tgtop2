@@ -1705,7 +1705,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     >
                       <button
                         onClick={() => openGroup(group.id)}
-                        className="group flex h-14 w-full items-center justify-between gap-3 rounded-xl border border-white/8 bg-[#111720] px-3.5 py-2 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
+                        className="group flex h-[68px] w-full items-center justify-between gap-3 rounded-xl border border-white/8 bg-[#111720] px-3.5 py-2 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-3">
                           <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
