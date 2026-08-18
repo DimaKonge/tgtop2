@@ -287,3 +287,4 @@
 - [x] Replace country and subcategory chip grids in listing configuration with compact dropdown controls
 - [x] Make bulk anonymous-listing work for the selected communities with clear eligibility behavior
 - [x] Redesign bulk-selection actions as a compact fixed bottom bar that does not shift My Groups cards
+- [x] Ensure bulk anonymous listing applies to both channels and chats, including mixed selections
