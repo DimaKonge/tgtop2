@@ -118,7 +118,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Снять выделение", "Clear selection")');
     expect(source).toContain('tx("Отменить", "Cancel")');
     expect(source).toContain('tx("Снять с каталога", "Remove from catalog")');
-    expect(source).toContain('h-[88px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2.5');
+    expect(source).toContain('setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "")');
+    expect(source).toContain('subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined');
+    expect(source).toContain('h-[80px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2');
     expect(source).toContain('absolute right-3 top-1/2 z-10 grid h-5 w-5 -translate-y-1/2');
     expect(source).toContain('relative h-6 w-11 shrink-0 rounded-full border transition-colors');
     expect(source).toContain('absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform');

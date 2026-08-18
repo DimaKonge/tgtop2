@@ -1301,7 +1301,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     myGroupsSelectionHoldTimer.current = null;
   };
   const openListing = (groupIds: number[]) => {
-    const firstGroup = mine.find(group => group.id === groupIds[0]);
+    const listingGroups = mine.filter(group => groupIds.includes(group.id));
+    const firstGroup = listingGroups[0];
+    const selectedGroupsShareCategory = listingGroups.length > 0 && listingGroups.every(group => group.category === firstGroup?.category);
     setSelectedGroupIds(Array.from(new Set(groupIds)));
     setListingCountry(
       COUNTRY_OPTIONS.includes(firstGroup?.country as ListingCountry)
@@ -1309,7 +1311,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         : "Global"
     );
     setListingCity(firstGroup?.city ?? "Все");
-    setListingSubcategory(firstGroup?.subcategory ?? "General");
+    setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "");
     setSalePriceTon(firstGroup?.salePriceTon ?? "");
     setIsListingForSale(Boolean(firstGroup?.salePriceTon));
     setAnonymousListing(Boolean(firstGroup?.anonymousListing));
@@ -1324,7 +1326,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       groupIds: selectedGroupIds,
       country: listingCountry,
       city: listingCity === "Все" ? undefined : listingCity,
-      subcategory: listingSubcategory,
+      subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined,
       salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
       anonymousListing: selectedListingGroups.length ? anonymousListing : undefined,
       monthlyEntryEnabled,
@@ -1950,7 +1952,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               {(targetSlot ? orderedMyGroups : visibleMyGroups).map(group => (
                 <div
                   key={group.id}
-                  className="relative h-[88px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2.5"
+                  className="relative h-[80px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2"
                 >
                   <div className="flex items-center gap-2">
                     {!targetSlot && myGroupsSelectionMode && <button

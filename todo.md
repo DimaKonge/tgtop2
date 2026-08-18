@@ -292,3 +292,5 @@
 - [x] Keep My Groups list-card dimensions unchanged in selection mode and refine bulk action controls
 - [x] Explicitly anchor listing-sheet switch thumbs to prevent on-state overflow
 - [x] Compact My Groups list rows and rename fixed selection-bar actions to clearer catalog wording
+- [x] Allow mixed group selections to save without a subcategory mismatch when no subcategory is chosen
+- [x] Further reduce My Groups list-card height while keeping selection-mode dimensions stable
