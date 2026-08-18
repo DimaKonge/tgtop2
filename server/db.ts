@@ -24,6 +24,9 @@ export function getStarsAmountForRankingBid(bidAmount: number) {
 
 function toPublicGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {
   const active = isRewardCampaignActive(group);
+  const rewardAmount = active
+    ? getRewardAmount(group, group.category === "Чаты" ? "manual_add" : "subscription")
+    : 0;
   const {
     monthlyEntryInviteLink: _monthlyEntryInviteLink,
     rewardActive: _rewardActive,
@@ -33,7 +36,7 @@ function toPublicGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {
     rewardPerManualAdd: _rewardPerManualAdd,
     ...publicGroup
   } = group;
-  return { ...publicGroup, rewardActive: active };
+  return { ...publicGroup, rewardActive: active, rewardAmount };
 }
 
 function toDetailGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {

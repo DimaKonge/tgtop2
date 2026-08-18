@@ -306,9 +306,45 @@
 - [x] Show the reward amount and «Подписаться и получить» action only inside the community detail screen
 - [x] Automatically deactivate exhausted reward campaigns and hide their public reward-star indicator until budget is replenished
 - [ ] Design and implement a clear guest journey from a reward-star card through Telegram action back to confirmed earned GRAM feedback in TG TOP
-- [ ] Replace the reward star with a Telegram-style card-corner badge that displays the available +GRAM amount, and keep one subscribe-and-earn action in details
-- [ ] Simplify reward listing settings around one entry-bonus toggle, total GRAM budget, and one per-subscriber reward amount
+- [x] Replace the reward star with a Telegram-style card-corner badge that displays the available +GRAM amount, and keep one subscribe-and-earn action in details
+- [x] Simplify reward listing settings around one entry-bonus toggle, total GRAM budget, and one per-subscriber reward amount
 - [x] Superseded: require anonymous mode to be disabled before ranking placement; the confirmed behavior instead permits anonymous communities in rankings
 - [x] Make anonymous listing the default, hide all anonymous owner identity and profile access, and ensure public profiles show only deliberately non-anonymous listings
 - [x] Eliminate flicker and standardize the card-transition speed for All, Channels, Chats, and NFT filter changes
 - [x] Add an owner-only «Разместить в каталоге» button below the main entry action for an unlisted community detail screen
+- [ ] Correct the community-detail hierarchy: compact anonymous identity, contextual market actions only when applicable, primary entry then reward action, and statistics fully visible above bottom navigation
+- [ ] Redesign «Перебить ставку» as a compact secondary ranking-market card that does not compete with community entry or purchase actions
+- [ ] Display each occupied ranking lot’s current TON bid directly on its public main-card pyramid cell
+- [ ] Add a compact per-cell bid popover with plus/minus controls that change the proposed ranking bid by 0.1 TON
+- [ ] Keep the bid popover open for repeated plus/minus taps and animate each 0.1 TON amount change smoothly
+- [ ] Replace repeated bid-stepper taps with a compact accelerated bid slider: 0.1 TON precision near the current bid and 1 / 2 / 4 / 8 TON fast ranges
+- [ ] Let the bidder select one of their eligible communities before submitting its placement into the chosen ranking slot
+- [ ] Cap the ranking bid slider at 100000 TON and provide a synchronized direct amount input for large bids
+- [ ] Present occupied ranking placements as auction lots with a transparent arrow trigger, current bid, and an automatic minimum outbid amount
+- [ ] Refresh the active ranking board at a short interval and animate remotely outbid lots without requiring a page reload
+- [ ] Notify a displaced owner in @TGTOP_robot with the competitor price and a Restore place button that opens the lot at competitor price + 0.1 TON
+- [ ] Show the same primary outbid panel inside an occupied community’s detail screen, with current price, minimum price, group selection, and bid controls
+- [ ] In community details, show active giveaway status first, then contextual ranking action, entry, analytics, and a purchase action only for sale listings
+- [ ] Replace all ranking placement and outbid prices, labels, notifications, and validation from TON to internal GRAM
+- [ ] Send a direct bot alert headed «Вас только что перебили» with a return-place action and minimum GRAM price
+- [ ] Show a compact per-second elapsed-time counter for how long the current group has held its ranking cell
+- [ ] Show «Подписаться и получить +… GRAM» for rewarded channels and «Вступить и получить +… GRAM» for rewarded chats in cards and details
+- [ ] Credit the exact owner-configured GRAM amount to a participant’s bonus wallet only after bot-observed membership verification
+- [ ] Validate and deploy the completed GRAM reward-card and simplified listing-settings changes to tgtop.xyz
+- [ ] When @TGTOP_robot loses admin access to a ranked community, remove it idempotently from the ranking cell and refund the owner’s exact placed GRAM amount
+- [ ] Superseded: keep a paid ranking position and public entry link active after bot removal, while pausing bot-verified analytics and automatic GRAM reward payouts
+- [ ] Keep live ranking updates lightweight and resilient for high concurrent Mini App traffic
+- [ ] Show a clear live cascade when an outbid shifts each affected community down one ranking cell and returns only the last community to the catalog
+- [ ] Resolve equal ranking prices by placing the community with the newest recorded bid above earlier equal-price placements
+- [ ] Build the low-cost lower row as a lightweight first-come live feed with smooth card movement under high concurrent placement traffic
+- [ ] Design a free-entry giveaways block with visible prizes, rules, participation counts, and end times before adding any draw mechanics
+- [ ] Use a compact Telegram-native giveaway layout: prize card, rule toggles, countdown, participant count, and one clear create or join action
+- [ ] Allow boost-only giveaway participation only after server-side verification that the user boosted the selected Telegram community
+- [ ] Make Russian the sole visible interface language and rename the My Groups management tab to «Рабочее пространство»
+- [ ] Replace the bottom navigation with four primary sections: «Каталог», «Розыгрыши», «Заработать» and «Мой кабинет»
+- [ ] Add an owner-facing «Добавить свой розыгрыш» action with owned-community selection, prize, end time, and participation conditions
+- [ ] Add a prefilled «Создать розыгрыш» action to owned-community cards in «Моём кабинете» and their detail screens
+- [ ] Show channel owners every bot-created invite link with its creation time, join count, and verified users who entered through it
+- [ ] Let channel owners create paid Telegram Stars invite links with a Stars price, link name, and owner-visible attribution
+- [ ] Use the bot-generated official Telegram Stars subscription invite link as the paid channel’s main «Перейти» action
+- [ ] Add dynamic motion to the ranking bid flow: smooth price feedback, brief lot highlight, and an origin-aware panel entrance

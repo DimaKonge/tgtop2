@@ -150,6 +150,7 @@ type Group = {
   monthlyEntryLinkName?: string | null;
   monthlyEntryInviteLink?: string | null;
   rewardActive?: boolean;
+  rewardAmount?: number;
   rewardBudget?: number;
   rewardPerSubscription?: number;
   rewardPerInvite?: number;
@@ -397,9 +398,9 @@ function GroupCard({
       aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
       className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
     >
-      {group?.rewardActive && (
-        <span aria-label={language === "en" ? "Rewards available" : "Доступна винагорода"} className={`absolute z-10 grid place-items-center rounded-full border border-amber-200/35 bg-[#17140b]/75 text-amber-200 shadow-sm backdrop-blur ${lead ? "right-4 top-4 h-8 w-8" : compact ? "right-1.5 top-1.5 h-5 w-5" : "right-2.5 top-2.5 h-6 w-6"}`}>
-          <Star className={lead ? "h-4 w-4 fill-current" : "h-3 w-3 fill-current"} />
+      {group?.rewardActive && (group.rewardAmount ?? 0) > 0 && (
+        <span aria-label={language === "en" ? `Earn +${formatGram(group.rewardAmount!)} GRAM` : `Получите +${formatGram(group.rewardAmount!)} GRAM`} className={`absolute right-0 top-0 z-10 border-b border-l border-amber-100/25 bg-amber-300/15 px-2.5 py-1 text-[9px] font-bold leading-none text-amber-100 shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${lead ? "px-3 py-1.5 text-[11px]" : compact ? "px-1.5 py-1 text-[7px]" : "px-2 py-1 text-[8px]"}`}>
+          +{formatGram(group.rewardAmount)}
         </span>
       )}
       {group && rankingPlacement ? (
@@ -1366,7 +1367,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setMonthlyEntryLinkName(firstGroup?.monthlyEntryLinkName ?? "");
     setRewardCampaignEnabled(Boolean(firstGroup?.rewardActive));
     setRewardBudget(firstGroup?.rewardBudget ? formatGram(firstGroup.rewardBudget) : "");
-    setRewardPerSubscription(firstGroup?.rewardPerSubscription ? formatGram(firstGroup.rewardPerSubscription) : "");
+    const initialJoinReward = firstGroup?.category === "Чаты" ? firstGroup?.rewardPerManualAdd : firstGroup?.rewardPerSubscription;
+    setRewardPerSubscription(initialJoinReward ? formatGram(initialJoinReward) : "");
     setRewardPerInvite(firstGroup?.rewardPerInvite ? formatGram(firstGroup.rewardPerInvite) : "");
     setRewardPerManualAdd(firstGroup?.rewardPerManualAdd ? formatGram(firstGroup.rewardPerManualAdd) : "0.01");
     setListingOpen(true);
@@ -1375,10 +1377,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     if (!selectedGroupIds.length) return toast.error(tx("Выберите хотя бы одну группу", "Select a community that is already listed."));
     const canConfigureRewards = selectedListingGroups.length === 1;
     const budgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;
-    const subscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;
-    const inviteUnits = rewardCampaignEnabled ? parseGramInput(rewardPerInvite) : 0;
-    const manualAddUnits = rewardCampaignEnabled ? parseGramInput(rewardPerManualAdd) : 0;
-    if (canConfigureRewards && rewardCampaignEnabled && [budgetUnits, subscriptionUnits, inviteUnits, manualAddUnits].some(value => value === undefined)) {
+    const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;
+    const rewardGroup = selectedListingGroups[0];
+    const isChatRewardCampaign = rewardGroup?.category === "Чаты";
+    if (canConfigureRewards && rewardCampaignEnabled && [budgetUnits, joinRewardUnits].some(value => value === undefined)) {
       return toast.error(tx("Введите сумму в GRAM с точностью до 0.01", "Enter a GRAM amount with up to two decimals."));
     }
     listWithCredits.mutate({
@@ -1394,9 +1396,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       ...(canConfigureRewards ? {
         rewardActive: rewardCampaignEnabled,
         rewardBudget: budgetUnits,
-        rewardPerSubscription: subscriptionUnits,
-        rewardPerInvite: inviteUnits,
-        rewardPerManualAdd: manualAddUnits,
+        rewardPerSubscription: isChatRewardCampaign ? 0 : joinRewardUnits,
+        rewardPerInvite: isChatRewardCampaign ? 0 : joinRewardUnits,
+        rewardPerManualAdd: isChatRewardCampaign ? joinRewardUnits : 0,
       } : {}),
     });
   };
@@ -1705,8 +1707,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     >
                       <button
                         onClick={() => openGroup(group.id)}
-                        className="group flex h-[68px] w-full items-center justify-between gap-3 rounded-xl border border-white/8 bg-[#111720] px-3.5 py-2 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
+                        className="group relative flex h-[68px] w-full items-center justify-between gap-3 overflow-hidden rounded-xl border border-white/8 bg-[#111720] px-3.5 py-2 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
                       >
+                        {group.rewardActive && (group.rewardAmount ?? 0) > 0 && (
+                          <span className="absolute right-0 top-0 z-10 border-b border-l border-amber-100/25 bg-amber-300/15 px-2 py-1 text-[8px] font-bold leading-none text-amber-100 shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(10px_0,100%_0,100%_100%,0_100%,0_10px)]">+{formatGram(group.rewardAmount)}</span>
+                        )}
                         <div className="flex min-w-0 flex-1 items-center gap-3">
                           <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
                             <Avatar group={group} />
@@ -1721,7 +1726,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           </span>
                         </div>
                         <div className="flex shrink-0 items-center gap-2.5 text-right">
-                          {group.rewardActive && <Star aria-label={tx("Доступна винагорода", "Rewards available")} className="h-3.5 w-3.5 shrink-0 fill-amber-200 text-amber-200" />}
                           {isSale ? (
                             <div className="flex flex-col items-end">
                               <b className="text-xs font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon!)} TON</b>
@@ -2905,26 +2909,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <Input value={rewardBudget} type="number" inputMode="decimal" min="0.01" step="0.01" onChange={event => setRewardBudget(event.target.value)} placeholder={tx("Бюджет кампании", "Campaign budget")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#a6c8ff]">GRAM</span>
                       </div>
-                      {isChannel ? (
-                        <>
-                          <div className="relative">
-                            <Input value={rewardPerSubscription} type="number" inputMode="decimal" min="0" step="0.01" onChange={event => setRewardPerSubscription(event.target.value)} placeholder={tx("За подписчика", "Per subscriber")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#a6c8ff]">GRAM</span>
-                          </div>
-                          <div className="relative">
-                            <Input value={rewardPerInvite} type="number" inputMode="decimal" min="0" step="0.01" onChange={event => setRewardPerInvite(event.target.value)} placeholder={tx("За подписчика по ссылке", "Per invite referral")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#a6c8ff]">GRAM</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="relative">
-                          <Input value={rewardPerManualAdd} type="number" inputMode="decimal" min="0.01" step="0.01" onChange={event => setRewardPerManualAdd(event.target.value)} placeholder={tx("За ручное добавление участника", "Per manual member addition")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#a6c8ff]">GRAM</span>
-                        </div>
-                      )}
+                      <div className="relative">
+                        <Input value={rewardPerSubscription} type="number" inputMode="decimal" min="0.01" step="0.01" onChange={event => setRewardPerSubscription(event.target.value)} placeholder={isChannel ? tx("За подписчика", "Per subscriber") : tx("За добавленного участника", "Per added member")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#a6c8ff]">GRAM</span>
+                      </div>
                       <p className="text-[10px] leading-4 text-slate-500">
                         {isChannel
-                          ? tx("За обычную подписку получает новый подписчик; за вход по ссылке — автор ссылки.", "A new subscriber earns the regular reward; the link creator earns the invite-referral reward.")
+                          ? tx("Одна ставка применяется и к подписке, и к вступлению по персональной ссылке.", "One amount applies to subscriptions and personal invite-link joins.")
                           : tx("Вознаграждение получает тот, кто добавил нового участника напрямую, без ссылки.", "The reward goes to the user who adds a new member directly, without an invite link.")}
                       </p>
                     </div>
