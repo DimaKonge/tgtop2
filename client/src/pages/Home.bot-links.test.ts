@@ -78,7 +78,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Добавить свою группу');
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('getPublicOwnerProfile.useQuery');
-    expect(source).toContain('const detailEntryUrl = detail?.group.username');
+    expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('tx("Перейти в группу", "Open community")');
     expect(source).toContain('tx("Перейти в приватную группу", "Open private community")');
     expect(source).toContain('ownsDetail && detail.group.status !== "listed"');
@@ -203,6 +203,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('rewardPerManualAdd: isChatRewardCampaign ? joinRewardUnits : 0');
     expect(source).toContain('className="group relative flex h-[68px] w-full items-center justify-between gap-3 overflow-hidden rounded-xl');
     expect(source).toContain('tx("Цена в TON", "Price in TON")');
+    expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
+    expect(source).toContain('detailHasPaidEntry');
+    expect(source).toContain('tx(`Войти за ${detail.group.monthlyEntryStars} Stars`');
+    expect(source).toContain('tx("Сделать вход платным", "Make entry paid")');
     expect(source).toContain('max-h-[34dvh] rounded-t-[20px]');
     expect(source).toContain('min-w-10 border-0 px-2 text-[10px]');
     expect(source).toContain('tx("Весь мир", "Worldwide")');

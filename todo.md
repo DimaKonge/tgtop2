@@ -346,5 +346,5 @@
 - [ ] Add a prefilled «Создать розыгрыш» action to owned-community cards in «Моём кабинете» and their detail screens
 - [ ] Show channel owners every bot-created invite link with its creation time, join count, and verified users who entered through it
 - [ ] Let channel owners create paid Telegram Stars invite links with a Stars price, link name, and owner-visible attribution
-- [ ] Use the bot-generated official Telegram Stars subscription invite link as the paid channel’s main «Перейти» action
+- [x] Use the bot-generated official Telegram Stars subscription invite link as the paid channel’s main «Перейти» action
 - [ ] Add dynamic motion to the ranking bid flow: smooth price feedback, brief lot highlight, and an origin-aware panel entrance

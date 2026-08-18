@@ -1264,9 +1264,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? slots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
-  const detailEntryUrl = detail?.group.username
+  const detailEntryUrl = detail?.group.monthlyEntryInviteLink ?? (detail?.group.username
     ? `https://t.me/${detail.group.username}`
-    : detail?.group.inviteLink ?? null;
+    : detail?.group.inviteLink ?? null);
+  const detailHasPaidEntry = Boolean(detail?.group.monthlyEntryInviteLink && detail.group.monthlyEntryStars);
   const detailOwner = detail?.group.owner ?? null;
   const subscriptionReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.subscriptionAmount ?? 0 : 0;
   const inviteReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.inviteAmount ?? 0 : 0;
@@ -2138,7 +2139,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       rel="noreferrer"
                       className="mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
                     >
-                      <span>{detail.group.inviteLink && !detail.group.username ? tx("Перейти в приватную группу", "Open private community") : tx("Перейти в группу", "Open community")}</span>
+                      <span>{detailHasPaidEntry
+                        ? tx(`Войти за ${detail.group.monthlyEntryStars} Stars`, `Join for ${detail.group.monthlyEntryStars} Stars`)
+                        : detail.group.inviteLink && !detail.group.username
+                          ? tx("Перейти в приватную группу", "Open private community")
+                          : tx("Перейти в группу", "Open community")}</span>
                       <ChevronRight className="h-4 w-4" />
                     </a>
                   )}
@@ -2852,7 +2857,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <section className="rounded-xl border border-amber-300/15 bg-amber-300/[0.035] p-3">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs">
-                    <b className="block text-slate-200">{tx("Ежемесячный вход", "Monthly entry")}</b>
+                      <b className="block text-slate-200">{tx("Сделать вход платным", "Make entry paid")}</b>
                     <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Telegram будет списывать Stars каждый месяц за доступ к каналу", "Telegram will charge Stars monthly for channel access")}</small>
                   </span>
                   <button type="button" role="switch" aria-checked={monthlyEntryEnabled} onClick={() => setMonthlyEntryEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${monthlyEntryEnabled ? "border-amber-200/70 bg-amber-400" : "border-white/15 bg-white/8"}`}>
