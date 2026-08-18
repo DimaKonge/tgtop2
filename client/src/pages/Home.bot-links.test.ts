@@ -109,11 +109,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
     expect(source).toContain('import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"');
-    expect(source).toContain('const canApplyAnonymousListing = selectedListingGroups.length > 0 && selectedListingGroups.every(group => group.category === "Чаты")');
-    expect(source).toContain('anonymousListing: canApplyAnonymousListing ? anonymousListing : undefined');
+    expect(source).toContain('const canApplyAnonymousListing = selectedListingGroups.length > 0');
+    expect(source).toContain('anonymousListing: selectedListingGroups.length ? anonymousListing : undefined');
     expect(source).toContain('aria-label={tx("Переключить анонимное размещение", "Toggle anonymous listing")}');
     expect(source).toContain('<Select value={listingCountry}');
     expect(source).toContain('<Select value={listingSubcategory}');
+    expect(source).toContain('fixed inset-x-3 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-50');
     expect(source).toContain('className="ranking-slot-enter ranking-slot-lead w-full"');
     expect(source).toContain('type MyGroupsViewMode = "list" | "grid"');
     expect(source).toContain('const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list")');

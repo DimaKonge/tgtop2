@@ -703,9 +703,6 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       throw new Error("Подкатегория не соответствует выбранным группам");
     }
   }
-  if (listingOptions.anonymousListing && groups.some(group => group.category !== "Чаты")) {
-    throw new Error("Анонимное размещение доступно только для чатов");
-  }
   if (listingOptions.monthlyEntryEnabled) {
     if (groups.length !== 1 || groups[0].category !== "Каналы" || groups[0].username) {
       throw new Error("Ежемесячный вход в Stars доступен только для одного приватного канала");
