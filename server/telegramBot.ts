@@ -2,11 +2,13 @@ import "dotenv/config";
 import axios from "axios";
 import {
   getGroupByChatId,
+  getRewardInviteBeneficiary,
   attributeTelegramReferral,
   grantGroupConnectionBonus,
   recordGroupActivity,
   recordGroupMembership,
   recordGroupSnapshot,
+  awardTelegramReward,
   observeProtectedGroupTransfer,
   approveStarsRankingPayment,
   settleStarsRankingPayment,
@@ -23,13 +25,14 @@ type TelegramChat = {
   photo?: { small_file_id?: string };
 };
 
-type TelegramUser = { id: number; first_name?: string; username?: string };
+type TelegramUser = { id: number; first_name?: string; username?: string; is_bot?: boolean };
 type ChatMember = { status: string; user: TelegramUser };
 type ChatMemberUpdate = {
   chat: TelegramChat;
+  from: TelegramUser;
   old_chat_member: ChatMember;
   new_chat_member: ChatMember;
-  invite_link?: { invite_link?: string };
+  invite_link?: { invite_link?: string; creator?: TelegramUser };
 };
 type TelegramActivity = { chat: TelegramChat; views?: number };
 type TelegramUpdate = {
@@ -153,6 +156,61 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   console.info(`[Telegram] Cataloged ${catalogCategory(chat)} ${chat.id}`);
 }
 
+async function awardMembershipReward(membership: ChatMemberUpdate): Promise<void> {
+  const member = membership.new_chat_member.user;
+  if (member.is_bot || !member.id) return;
+  const chatId = catalogChatId(membership.chat.id);
+  const viaInviteLink = Boolean(membership.invite_link?.invite_link);
+  const memberName = member.username ?? member.first_name ?? "Telegram user";
+  if (membership.chat.type === "channel") {
+    const linkCreator = membership.invite_link?.creator;
+    const rewardLink = membership.invite_link?.invite_link
+      ? await getRewardInviteBeneficiary(chatId, membership.invite_link.invite_link)
+      : undefined;
+    const rewardLinkTelegramId = rewardLink?.beneficiaryOpenId.match(/^telegram:(\d+)$/)?.[1];
+    const result = rewardLinkTelegramId && Number(rewardLinkTelegramId) !== member.id
+      ? await awardTelegramReward({
+          chatId,
+          eventType: "invite_referral",
+          beneficiaryTelegramId: Number(rewardLinkTelegramId),
+          memberTelegramId: member.id,
+          inviterTelegramId: Number(rewardLinkTelegramId),
+        })
+      : viaInviteLink && linkCreator && !linkCreator.is_bot && linkCreator.id !== member.id
+      ? await awardTelegramReward({
+          chatId,
+          eventType: "invite_referral",
+          beneficiaryTelegramId: linkCreator.id,
+          memberTelegramId: member.id,
+          beneficiaryName: linkCreator.username ?? linkCreator.first_name ?? "Telegram user",
+          beneficiaryUsername: linkCreator.username,
+          inviterTelegramId: linkCreator.id,
+        })
+      : await awardTelegramReward({
+          chatId,
+          eventType: "subscription",
+          beneficiaryTelegramId: member.id,
+          memberTelegramId: member.id,
+          beneficiaryName: memberName,
+          beneficiaryUsername: member.username,
+        });
+    if (result.awarded) console.info(`[Telegram] Awarded ${result.amount / 100} GRAM for ${rewardLinkTelegramId || (viaInviteLink && linkCreator && !linkCreator.is_bot) ? "channel referral" : "channel subscription"} in ${chatId}`);
+    return;
+  }
+  if ((membership.chat.type === "group" || membership.chat.type === "supergroup") && !viaInviteLink && !membership.from.is_bot && membership.from.id !== member.id) {
+    const result = await awardTelegramReward({
+      chatId,
+      eventType: "manual_add",
+      beneficiaryTelegramId: membership.from.id,
+      memberTelegramId: member.id,
+      beneficiaryName: membership.from.username ?? membership.from.first_name ?? "Telegram user",
+      beneficiaryUsername: membership.from.username,
+      inviterTelegramId: membership.from.id,
+    });
+    if (result.awarded) console.info(`[Telegram] Awarded ${result.amount / 100} GRAM for manual chat addition in ${chatId}`);
+  }
+}
+
 async function handleUpdate(update: TelegramUpdate): Promise<void> {
   if (update.pre_checkout_query) {
     const checkout = update.pre_checkout_query;
@@ -173,6 +231,7 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     const joins = !isActiveMember(membership.old_chat_member.status) && isActiveMember(membership.new_chat_member.status);
     const leaves = isActiveMember(membership.old_chat_member.status) && !isActiveMember(membership.new_chat_member.status);
     if (joins || leaves) await recordGroupMembership(catalogChatId(membership.chat.id), joins, leaves, Boolean(membership.invite_link?.invite_link));
+    if (joins) await awardMembershipReward(membership);
     return;
   }
   const message = update.message;

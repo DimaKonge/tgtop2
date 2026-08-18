@@ -108,3 +108,20 @@ export async function createTelegramMonthlySubscriptionInviteLink(input: { chatI
     throw new Error("Не удалось создать платную ссылку Telegram");
   }
 }
+
+export async function createTelegramRewardInviteLink(input: { chatId: string; linkName: string }) {
+  if (!botToken) throw new Error("TG TOP bot token is not configured");
+  try {
+    const response = await axios.post<{ ok: boolean; result?: { invite_link?: string }; description?: string }>(`https://api.telegram.org/bot${botToken}/createChatInviteLink`, {
+      chat_id: input.chatId,
+      name: input.linkName,
+    }, { timeout: 15_000 });
+    if (!response.data.ok || !response.data.result?.invite_link) {
+      throw new Error(response.data.description ?? "Telegram не создал ссылку для приглашения");
+    }
+    return response.data.result.invite_link;
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error("Не удалось создать ссылку Telegram для вознаграждений");
+  }
+}

@@ -70,4 +70,20 @@ describe("normalizeGroupListingOptions", () => {
       anonymousListing: true,
     });
   });
+
+  it("retains internal-GRAM reward campaign settings for server-side validation", () => {
+    expect(normalizeGroupListingOptions({
+      rewardActive: true,
+      rewardBudget: 500,
+      rewardPerSubscription: 1,
+      rewardPerInvite: 2,
+      rewardPerManualAdd: 1,
+    })).toMatchObject({
+      rewardActive: true,
+      rewardBudget: 500,
+      rewardPerSubscription: 1,
+      rewardPerInvite: 2,
+      rewardPerManualAdd: 1,
+    });
+  });
 });

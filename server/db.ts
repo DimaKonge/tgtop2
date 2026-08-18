@@ -1,7 +1,7 @@
-import { eq, and, or, asc, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, or, asc, desc, gte, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { cascadeRankedOccupants } from "./auctionCascade";
@@ -11,6 +11,7 @@ import { isCatalogSubcategory } from "./catalogTaxonomy";
 import { getMinimumRankingBidMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
 import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
+import { DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -19,6 +20,35 @@ const STARS_RANKING_PAYMENT_TTL_MS = 20 * 60 * 1000;
 
 export function getStarsAmountForRankingBid(bidAmount: number) {
   return Math.max(STARS_PER_MINIMUM_RANKING_BID, Math.ceil(bidAmount / 10));
+}
+
+function toPublicGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {
+  const active = isRewardCampaignActive(group);
+  const {
+    monthlyEntryInviteLink: _monthlyEntryInviteLink,
+    rewardActive: _rewardActive,
+    rewardBudget: _rewardBudget,
+    rewardPerSubscription: _rewardPerSubscription,
+    rewardPerInvite: _rewardPerInvite,
+    rewardPerManualAdd: _rewardPerManualAdd,
+    ...publicGroup
+  } = group;
+  return { ...publicGroup, rewardActive: active };
+}
+
+function toDetailGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {
+  const publicGroup = toPublicGroup(group);
+  const active = isRewardCampaignActive(group);
+  return {
+    ...publicGroup,
+    reward: active
+      ? {
+          subscriptionAmount: getRewardAmount(group, "subscription"),
+          inviteAmount: getRewardAmount(group, "invite_referral"),
+          manualAddAmount: getRewardAmount(group, "manual_add"),
+        }
+      : undefined,
+  };
 }
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -138,7 +168,31 @@ export async function getAccountActivity(openId: string) {
   ]);
   const namedGroup = (groupTitle: string | null, groupUsername: string | null) => groupUsername ? `@${groupUsername}` : (groupTitle ?? "TG TOP");
   return [
-    ...credits.map(item => ({ id: `credit:${item.id}`, type: "credit" as const, status: item.kind, createdAt: item.createdAt, title: item.kind === "group_connection_bonus" ? "connection_bonus" : item.kind === "manual_bonus" ? "manual_bonus" : "catalog_listing", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.amount / 100, currency: "GRAM", direction: item.amount >= 0 ? "in" as const : "out" as const })),
+    ...credits.map(item => ({
+      id: `credit:${item.id}`,
+      type: "credit" as const,
+      status: item.kind,
+      createdAt: item.createdAt,
+      title: item.kind === "group_connection_bonus"
+        ? "connection_bonus"
+        : item.kind === "manual_bonus"
+          ? "manual_bonus"
+          : item.kind === "reward_campaign_reserve"
+            ? "reward_campaign_reserve"
+            : item.kind === "reward_campaign_release"
+              ? "reward_campaign_release"
+              : item.kind === "reward_subscription"
+                ? "reward_subscription"
+                : item.kind === "reward_invite_referral"
+                  ? "reward_invite_referral"
+                  : item.kind === "reward_manual_add"
+                    ? "reward_manual_add"
+                    : "catalog_listing",
+      subject: namedGroup(item.groupTitle, item.groupUsername),
+      amount: item.amount / 100,
+      currency: "GRAM",
+      direction: item.amount >= 0 ? "in" as const : "out" as const,
+    })),
     ...starsPayments.map(item => ({ id: `stars:${item.id}`, type: "stars" as const, status: item.status, createdAt: item.paidAt ?? item.createdAt, title: "ranking_stars", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.starsAmount, currency: "Stars", direction: "out" as const })),
     ...bids.map(item => ({ id: `bid:${item.id}`, type: "bid" as const, status: item.status, createdAt: item.createdAt, title: "ranking_bid", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.bidAmount / 1000, currency: "TON", direction: "neutral" as const })),
     ...userDeals.map(item => ({ id: `deal:${item.id}`, type: "deal" as const, status: item.status, createdAt: item.createdAt, title: item.dealType, subject: namedGroup(item.groupTitle, item.groupUsername), amount: Number(item.price), currency: "TON", direction: item.buyerOpenId === openId ? "out" as const : "in" as const })),
@@ -216,7 +270,7 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
     .where(and(...groupConditions));
   const groupMap = new Map(groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => {
-    const { monthlyEntryInviteLink: _monthlyEntryInviteLink, ...publicGroup } = group;
+    const publicGroup = toPublicGroup(group);
     return [
     group.id,
     {
@@ -416,7 +470,7 @@ export async function getGroupsCatalog(category?: string, country?: string, subc
     .where(and(...conditions))
     .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
   return groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => {
-    const { monthlyEntryInviteLink: _monthlyEntryInviteLink, ...publicGroup } = group;
+    const publicGroup = toPublicGroup(group);
     return {
       ...publicGroup,
       owner: group.anonymousListing ? undefined : {
@@ -458,7 +512,7 @@ export async function getPublicOwnerProfile(openId: string) {
   return {
     owner,
     groups: groups.map(group => {
-      const { monthlyEntryInviteLink: _monthlyEntryInviteLink, ...publicGroup } = group;
+      const publicGroup = toPublicGroup(group);
       return { ...publicGroup, owner };
     }),
     nfts,
@@ -581,9 +635,8 @@ export async function getGroupDetail(id: number) {
   const ownerNfts = await db.select().from(nftUsernames)
     .where(and(eq(nftUsernames.showcaseGroupId, group.id), eq(nftUsernames.status, "available")))
     .orderBy(desc(nftUsernames.createdAt));
-  const { monthlyEntryInviteLink: _monthlyEntryInviteLink, ...publicGroup } = group;
   return {
-    group: publicGroup,
+    group: toDetailGroup(group),
     snapshots: snapshots.reverse(),
     ownerNfts,
     analytics: { source: "tgtop_bot_observed" as const, observedSince: group.createdAt },
@@ -628,6 +681,123 @@ export async function recordGroupMembership(chatId: string, joined: boolean, lef
   await recordGroupSnapshot(group.id, group.membersCount, group.messagesCount, nextJoined);
 }
 
+export type TelegramRewardInput = {
+  chatId: string;
+  eventType: RewardEventType;
+  beneficiaryTelegramId: number;
+  memberTelegramId: number;
+  beneficiaryName?: string;
+  beneficiaryUsername?: string;
+  inviterTelegramId?: number;
+};
+
+export async function awardTelegramReward(input: TelegramRewardInput) {
+  const db = await getDb();
+  if (!db) return { awarded: false as const, reason: "database_unavailable" as const };
+  const group = await getGroupByChatId(input.chatId);
+  if (!group || group.status !== "listed") return { awarded: false as const, reason: "group_unavailable" as const };
+  const amount = getRewardAmount(group, input.eventType);
+  const beneficiaryOpenId = `telegram:${input.beneficiaryTelegramId}`;
+  if (!isRewardCampaignActive(group) || amount < 1 || group.rewardBudget < amount || beneficiaryOpenId === group.ownerOpenId) {
+    return { awarded: false as const, reason: "campaign_inactive" as const };
+  }
+  try {
+    await db.transaction(async tx => {
+      await tx.insert(rewardEvents).values({
+        groupId: group.id,
+        beneficiaryOpenId,
+        memberTelegramId: String(input.memberTelegramId),
+        inviterOpenId: input.inviterTelegramId ? `telegram:${input.inviterTelegramId}` : null,
+        eventType: input.eventType,
+        amount,
+      });
+      const updated = await tx.update(groupsCatalog).set({
+        rewardBudget: sql`${groupsCatalog.rewardBudget} - ${amount}`,
+      }).where(and(
+        eq(groupsCatalog.id, group.id),
+        eq(groupsCatalog.rewardActive, true),
+        gte(groupsCatalog.rewardBudget, amount)
+      ));
+      const affectedRows = Number((updated as unknown as Array<{ affectedRows?: number }>)[0]?.affectedRows ?? 0);
+      if (affectedRows !== 1) throw new Error("reward_budget_unavailable");
+      await tx.insert(users).values({
+        openId: beneficiaryOpenId,
+        name: input.beneficiaryName ?? "Telegram user",
+        telegramUsername: input.beneficiaryUsername ?? null,
+        loginMethod: "telegram-bot",
+        lastSignedIn: new Date(),
+      }).onDuplicateKeyUpdate({
+        set: {
+          ...(input.beneficiaryName ? { name: input.beneficiaryName } : {}),
+          ...(input.beneficiaryUsername ? { telegramUsername: input.beneficiaryUsername } : {}),
+          lastSignedIn: new Date(),
+        },
+      });
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${amount}` }).where(eq(users.openId, beneficiaryOpenId));
+      await tx.insert(creditTransactions).values({
+        userOpenId: beneficiaryOpenId,
+        groupId: group.id,
+        telegramChatId: group.chatId,
+        amount,
+        kind: input.eventType === "subscription"
+          ? "reward_subscription"
+          : input.eventType === "invite_referral"
+            ? "reward_invite_referral"
+            : "reward_manual_add",
+      });
+      const [afterSpend] = await tx.select().from(groupsCatalog).where(eq(groupsCatalog.id, group.id)).limit(1);
+      if (afterSpend && !isRewardCampaignActive(afterSpend)) {
+        await tx.update(groupsCatalog).set({ rewardActive: false }).where(eq(groupsCatalog.id, group.id));
+      }
+    });
+    return { awarded: true as const, amount, groupId: group.id };
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "ER_DUP_ENTRY") return { awarded: false as const, reason: "duplicate" as const };
+    if (error instanceof Error && error.message === "reward_budget_unavailable") return { awarded: false as const, reason: "budget_exhausted" as const };
+    throw error;
+  }
+}
+
+export async function getOrCreateRewardInviteLink(groupId: number, beneficiaryOpenId: string, createInviteLink: () => Promise<string>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.id, groupId)).limit(1);
+  if (!group || group.status !== "listed" || group.category !== "Каналы" || !isRewardCampaignActive(group) || getRewardAmount(group, "invite_referral") < 1) {
+    throw new Error("Пригласительная кампания для канала недоступна");
+  }
+  const [existing] = await db.select().from(rewardInviteLinks).where(and(
+    eq(rewardInviteLinks.groupId, groupId),
+    eq(rewardInviteLinks.beneficiaryOpenId, beneficiaryOpenId)
+  )).limit(1);
+  if (existing) return { inviteLink: existing.inviteLink, existing: true };
+  const inviteLink = await createInviteLink();
+  try {
+    await db.insert(rewardInviteLinks).values({ groupId, beneficiaryOpenId, inviteLink });
+    return { inviteLink, existing: false };
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+    const [concurrent] = await db.select().from(rewardInviteLinks).where(and(
+      eq(rewardInviteLinks.groupId, groupId),
+      eq(rewardInviteLinks.beneficiaryOpenId, beneficiaryOpenId)
+    )).limit(1);
+    if (!concurrent) throw error;
+    return { inviteLink: concurrent.inviteLink, existing: true };
+  }
+}
+
+export async function getRewardInviteBeneficiary(chatId: string, inviteLink: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.chatId, chatId)).limit(1);
+  if (!group) return undefined;
+  const [link] = await db.select().from(rewardInviteLinks).where(and(
+    eq(rewardInviteLinks.groupId, group.id),
+    eq(rewardInviteLinks.inviteLink, inviteLink)
+  )).limit(1);
+  return link ? { beneficiaryOpenId: link.beneficiaryOpenId, groupId: group.id } : undefined;
+}
+
 export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: number) {
   const db = await getDb();
   if (!db) return false;
@@ -667,6 +837,11 @@ export type GroupListingOptions = {
   monthlyEntryEnabled?: boolean;
   monthlyEntryStars?: number;
   monthlyEntryLinkName?: string;
+  rewardActive?: boolean;
+  rewardBudget?: number;
+  rewardPerSubscription?: number;
+  rewardPerInvite?: number;
+  rewardPerManualAdd?: number;
 };
 
 export function normalizeGroupListingOptions(listing?: GroupListingOptions | string) {
@@ -686,6 +861,11 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
     monthlyEntryEnabled: options.monthlyEntryEnabled,
     monthlyEntryStars: options.monthlyEntryStars,
     monthlyEntryLinkName: options.monthlyEntryLinkName?.trim() || null,
+    rewardActive: options.rewardActive,
+    rewardBudget: options.rewardBudget,
+    rewardPerSubscription: options.rewardPerSubscription,
+    rewardPerInvite: options.rewardPerInvite,
+    rewardPerManualAdd: options.rewardPerManualAdd,
   };
 }
 
@@ -711,17 +891,50 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       throw new Error("Укажите цену от 1 до 10000 Stars в месяц");
     }
   }
+  const includesRewardCampaign = [
+    listingOptions.rewardActive,
+    listingOptions.rewardBudget,
+    listingOptions.rewardPerSubscription,
+    listingOptions.rewardPerInvite,
+    listingOptions.rewardPerManualAdd,
+  ].some(value => value !== undefined);
+  if (includesRewardCampaign && groups.length !== 1) {
+    throw new Error("Кампанию вознаграждений можно настроить для одной группы за раз");
+  }
+  const rewardGroup = groups[0];
+  const rewardConfig = includesRewardCampaign && rewardGroup
+    ? {
+        category: rewardGroup.category,
+        rewardActive: listingOptions.rewardActive ?? rewardGroup.rewardActive,
+        rewardBudget: listingOptions.rewardActive === false ? 0 : (listingOptions.rewardBudget ?? rewardGroup.rewardBudget),
+        rewardPerSubscription: listingOptions.rewardPerSubscription ?? rewardGroup.rewardPerSubscription,
+        rewardPerInvite: listingOptions.rewardPerInvite ?? rewardGroup.rewardPerInvite,
+        rewardPerManualAdd: listingOptions.rewardPerManualAdd ?? rewardGroup.rewardPerManualAdd,
+      }
+    : undefined;
+  const rewardValidationError = rewardConfig ? validateRewardCampaignConfig(rewardConfig) : undefined;
+  if (rewardValidationError) throw new Error(rewardValidationError);
   const groupsNeedingListing = groups.filter(group => group.status !== "listed");
   const targetGroupsForAnnouncement = groups;
   const totalCost = groupsNeedingListing.length * cost;
   const user = await getUserByOpenId(ownerOpenId);
-  if (!user || user.bonusBalance < totalCost) throw new Error("Недостаточно бонусных GRAM");
+  const reservedRewardBudget = rewardConfig && rewardGroup ? Math.max(0, rewardConfig.rewardBudget - rewardGroup.rewardBudget) : 0;
+  const releasedRewardBudget = rewardConfig && rewardGroup ? Math.max(0, rewardGroup.rewardBudget - rewardConfig.rewardBudget) : 0;
+  if (!user || user.bonusBalance + releasedRewardBudget < totalCost + reservedRewardBudget) throw new Error("Недостаточно бонусных GRAM");
   await db.transaction(async tx => {
+    if (totalCost || reservedRewardBudget || releasedRewardBudget) {
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${totalCost + reservedRewardBudget} + ${releasedRewardBudget}` }).where(eq(users.openId, ownerOpenId));
+    }
     if (totalCost) {
-      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${totalCost}` }).where(eq(users.openId, ownerOpenId));
       await tx.insert(creditTransactions).values(groupsNeedingListing.map(group => ({ userOpenId: ownerOpenId, groupId: group.id, amount: -cost, kind: "listing_spend" as const })));
     } else {
       await tx.insert(creditTransactions).values(groups.map(group => ({ userOpenId: ownerOpenId, groupId: group.id, amount: 0, kind: "listing_spend" as const })).filter((v, i, a) => a.findIndex(t => t.groupId === v.groupId) === i));
+    }
+    if (rewardGroup && reservedRewardBudget) {
+      await tx.insert(creditTransactions).values({ userOpenId: ownerOpenId, groupId: rewardGroup.id, amount: -reservedRewardBudget, kind: "reward_campaign_reserve" });
+    }
+    if (rewardGroup && releasedRewardBudget) {
+      await tx.insert(creditTransactions).values({ userOpenId: ownerOpenId, groupId: rewardGroup.id, amount: releasedRewardBudget, kind: "reward_campaign_release" });
     }
     await Promise.all(uniqueGroupIds.map(groupId => tx.update(groupsCatalog).set({
       status: "listed",
@@ -738,6 +951,13 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
         monthlyEntryLinkName: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryLinkName : null,
         monthlyEntryInviteLink: null,
         monthlyEntryUpdatedAt: null,
+      } : {}),
+      ...(rewardConfig && rewardGroup?.id === groupId ? {
+        rewardActive: isRewardCampaignActive(rewardConfig),
+        rewardBudget: rewardConfig.rewardBudget,
+        rewardPerSubscription: rewardConfig.rewardPerSubscription,
+        rewardPerInvite: rewardConfig.rewardPerInvite,
+        rewardPerManualAdd: rewardConfig.rewardPerManualAdd,
       } : {}),
     }).where(eq(groupsCatalog.id, groupId))));
 

@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
+import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
 import { formatTonAmount } from "./tonFormatting";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
@@ -17,6 +17,11 @@ const groupListingInput = z.object({
   monthlyEntryEnabled: z.boolean().optional(),
   monthlyEntryStars: z.number().int().min(1).max(10_000).optional(),
   monthlyEntryLinkName: z.string().trim().max(64).optional(),
+  rewardActive: z.boolean().optional(),
+  rewardBudget: z.number().int().min(0).max(10_000_000).optional(),
+  rewardPerSubscription: z.number().int().min(0).max(1_000_000).optional(),
+  rewardPerInvite: z.number().int().min(0).max(1_000_000).optional(),
+  rewardPerManualAdd: z.number().int().min(0).max(1_000_000).optional(),
 });
 
 export const appRouter = router({
@@ -174,6 +179,20 @@ export const appRouter = router({
         });
         await db.saveMonthlyEntryInviteLink(ctx.user.openId, group.id, inviteLink);
         return { success: true, inviteLink };
+      }),
+
+    createRewardInviteLink: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.ownerOpenId === ctx.user.openId) throw new Error("Ссылка для приглашений недоступна");
+        const result = await db.getOrCreateRewardInviteLink(input.groupId, ctx.user.openId, () =>
+          createTelegramRewardInviteLink({
+            chatId: group.chatId,
+            linkName: `TG TOP reward ${ctx.user.openId.replace(/^telegram:/, "").slice(-10)}`,
+          })
+        );
+        return { success: true, inviteLink: result.inviteLink, existing: result.existing };
       }),
 
     unlistGroups: protectedProcedure

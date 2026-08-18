@@ -33,6 +33,7 @@ import {
   Pin,
   PinOff,
   Settings2,
+  Star,
   Sun,
   Trash2,
   Trophy,
@@ -57,6 +58,16 @@ const date = (value?: Date | null, language: Language = "ru") =>
         year: "numeric",
       })
     : "—";
+const formatGram = (units: number | null | undefined) => {
+  const amount = Math.max(0, Number(units ?? 0)) / 100;
+  return amount.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+};
+const parseGramInput = (value: string): number | undefined => {
+  const normalized = value.trim().replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return undefined;
+  const units = Math.round(Number(normalized) * 100);
+  return Number.isSafeInteger(units) ? units : undefined;
+};
 type ListingType = "catalog" | "sale";
 type ListingCountry = "Global" | "UA" | "PL" | "DE" | "GB" | "US" | "RU" | "FR" | "ES" | "IT" | "NL" | "CZ" | "RO" | "TR" | "CA" | "AU" | "AE" | "KZ";
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
@@ -138,6 +149,16 @@ type Group = {
   monthlyEntryStars?: number | null;
   monthlyEntryLinkName?: string | null;
   monthlyEntryInviteLink?: string | null;
+  rewardActive?: boolean;
+  rewardBudget?: number;
+  rewardPerSubscription?: number;
+  rewardPerInvite?: number;
+  rewardPerManualAdd?: number;
+  reward?: {
+    subscriptionAmount: number;
+    inviteAmount: number;
+    manualAddAmount: number;
+  };
   deleteServiceMessages?: boolean;
   ownerPinned?: boolean;
   ownerSortOrder?: number;
@@ -376,6 +397,11 @@ function GroupCard({
       aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
       className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
     >
+      {group?.rewardActive && (
+        <span aria-label={language === "en" ? "Rewards available" : "Доступна винагорода"} className={`absolute z-10 grid place-items-center rounded-full border border-amber-200/35 bg-[#17140b]/75 text-amber-200 shadow-sm backdrop-blur ${lead ? "right-4 top-4 h-8 w-8" : compact ? "right-1.5 top-1.5 h-5 w-5" : "right-2.5 top-2.5 h-6 w-6"}`}>
+          <Star className={lead ? "h-4 w-4 fill-current" : "h-3 w-3 fill-current"} />
+        </span>
+      )}
       {group && rankingPlacement ? (
         <>
           <>
@@ -704,6 +730,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [monthlyEntryEnabled, setMonthlyEntryEnabled] = useState(false);
   const [monthlyEntryStars, setMonthlyEntryStars] = useState("");
   const [monthlyEntryLinkName, setMonthlyEntryLinkName] = useState("");
+  const [rewardCampaignEnabled, setRewardCampaignEnabled] = useState(false);
+  const [rewardBudget, setRewardBudget] = useState("");
+  const [rewardPerSubscription, setRewardPerSubscription] = useState("");
+  const [rewardPerInvite, setRewardPerInvite] = useState("");
+  const [rewardPerManualAdd, setRewardPerManualAdd] = useState("");
   const [nftTransferOpen, setNftTransferOpen] = useState(false);
   const [nftTransferStep, setNftTransferStep] = useState<"select" | "review" | "prepared">("select");
   const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
@@ -838,7 +869,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       transactions: Array<{
           id: number;
           amount: number;
-          kind: "group_connection_bonus" | "listing_spend" | "manual_bonus";
+          kind: "group_connection_bonus" | "listing_spend" | "manual_bonus" | "reward_campaign_reserve" | "reward_campaign_release" | "reward_subscription" | "reward_invite_referral" | "reward_manual_add";
           createdAt: Date;
           groupId: number | null;
           groupTitle: string | null;
@@ -920,6 +951,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.myGroups.invalidate();
       window.open(inviteLink, "_blank", "noopener,noreferrer");
       toast.success(tx("Платная ссылка создана и открыта", "Paid link created and opened."));
+    },
+    onError: error => toast.error(error.message),
+  });
+  const createRewardInviteLink = trpc.tgTop.createRewardInviteLink.useMutation({
+    onSuccess: async ({ inviteLink, existing }) => {
+      try {
+        await navigator.clipboard.writeText(inviteLink);
+        toast.success(tx(existing ? "Ваша ссылка уже готова и скопирована" : "Персональная ссылка создана и скопирована", existing ? "Your existing link is ready and copied" : "Your personal link was created and copied"));
+      } catch {
+        window.open(inviteLink, "_blank", "noopener,noreferrer");
+        toast.success(tx("Персональная ссылка создана", "Your personal link was created"));
+      }
     },
     onError: error => toast.error(error.message),
   });
@@ -1224,6 +1267,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? `https://t.me/${detail.group.username}`
     : detail?.group.inviteLink ?? null;
   const detailOwner = detail?.group.owner ?? null;
+  const subscriptionReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.subscriptionAmount ?? 0 : 0;
+  const inviteReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.inviteAmount ?? 0 : 0;
+  const manualAddReward = !ownsDetail && detail?.group.category === "Чаты" ? detail.group.reward?.manualAddAmount ?? 0 : 0;
   const selectedListingGroups = mine.filter(group => selectedGroupIds.includes(group.id));
   const orderedMyGroups = myGroupsLayout.length === mine.length ? myGroupsLayout : mine;
   const pinnedMyGroups = orderedMyGroups.filter(group => group.ownerPinned);
@@ -1318,10 +1364,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
     setMonthlyEntryStars(firstGroup?.monthlyEntryStars ? String(firstGroup.monthlyEntryStars) : "");
     setMonthlyEntryLinkName(firstGroup?.monthlyEntryLinkName ?? "");
+    setRewardCampaignEnabled(Boolean(firstGroup?.rewardActive));
+    setRewardBudget(firstGroup?.rewardBudget ? formatGram(firstGroup.rewardBudget) : "");
+    setRewardPerSubscription(firstGroup?.rewardPerSubscription ? formatGram(firstGroup.rewardPerSubscription) : "");
+    setRewardPerInvite(firstGroup?.rewardPerInvite ? formatGram(firstGroup.rewardPerInvite) : "");
+    setRewardPerManualAdd(firstGroup?.rewardPerManualAdd ? formatGram(firstGroup.rewardPerManualAdd) : "0.01");
     setListingOpen(true);
   };
   const saveListing = () => {
-    if (!selectedGroupIds.length) return toast.error(tx("Выберите хотя бы одну группу", "Select at least one community."));
+    if (!selectedGroupIds.length) return toast.error(tx("Выберите хотя бы одну группу", "Select a community that is already listed."));
+    const canConfigureRewards = selectedListingGroups.length === 1;
+    const budgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;
+    const subscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;
+    const inviteUnits = rewardCampaignEnabled ? parseGramInput(rewardPerInvite) : 0;
+    const manualAddUnits = rewardCampaignEnabled ? parseGramInput(rewardPerManualAdd) : 0;
+    if (canConfigureRewards && rewardCampaignEnabled && [budgetUnits, subscriptionUnits, inviteUnits, manualAddUnits].some(value => value === undefined)) {
+      return toast.error(tx("Введите сумму в GRAM с точностью до 0.01", "Enter a GRAM amount with up to two decimals."));
+    }
     listWithCredits.mutate({
       groupIds: selectedGroupIds,
       country: listingCountry,
@@ -1332,6 +1391,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       monthlyEntryEnabled,
       monthlyEntryStars: monthlyEntryEnabled ? Number(monthlyEntryStars) : undefined,
       monthlyEntryLinkName: monthlyEntryEnabled ? monthlyEntryLinkName.trim() || undefined : undefined,
+      ...(canConfigureRewards ? {
+        rewardActive: rewardCampaignEnabled,
+        rewardBudget: budgetUnits,
+        rewardPerSubscription: subscriptionUnits,
+        rewardPerInvite: inviteUnits,
+        rewardPerManualAdd: manualAddUnits,
+      } : {}),
     });
   };
   const removeSelectedFromListing = () => {
@@ -1655,6 +1721,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           </span>
                         </div>
                         <div className="flex shrink-0 items-center gap-2.5 text-right">
+                          {group.rewardActive && <Star aria-label={tx("Доступна винагорода", "Rewards available")} className="h-3.5 w-3.5 shrink-0 fill-amber-200 text-amber-200" />}
                           {isSale ? (
                             <div className="flex flex-col items-end">
                               <b className="text-xs font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon!)} TON</b>
@@ -1738,6 +1805,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                     </div>
                     <div className="flex shrink-0 items-center gap-3 text-right">
+                      {group.rewardActive && <Star aria-label={tx("Доступна винагорода", "Rewards available")} className="h-3.5 w-3.5 shrink-0 fill-amber-200 text-amber-200" />}
                       {isSale ? (
                         <div className="flex flex-col items-end">
                           <b className="text-base font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon!)} TON</b>
@@ -2066,9 +2134,34 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       rel="noreferrer"
                       className="mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
                     >
-                      <span>{detail.group.inviteLink && !detail.group.username ? tx("Перейти в приватную группу", "Open private community") : tx("Перейти в группу", "Open community")}</span>
+                      <span>{subscriptionReward > 0
+                        ? tx(`Подписаться и получить +${formatGram(subscriptionReward)} GRAM`, `Subscribe and earn +${formatGram(subscriptionReward)} GRAM`)
+                        : detail.group.inviteLink && !detail.group.username ? tx("Перейти в приватную группу", "Open private community") : tx("Перейти в группу", "Open community")}</span>
                       <ChevronRight className="h-4 w-4" />
                     </a>
+                  )}
+                  {inviteReward > 0 && isAuthenticated && (
+                    <button
+                      type="button"
+                      onClick={() => createRewardInviteLink.mutate({ groupId: detail.group.id })}
+                      disabled={createRewardInviteLink.isPending}
+                      className="mt-3 flex w-full items-center justify-between rounded-xl border border-amber-200/20 bg-amber-300/[0.07] px-4 py-3 text-left text-amber-50 transition-colors hover:bg-amber-300/[0.11] active:scale-[0.99] disabled:opacity-60"
+                    >
+                      <span>
+                        <b className="block text-xs">{createRewardInviteLink.isPending ? ui.loading : tx(`Взять ссылку · +${formatGram(inviteReward)} GRAM за приглашение`, `Get a link · +${formatGram(inviteReward)} GRAM per referral`)}</b>
+                        <small className="mt-1 block text-[10px] text-amber-100/60">{tx("Поделитесь личной ссылкой — награда придет после входа нового подписчика.", "Share your personal link — the reward arrives after a new subscriber joins.")}</small>
+                      </span>
+                      <Star className="h-4 w-4 shrink-0 fill-current" />
+                    </button>
+                  )}
+                  {manualAddReward > 0 && (
+                    <div className="mt-3 flex items-start gap-3 rounded-xl border border-amber-200/20 bg-amber-300/[0.06] p-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-amber-200/20 bg-amber-300/10 text-amber-200"><Star className="h-4 w-4 fill-current" /></span>
+                      <span>
+                        <b className="block text-xs text-amber-50">{tx(`Добавьте участника и получите +${formatGram(manualAddReward)} GRAM`, `Add a member and earn +${formatGram(manualAddReward)} GRAM`)}</b>
+                        <small className="mt-1 block text-[11px] leading-4 text-amber-100/60">{tx("Добавьте нового участника напрямую в Telegram — бот начислит вознаграждение мгновенно.", "Add a new member directly in Telegram — the bot credits the reward instantly.")}</small>
+                      </span>
+                    </div>
                   )}
                   {detailOwner && (
                     <button
@@ -2368,6 +2461,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {accountActivity.map(item => {
                     const title = item.title === "connection_bonus" ? tx("Бонус за подключение", "Connection bonus")
                       : item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")
+                      : item.title === "reward_campaign_reserve" ? tx("Резерв кампании вознаграждений", "Reward campaign reserve")
+                      : item.title === "reward_campaign_release" ? tx("Возврат бюджета кампании", "Reward campaign budget release")
+                      : item.title === "reward_subscription" ? tx("Награда за подписку", "Subscription reward")
+                      : item.title === "reward_invite_referral" ? tx("Награда за приглашение", "Invite referral reward")
+                      : item.title === "reward_manual_add" ? tx("Награда за добавление участника", "Manual member-add reward")
                       : item.title === "catalog_listing" ? tx("Размещение в каталоге", "Catalog listing")
                       : item.title === "ranking_stars" ? tx("Ставка через Telegram Stars", "Telegram Stars bid")
                       : item.title === "ranking_bid" ? tx("Зафиксированная ставка", "Recorded bid")
@@ -2750,6 +2848,63 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 )}
               </section>
             )}
+
+            {selectedListingGroups.length === 1 && (() => {
+              const rewardGroup = selectedListingGroups[0];
+              const isChannel = rewardGroup?.category === "Каналы";
+              return (
+                <section className="rounded-xl border border-[#3f8cff]/20 bg-[#3f8cff]/[0.045] p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs">
+                      <b className="block text-slate-200">{tx("Вознаграждения", "Rewards")}</b>
+                      <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">
+                        {tx("Резервируйте внутренний GRAM и начисляйте его только за подтвержденные ботом действия.", "Reserve internal GRAM and award it only for bot-confirmed actions.")}
+                      </small>
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={rewardCampaignEnabled}
+                      aria-label={tx("Переключить кампанию вознаграждений", "Toggle reward campaign")}
+                      onClick={() => setRewardCampaignEnabled(value => !value)}
+                      className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${rewardCampaignEnabled ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}
+                    >
+                      <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${rewardCampaignEnabled ? "translate-x-6" : "translate-x-0"}`} />
+                    </button>
+                  </div>
+                  {rewardCampaignEnabled && (
+                    <div className="mt-3 space-y-2.5">
+                      <div className="relative">
+                        <Input value={rewardBudget} type="number" inputMode="decimal" min="0.01" step="0.01" onChange={event => setRewardBudget(event.target.value)} placeholder={tx("Бюджет кампании", "Campaign budget")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#a6c8ff]">GRAM</span>
+                      </div>
+                      {isChannel ? (
+                        <>
+                          <div className="relative">
+                            <Input value={rewardPerSubscription} type="number" inputMode="decimal" min="0" step="0.01" onChange={event => setRewardPerSubscription(event.target.value)} placeholder={tx("За подписчика", "Per subscriber")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#a6c8ff]">GRAM</span>
+                          </div>
+                          <div className="relative">
+                            <Input value={rewardPerInvite} type="number" inputMode="decimal" min="0" step="0.01" onChange={event => setRewardPerInvite(event.target.value)} placeholder={tx("За подписчика по ссылке", "Per invite referral")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#a6c8ff]">GRAM</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="relative">
+                          <Input value={rewardPerManualAdd} type="number" inputMode="decimal" min="0.01" step="0.01" onChange={event => setRewardPerManualAdd(event.target.value)} placeholder={tx("За ручное добавление участника", "Per manual member addition")} className="h-10 border-white/10 bg-[#0b0f14] pr-14 text-sm" />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#a6c8ff]">GRAM</span>
+                        </div>
+                      )}
+                      <p className="text-[10px] leading-4 text-slate-500">
+                        {isChannel
+                          ? tx("За обычную подписку получает новый подписчик; за вход по ссылке — автор ссылки.", "A new subscriber earns the regular reward; the link creator earns the invite-referral reward.")
+                          : tx("Вознаграждение получает тот, кто добавил нового участника напрямую, без ссылки.", "The reward goes to the user who adds a new member directly, without an invite link.")}
+                      </p>
+                    </div>
+                  )}
+                </section>
+              );
+            })()}
 
             {selectedListingGroups.length === 1 && selectedListingGroups[0]?.category === "Каналы" && selectedListingGroups[0]?.username && (
               <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] leading-4 text-slate-500">{tx("Ежемесячный вход в Stars доступен после перевода канала в приватный режим.", "Monthly Stars entry is available after the channel becomes private.")}</p>

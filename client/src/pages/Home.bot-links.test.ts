@@ -183,6 +183,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const CITY_OPTIONS');
     expect(source).toContain('setCity("Все")');
     expect(source).toContain('tx("Анонимное размещение", "Anonymous listing")');
+    expect(source).toContain('tx("Вознаграждения", "Rewards")');
+    expect(source).toContain('rewardCampaignEnabled');
+    expect(source).toContain('rewardBudget: budgetUnits');
+    expect(source).toContain('rewardPerSubscription: subscriptionUnits');
+    expect(source).toContain('rewardPerInvite: inviteUnits');
+    expect(source).toContain('rewardPerManualAdd: manualAddUnits');
     expect(source).toContain('tx("Цена в TON", "Price in TON")');
     expect(source).toContain('max-h-[34dvh] rounded-t-[20px]');
     expect(source).toContain('min-w-10 border-0 px-2 text-[10px]');

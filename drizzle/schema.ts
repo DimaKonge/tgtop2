@@ -67,6 +67,11 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   monthlyEntryLinkName: varchar("monthlyEntryLinkName", { length: 64 }),
   monthlyEntryInviteLink: varchar("monthlyEntryInviteLink", { length: 512 }),
   monthlyEntryUpdatedAt: timestamp("monthlyEntryUpdatedAt"),
+  rewardActive: boolean("rewardActive").default(false).notNull(),
+  rewardBudget: int("rewardBudget").default(0).notNull(),
+  rewardPerSubscription: int("rewardPerSubscription").default(0).notNull(),
+  rewardPerInvite: int("rewardPerInvite").default(0).notNull(),
+  rewardPerManualAdd: int("rewardPerManualAdd").default(1).notNull(),
   deleteServiceMessages: boolean("deleteServiceMessages").default(false).notNull(),
   ownerPinned: boolean("ownerPinned").default(false).notNull(),
   ownerSortOrder: int("ownerSortOrder").default(0).notNull(),
@@ -101,7 +106,7 @@ export const creditTransactions = mysqlTable("credit_transactions", {
   groupId: int("groupId"),
   telegramChatId: varchar("telegramChatId", { length: 64 }),
   amount: int("amount").notNull(),
-  kind: mysqlEnum("kind", ["group_connection_bonus", "listing_spend", "manual_bonus"]).notNull(),
+  kind: mysqlEnum("kind", ["group_connection_bonus", "listing_spend", "manual_bonus", "reward_campaign_reserve", "reward_campaign_release", "reward_subscription", "reward_invite_referral", "reward_manual_add"]).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [
   uniqueIndex("credit_transactions_kind_telegram_chat_unique").on(table.kind, table.telegramChatId),
@@ -109,6 +114,34 @@ export const creditTransactions = mysqlTable("credit_transactions", {
 ]);
 
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
+
+export const rewardEvents = mysqlTable("reward_events", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("groupId").notNull(),
+  beneficiaryOpenId: varchar("beneficiaryOpenId", { length: 64 }).notNull(),
+  memberTelegramId: varchar("memberTelegramId", { length: 64 }).notNull(),
+  inviterOpenId: varchar("inviterOpenId", { length: 64 }),
+  eventType: mysqlEnum("eventType", ["subscription", "invite_referral", "manual_add"]).notNull(),
+  amount: int("amount").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("reward_events_group_member_beneficiary_type_unique").on(table.groupId, table.memberTelegramId, table.beneficiaryOpenId, table.eventType),
+  index("reward_events_beneficiary_created_idx").on(table.beneficiaryOpenId, table.createdAt),
+]);
+
+export type RewardEvent = typeof rewardEvents.$inferSelect;
+
+export const rewardInviteLinks = mysqlTable("reward_invite_links", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("groupId").notNull(),
+  beneficiaryOpenId: varchar("beneficiaryOpenId", { length: 64 }).notNull(),
+  inviteLink: varchar("inviteLink", { length: 512 }).notNull().unique(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("reward_invite_links_group_beneficiary_unique").on(table.groupId, table.beneficiaryOpenId),
+]);
+
+export type RewardInviteLink = typeof rewardInviteLinks.$inferSelect;
 
 export const auctionSlots = mysqlTable("auction_slots", {
   id: int("id").autoincrement().primaryKey(),
