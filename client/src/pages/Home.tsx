@@ -205,6 +205,8 @@ const formatTon = (value: number | string | null | undefined) => {
 };
 const getCategoryLabel = (category: Group["category"], language: Language) =>
   language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
+const getCommunityAccessLabel = (group: Pick<Group, "username">, language: Language) =>
+  group.username ? `@${group.username}` : language === "en" ? "Private" : "Приватный";
 const getSubcategoryLabel = (subcategory: string, language: Language) =>
   SUBCATEGORY_LABELS[subcategory]?.[language] ?? subcategory;
 const getCountryLabel = (country: string, language: Language) =>
@@ -312,7 +314,7 @@ function SortableMyGroupTile({
       <button type="button" onPointerDown={beginSelectionHold} onPointerUp={clearSelectionHold} onPointerCancel={clearSelectionHold} onPointerLeave={clearSelectionHold} onClick={() => { clearSelectionHold(); if (selectionTriggered.current) { selectionTriggered.current = false; return; } if (selectionMode) onSelect(); else onOpen(); }} className="relative z-10 flex h-full w-full flex-col justify-end p-2.5 text-left">
         <span className="min-w-0 w-full">
           <b className="line-clamp-2 text-[11px] leading-3.5 text-white drop-shadow-sm">{group.title}</b>
-          <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{group.inviteLink ? (isEnglish ? "Private" : "Приватный") : group.username ? `@${group.username}` : group.category}</small>
+          <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{getCommunityAccessLabel(group, language)}</small>
         </span>
       </button>
       <span className={`absolute right-0 top-1 z-10 max-w-[76%] truncate border-b border-l px-2.5 pb-1 pt-1 text-[7px] font-semibold leading-none shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${statusClass}`}>{status}</span>
@@ -399,7 +401,7 @@ function GroupCard({
             <small
               className={`mt-1 block max-w-full truncate text-xs text-slate-200/80 ${compact ? "hidden" : ""}`}
             >
-              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="no-underline hover:text-white">@{group.username}</a> : getCategoryLabel(group.category, language)} ·{" "}
+              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="no-underline hover:text-white">{getCommunityAccessLabel(group, language)}</a> : getCommunityAccessLabel(group, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
           </span>
@@ -419,7 +421,7 @@ function GroupCard({
               <small
                 className={`block truncate text-[11px] text-slate-500 ${compact ? "hidden" : ""}`}
               >
-                {group.inviteLink ? (language === "en" ? "Private" : "Приватный") : group.username ? `@${group.username}` : getCategoryLabel(group.category, language)} ·{" "}
+                {getCommunityAccessLabel(group, language)} ·{" "}
                 {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
               </small>
             </span>
@@ -1648,7 +1650,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                               {group.title}
                             </b>
                             <small className="block truncate text-[11px] text-slate-500">
-                              {group.inviteLink ? (language === "en" ? "Private" : "Приватный") : group.username ? `@${group.username}` : getCategoryLabel(group.category, language)} · {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
+                              {getCommunityAccessLabel(group, language)} · {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
                             </small>
                           </span>
                         </div>
@@ -1735,7 +1737,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-sm font-medium text-white transition-colors group-hover:text-[#a6c8ff]">{group.title}</b>
                         <small className="mt-1 block truncate text-xs text-slate-500">
-                          {group.inviteLink ? tx("Приватный", "Private") : group.username ? `@${group.username}` : group.category} · {n(group.membersCount)} {tx("участников", "members")}
+                          {getCommunityAccessLabel(group, language)} · {n(group.membersCount)} {tx("участников", "members")}
                         </small>
                       </span>
                     </div>
@@ -1980,7 +1982,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-sm">{group.title}</b>
                         <small className="mt-1 block text-xs text-slate-500">
-                          {group.inviteLink ? tx("Приватный", "Private") : group.username ? `@${group.username}` : group.category} · {n(group.membersCount)} {tx("участников", "members")}
+                          {getCommunityAccessLabel(group, language)} · {n(group.membersCount)} {tx("участников", "members")}
                         </small>
                       </span>
                       <span
@@ -2073,7 +2075,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       rel="noreferrer"
                       className="mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
                     >
-                      <span>{tx("Перейти в группу", "Open community")}</span>
+                      <span>{detail.group.inviteLink && !detail.group.username ? tx("Перейти в приватную группу", "Open private community") : tx("Перейти в группу", "Open community")}</span>
                       <ChevronRight className="h-4 w-4" />
                     </a>
                   )}
@@ -2591,7 +2593,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             {mine.length ? mine.map(group => (
               <button key={group.id} onClick={() => showcaseNft && setNftShowcase.mutate({ nftId: showcaseNft.id, target: "group", groupId: group.id })} disabled={setNftShowcase.isPending} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#111720] p-3 text-left transition-colors hover:bg-white/[0.04] disabled:opacity-50">
                 <Avatar group={group} compact />
-                <span className="min-w-0 flex-1"><b className="block truncate text-sm">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.inviteLink ? tx("Приватный", "Private") : group.username ? `@${group.username}` : getCategoryLabel(group.category, language)}</small></span>
+                <span className="min-w-0 flex-1"><b className="block truncate text-sm">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{getCommunityAccessLabel(group, language)}</small></span>
                 <ChevronRight className="h-4 w-4 text-[#a6c8ff]" />
               </button>
             )) : <p className="rounded-xl border border-dashed border-white/12 p-5 text-center text-xs leading-5 text-slate-500">{tx("Сначала подключите свою площадку в личной папке.", "Connect a community in My Groups first.")}</p>}

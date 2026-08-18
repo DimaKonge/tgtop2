@@ -273,8 +273,8 @@
 - [x] Keep one shared Top search field visible across Channels, Chats, and NFT, with NFT name and username matching
 - [x] Restore full-width public ranking tiers while reducing only their heights to reveal the third row on mobile
 - [x] Move listing-owner information from public ranking cards into the community detail view
-- [ ] Show «Приватный» on public cards whenever a community has neither a public username nor an invite link
-- [ ] Label the detail-view entry action «Перейти в приватную группу» for private communities
+- [x] Show «Приватный» on public cards whenever a community has neither a public username nor an invite link
+- [x] Label the detail-view entry action «Перейти в приватную группу» for private communities
 - [ ] Add management-panel controls for paid private-entry links with price, expiry, usage limits, payment confirmation, and invite delivery
 - [x] Add «Сделать вход платным», Stars price, and native Telegram paid-link generation controls to eligible private-channel listing settings
 - [x] Restrict Telegram monthly Stars subscription-link controls to managed channels, not chats or groups
