@@ -780,7 +780,13 @@ export async function awardTelegramReward(input: TelegramRewardInput) {
         await tx.update(groupsCatalog).set({ rewardActive: false }).where(eq(groupsCatalog.id, group.id));
       }
     });
-    return { awarded: true as const, amount, groupId: group.id };
+    return {
+      awarded: true as const,
+      amount,
+      groupId: group.id,
+      beneficiaryTelegramId: input.beneficiaryTelegramId,
+      groupTitle: group.title,
+    };
   } catch (error) {
     const code = (error as { code?: string }).code;
     if (code === "ER_DUP_ENTRY") return { awarded: false as const, reason: "duplicate" as const };
@@ -1034,6 +1040,15 @@ export async function saveMonthlyEntryInviteLink(ownerOpenId: string, groupId: n
     throw new Error("Ежемесячный вход доступен только для приватного канала с указанной ценой");
   }
   await db.update(groupsCatalog).set({ monthlyEntryInviteLink: inviteLink, monthlyEntryUpdatedAt: new Date() }).where(eq(groupsCatalog.id, groupId));
+}
+
+export async function savePrivateEntryInviteLink(ownerOpenId: string, groupId: number, inviteLink: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(and(eq(groupsCatalog.id, groupId), eq(groupsCatalog.ownerOpenId, ownerOpenId))).limit(1);
+  if (!group) throw new Error("Сообщество недоступно для настройки");
+  if (group.username) throw new Error("Закрытая ссылка нужна только приватному сообществу без @username");
+  await db.update(groupsCatalog).set({ inviteLink }).where(eq(groupsCatalog.id, groupId));
 }
 
 export async function listGroupWithCredits(ownerOpenId: string, groupId: number, listing?: GroupListingOptions | string, cost = GROUP_CONNECTION_BONUS) {

@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
+import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
 import { formatTonAmount } from "./tonFormatting";
 
 const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
@@ -186,6 +186,17 @@ export const appRouter = router({
           linkName: group.monthlyEntryLinkName,
         });
         await db.saveMonthlyEntryInviteLink(ctx.user.openId, group.id, inviteLink);
+        return { success: true, inviteLink };
+      }),
+
+    createPrivateEntryLink: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.ownerOpenId !== ctx.user.openId) throw new Error("Сообщество недоступно для настройки");
+        if (group.username) throw new Error("Закрытая ссылка доступна только для приватного сообщества без @username");
+        const inviteLink = await createTelegramPrivateInviteLink({ chatId: group.chatId, linkName: "TG TOP private entry" });
+        await db.savePrivateEntryInviteLink(ctx.user.openId, group.id, inviteLink);
         return { success: true, inviteLink };
       }),
 

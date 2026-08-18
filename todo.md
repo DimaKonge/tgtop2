@@ -371,3 +371,9 @@
 - [x] Raise the fixed bulk-action bar above Telegram’s native bottom bar and reserve bottom scroll clearance for selectable My Groups cards
 - [x] Hide the My Groups status ribbon completely for communities that are not listed; retain only catalog and sale ribbons
 - [x] Finish the Profile as a coherent personal cabinet: real GRAM balance graph, in-profile wallet connection, public-account visibility, and compact paginated activity history
+- [x] Send a concise @TGTOP_robot credit notification after each verified GRAM reward and refresh the recipient’s profile balance and activity automatically
+- [x] Repair private invite-link creation for bot-managed communities and show actionable Telegram rights/type errors when a link cannot be issued
+- [ ] Deploy the completed profile cabinet to production and verify live Telegram account data loads without stale balances
+- [x] Open community links through Telegram WebApp navigation so returning from a group preserves the current TG TOP Mini App session and detail screen
+- [x] Refine My Groups into a clear workspace for adding communities, selecting several cards, listing them, removing them from the catalog, and deleting them from the cabinet
+- [x] Refine Profile hierarchy around balance, wallet, reward status, public visibility, leaderboard, and compact account activity

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import axios from "axios";
+import { notifyRewardCredited } from "./telegramNotifications";
 import {
   getGroupByChatId,
   getRewardInviteBeneficiary,
@@ -194,7 +195,10 @@ async function awardMembershipReward(membership: ChatMemberUpdate): Promise<void
           beneficiaryName: memberName,
           beneficiaryUsername: member.username,
         });
-    if (result.awarded) console.info(`[Telegram] Awarded ${result.amount / 100} GRAM for ${rewardLinkTelegramId || (viaInviteLink && linkCreator && !linkCreator.is_bot) ? "channel referral" : "channel subscription"} in ${chatId}`);
+    if (result.awarded) {
+      console.info(`[Telegram] Awarded ${result.amount / 100} GRAM for ${rewardLinkTelegramId || (viaInviteLink && linkCreator && !linkCreator.is_bot) ? "channel referral" : "channel subscription"} in ${chatId}`);
+      await notifyRewardCredited({ telegramUserId: result.beneficiaryTelegramId, groupTitle: result.groupTitle, amount: result.amount });
+    }
     return;
   }
   if ((membership.chat.type === "group" || membership.chat.type === "supergroup") && !viaInviteLink && !membership.from.is_bot && membership.from.id !== member.id) {
@@ -207,7 +211,10 @@ async function awardMembershipReward(membership: ChatMemberUpdate): Promise<void
       beneficiaryUsername: membership.from.username,
       inviterTelegramId: membership.from.id,
     });
-    if (result.awarded) console.info(`[Telegram] Awarded ${result.amount / 100} GRAM for manual chat addition in ${chatId}`);
+    if (result.awarded) {
+      console.info(`[Telegram] Awarded ${result.amount / 100} GRAM for manual chat addition in ${chatId}`);
+      await notifyRewardCredited({ telegramUserId: result.beneficiaryTelegramId, groupTitle: result.groupTitle, amount: result.amount });
+    }
   }
 }
 

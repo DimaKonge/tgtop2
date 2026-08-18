@@ -231,6 +231,21 @@ const getCategoryLabel = (category: Group["category"], language: Language) =>
   language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
 const getCommunityAccessLabel = (group: Pick<Group, "username">, language: Language) =>
   group.username ? `@${group.username}` : language === "en" ? "Private" : "Приватный";
+const openTelegramCommunityLink = (url: string) => {
+  const webApp = window.Telegram?.WebApp as unknown as {
+    openTelegramLink?: (target: string) => void;
+    openLink?: (target: string) => void;
+  } | undefined;
+  if (/^https:\/\/t\.me\//i.test(url) && webApp?.openTelegramLink) {
+    webApp.openTelegramLink(url);
+    return;
+  }
+  if (webApp?.openLink) {
+    webApp.openLink(url);
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+};
 const getSubcategoryLabel = (subcategory: string, language: Language) =>
   SUBCATEGORY_LABELS[subcategory]?.[language] ?? subcategory;
 const getCountryLabel = (country: string, language: Language) =>
@@ -439,7 +454,7 @@ function GroupCard({
             <small
               className={`mt-1 block max-w-full truncate text-xs text-slate-200/80 ${compact ? "hidden" : ""}`}
             >
-              {groupUrl ? <a href={groupUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()} className="no-underline hover:text-white">{getCommunityAccessLabel(group, language)}</a> : getCommunityAccessLabel(group, language)} ·{" "}
+              {groupUrl ? <a href={groupUrl} onClick={event => { event.preventDefault(); event.stopPropagation(); openTelegramCommunityLink(groupUrl); }} className="no-underline hover:text-white">{getCommunityAccessLabel(group, language)}</a> : getCommunityAccessLabel(group, language)} ·{" "}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
           </span>
@@ -911,9 +926,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   }, [mineQuery.dataUpdatedAt]);
   const accountQuery = trpc.tgTop.getAccount.useQuery(undefined, {
     enabled: isAuthenticated,
+    refetchInterval: 8_000,
+    refetchIntervalInBackground: false,
   });
   const accountActivityQuery = trpc.tgTop.getAccountActivity.useQuery(undefined, {
     enabled: isAuthenticated,
+    refetchInterval: 8_000,
+    refetchIntervalInBackground: false,
   });
   const account = accountQuery.data as
     | {
@@ -1013,8 +1032,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const createMonthlyEntryLink = trpc.tgTop.createMonthlyEntryLink.useMutation({
     onSuccess: ({ inviteLink }) => {
       void utils.tgTop.myGroups.invalidate();
-      window.open(inviteLink, "_blank", "noopener,noreferrer");
+      openTelegramCommunityLink(inviteLink);
       toast.success(tx("Платная ссылка создана и открыта", "Paid link created and opened."));
+    },
+    onError: error => toast.error(error.message),
+  });
+  const createPrivateEntryLink = trpc.tgTop.createPrivateEntryLink.useMutation({
+    onSuccess: ({ inviteLink }) => {
+      void utils.tgTop.myGroups.invalidate();
+      void utils.tgTop.getGroups.invalidate();
+      void utils.tgTop.getGroupDetail.invalidate();
+      openTelegramCommunityLink(inviteLink);
+      toast.success(tx("Закрытая ссылка создана и открыта", "Private link created and opened."));
     },
     onError: error => toast.error(error.message),
   });
@@ -1024,7 +1053,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         await navigator.clipboard.writeText(inviteLink);
         toast.success(tx(existing ? "Ваша ссылка уже готова и скопирована" : "Персональная ссылка создана и скопирована", existing ? "Your existing link is ready and copied" : "Your personal link was created and copied"));
       } catch {
-        window.open(inviteLink, "_blank", "noopener,noreferrer");
+        openTelegramCommunityLink(inviteLink);
         toast.success(tx("Персональная ссылка создана", "Your personal link was created"));
       }
     },
@@ -1340,6 +1369,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const inviteReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.inviteAmount ?? 0 : 0;
   const manualAddReward = !ownsDetail && detail?.group.category === "Чаты" ? detail.group.reward?.manualAddAmount ?? 0 : 0;
   const selectedListingGroups = mine.filter(group => selectedGroupIds.includes(group.id));
+  const privateEntryEligibleGroup = selectedListingGroups.length === 1 && !selectedListingGroups[0]?.username ? selectedListingGroups[0] : undefined;
   const orderedMyGroups = myGroupsLayout.length === mine.length ? myGroupsLayout : mine;
   const pinnedMyGroups = orderedMyGroups.filter(group => group.ownerPinned);
   const unpinnedMyGroups = orderedMyGroups.filter(group => !group.ownerPinned);
@@ -1954,20 +1984,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 className="h-8 rounded-lg border-white/10 bg-[#111720] px-3 text-[11px] text-slate-200 placeholder:text-slate-600"
               />
             )}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => startBotAdminSetup("channel")}
-                className="rounded-xl border border-white/10 bg-[#111720] px-3 py-3 text-sm font-semibold"
-              >
-                {tx("+ Канал", "+ Channel")}
-              </button>
-              <button
-                onClick={() => startBotAdminSetup("group")}
-                className="rounded-xl border border-white/10 bg-[#111720] px-3 py-3 text-sm font-semibold"
-              >
-                {tx("+ Чат", "+ Chat")}
-              </button>
-            </div>
+            <button type="button" onClick={() => setMyGroupsAddOpen(true)} className="flex h-14 w-full items-center justify-between rounded-2xl border border-dashed border-[#3f8cff]/45 bg-[#3f8cff]/[0.055] px-4 text-left transition-colors hover:bg-[#3f8cff]/[0.1] active:scale-[0.99]">
+              <span><b className="block text-sm text-[#b8d1ff]">{tx("Добавить сообщество", "Add community")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{tx("Канал или чат с ботом-администратором", "Channel or chat with an administrator bot")}</small></span>
+              <span className="grid h-8 w-8 place-items-center rounded-xl border border-[#72a8ff]/35 bg-[#3f8cff]/12 text-[#a6c8ff]"><Plus className="h-4 w-4" /></span>
+            </button>
             {!targetSlot && mine.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 px-0.5">
                 <button type="button" onClick={() => { setMyGroupsViewMode(mode => mode === "list" ? "grid" : "list"); exitMyGroupsSelection(); }} aria-label={myGroupsViewMode === "grid" ? tx("Показать список", "Show list") : tx("Показать сетку", "Show grid")} className="inline-flex h-6 items-center gap-1.5 rounded-full border border-[#3f8cff]/45 bg-[#3f8cff]/12 px-2.5 text-[9px] font-semibold text-[#b8d1ff] transition-colors hover:bg-[#3f8cff]/20">
@@ -2210,8 +2230,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {detailEntryUrl && (
                     <a
                       href={detailEntryUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                      onClick={event => { event.preventDefault(); openTelegramCommunityLink(detailEntryUrl); }}
                       className="mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
                     >
                       <span>{detailHasPaidEntry
@@ -2235,8 +2254,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {detailEntryUrl && subscriptionReward > 0 && (
                     <a
                       href={detailEntryUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                      onClick={event => { event.preventDefault(); openTelegramCommunityLink(detailEntryUrl); }}
                       className="mt-3 flex min-h-12 w-full items-center justify-between rounded-xl border border-amber-200/25 bg-amber-300/[0.09] px-4 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-300/[0.14] active:scale-[0.99]"
                     >
                       <span>{tx(`Подписаться и получить +${formatGram(subscriptionReward)} GRAM`, `Subscribe and earn +${formatGram(subscriptionReward)} GRAM`)}</span>
@@ -2951,6 +2969,21 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             )}
 
+            {privateEntryEligibleGroup && (
+              <section className="rounded-xl border border-[#3f8cff]/20 bg-[#3f8cff]/[0.045] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-xs">
+                    <b className="block text-slate-200">{tx("Закрытая ссылка для входа", "Private entry link")}</b>
+                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Бот создаст новую ссылку Telegram и закрепит её как главный вход в карточке сообщества.", "The bot will create a new Telegram link and use it as the community’s main entry.")}</small>
+                  </span>
+                  <button type="button" onClick={() => createPrivateEntryLink.mutate({ groupId: privateEntryEligibleGroup.id })} disabled={createPrivateEntryLink.isPending} className="shrink-0 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/12 px-3 py-2 text-[10px] font-semibold text-[#a6c8ff] disabled:opacity-45">
+                    {createPrivateEntryLink.isPending ? ui.loading : tx("Создать", "Create")}
+                  </button>
+                </div>
+                {privateEntryEligibleGroup.inviteLink && <button type="button" onClick={() => openTelegramCommunityLink(privateEntryEligibleGroup.inviteLink!)} className="mt-2 block max-w-full truncate text-left text-[10px] font-medium text-[#9cc3ff] hover:text-white">{tx("Открыть текущую закрытую ссылку", "Open current private link")}</button>}
+              </section>
+            )}
+
             {monthlyEntryEligibleGroup && (
               <section className="rounded-xl border border-amber-300/15 bg-amber-300/[0.035] p-3">
                 <div className="flex items-center justify-between gap-3">
@@ -2974,7 +3007,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <span>★</span>
                     </button>
                     {monthlyEntryEligibleGroup.monthlyEntryInviteLink ? (
-                      <a href={monthlyEntryEligibleGroup.monthlyEntryInviteLink} target="_blank" rel="noreferrer" className="block truncate text-[10px] font-medium text-[#9cc3ff] hover:text-white">{tx("Открыть активную платную ссылку", "Open active paid link")}</a>
+                      <button type="button" onClick={() => openTelegramCommunityLink(monthlyEntryEligibleGroup.monthlyEntryInviteLink!)} className="block max-w-full truncate text-left text-[10px] font-medium text-[#9cc3ff] hover:text-white">{tx("Открыть активную платную ссылку", "Open active paid link")}</button>
                     ) : (
                       <p className="text-[10px] leading-4 text-slate-500">{tx("Сначала сохраните цену, затем создайте ссылку Telegram.", "Save the price first, then create the Telegram link.")}</p>
                     )}

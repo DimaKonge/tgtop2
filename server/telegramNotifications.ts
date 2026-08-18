@@ -8,6 +8,28 @@ export function getTelegramChatIdFromOpenId(openId: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
+export async function notifyRewardCredited(input: { telegramUserId: number; groupTitle: string; amount: number }) {
+  if (!botToken) return false;
+  const amount = (input.amount / 100).toFixed(2).replace(/\.?0+$/, "");
+  const text = [
+    "✅ GRAM зачислены на баланс",
+    "",
+    `+${amount} GRAM · ${input.groupTitle}`,
+    "Баланс и история в TG TOP обновятся автоматически.",
+  ].join("\n");
+  try {
+    const response = await axios.post<{ ok: boolean }>(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: input.telegramUserId,
+      text,
+      reply_markup: { inline_keyboard: [[{ text: "Открыть баланс", web_app: { url: miniAppUrl } }]] },
+    }, { timeout: 15_000 });
+    return response.data.ok;
+  } catch (error) {
+    console.warn("[Telegram] Could not send reward-credit notification:", error);
+    return false;
+  }
+}
+
 export async function notifyRecordedRankingBid(input: { openId: string; groupTitle: string; bidAmount: number; slotNumber: number }) {
   const chatId = getTelegramChatIdFromOpenId(input.openId);
   if (!chatId || !botToken) return false;
@@ -104,8 +126,34 @@ export async function createTelegramMonthlySubscriptionInviteLink(input: { chatI
     }
     return response.data.result.invite_link;
   } catch (error) {
-    if (error instanceof Error) throw error;
-    throw new Error("Не удалось создать платную ссылку Telegram");
+    throw telegramInviteLinkError(error, "Не удалось создать платную ссылку Telegram");
+  }
+}
+
+function telegramInviteLinkError(error: unknown, fallback: string) {
+  const description = axios.isAxiosError(error)
+    ? (error.response?.data as { description?: string } | undefined)?.description
+    : error instanceof Error ? error.message : undefined;
+  if (/not enough rights|administrator rights|invite users/i.test(description ?? "")) {
+    return new Error("Боту нужны права администратора «Пригласительные ссылки» / «Добавлять пользователей». Откройте права @TGTOP_robot в сообществе и повторите попытку.");
+  }
+  if (/chat not found|chat.*invalid/i.test(description ?? "")) {
+    return new Error("TG TOP не видит это сообщество. Добавьте @TGTOP_robot администратором и обновите список «Мои».");
+  }
+  return new Error(description ?? fallback);
+}
+
+export async function createTelegramPrivateInviteLink(input: { chatId: string; linkName: string }) {
+  if (!botToken) throw new Error("TG TOP bot token is not configured");
+  try {
+    const response = await axios.post<{ ok: boolean; result?: { invite_link?: string }; description?: string }>(`https://api.telegram.org/bot${botToken}/createChatInviteLink`, {
+      chat_id: input.chatId,
+      name: input.linkName,
+    }, { timeout: 15_000 });
+    if (!response.data.ok || !response.data.result?.invite_link) throw new Error(response.data.description ?? "Telegram не создал закрытую ссылку");
+    return response.data.result.invite_link;
+  } catch (error) {
+    throw telegramInviteLinkError(error, "Не удалось создать закрытую ссылку Telegram");
   }
 }
 
@@ -121,7 +169,6 @@ export async function createTelegramRewardInviteLink(input: { chatId: string; li
     }
     return response.data.result.invite_link;
   } catch (error) {
-    if (error instanceof Error) throw error;
-    throw new Error("Не удалось создать ссылку Telegram для вознаграждений");
+    throw telegramInviteLinkError(error, "Не удалось создать ссылку Telegram для вознаграждений");
   }
 }

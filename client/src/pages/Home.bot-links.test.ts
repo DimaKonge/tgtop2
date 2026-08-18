@@ -36,7 +36,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('className="absolute inset-0 grid place-items-center"');
     expect(source).toContain('className="absolute inset-0 h-full w-full object-cover"');
     expect(source).toContain('https://t.me/${group.username}');
-    expect(source).toContain('onClick={event => event.stopPropagation()}');
+    expect(source).toContain('openTelegramCommunityLink(groupUrl)');
     expect(source).toContain('className="no-underline hover:text-white"');
     expect(source).toContain('https://t.me/${group.username}');
     expect(source).not.toContain('underline-offset-2');
