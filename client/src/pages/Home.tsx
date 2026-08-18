@@ -726,7 +726,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [listingSubcategory, setListingSubcategory] = useState("General");
   const [salePriceTon, setSalePriceTon] = useState("");
   const [isListingForSale, setIsListingForSale] = useState(false);
-  const [anonymousListing, setAnonymousListing] = useState(false);
+  const [anonymousListing, setAnonymousListing] = useState(true);
   const [monthlyEntryEnabled, setMonthlyEntryEnabled] = useState(false);
   const [monthlyEntryStars, setMonthlyEntryStars] = useState("");
   const [monthlyEntryLinkName, setMonthlyEntryLinkName] = useState("");
@@ -1360,7 +1360,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "");
     setSalePriceTon(firstGroup?.salePriceTon ?? "");
     setIsListingForSale(Boolean(firstGroup?.salePriceTon));
-    setAnonymousListing(Boolean(firstGroup?.anonymousListing));
+    setAnonymousListing(firstGroup?.anonymousListing ?? true);
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
     setMonthlyEntryStars(firstGroup?.monthlyEntryStars ? String(firstGroup.monthlyEntryStars) : "");
     setMonthlyEntryLinkName(firstGroup?.monthlyEntryLinkName ?? "");
@@ -2134,10 +2134,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       rel="noreferrer"
                       className="mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
                     >
-                      <span>{subscriptionReward > 0
-                        ? tx(`Подписаться и получить +${formatGram(subscriptionReward)} GRAM`, `Subscribe and earn +${formatGram(subscriptionReward)} GRAM`)
-                        : detail.group.inviteLink && !detail.group.username ? tx("Перейти в приватную группу", "Open private community") : tx("Перейти в группу", "Open community")}</span>
+                      <span>{detail.group.inviteLink && !detail.group.username ? tx("Перейти в приватную группу", "Open private community") : tx("Перейти в группу", "Open community")}</span>
                       <ChevronRight className="h-4 w-4" />
+                    </a>
+                  )}
+                  {detailEntryUrl && subscriptionReward > 0 && (
+                    <a
+                      href={detailEntryUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 flex min-h-12 w-full items-center justify-between rounded-xl border border-amber-200/25 bg-amber-300/[0.09] px-4 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-300/[0.14] active:scale-[0.99]"
+                    >
+                      <span>{tx(`Подписаться и получить +${formatGram(subscriptionReward)} GRAM`, `Subscribe and earn +${formatGram(subscriptionReward)} GRAM`)}</span>
+                      <Star className="h-4 w-4 fill-current" />
                     </a>
                   )}
                   {inviteReward > 0 && isAuthenticated && (
@@ -2163,7 +2172,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                     </div>
                   )}
-                  {detailOwner && (
+                  {detail.group.anonymousListing ? (
+                    <div className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] p-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">A</span>
+                      <span className="min-w-0 flex-1">
+                        <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Разместил", "Listed by")}</small>
+                        <b className="mt-0.5 block truncate text-xs text-slate-200">{tx("Аноним", "Anonymous")}</b>
+                      </span>
+                    </div>
+                  ) : detailOwner && (
                     <button
                       type="button"
                       onClick={() => openOwner(detailOwner.openId)}

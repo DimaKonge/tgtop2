@@ -71,6 +71,15 @@ describe("normalizeGroupListingOptions", () => {
     });
   });
 
+  it("uses anonymous listing by default unless the owner explicitly reveals their listing", () => {
+    expect(normalizeGroupListingOptions({ listingType: "catalog", country: "Global" })).toMatchObject({
+      anonymousListing: true,
+    });
+    expect(normalizeGroupListingOptions({ listingType: "catalog", country: "Global", anonymousListing: false })).toMatchObject({
+      anonymousListing: false,
+    });
+  });
+
   it("retains internal-GRAM reward campaign settings for server-side validation", () => {
     expect(normalizeGroupListingOptions({
       rewardActive: true,

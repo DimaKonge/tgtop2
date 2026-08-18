@@ -86,7 +86,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('detailOwner &&');
     expect(source).toContain('tx("Мои группы", "My groups")');
     expect(source).not.toContain('tx("Личная папка", "Personal cabinet")');
-    expect(source).not.toContain('Разместил');
+    expect(source).toContain('tx("Разместил", "Listed by")');
     expect(source).not.toContain('onOwnerClick');
     expect(source).toContain('Профиль владельца');
     expect(source).toContain('getOwnerLeaderboard.useQuery');
@@ -113,6 +113,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const canApplyAnonymousListing = selectedListingGroups.length > 0');
     expect(source).toContain('anonymousListing: selectedListingGroups.length ? anonymousListing : undefined');
     expect(source).toContain('aria-label={tx("Переключить анонимное размещение", "Toggle anonymous listing")}');
+    expect(source).toContain('const [anonymousListing, setAnonymousListing] = useState(true)');
+    expect(source).toContain('detail.group.anonymousListing ? (');
+    expect(source).toContain('tx("Аноним", "Anonymous")');
+    expect(source).toContain('Подписаться и получить +${formatGram(subscriptionReward)} GRAM');
     expect(source).toContain('<Select value={listingCountry}');
     expect(source).toContain('<Select value={listingSubcategory}');
     expect(source).toContain('fixed inset-x-3 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-50');

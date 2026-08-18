@@ -486,6 +486,12 @@ export async function getGroupsCatalog(category?: string, country?: string, subc
 export async function getPublicOwnerProfile(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
+  const groups = await db.select().from(groupsCatalog).where(and(
+    eq(groupsCatalog.ownerOpenId, openId),
+    eq(groupsCatalog.status, "listed"),
+    eq(groupsCatalog.anonymousListing, false)
+  )).orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
+  if (!groups.length) return undefined;
   const [owner] = await db.select({
     openId: users.openId,
     name: users.name,
@@ -493,10 +499,6 @@ export async function getPublicOwnerProfile(openId: string) {
     avatarUrl: users.avatarUrl,
   }).from(users).where(eq(users.openId, openId)).limit(1);
   if (!owner) return undefined;
-  const groups = await db.select().from(groupsCatalog).where(and(
-    eq(groupsCatalog.ownerOpenId, openId),
-    eq(groupsCatalog.status, "listed")
-  )).orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
   const nfts = await db.select({
     id: nftUsernames.id,
     username: nftUsernames.username,
@@ -533,7 +535,7 @@ export async function getOwnerLeaderboard(limit = 25) {
     totalMembers,
   }).from(groupsCatalog)
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
-    .where(eq(groupsCatalog.status, "listed"))
+    .where(and(eq(groupsCatalog.status, "listed"), eq(groupsCatalog.anonymousListing, false)))
     .groupBy(groupsCatalog.ownerOpenId, users.name, users.telegramUsername, users.avatarUrl)
     .orderBy(desc(totalMembers), desc(activeListings), asc(groupsCatalog.ownerOpenId))
     .limit(Math.min(Math.max(limit, 1), 100));
@@ -629,14 +631,29 @@ export async function saveMyGroupsLayout(ownerOpenId: string, orderedGroupIds: n
 export async function getGroupDetail(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const group = await getGroupById(id);
-  if (!group) return undefined;
+  const [detailRow] = await db.select({
+    group: groupsCatalog,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+    ownerAvatarUrl: users.avatarUrl,
+  }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
+    .where(eq(groupsCatalog.id, id))
+    .limit(1);
+  if (!detailRow) return undefined;
+  const { group, ownerName, ownerTelegramUsername, ownerAvatarUrl } = detailRow;
   const snapshots = await db.select().from(groupStatsSnapshots).where(eq(groupStatsSnapshots.groupId, id)).orderBy(desc(groupStatsSnapshots.recordedAt)).limit(30);
   const ownerNfts = await db.select().from(nftUsernames)
     .where(and(eq(nftUsernames.showcaseGroupId, group.id), eq(nftUsernames.status, "available")))
     .orderBy(desc(nftUsernames.createdAt));
   return {
     group: toDetailGroup(group),
+    owner: group.anonymousListing ? undefined : {
+      openId: group.ownerOpenId,
+      name: ownerName,
+      telegramUsername: ownerTelegramUsername,
+      avatarUrl: ownerAvatarUrl,
+    },
     snapshots: snapshots.reverse(),
     ownerNfts,
     analytics: { source: "tgtop_bot_observed" as const, observedSince: group.createdAt },
@@ -857,7 +874,7 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
     country: options.country,
     city: options.city,
     subcategory: options.subcategory,
-    anonymousListing: options.anonymousListing,
+    anonymousListing: options.anonymousListing ?? true,
     monthlyEntryEnabled: options.monthlyEntryEnabled,
     monthlyEntryStars: options.monthlyEntryStars,
     monthlyEntryLinkName: options.monthlyEntryLinkName?.trim() || null,
