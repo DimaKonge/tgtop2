@@ -330,7 +330,7 @@
 - [ ] Show a compact per-second elapsed-time counter for how long the current group has held its ranking cell
 - [ ] Show «Подписаться и получить +… GRAM» for rewarded channels and «Вступить и получить +… GRAM» for rewarded chats in cards and details
 - [ ] Credit the exact owner-configured GRAM amount to a participant’s bonus wallet only after bot-observed membership verification
-- [ ] Validate and deploy the completed GRAM reward-card and simplified listing-settings changes to tgtop.xyz
+- [x] Validate and deploy the completed GRAM reward-card and simplified listing-settings changes to tgtop.xyz
 - [ ] When @TGTOP_robot loses admin access to a ranked community, remove it idempotently from the ranking cell and refund the owner’s exact placed GRAM amount
 - [ ] Superseded: keep a paid ranking position and public entry link active after bot removal, while pausing bot-verified analytics and automatic GRAM reward payouts
 - [ ] Keep live ranking updates lightweight and resilient for high concurrent Mini App traffic
