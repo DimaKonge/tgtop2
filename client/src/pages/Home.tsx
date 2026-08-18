@@ -6,6 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -350,11 +351,11 @@ function GroupCard({
   const compact = variant === "compact";
   const rankingPlacement = variant !== "list";
   const cardStyle = lead
-    ? "h-[252px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[42vh] sm:p-6"
+    ? "h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[46vh] sm:p-6"
           : variant === "secondary"
-      ? "h-[104px] border-white/10 bg-[#111720] p-3 sm:h-[140px] sm:p-4"
+      ? "h-[128px] border-white/10 bg-[#111720] p-3 sm:h-[160px] sm:p-4"
       : compact
-        ? "h-[68px] border-white/8 bg-[#111720] p-2 sm:h-[106px]"
+        ? "h-[78px] border-white/8 bg-[#111720] p-2 sm:h-[116px]"
         : "h-[52px] border-white/8 bg-[#111720] px-3 py-1.5";
   const shellStyle = compact
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
@@ -432,10 +433,6 @@ function GroupCard({
                 <b className="text-sm font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon)} TON</b>
                 <small className="text-[10px] text-slate-400">{language === "en" ? "For sale" : "Продажа"}</small>
               </div>
-            ) : !rankingPlacement ? (
-              <span className="rounded bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                {language === "en" ? "Catalog" : "Каталог"}
-              </span>
             ) : null}
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
           </span>
@@ -1251,6 +1248,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? selectedListingGroups[0]?.category
     : null;
   const listingSubcategoryOptions = listingCategory ? CATEGORY_SUBCATEGORIES[listingCategory] : [];
+  const canApplyAnonymousListing = selectedListingGroups.length > 0 && selectedListingGroups.every(group => group.category === "Чаты");
   const monthlyEntryEligibleGroup = selectedListingGroups.length === 1 && selectedListingGroups[0]?.category === "Каналы" && !selectedListingGroups[0]?.username
     ? selectedListingGroups[0]
     : null;
@@ -1328,7 +1326,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       city: listingCity === "Все" ? undefined : listingCity,
       subcategory: listingSubcategory,
       salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
-      anonymousListing,
+      anonymousListing: canApplyAnonymousListing ? anonymousListing : undefined,
       monthlyEntryEnabled,
       monthlyEntryStars: monthlyEntryEnabled ? Number(monthlyEntryStars) : undefined,
       monthlyEntryLinkName: monthlyEntryEnabled ? monthlyEntryLinkName.trim() || undefined : undefined,
@@ -1660,11 +1658,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                               <b className="text-xs font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon!)} TON</b>
                               <small className="text-[9px] text-slate-400">{language === "en" ? "For sale" : "Продажа"}</small>
                             </div>
-                          ) : (
-                            <span className="rounded bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                              {language === "en" ? "Catalog" : "Каталог"}
-                            </span>
-                          )}
+                          ) : null}
                           <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600 transition-transform group-hover:translate-x-0.5 group-hover:text-[#3f8cff]" />
                         </div>
                       </button>
@@ -2652,26 +2646,28 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <div className="space-y-5 px-4 pb-4">
             <section>
               <p className="mb-2 text-xs text-slate-400">{tx("Страна / регион в каталоге", "Catalog country / region")}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {COUNTRY_OPTIONS.map(item => (
-                  <button
-                    key={item}
-                    onClick={() => { setListingCountry(item); setListingCity("Все"); }}
-                    className={`rounded-lg border px-2.5 py-2 text-[10px] font-medium ${listingCountry === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}
-                  >
-                    {getCountryLabel(item, language)}
-                  </button>
-                ))}
-              </div>
+              <Select value={listingCountry} onValueChange={value => { setListingCountry(value as ListingCountry); setListingCity("Все"); }}>
+                <SelectTrigger className="h-11 w-full rounded-xl border-white/10 bg-[#0b0f14] text-sm text-slate-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
+                  {COUNTRY_OPTIONS.map(item => <SelectItem key={item} value={item} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{getCountryLabel(item, language)}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </section>
 
             {(CITY_OPTIONS[listingCountry] ?? []).length > 0 && (
               <section>
                 <p className="mb-2 text-xs text-slate-400">{tx("Город", "City")}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  <button onClick={() => setListingCity("Все")} className={`rounded-lg border px-2.5 py-1.5 text-[10px] ${listingCity === "Все" ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{tx("Не указан", "Not specified")}</button>
-                  {CITY_OPTIONS[listingCountry].map(item => <button key={item.value} onClick={() => setListingCity(item.value)} className={`rounded-lg border px-2.5 py-1.5 text-[10px] ${listingCity === item.value ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{item[language]}</button>)}
-                </div>
+                <Select value={listingCity} onValueChange={setListingCity}>
+                  <SelectTrigger className="h-11 w-full rounded-xl border-white/10 bg-[#0b0f14] text-sm text-slate-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
+                    <SelectItem value="Все" className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{tx("Не указан", "Not specified")}</SelectItem>
+                    {CITY_OPTIONS[listingCountry].map(item => <SelectItem key={item.value} value={item.value} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{item[language]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </section>
             )}
 
@@ -2681,11 +2677,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {!listingCategory && <span className="text-[10px] text-amber-100/70">{tx("Выберите группы одного типа", "Select one community type")}</span>}
               </div>
               {listingCategory ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {listingSubcategoryOptions.map(item => (
-                    <button key={item} onClick={() => setListingSubcategory(item)} className={`rounded-lg border px-2.5 py-1.5 text-[10px] ${listingSubcategory === item ? "border-[#3f8cff] bg-[#3f8cff]/15 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{getSubcategoryLabel(item, language)}</button>
-                  ))}
-                </div>
+                <Select value={listingSubcategory} onValueChange={setListingSubcategory}>
+                  <SelectTrigger className="h-11 w-full rounded-xl border-white/10 bg-[#0b0f14] text-sm text-slate-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
+                    {listingSubcategoryOptions.map(item => <SelectItem key={item} value={item} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{getSubcategoryLabel(item, language)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               ) : (
                 <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] text-slate-500">{tx("Подкатегории задаются отдельно для каналов и чатов.", "Subcategories are configured separately for channels and chats.")}</p>
               )}
@@ -2761,14 +2760,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] leading-4 text-slate-500">{tx("Ежемесячный вход в Stars доступен после перевода канала в приватный режим.", "Monthly Stars entry is available after the channel becomes private.")}</p>
             )}
 
-            {selectedListingGroups.length > 0 && selectedListingGroups.every(group => group.category === "Чаты") && (
+            {selectedListingGroups.length > 0 && (
               <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs">
                     <b className="block text-slate-200">{tx("Анонимное размещение", "Anonymous listing")}</b>
-                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Не показывать владельца в карточках TG TOP", "Do not show the owner on TG TOP cards")}</small>
+                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{canApplyAnonymousListing ? tx("Не показывать владельца в карточках TG TOP для всех выбранных чатов", "Do not show the owner on TG TOP cards for all selected chats") : tx("Доступно, когда выбраны только чаты", "Available when only chats are selected")}</small>
                   </span>
-                  <button type="button" role="switch" aria-checked={anonymousListing} onClick={() => setAnonymousListing(value => !value)} className={`relative h-6 w-10 shrink-0 rounded-full border transition-colors ${anonymousListing ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
+                  <button type="button" role="switch" aria-checked={anonymousListing} aria-label={tx("Переключить анонимное размещение", "Toggle anonymous listing")} disabled={!canApplyAnonymousListing} onClick={() => setAnonymousListing(value => !value)} className={`relative h-6 w-10 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${anonymousListing ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
                     <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${anonymousListing ? "translate-x-5" : "translate-x-0.5"}`} />
                   </button>
                 </div>

@@ -60,4 +60,14 @@ describe("normalizeGroupListingOptions", () => {
       monthlyEntryLinkName: "TG TOP monthly",
     });
   });
+
+  it("retains anonymous-listing preference for the bulk chat-listing flow", () => {
+    expect(normalizeGroupListingOptions({
+      listingType: "catalog",
+      country: "Global",
+      anonymousListing: true,
+    })).toMatchObject({
+      anonymousListing: true,
+    });
+  });
 });

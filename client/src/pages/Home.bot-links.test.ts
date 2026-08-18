@@ -23,10 +23,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toMatch(/<GroupCard\s+group=\{leadSlot\.group\}\s+variant="lead"/);
     expect(source).toContain('variant="secondary"');
     expect(source).toContain('variant="compact"');
-    expect(source).toContain('h-[252px] border-[#3f8cff]/35 bg-[#141c27] p-5');
-    expect(source).toContain('sm:h-[42vh]');
-    expect(source).toContain('h-[104px] border-white/10 bg-[#111720] p-3');
-    expect(source).toContain('h-[68px] border-white/8 bg-[#111720] p-2');
+    expect(source).toContain('h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5');
+    expect(source).toContain('sm:h-[46vh]');
+    expect(source).toContain('h-[128px] border-white/10 bg-[#111720] p-3');
+    expect(source).toContain('h-[78px] border-white/8 bg-[#111720] p-2');
     expect(source).toContain('max-w-full truncate');
     expect(source).toContain('max-w-[132px]');
     expect(source).toContain('lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"');
@@ -45,6 +45,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const formatTon = (value: number | string | null | undefined)');
     expect(source).toContain('tx(`Свободная позиция · от ${formatTon(0.1)} TON`');
     expect(source).not.toContain('0.100 TON');
+    expect(source).not.toContain('{language === "en" ? "Catalog" : "Каталог"}');
     expect(source).toContain('tx("Снять с листинга", "Remove from listing")');
     expect(source).toContain('sticky top-2 z-10 flex items-center justify-between');
     expect(source).not.toContain('tx("Динамика аудитории", "Audience dynamics")');
@@ -107,6 +108,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const verifiedTasks');
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${board.map');
+    expect(source).toContain('import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"');
+    expect(source).toContain('const canApplyAnonymousListing = selectedListingGroups.length > 0 && selectedListingGroups.every(group => group.category === "Чаты")');
+    expect(source).toContain('anonymousListing: canApplyAnonymousListing ? anonymousListing : undefined');
+    expect(source).toContain('aria-label={tx("Переключить анонимное размещение", "Toggle anonymous listing")}');
+    expect(source).toContain('<Select value={listingCountry}');
+    expect(source).toContain('<Select value={listingSubcategory}');
     expect(source).toContain('className="ranking-slot-enter ranking-slot-lead w-full"');
     expect(source).toContain('type MyGroupsViewMode = "list" | "grid"');
     expect(source).toContain('const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list")');

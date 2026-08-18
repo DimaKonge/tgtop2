@@ -281,3 +281,7 @@
 - [x] Add My Groups bulk-selection mode with a visible control, long-press activation, and shared batch actions
 - [x] Replace My Groups List/Grid chips with one toggle button and use the «Не в листинге» / «Unlisted» filter label
 - [x] Tune public ranking-board tier widths to fully use the available mobile content width
+- [x] Make every public 1→2→4 ranking-card tier more square by increasing its height without changing its full-width grid
+- [x] Remove the redundant «Каталог / Catalog» status text from lower public list cards
+- [x] Add an anonymous-listing toggle to bulk listing configuration and apply it to every selected community
+- [x] Replace country and subcategory chip grids in listing configuration with compact dropdown controls
