@@ -237,6 +237,9 @@ type Slot = {
   id: number;
   slotNumber: number;
   bidAmount: number;
+  category?: "Все" | "Каналы" | "Чаты";
+  country?: string;
+  subcategory?: string;
   updatedAt?: Date;
   group: Group | null;
 };
@@ -1497,8 +1500,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   useEffect(() => {
     setDetailBidInput(selectedSlot && detailMinimumBid !== null ? formatTon(detailMinimumBid) : "");
   }, [detailMinimumBid, selectedSlot?.id]);
+  const detailBoardCategory = selectedSlot?.category ?? detailBoardScope?.category ?? detail?.group.category ?? "Все";
+  const detailBoardCountry = selectedSlot?.country ?? detailBoardScope?.country ?? detail?.group.country ?? "Global";
+  const detailBoardSubcategory = selectedSlot?.subcategory ?? detailBoardScope?.subcategory ?? detail?.group.subcategory ?? "Все";
   const detailCatalogPath = detail
-    ? [tx("Все", "All"), getCountryLabel(detailBoardScope?.country ?? detail.group.country, language), (detailBoardScope?.category ?? detail.group.category) === "Все" ? tx("Все", "All") : getCategoryLabel((detailBoardScope?.category ?? detail.group.category) as "Каналы" | "Чаты", language), getSubcategoryLabel(detailBoardScope?.subcategory ?? detail.group.subcategory, language)].filter((part): part is string => Boolean(part)).join(" · ")
+    ? [
+        tx("Все сообщества", "All communities"),
+        getCountryLabel(detailBoardCountry, language),
+        getCategoryLabel((detailBoardCategory === "Все" ? detail.group.category : detailBoardCategory) as "Каналы" | "Чаты", language),
+        detailBoardSubcategory !== "Все" ? getSubcategoryLabel(detailBoardSubcategory, language) : null,
+      ].filter((part): part is string => Boolean(part)).join(" · ")
     : "";
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
   const detailEntryUrl = detail?.group.monthlyEntryInviteLink ?? (detail?.group.username
@@ -2451,7 +2462,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <a
                       href={detailEntryUrl}
                       onClick={event => { event.preventDefault(); openTelegramCommunityLink(detailEntryUrl); }}
-                      className="order-2 mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
+                      className="order-1 mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
                     >
                       <span>{detailHasPaidEntry
                         ? tx(`Войти за ${detail.group.monthlyEntryStars} Stars`, `Join for ${detail.group.monthlyEntryStars} Stars`)
@@ -2599,13 +2610,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   )}
                   {selectedSlot && (
-                    <section className="order-1 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
+                    <section className="order-2 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
                       <div className="flex items-start justify-between gap-3">
                         <span>
                           <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[#8fb9ff]">{tx(`Текущее место · #${selectedSlot.slotNumber}`, `Current place · #${selectedSlot.slotNumber}`)}</small>
-                          <b className="mt-1 block text-base text-slate-100">{formatTon(selectedSlot.bidAmount / 1000)} GRAM</b>
+                          <span className="mt-1 flex items-baseline gap-1.5"><b className="block text-base text-slate-100">{formatTon(selectedSlot.bidAmount / 1000)} GRAM</b><small className="text-[10px] text-slate-500">{tx("цена лота", "lot price")}</small></span>
                         </span>
-                        <span className="rounded-full border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-slate-300">{tx(`минимум ${formatTon(detailMinimumBid)} GRAM`, `minimum ${formatTon(detailMinimumBid)} GRAM`)}</span>
+                        <span className="rounded-full border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-slate-300">{tx(`перебить от ${formatTon(detailMinimumBid)} GRAM`, `outbid from ${formatTon(detailMinimumBid)} GRAM`)}</span>
                       </div>
                       <div className="mt-3 flex items-center justify-between rounded-lg bg-black/15 px-2.5 py-2 text-[11px]">
                         <span className="text-slate-500">{tx("На этой позиции", "In this position")}</span>
@@ -2633,7 +2644,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           <button type="button" onClick={() => { if (!detail || !selectedSlot) return; const value = detailRankingBidAmount; const minimum = getMinimumRankingBidGram(selectedSlot); if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`)); placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM` }); }} disabled={!detailRankingPreviewSlotNumber || placeBid.isPending} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{placeBid.isPending ? tx("Оплата…", "Paying…") : tx("Поднять ставку", "Raise bid")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("Оплата GRAM с баланса TG TOP", "GRAM payment from TG TOP balance")}</small></span><b className="text-xs text-[#a6c8ff]">{formatTon(detailRankingBidAmount)} GRAM</b></button>
                         </div>
                       )}
-                      {!ownsDetail && isAuthenticated && <button onClick={() => openMine(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Цена лота", "Lot price")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Установить от ${formatTon(detailMinimumBid)} GRAM`, `Set from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
+                      {!ownsDetail && isAuthenticated && <button onClick={() => openMine(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Перебить лот", "Outbid lot")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Следующая ставка: от ${formatTon(detailMinimumBid)} GRAM`, `Next bid: from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
                     </section>
                   )}
                   {!ownsDetail && detail.group.salePriceTon && detail.group.listingType === "sale" && (
