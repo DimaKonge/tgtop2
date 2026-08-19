@@ -337,6 +337,16 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
     const requiredMilliTon = getMinimumRankingBidMilliTon(target.bidAmount, target.groupId !== null, slotFloor);
     throw new Error(`Минимальная ставка для этой позиции — ${formatTonAmount(requiredMilliTon / 1000)} GRAM`);
   }
+  const outbid = target.groupId && target.groupId !== groupId && target.leaderUserId
+    ? {
+        openId: target.leaderUserId,
+        groupTitle: target.title,
+        slotId: target.id,
+        slotNumber: target.slotNumber,
+        competitorBidAmount: bidAmount,
+        restoreMinimumBidAmount: getMinimumRankingBidMilliTon(bidAmount, true, slotFloor),
+      }
+    : undefined;
   const board = await db.select().from(auctionSlots).where(and(
     eq(auctionSlots.category, target.category),
     eq(auctionSlots.country, target.country)
@@ -396,7 +406,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
     rankingIntentId = Number(inserted[0]?.insertId ?? 0);
   });
 
-  return { id: rankingIntentId, slotNumber: target.slotNumber, bidAmount, groupTitle: group.title };
+  return { id: rankingIntentId, slotNumber: target.slotNumber, bidAmount, groupTitle: group.title, outbid };
 }
 
 export async function createStarsRankingPaymentIntent(input: { userOpenId: string; slotId: number; groupId: number; bidAmount: number }) {
@@ -467,14 +477,14 @@ export async function settleStarsRankingPayment(input: { payload: string; telegr
   const group = await getGroupById(intent.groupId);
   if (!group) throw new Error("Группа для подтверждённой ставки больше недоступна");
   try {
-    await placeBid(intent.slotId, intent.bidAmount, `${formatTonAmount(intent.bidAmount / 1000)} GRAM`, group.username ?? group.title, intent.userOpenId, intent.groupId);
+    const placement = await placeBid(intent.slotId, intent.bidAmount, `${formatTonAmount(intent.bidAmount / 1000)} GRAM`, group.username ?? group.title, intent.userOpenId, intent.groupId);
     await db.update(starsRankingPaymentIntents).set({
       status: "paid",
       telegramPaymentChargeId: input.telegramPaymentChargeId,
       telegramUserId: String(input.telegramUserId),
       paidAt: new Date(),
     }).where(eq(starsRankingPaymentIntents.id, intent.id));
-    return { status: "paid" as const, idempotent: false };
+    return { status: "paid" as const, idempotent: false, outbid: placement.outbid };
   } catch (error) {
     await db.update(starsRankingPaymentIntents).set({
       status: "refund_required",

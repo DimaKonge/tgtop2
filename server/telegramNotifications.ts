@@ -59,6 +59,41 @@ export async function notifyRecordedRankingBid(input: { openId: string; groupTit
   }
 }
 
+export async function notifyRankingOutbid(input: {
+  openId: string;
+  groupTitle: string;
+  slotId: number;
+  slotNumber: number;
+  competitorBidAmount: number;
+  restoreMinimumBidAmount: number;
+}) {
+  const chatId = getTelegramChatIdFromOpenId(input.openId);
+  if (!chatId || !botToken) return false;
+
+  const competitorBid = (input.competitorBidAmount / 1000).toFixed(1);
+  const restoreMinimum = (input.restoreMinimumBidAmount / 1000).toFixed(1);
+  const text = [
+    "⚡ Вас только что перебили",
+    "",
+    `Группа: ${input.groupTitle}`,
+    `Позиция: ${input.slotNumber}`,
+    `Ставка конкурента: ${competitorBid} GRAM`,
+    `Вернуть место: от ${restoreMinimum} GRAM`,
+  ].join("\n");
+
+  try {
+    const response = await axios.post<{ ok: boolean }>(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId,
+      text,
+      reply_markup: { inline_keyboard: [[{ text: "Вернуть место", web_app: { url: `${miniAppUrl}?rankSlot=${input.slotId}` } }]] },
+    }, { timeout: 15_000 });
+    return response.data.ok;
+  } catch (error) {
+    console.warn("[Telegram] Could not send ranking outbid notification:", error);
+    return false;
+  }
+}
+
 export async function notifyCommunityListed(input: {
   chatId: string;
   groupId: number;

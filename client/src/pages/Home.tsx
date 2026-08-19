@@ -795,6 +795,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [selectedOwnerOpenId, setSelectedOwnerOpenId] = useState<string | null>(null);
   const [targetSlot, setTargetSlot] = useState<Slot | null>(null);
+  const [rankSlotLinkId, setRankSlotLinkId] = useState<number | null>(null);
   const [amount, setAmount] = useState("0.1");
   const [starsPaymentGroup, setStarsPaymentGroup] = useState<Group | null>(null);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
@@ -852,6 +853,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setSelectedGroupId(listingId);
       setPage("details");
     }
+    const rankSlotId = Number(params.get("rankSlot"));
+    if (Number.isInteger(rankSlotId) && rankSlotId > 0) setRankSlotLinkId(rankSlotId);
   }, []);
   const ui =
     language === "en"
@@ -909,6 +912,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     city,
   });
   const slots = (slotsQuery.data ?? []) as Slot[];
+  useEffect(() => {
+    if (!rankSlotLinkId || !slots.length) return;
+    const slot = slots.find(item => item.id === rankSlotLinkId);
+    if (!slot) return;
+    setTargetSlot(slot);
+    setAmount(formatTon(getMinimumRankingBidGram(slot)));
+    setPage("mine");
+    setRankSlotLinkId(null);
+  }, [rankSlotLinkId, slots]);
   const groupsQuery = trpc.tgTop.getGroups.useQuery({ category, country, subcategory, city });
   const listedGroups = (groupsQuery.data ?? []) as Group[];
   useEffect(() => {

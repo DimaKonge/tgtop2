@@ -8,6 +8,15 @@ describe("ranking intent bot notifications", () => {
     expect(getTelegramChatIdFromOpenId("manus-user")).toBeNull();
     expect(getTelegramChatIdFromOpenId("telegram:not-a-number")).toBeNull();
   });
+
+  it("prepares an actionable outbid notification with the current competitor price and restore link", () => {
+    const source = readFileSync(new URL("./telegramNotifications.ts", import.meta.url), "utf8");
+    expect(source).toContain("notifyRankingOutbid");
+    expect(source).toContain("Вас только что перебили");
+    expect(source).toContain("Ставка конкурента:");
+    expect(source).toContain("Вернуть место");
+    expect(source).toContain("?rankSlot=${input.slotId}");
+  });
 });
 
 describe("Stars invoice window delivery", () => {

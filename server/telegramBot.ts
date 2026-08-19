@@ -16,6 +16,7 @@ import {
   upsertTelegramGroup,
   upsertUser,
 } from "./db";
+import { notifyRankingOutbid } from "./telegramNotifications";
 
 type TelegramChat = {
   id: number;
@@ -260,6 +261,9 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
           return false;
         })
       : false;
+    if (settlement.status === "paid" && !settlement.idempotent && settlement.outbid) {
+      void notifyRankingOutbid(settlement.outbid);
+    }
     await telegramCall<boolean>("sendMessage", {
       chat_id: message.chat.id,
       text: settlement.status === "paid"
