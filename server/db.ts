@@ -38,7 +38,12 @@ function toPublicGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {
     rewardPerManualAdd: _rewardPerManualAdd,
     ...publicGroup
   } = group;
-  return { ...publicGroup, rewardActive: active, rewardAmount };
+  return {
+    ...publicGroup,
+    ...(group.managerPublic ? {} : { managerTelegramUserId: null, managerUsername: null, managerName: null }),
+    rewardActive: active,
+    rewardAmount,
+  };
 }
 
 function toDetailGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {
@@ -392,7 +397,19 @@ export async function getAuctionSlots(category?: string, country?: string, subca
   return slots.map(slot => ({ ...slot, group: slot.groupId ? groupMap.get(slot.groupId) ?? null : null }));
 }
 
-export async function placeBid(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, visibility?: { anonymousListing: boolean; showOwnerContact: boolean }) {
+export type RankingLotOptions = {
+  anonymousListing?: boolean;
+  showOwnerContact?: boolean;
+  managerPublic?: boolean;
+  listingAnnouncementEnabled?: boolean;
+  salePriceTon?: string | null;
+  rewardActive?: boolean;
+  rewardBudget?: number;
+  rewardPerSubscription?: number;
+  rewardPerManualAdd?: number;
+};
+
+export async function placeBid(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, options?: RankingLotOptions) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -470,10 +487,18 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
         updatedAt: now,
       }).where(eq(auctionSlots.id, slot.id));
     }
-    if (visibility) {
+    if (options) {
+      const salePriceTon = options.salePriceTon?.trim() || null;
       await tx.update(groupsCatalog).set({
-        anonymousListing: visibility.anonymousListing,
-        showOwnerContact: visibility.showOwnerContact,
+        ...(options.anonymousListing !== undefined ? { anonymousListing: options.anonymousListing } : {}),
+        ...(options.showOwnerContact !== undefined ? { showOwnerContact: options.showOwnerContact } : {}),
+        ...(options.managerPublic !== undefined ? { managerPublic: options.managerPublic } : {}),
+        ...(options.listingAnnouncementEnabled !== undefined ? { listingAnnouncementEnabled: options.listingAnnouncementEnabled } : {}),
+        ...(options.salePriceTon !== undefined ? { salePriceTon, listingType: salePriceTon ? "sale" : "catalog" } : {}),
+        ...(options.rewardActive !== undefined ? { rewardActive: options.rewardActive } : {}),
+        ...(options.rewardBudget !== undefined ? { rewardBudget: options.rewardBudget } : {}),
+        ...(options.rewardPerSubscription !== undefined ? { rewardPerSubscription: options.rewardPerSubscription } : {}),
+        ...(options.rewardPerManualAdd !== undefined ? { rewardPerManualAdd: options.rewardPerManualAdd } : {}),
       }).where(eq(groupsCatalog.id, group.id));
     }
 
@@ -490,7 +515,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   return { id: rankingIntentId, slotNumber: target.slotNumber, bidAmount, groupTitle: group.title, outbid };
 }
 
-export async function payRankingBidWithGramCredit(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, visibility?: { anonymousListing: boolean; showOwnerContact: boolean }) {
+export async function payRankingBidWithGramCredit(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, options?: RankingLotOptions) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const spendUnits = Math.round((bidAmount / 1000) * 100);
@@ -504,7 +529,7 @@ export async function payRankingBidWithGramCredit(slotId: number, bidAmount: num
   });
 
   try {
-    return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId, visibility);
+    return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId, options);
   } catch (error) {
     await db.transaction(async tx => {
       await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${spendUnits}` }).where(eq(users.openId, leaderUserId));
@@ -852,7 +877,7 @@ export async function saveMyGroupsLayout(ownerOpenId: string, orderedGroupIds: n
   });
 }
 
-export async function getGroupDetail(id: number) {
+export async function getGroupDetail(id: number, viewerOpenId?: string) {
   const db = await getDb();
   if (!db) return undefined;
   const [detailRow] = await db.select({
@@ -871,8 +896,12 @@ export async function getGroupDetail(id: number) {
   const ownerNfts = await db.select().from(nftUsernames)
     .where(and(eq(nftUsernames.showcaseGroupId, group.id), eq(nftUsernames.status, "available")))
     .orderBy(desc(nftUsernames.createdAt));
+  const detailGroup = toDetailGroup(group);
+  const groupForViewer = group.managerPublic || group.ownerOpenId === viewerOpenId
+    ? detailGroup
+    : { ...detailGroup, managerTelegramUserId: null, managerUsername: null, managerName: null };
   return {
-    group: toDetailGroup(group),
+    group: groupForViewer,
     owner: canExposeOwnerProfile(ownerPublicProfile) ? {
       openId: group.ownerOpenId,
       name: ownerName,
@@ -1086,6 +1115,7 @@ export type GroupListingOptions = {
   subcategory?: string;
   anonymousListing?: boolean;
   showOwnerContact?: boolean;
+  managerPublic?: boolean;
   listingAnnouncementEnabled?: boolean;
   monthlyEntryEnabled?: boolean;
   monthlyEntryStars?: number;
@@ -1112,6 +1142,7 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
     subcategory: options.subcategory,
     anonymousListing: options.anonymousListing ?? true,
     showOwnerContact: options.showOwnerContact ?? false,
+    managerPublic: options.managerPublic ?? true,
     listingAnnouncementEnabled: options.listingAnnouncementEnabled,
     monthlyEntryEnabled: options.monthlyEntryEnabled,
     monthlyEntryStars: options.monthlyEntryStars,
@@ -1201,6 +1232,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),
       ...(listingOptions.anonymousListing !== undefined ? { anonymousListing: listingOptions.anonymousListing } : {}),
       ...(listingOptions.showOwnerContact !== undefined ? { showOwnerContact: listingOptions.showOwnerContact } : {}),
+      ...(listingOptions.managerPublic !== undefined ? { managerPublic: listingOptions.managerPublic } : {}),
       ...(listingOptions.listingAnnouncementEnabled !== undefined ? { listingAnnouncementEnabled: listingOptions.listingAnnouncementEnabled } : {}),
       ...(listingOptions.monthlyEntryEnabled !== undefined ? {
         monthlyEntryEnabled: listingOptions.monthlyEntryEnabled,

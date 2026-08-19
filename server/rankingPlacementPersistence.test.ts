@@ -18,9 +18,10 @@ describe("ranking placement persistence", () => {
 
   it("persists a chosen public or anonymous profile mode inside the paid ranking placement", () => {
     const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
-    expect(source).toContain("visibility?: { anonymousListing: boolean; showOwnerContact: boolean }");
+    expect(source).toContain("export type RankingLotOptions = {");
     expect(source).toContain("await tx.update(groupsCatalog).set({");
-    expect(source).toContain("anonymousListing: visibility.anonymousListing");
-    expect(source).toContain("showOwnerContact: visibility.showOwnerContact");
+    expect(source).toContain("anonymousListing: options.anonymousListing");
+    expect(source).toContain("showOwnerContact: options.showOwnerContact");
+    expect(source).toContain("managerPublic: options.managerPublic");
   });
 });

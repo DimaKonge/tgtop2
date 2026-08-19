@@ -16,6 +16,7 @@ const groupListingInput = z.object({
   subcategory: z.string().min(2).max(64).optional(),
   anonymousListing: z.boolean().optional(),
   showOwnerContact: z.boolean().optional(),
+  managerPublic: z.boolean().optional(),
   listingAnnouncementEnabled: z.boolean().optional(),
   monthlyEntryEnabled: z.boolean().optional(),
   monthlyEntryStars: z.number().int().min(1).max(10_000).optional(),
@@ -53,6 +54,13 @@ export const appRouter = router({
         groupId: z.number(),
         anonymousListing: z.boolean().optional(),
         showOwnerContact: z.boolean().optional(),
+        managerPublic: z.boolean().optional(),
+        listingAnnouncementEnabled: z.boolean().optional(),
+        salePriceTon: z.string().max(64).nullable().optional(),
+        rewardActive: z.boolean().optional(),
+        rewardBudget: z.number().int().min(0).optional(),
+        rewardPerSubscription: z.number().int().min(0).optional(),
+        rewardPerManualAdd: z.number().int().min(0).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const group = await db.getGroupById(input.groupId);
@@ -66,9 +74,19 @@ export const appRouter = router({
           group.username ?? group.title,
           ctx.user.openId,
           input.groupId,
-          input.anonymousListing === undefined && input.showOwnerContact === undefined
+          input.anonymousListing === undefined && input.showOwnerContact === undefined && input.managerPublic === undefined && input.listingAnnouncementEnabled === undefined && input.salePriceTon === undefined && input.rewardActive === undefined && input.rewardBudget === undefined && input.rewardPerSubscription === undefined && input.rewardPerManualAdd === undefined
             ? undefined
-            : { anonymousListing: Boolean(input.anonymousListing), showOwnerContact: Boolean(input.showOwnerContact) }
+            : {
+                anonymousListing: input.anonymousListing,
+                showOwnerContact: input.showOwnerContact,
+                managerPublic: input.managerPublic,
+                listingAnnouncementEnabled: input.listingAnnouncementEnabled,
+                salePriceTon: input.salePriceTon,
+                rewardActive: input.rewardActive,
+                rewardBudget: input.rewardBudget,
+                rewardPerSubscription: input.rewardPerSubscription,
+                rewardPerManualAdd: input.rewardPerManualAdd,
+              }
         );
         void notifyRecordedRankingBid({
           openId: ctx.user.openId,
@@ -171,8 +189,8 @@ export const appRouter = router({
 
     getGroupDetail: publicProcedure
       .input(z.object({ groupId: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getGroupDetail(input.groupId);
+      .query(async ({ ctx, input }) => {
+        return await db.getGroupDetail(input.groupId, ctx.user?.openId);
       }),
 
     getPublicOwnerProfile: publicProcedure

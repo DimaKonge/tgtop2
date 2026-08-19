@@ -82,8 +82,8 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('getPublicOwnerProfile.useQuery');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
-    expect(source).toContain('tx("Перейти в группу", "Open community")');
-    expect(source).toContain('tx("Открыть приватную группу", "Open private community")');
+    expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
+    expect(source).toContain('disabled={!detailEntryUrl}');
     expect(source).toContain('ownsDetail && detail.group.status !== "listed"');
     expect(source).toContain('tx("Разместить в каталоге", "List in catalog")');
     expect(source).toContain('onClick={() => setInlineListingOpen(true)}');
@@ -92,7 +92,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
     expect(source).toContain('const hours = Math.floor(seconds / 3_600);');
     expect(source).not.toContain('const days = Math.floor(seconds / 86_400);');
-    expect(source).toContain('!detailOwner ? (');
+    expect(source).toContain('!ownsDetail && (!detailPlacementIsPublic || !detailOwner) ? (');
     expect(source).toContain('tx("Анонимно", "Anonymously")');
     expect(source).toContain('const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0');
     expect(source).toContain('rewardPerInvite: isChatRewardCampaign ? 0 : joinRewardUnits');
@@ -152,7 +152,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('anonymousListing: selectedListingGroups.length ? anonymousListing : undefined');
     expect(source).not.toContain('Переключить анонимное размещение');
     expect(source).not.toContain('const [anonymousListing, setAnonymousListing] = useState(true)');
-    expect(source).toContain('!detailOwner ? (');
+    expect(source).toContain('!ownsDetail && (!detailPlacementIsPublic || !detailOwner) ? (');
     expect(source).toContain('tx("Анонимно", "Anonymously")');
     expect(source).toContain('Подписаться и получить +${formatGram(subscriptionReward)} GRAM');
     expect(source).toContain('<Select value={listingCountry}');
@@ -253,7 +253,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Залистить');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('detailHasPaidEntry');
-    expect(source).toContain('tx(`Войти за ${detail.group.monthlyEntryStars} Stars`');
+    expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
     expect(source).toContain('tx("Сделать вход платным", "Make entry paid")');
     expect(source).toContain('max-h-[34dvh] rounded-t-[20px]');
     expect(source).toContain('Оформление');
@@ -319,7 +319,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null)');
     expect(source).toContain('Удалить группу из платформы?');
     expect(source).toContain('className="flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-5"');
-    expect(source).toContain('className="order-1 mt-4 flex min-h-16 w-full items-center justify-between rounded-2xl border border-[#83b6ff]/65 bg-gradient-to-r from-[#1688f5] via-[#2d82ed] to-[#4d70d8]');
+    expect(source).toContain('className={`order-0 flex w-full items-start gap-4 rounded-xl text-left transition-colors ${detailEntryUrl');
     expect(source).toContain('className="order-2 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3"');
     expect(source).toContain('function AudienceGrowthChart');
     expect(source).toContain('Снимки @TGTOP_robot с первого наблюдения.');
@@ -345,7 +345,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Группа опустится с ${selectedSlot.slotNumber}-й на ${detailRankingPreviewSlotNumber}-ю позицию');
     expect(source).toContain('tx("Обновить лот", "Refresh lot")');
     expect(source).toContain('tx("Другие смогут перейти в ваш профиль", "Others can open your profile")');
-    expect(source).toContain('Чтобы изменения вступили в силу, обновите ставку.');
+    expect(source).toContain('tx("Параметры публикации", "Publication settings")');
     expect(source).not.toContain('tx("Обновить Top", "Refresh Top")');
     expect(source).toContain('const groupAdministratorsQuery = trpc.tgTop.getGroupAdministrators.useQuery');
     expect(source).toContain('const setGroupManager = trpc.tgTop.setGroupManager.useMutation');
@@ -353,7 +353,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('setManagerSheetOpen(true)');
     expect(source).toContain('setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId })');
     expect(source).toContain('managerTelegramUserId?: string | null;');
-    expect(source).toContain('detail.group.managerName && (');
+    expect(source).toContain('detail.group.managerName && detail.group.managerPublic !== false');
+    expect(source).toContain('tx("Показывать менеджера", "Show manager")');
     expect(source).toContain('tx("Размещено", "Listed")');
     expect(source).toContain('tx("Анонимно", "Anonymously")');
     expect(source).toContain('tx("Менеджер группы", "Community manager")');
@@ -367,7 +368,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const saveInlineDetailListing = () => {');
     expect(source).toContain('tx("Параметры публикации", "Publication settings")');
     expect(source).toContain('tx("Публичная публикация", "Public publication")');
-    expect(source).toContain('tx("Открыть в Telegram", "Open in Telegram")');
+    expect(source).toContain('disabled={!detailEntryUrl}');
     expect(source).toContain('tx("Обновить лот", "Refresh lot")');
+    expect(source).toContain('Ваш лот будет в Top, пока другую группу не разместят выше по ставке.');
+    expect(source).toContain('managerPublic?: boolean;');
+    expect(source).toContain('tx("Показывать менеджера", "Show manager")');
   });
 });

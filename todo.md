@@ -466,3 +466,12 @@
 - [x] Move listing settings from the separate sheet into a compact, ordered owner-management card without duplicated actions
 - [x] Redesign the primary «Перейти в группу» action as an expressive Telegram-blue entry card with clear visual priority
 - [x] Rename «Обновить ставку» to «Обновить лот» and restyle it as a visually prominent primary action
+- [x] Replace the anonymous-placement header block with the compact publication-settings control for owners
+- [x] Move group entry to a subtle header control and make the community avatar open Telegram
+- [x] Remove the duplicate anonymous-placement switch from the ranking bid block while keeping the wide «Обновить лот» action
+- [x] Add a publication setting that lets an owner show or hide the selected manager from public community details
+- [x] Reduce the typography of the reward-budget and reward-per-subscriber fields for a cleaner compact mobile layout
+- [x] Explain in the empty-slot group selector that the listed lot remains in Top until another group outbids it
+- [x] Restyle the «Выбрать и настроить ставку» action with a calmer outlined dark presentation
+- [x] Add the compact lot-publication settings to the bottom bid sheet and rename it «Параметры лота»
+- [x] Remove the standalone Telegram-entry button and make the entire community header card open the community

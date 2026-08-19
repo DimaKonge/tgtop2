@@ -80,6 +80,15 @@ describe("normalizeGroupListingOptions", () => {
     });
   });
 
+  it("keeps the manager publicly visible by default and accepts an explicit hide preference", () => {
+    expect(normalizeGroupListingOptions({ listingType: "catalog", country: "Global" })).toMatchObject({
+      managerPublic: true,
+    });
+    expect(normalizeGroupListingOptions({ listingType: "catalog", country: "Global", managerPublic: false })).toMatchObject({
+      managerPublic: false,
+    });
+  });
+
   it("retains internal-GRAM reward campaign settings for server-side validation", () => {
     expect(normalizeGroupListingOptions({
       rewardActive: true,

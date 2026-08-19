@@ -210,6 +210,7 @@ type Group = {
   managerTelegramUserId?: string | null;
   managerUsername?: string | null;
   managerName?: string | null;
+  managerPublic?: boolean;
   listingAnnouncementEnabled?: boolean;
   monthlyEntryEnabled?: boolean;
   monthlyEntryStars?: number | null;
@@ -866,6 +867,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [salePriceTon, setSalePriceTon] = useState("");
   const [isListingForSale, setIsListingForSale] = useState(false);
   const [showOwnerContact, setShowOwnerContact] = useState(false);
+  const [managerPublic, setManagerPublic] = useState(true);
   const [listingAnnouncementEnabled, setListingAnnouncementEnabled] = useState(true);
   const [monthlyEntryEnabled, setMonthlyEntryEnabled] = useState(false);
   const [monthlyEntryStars, setMonthlyEntryStars] = useState("");
@@ -1549,6 +1551,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
     setIsListingForSale(Boolean(group.salePriceTon));
     setShowOwnerContact(Boolean(group.showOwnerContact));
+    setManagerPublic(group.managerPublic !== false);
     setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true);
     setRewardCampaignEnabled(Boolean(group.rewardActive));
     setRewardBudget(group.rewardBudget ? formatGram(group.rewardBudget) : "");
@@ -1715,6 +1718,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setSalePriceTon(firstGroup?.salePriceTon ? formatTon(firstGroup.salePriceTon) : "");
     setIsListingForSale(Boolean(firstGroup?.salePriceTon));
     setShowOwnerContact(Boolean(firstGroup?.showOwnerContact));
+    setManagerPublic(firstGroup?.managerPublic !== false);
     setListingAnnouncementEnabled(firstGroup?.listingAnnouncementEnabled ?? true);
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
     setMonthlyEntryStars(firstGroup?.monthlyEntryStars ? String(firstGroup.monthlyEntryStars) : "");
@@ -1755,6 +1759,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined,
       salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
       showOwnerContact: selectedListingGroups.length ? showOwnerContact : undefined,
+      managerPublic,
       listingAnnouncementEnabled,
       monthlyEntryEnabled,
       monthlyEntryStars: monthlyEntryEnabled ? Number(monthlyEntryStars) : undefined,
@@ -1784,6 +1789,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
       anonymousListing: detailVisibility === "anonymous",
       showOwnerContact,
+      managerPublic,
       listingAnnouncementEnabled,
       rewardActive: rewardCampaignEnabled,
       rewardBudget: budgetUnits,
@@ -1868,11 +1874,26 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const minimum = getMinimumRankingBidGram(targetSlot);
     if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10)
       return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`));
+    const budgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;
+    const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;
+    if (rewardCampaignEnabled && [budgetUnits, joinRewardUnits].some(item => item === undefined)) {
+      return toast.error(tx("Введите сумму в GRAM с точностью до 0.01", "Enter a GRAM amount with up to two decimals."));
+    }
+    const isChat = group.category === "Чаты";
     placeBid.mutate({
       slotId: targetSlot.id,
       groupId: group.id,
       bidAmount: value,
       currentBid: `${formatTon(value)} GRAM`,
+      anonymousListing: detailVisibility === "anonymous",
+      showOwnerContact,
+      managerPublic,
+      listingAnnouncementEnabled,
+      salePriceTon: isListingForSale ? salePriceTon || null : null,
+      rewardActive: rewardCampaignEnabled,
+      rewardBudget: budgetUnits,
+      rewardPerSubscription: isChat ? 0 : joinRewardUnits,
+      rewardPerManualAdd: isChat ? joinRewardUnits : 0,
     });
   };
   const openStarsPayment = (group: Group) => {
@@ -1882,6 +1903,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) {
       return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`));
     }
+    setDetailVisibility(group.anonymousListing === false ? "public" : "anonymous");
+    setShowOwnerContact(Boolean(group.showOwnerContact));
+    setManagerPublic(group.managerPublic !== false);
+    setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true);
+    setIsListingForSale(Boolean(group.salePriceTon));
+    setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
+    setRewardCampaignEnabled(Boolean(group.rewardActive));
+    setRewardBudget(group.rewardBudget ? formatGram(group.rewardBudget) : "");
+    const joinReward = group.category === "Чаты" ? group.rewardPerManualAdd : group.rewardPerSubscription;
+    setRewardPerSubscription(joinReward ? formatGram(joinReward) : "");
     setStarsPaymentGroup(group);
   };
   const openNftTransfer = () => {
@@ -2286,7 +2317,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       : tx(`Свободная позиция · от ${amount} GRAM`, `Vacant position · from ${amount} GRAM`)}
                   </small>
                   <small className="mt-0.5 block text-[10px] text-slate-500">
-                    {tx("После выбора группы откроется ползунок ставки и оплата через Telegram Stars.", "After you select a community, choose the amount and pay via Telegram Stars.")}
+                    {tx("Ваш лот будет в Top, пока другую группу не разместят выше по ставке.", "Your lot stays in Top until another community outbids it.")}
                   </small>
                 </span>
                 <button
@@ -2488,9 +2519,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <div className="mt-3">
                       <button
                         onClick={() => openStarsPayment(group)}
-                        className="w-full rounded-lg bg-[#3f8cff] py-2 text-xs font-semibold active:scale-[0.98]"
+                        className="flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/[0.07] px-3 py-2 text-xs font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.13] active:scale-[0.98]"
                       >
-                        {tx("Выбрать и настроить ставку", "Choose and set bid")}
+                        <span>{tx("Выбрать и настроить ставку", "Choose and set bid")}</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   )}
@@ -2536,9 +2568,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {ui.back}
                 </button>
                 <div className="flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-5">
-                  <div className="order-0 flex items-start gap-4">
+                  <button
+                    type="button"
+                    onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
+                    disabled={!detailEntryUrl}
+                    className={`order-0 flex w-full items-start gap-4 rounded-xl text-left transition-colors ${detailEntryUrl ? "cursor-pointer hover:bg-white/[0.035] active:scale-[0.995]" : "cursor-default"}`}
+                  >
                     <Avatar group={detail.group} large />
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1 py-1">
                       <h1 className="truncate text-xl font-semibold">
                         {detail.group.title}
                       </h1>
@@ -2561,24 +2598,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <p className="mt-3 text-sm leading-5 text-slate-400">{detail.group.description}</p>
                       ) : null}
                     </span>
-                  </div>
-                  {detailEntryUrl && (
-                    <a
-                      href={detailEntryUrl}
-                      onClick={event => { event.preventDefault(); openTelegramCommunityLink(detailEntryUrl); }}
-                      className="order-1 mt-4 flex min-h-16 w-full items-center justify-between rounded-2xl border border-[#83b6ff]/65 bg-gradient-to-r from-[#1688f5] via-[#2d82ed] to-[#4d70d8] px-4 text-white shadow-lg shadow-[#1688f5]/20 transition-all hover:brightness-110 active:scale-[0.985]"
-                    >
-                      <span className="flex items-center gap-3">
-                        <span className="grid h-9 w-9 place-items-center rounded-xl border border-white/25 bg-white/15"><Globe2 className="h-4.5 w-4.5" /></span>
-                        <span className="text-left"><b className="block text-base leading-tight">{detailHasPaidEntry
-                          ? tx(`Войти за ${detail.group.monthlyEntryStars} Stars`, `Join for ${detail.group.monthlyEntryStars} Stars`)
-                          : detail.group.inviteLink && !detail.group.username
-                            ? tx("Открыть приватную группу", "Open private community")
-                            : tx("Перейти в группу", "Open community")}</b><small className="mt-1 block text-[10px] font-medium uppercase tracking-[0.12em] text-white/70">{tx("Открыть в Telegram", "Open in Telegram")}</small></span>
-                      </span>
-                      <span className="grid h-9 w-9 place-items-center rounded-full bg-white/15"><ChevronRight className="h-5 w-5" /></span>
-                    </a>
-                  )}
+                    {detailEntryUrl && <span className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-[#8fb9ff]"><ChevronRight className="h-4 w-4" /></span>}
+                  </button>
                   {ownsDetail && detail.group.status !== "listed" && (
                     <button
                       type="button"
@@ -2622,7 +2643,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                     </div>
                   )}
-                  {!detailPlacementIsPublic || !detailOwner ? (
+                  {!ownsDetail && (!detailPlacementIsPublic || !detailOwner) ? (
                     <div className="mt-3 w-full rounded-xl border border-white/8 bg-white/[0.035] p-3">
                       <div className="flex items-center gap-3">
                         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">A</span>
@@ -2631,7 +2652,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           <b className="mt-0.5 block truncate text-xs text-slate-200">{tx("Анонимно", "Anonymously")}</b>
                         </span>
                       </div>
-                      {detail.group.managerName && (
+                      {detail.group.managerName && detail.group.managerPublic !== false && (
                         <button
                           type="button"
                           onClick={() => {
@@ -2685,6 +2706,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             <button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button>
                             <button type="button" onClick={() => setShowOwnerContact(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${showOwnerContact ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Контакт", "Contact")}</b><small className={`mt-0.5 block text-[10px] ${showOwnerContact ? "text-[#8fb9ff]" : "text-slate-500"}`}>{showOwnerContact ? tx("Показывать @username", "Show @username") : tx("Скрыт", "Hidden")}</small></button>
                           </div>
+                          {detail.group.managerName && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{tx("Показывать менеджера", "Show manager")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{managerPublic ? tx("Гости увидят профиль менеджера", "Guests can open the manager profile") : tx("Скрыт из публичной карточки", "Hidden from public details")}</small></span><button type="button" role="switch" aria-checked={managerPublic} onClick={() => setManagerPublic(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${managerPublic ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${managerPublic ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
                           <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2">
                             <span><b className="block text-[11px] text-slate-200">{tx("Выставить на продажу", "Offer for sale")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{isListingForSale ? tx("Цена будет видна покупателям", "Buyers will see the price") : tx("Без продажи", "Not for sale")}</small></span>
                             <button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} /></button>
@@ -2694,7 +2716,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             <span><b className="block text-[11px] text-slate-200">{tx("Вознаграждения", "Rewards")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{rewardCampaignEnabled ? tx("GRAM за подтверждённые действия", "GRAM for confirmed actions") : tx("Выключены", "Off")}</small></span>
                             <button type="button" role="switch" aria-checked={rewardCampaignEnabled} onClick={() => setRewardCampaignEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${rewardCampaignEnabled ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${rewardCampaignEnabled ? "translate-x-6" : "translate-x-0"}`} /></button>
                           </div>
-                          {rewardCampaignEnabled && <div className="grid grid-cols-2 gap-2"><div className="relative"><Input value={rewardBudget} inputMode="decimal" onChange={event => setRewardBudget(event.target.value)} placeholder={tx("Бюджет", "Budget")} className="h-10 border-white/10 bg-black/15 pr-12 text-xs" /><span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-medium text-slate-500">GRAM</span></div><div className="relative"><Input value={rewardPerSubscription} inputMode="decimal" onChange={event => setRewardPerSubscription(event.target.value)} placeholder={detail.group.category === "Чаты" ? tx("За участника", "Per member") : tx("За подписчика", "Per subscriber")} className="h-10 border-white/10 bg-black/15 pr-12 text-xs" /><span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-medium text-slate-500">GRAM</span></div></div>}
+                          {rewardCampaignEnabled && <div className="grid grid-cols-2 gap-2"><div className="relative"><Input value={rewardBudget} inputMode="decimal" onChange={event => setRewardBudget(event.target.value)} placeholder={tx("Бюджет", "Budget")} className="h-9 border-white/10 bg-black/15 pr-10 text-[11px] placeholder:text-[11px]" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-medium text-slate-500">GRAM</span></div><div className="relative"><Input value={rewardPerSubscription} inputMode="decimal" onChange={event => setRewardPerSubscription(event.target.value)} placeholder={detail.group.category === "Чаты" ? tx("За участника", "Per member") : tx("За подписчика", "Per subscriber")} className="h-9 border-white/10 bg-black/15 pr-10 text-[11px] placeholder:text-[11px]" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-medium text-slate-500">GRAM</span></div></div>}
                           <button type="button" onClick={saveInlineDetailListing} disabled={listWithCredits.isPending} className="flex w-full items-center justify-between rounded-lg bg-[#1688f5] px-3 py-2.5 text-left text-white shadow-md shadow-[#1688f5]/20 transition-transform active:scale-[0.985] disabled:opacity-50"><span><b className="block text-xs">{listWithCredits.isPending ? tx("Сохраняем…", "Saving…") : detail.group.status === "listed" ? tx("Сохранить изменения", "Save changes") : tx("Разместить в каталоге", "List in catalog")}</b><small className="mt-0.5 block text-[10px] text-white/70">{detail.group.status === "listed" ? tx("Без повторной оплаты", "No repeat charge") : tx("От 0.1 GRAM", "From 0.1 GRAM")}</small></span><ChevronRight className="h-4 w-4" /></button>
                         </div>
                       )}
@@ -2802,11 +2824,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           </div>
                           <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
                           {detailWillDrop && <p className="mt-2 rounded-lg border border-rose-300/20 bg-rose-400/[0.07] px-2.5 py-2 text-[10px] font-medium text-rose-200">{tx(`Группа опустится с ${selectedSlot.slotNumber}-й на ${detailRankingPreviewSlotNumber}-ю позицию`, `The community will drop from ${selectedSlot.slotNumber} to ${detailRankingPreviewSlotNumber}`)}</p>}
-                          <button type="button" onClick={() => setDetailVisibility(value => value === "public" ? "anonymous" : "public")} className="mt-2 flex w-full items-center justify-between gap-3 rounded-lg border border-white/8 bg-black/15 px-2.5 py-2 text-left">
-                            <span><b className="block text-[11px] text-slate-200">{detailVisibility === "public" ? tx("Публичное размещение", "Public placement") : tx("Анонимное размещение", "Anonymous placement")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detailVisibility === "public" ? tx("Другие смогут перейти в ваш профиль", "Others can open your profile") : tx("Постинг будет анонимным", "Placement stays anonymous")}</small></span>
-                            <span role="switch" aria-checked={detailVisibility === "public"} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${detailVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detailVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></span>
-                          </button>
-                          {detailVisibilityChanged && <small className="mt-1.5 block px-1 text-[10px] text-slate-500">{tx("Чтобы изменения вступили в силу, обновите ставку.", "Update the bid to apply these changes.")}</small>}
                           <button type="button" onClick={() => { if (!detail || !selectedSlot) return; const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`)); placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous" }); }} disabled={!detailRankingPreviewSlotNumber || placeBid.isPending} className="mt-3 flex w-full items-center justify-between rounded-xl border border-[#8bbcff]/55 bg-gradient-to-r from-[#1688f5] to-[#557be0] px-3.5 py-3 text-left text-white shadow-lg shadow-[#1688f5]/20 transition-all hover:brightness-110 active:scale-[0.985] disabled:opacity-45"><span><b className="block text-sm">{placeBid.isPending ? tx("Обновляем…", "Refreshing…") : tx("Обновить лот", "Refresh lot")}</b><small className="mt-0.5 block text-[10px] text-white/70">{tx("Применить цену и видимость", "Apply price and visibility")}</small></span><b className="rounded-lg border border-white/25 bg-white/15 px-2.5 py-1.5 text-xs">{formatTon(detailRankingBidAmount)} GRAM</b></button>
                         </div>
                       )}
@@ -3371,7 +3388,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <Sheet open={Boolean(starsPaymentGroup)} onOpenChange={open => !open && setStarsPaymentGroup(null)}>
         <SheetContent side="bottom" className="max-h-[88dvh] rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
           <SheetHeader className="px-4">
-            <SheetTitle className="text-slate-100">{tx("Выберите цену места", "Set placement price")}</SheetTitle>
+            <SheetTitle className="text-slate-100">{tx("Параметры лота", "Lot settings")}</SheetTitle>
             <p className="text-xs leading-5 text-slate-500">
               {starsPaymentGroup?.title} · {tx(`позиция ${targetSlot?.slotNumber ?? "—"}`, `placement ${targetSlot?.slotNumber ?? "—"}`)}
             </p>
@@ -3398,6 +3415,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <div><div className="mb-2 flex items-center justify-between text-[10px] text-slate-500"><span>{formatTon(minimum)} GRAM</span><span className={tone.text}>{ratio <= 1.2 ? tx("Минимальная", "Minimum") : ratio <= 1.5 ? tx("Уверенная", "Confident") : tx("Максимальная", "Maximum")}</span><span>{formatTon(maximum)} GRAM</span></div><Slider value={[bidAmount]} min={minimum} max={maximum} step={0.1} onValueChange={([value]) => setBid(value)} className={`py-3 [&_[data-slot=slider-track]]:h-3 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-thumb]]:size-7 ${tone.range}`} /></div>
                 <div className="grid grid-cols-4 gap-2">{[{ label: "+10%", value: bidAmount * 1.1 }, { label: "+30%", value: bidAmount * 1.3 }, { label: "+50%", value: bidAmount * 1.5 }, { label: tx("Минимум", "Minimum"), value: minimum }].map(item => <button key={item.label} onClick={() => setBid(item.value)} className="rounded-xl border border-white/8 bg-white/[0.04] px-2 py-2.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.08] active:scale-[0.97]">{item.label}</button>)}</div>
                 <p className="text-center text-xs text-slate-400">{tx(`${formatTon(bidAmount)} GRAM · шаг 0.1 GRAM`, `${formatTon(bidAmount)} GRAM · 0.1 GRAM step`)}</p>
+                <section className="rounded-2xl border border-white/8 bg-white/[0.025] p-3">
+                  <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/10 text-[#8fb9ff]"><Settings2 className="h-4 w-4" /></span><span><b className="block text-xs text-slate-100">{tx("Параметры лота", "Lot settings")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{tx("Видимость, объявление, продажа", "Visibility, announcement, sale")}</small></span></div>
+                  <div className="mt-3 space-y-2 border-t border-white/8 pt-2">
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{detailVisibility === "public" ? tx("Публичная публикация", "Public publication") : tx("Анонимная публикация", "Anonymous publication")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detailVisibility === "public" ? tx("Другие смогут перейти в ваш профиль", "Others can open your profile") : tx("Владелец не показывается в карточке", "The owner stays hidden in the card")}</small></span><button type="button" role="switch" aria-checked={detailVisibility === "public"} onClick={() => setDetailVisibility(value => value === "public" ? "anonymous" : "public")} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${detailVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detailVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></button></div>
+                    <div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button><button type="button" onClick={() => setShowOwnerContact(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${showOwnerContact ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Контакт", "Contact")}</b><small className={`mt-0.5 block text-[10px] ${showOwnerContact ? "text-[#8fb9ff]" : "text-slate-500"}`}>{showOwnerContact ? tx("Показывать @username", "Show @username") : tx("Скрыт", "Hidden")}</small></button></div>
+                    {starsPaymentGroup.managerName && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{tx("Показывать менеджера", "Show manager")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{managerPublic ? tx("Гости увидят менеджера", "Guests will see the manager") : tx("Скрыт из карточки", "Hidden from details")}</small></span><button type="button" role="switch" aria-checked={managerPublic} onClick={() => setManagerPublic(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${managerPublic ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${managerPublic ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{tx("Выставить на продажу", "Offer for sale")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{isListingForSale ? tx("Цена будет видна покупателям", "Buyers will see the price") : tx("Без продажи", "Not for sale")}</small></span><button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} /></button></div>
+                    {isListingForSale && <div className="relative"><Input value={salePriceTon} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }} placeholder={tx("Цена продажи", "Sale price")} className="h-9 border-white/10 bg-black/15 pr-10 text-[11px] placeholder:text-[11px]" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-medium text-slate-500">GRAM</span></div>}
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{tx("Вознаграждения", "Rewards")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{rewardCampaignEnabled ? tx("GRAM за подтверждённые действия", "GRAM for confirmed actions") : tx("Выключены", "Off")}</small></span><button type="button" role="switch" aria-checked={rewardCampaignEnabled} onClick={() => setRewardCampaignEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${rewardCampaignEnabled ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${rewardCampaignEnabled ? "translate-x-6" : "translate-x-0"}`} /></button></div>
+                    {rewardCampaignEnabled && <div className="grid grid-cols-2 gap-2"><div className="relative"><Input value={rewardBudget} inputMode="decimal" onChange={event => setRewardBudget(event.target.value)} placeholder={tx("Бюджет", "Budget")} className="h-9 border-white/10 bg-black/15 pr-10 text-[11px] placeholder:text-[11px]" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-medium text-slate-500">GRAM</span></div><div className="relative"><Input value={rewardPerSubscription} inputMode="decimal" onChange={event => setRewardPerSubscription(event.target.value)} placeholder={starsPaymentGroup.category === "Чаты" ? tx("За участника", "Per member") : tx("За подписчика", "Per subscriber")} className="h-9 border-white/10 bg-black/15 pr-10 text-[11px] placeholder:text-[11px]" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-medium text-slate-500">GRAM</span></div></div>}
+                  </div>
+                </section>
                 <button onClick={() => submitPlacement(starsPaymentGroup)} disabled={placeBid.isPending || !isAuthenticated} className="flex w-full items-center justify-between rounded-2xl bg-[#1688f5] px-5 py-4 text-left text-white shadow-lg shadow-[#1688f5]/20 transition-transform active:scale-[0.98] disabled:opacity-55"><span><b className="block text-base">{isAuthenticated ? tx("Оплатить GRAM", "Pay with GRAM") : tx("Войти через Telegram", "Sign in with Telegram")}</b><small className="mt-0.5 block text-[11px] text-white/70">{tx("Сумма спишется с баланса TG TOP.", "The amount will be deducted from your TG TOP balance.")}</small></span><b className="text-lg">{formatTon(bidAmount)} GRAM</b></button>
               </>;
             })()}

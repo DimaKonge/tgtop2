@@ -67,6 +67,7 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   managerTelegramUserId: varchar("managerTelegramUserId", { length: 64 }),
   managerUsername: varchar("managerUsername", { length: 128 }),
   managerName: varchar("managerName", { length: 255 }),
+  managerPublic: boolean("managerPublic").default(true).notNull(),
   listingAnnouncementEnabled: boolean("listingAnnouncementEnabled").default(true).notNull(),
   monthlyEntryEnabled: boolean("monthlyEntryEnabled").default(false).notNull(),
   monthlyEntryStars: int("monthlyEntryStars"),
