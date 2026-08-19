@@ -730,6 +730,17 @@ export async function getGroupById(id: number) {
   return result[0];
 }
 
+export async function setGroupManager(ownerOpenId: string, groupId: number, manager: { telegramUserId: string; username: string | null; name: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.update(groupsCatalog).set({
+    managerTelegramUserId: manager.telegramUserId,
+    managerUsername: manager.username,
+    managerName: manager.name,
+  }).where(and(eq(groupsCatalog.id, groupId), eq(groupsCatalog.ownerOpenId, ownerOpenId)));
+  if (!result[0]?.affectedRows) throw new Error("Сообщество недоступно для настройки менеджера");
+}
+
 export async function getGroupByChatId(chatId: string) {
   const db = await getDb();
   if (!db) return undefined;
@@ -1075,6 +1086,7 @@ export type GroupListingOptions = {
   subcategory?: string;
   anonymousListing?: boolean;
   showOwnerContact?: boolean;
+  listingAnnouncementEnabled?: boolean;
   monthlyEntryEnabled?: boolean;
   monthlyEntryStars?: number;
   monthlyEntryLinkName?: string;
@@ -1100,6 +1112,7 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
     subcategory: options.subcategory,
     anonymousListing: options.anonymousListing ?? true,
     showOwnerContact: options.showOwnerContact ?? false,
+    listingAnnouncementEnabled: options.listingAnnouncementEnabled,
     monthlyEntryEnabled: options.monthlyEntryEnabled,
     monthlyEntryStars: options.monthlyEntryStars,
     monthlyEntryLinkName: options.monthlyEntryLinkName?.trim() || null,
@@ -1188,6 +1201,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),
       ...(listingOptions.anonymousListing !== undefined ? { anonymousListing: listingOptions.anonymousListing } : {}),
       ...(listingOptions.showOwnerContact !== undefined ? { showOwnerContact: listingOptions.showOwnerContact } : {}),
+      ...(listingOptions.listingAnnouncementEnabled !== undefined ? { listingAnnouncementEnabled: listingOptions.listingAnnouncementEnabled } : {}),
       ...(listingOptions.monthlyEntryEnabled !== undefined ? {
         monthlyEntryEnabled: listingOptions.monthlyEntryEnabled,
         monthlyEntryStars: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryStars ?? null : null,
@@ -1230,6 +1244,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
     title: group.title,
     listingType: listingOptions.listingType,
     salePriceTon: listingOptions.salePriceTon ?? null,
+    listingAnnouncementEnabled: listingOptions.listingAnnouncementEnabled ?? group.listingAnnouncementEnabled,
     monthlyEntryEnabled: listingOptions.monthlyEntryEnabled ?? false,
     monthlyEntryStars: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryStars ?? null : null,
   }));

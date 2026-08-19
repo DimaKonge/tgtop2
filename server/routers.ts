@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
+import { getTelegramGroupAdministrators } from "./telegramBot";
 import { formatTonAmount } from "./tonFormatting";
 
 const tonAmount = z.string().regex(/^\d+(\.\d)?$/);
@@ -15,6 +16,7 @@ const groupListingInput = z.object({
   subcategory: z.string().min(2).max(64).optional(),
   anonymousListing: z.boolean().optional(),
   showOwnerContact: z.boolean().optional(),
+  listingAnnouncementEnabled: z.boolean().optional(),
   monthlyEntryEnabled: z.boolean().optional(),
   monthlyEntryStars: z.number().int().min(1).max(10_000).optional(),
   monthlyEntryLinkName: z.string().trim().max(64).optional(),
@@ -105,6 +107,33 @@ export const appRouter = router({
     myGroups: protectedProcedure.query(async ({ ctx }) => {
       return await db.getMyGroups(ctx.user.openId);
     }),
+    getGroupAdministrators: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.ownerOpenId !== ctx.user.openId) throw new Error("Сообщество недоступно для настройки менеджера");
+        try {
+          return await getTelegramGroupAdministrators(group.chatId);
+        } catch {
+          throw new Error("Не удалось получить администраторов. Добавьте @TGTOP_robot в администраторы группы и повторите попытку.");
+        }
+      }),
+    setGroupManager: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive(), telegramUserId: z.string().min(1).max(64) }))
+      .mutation(async ({ ctx, input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.ownerOpenId !== ctx.user.openId) throw new Error("Сообщество недоступно для настройки менеджера");
+        let administrators;
+        try {
+          administrators = await getTelegramGroupAdministrators(group.chatId);
+        } catch {
+          throw new Error("Не удалось проверить администраторов. Убедитесь, что @TGTOP_robot добавлен в администраторы группы.");
+        }
+        const manager = administrators.find(admin => admin.telegramUserId === input.telegramUserId);
+        if (!manager) throw new Error("Выбранный аккаунт больше не является администратором этой группы");
+        await db.setGroupManager(ctx.user.openId, group.id, manager);
+        return { success: true, manager };
+      }),
     openGiveaways: publicProcedure.query(async () => {
       return await db.getOpenGiveaways();
     }),
@@ -169,7 +198,7 @@ export const appRouter = router({
       .input(z.object({ groupId: z.number() }).merge(groupListingInput))
       .mutation(async ({ ctx, input }) => {
         const groups = await db.listGroupWithCredits(ctx.user.openId, input.groupId, input);
-        await Promise.all(groups.map(group => notifyCommunityListed({
+        await Promise.all(groups.filter(group => group.listingAnnouncementEnabled).map(group => notifyCommunityListed({
           chatId: group.chatId,
           groupId: group.id,
           groupTitle: group.title,
@@ -183,7 +212,7 @@ export const appRouter = router({
       .input(z.object({ groupIds: z.array(z.number()).min(1).max(50) }).merge(groupListingInput))
       .mutation(async ({ ctx, input }) => {
         const groups = await db.listGroupsWithCredits(ctx.user.openId, input.groupIds, input);
-        await Promise.all(groups.map(group => notifyCommunityListed({
+        await Promise.all(groups.filter(group => group.listingAnnouncementEnabled).map(group => notifyCommunityListed({
           chatId: group.chatId,
           groupId: group.id,
           groupTitle: group.title,

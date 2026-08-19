@@ -27,7 +27,7 @@ type TelegramChat = {
   photo?: { small_file_id?: string };
 };
 
-type TelegramUser = { id: number; first_name?: string; username?: string; is_bot?: boolean };
+type TelegramUser = { id: number; first_name?: string; last_name?: string; username?: string; is_bot?: boolean };
 type ChatMember = { status: string; user: TelegramUser };
 type ChatMemberUpdate = {
   chat: TelegramChat;
@@ -92,6 +92,23 @@ async function telegramCall<T>(method: string, payload: Record<string, unknown> 
   const response = await axios.post<{ ok: boolean; result: T; description?: string }>(getApiUrl(method), payload, { timeout: 40_000 });
   if (!response.data.ok) throw new Error(response.data.description ?? `Telegram API ${method} failed`);
   return response.data.result;
+}
+
+export type TelegramGroupAdministrator = {
+  telegramUserId: string;
+  username: string | null;
+  name: string;
+};
+
+export async function getTelegramGroupAdministrators(chatId: string): Promise<TelegramGroupAdministrator[]> {
+  const administrators = await telegramCall<ChatMember[]>("getChatAdministrators", { chat_id: chatId });
+  return administrators
+    .filter(member => isBotAdmin(member.status) && !member.user.is_bot)
+    .map(member => ({
+      telegramUserId: String(member.user.id),
+      username: member.user.username ?? null,
+      name: [member.user.first_name, member.user.last_name].filter(Boolean).join(" ") || member.user.username || `ID ${member.user.id}`,
+    }));
 }
 
 async function getMemberCount(chatId: number): Promise<number> {

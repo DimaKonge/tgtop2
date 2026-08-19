@@ -207,6 +207,10 @@ type Group = {
   listingType?: ListingType;
   anonymousListing?: boolean;
   showOwnerContact?: boolean;
+  managerTelegramUserId?: string | null;
+  managerUsername?: string | null;
+  managerName?: string | null;
+  listingAnnouncementEnabled?: boolean;
   monthlyEntryEnabled?: boolean;
   monthlyEntryStars?: number | null;
   monthlyEntryLinkName?: string | null;
@@ -853,12 +857,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const myGroupsSelectionHoldTimer = useRef<number | null>(null);
   const myGroupsSelectionHoldTriggered = useRef(false);
   const [listingOpen, setListingOpen] = useState(false);
+  const [managerSheetOpen, setManagerSheetOpen] = useState(false);
+  const [selectedManagerTelegramUserId, setSelectedManagerTelegramUserId] = useState<string | null>(null);
   const [listingCountry, setListingCountry] = useState<ListingCountry>("Global");
   const [listingCity, setListingCity] = useState("Все");
   const [listingSubcategory, setListingSubcategory] = useState("General");
   const [salePriceTon, setSalePriceTon] = useState("");
   const [isListingForSale, setIsListingForSale] = useState(false);
   const [showOwnerContact, setShowOwnerContact] = useState(false);
+  const [listingAnnouncementEnabled, setListingAnnouncementEnabled] = useState(true);
   const [monthlyEntryEnabled, setMonthlyEntryEnabled] = useState(false);
   const [monthlyEntryStars, setMonthlyEntryStars] = useState("");
   const [monthlyEntryLinkName, setMonthlyEntryLinkName] = useState("");
@@ -1082,6 +1089,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     { groupId: selectedGroupId ?? 0 },
     { enabled: selectedGroupId !== null }
   );
+  const groupAdministratorsQuery = trpc.tgTop.getGroupAdministrators.useQuery(
+    { groupId: selectedGroupId ?? 0 },
+    { enabled: managerSheetOpen && selectedGroupId !== null }
+  );
   const publicOwnerQuery = trpc.tgTop.getPublicOwnerProfile.useQuery(
     { openId: selectedOwnerOpenId ?? "" },
     { enabled: selectedOwnerOpenId !== null }
@@ -1100,6 +1111,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.getAccount.invalidate();
       void utils.tgTop.getOwnerLeaderboard.invalidate();
       void utils.tgTop.getPublicOwnerProfile.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const setGroupManager = trpc.tgTop.setGroupManager.useMutation({
+    onSuccess: () => {
+      toast.success(tx("Менеджер группы обновлён", "Group manager updated"));
+      setManagerSheetOpen(false);
+      void utils.tgTop.getGroupDetail.invalidate();
+      void utils.tgTop.myGroups.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -1678,6 +1698,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setSalePriceTon(firstGroup?.salePriceTon ? formatTon(firstGroup.salePriceTon) : "");
     setIsListingForSale(Boolean(firstGroup?.salePriceTon));
     setShowOwnerContact(Boolean(firstGroup?.showOwnerContact));
+    setListingAnnouncementEnabled(firstGroup?.listingAnnouncementEnabled ?? true);
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
     setMonthlyEntryStars(firstGroup?.monthlyEntryStars ? String(firstGroup.monthlyEntryStars) : "");
     setMonthlyEntryLinkName(firstGroup?.monthlyEntryLinkName ?? "");
@@ -1716,6 +1737,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined,
       salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
       showOwnerContact: selectedListingGroups.length ? showOwnerContact : undefined,
+      listingAnnouncementEnabled,
       monthlyEntryEnabled,
       monthlyEntryStars: monthlyEntryEnabled ? Number(monthlyEntryStars) : undefined,
       monthlyEntryLinkName: monthlyEntryEnabled ? monthlyEntryLinkName.trim() || undefined : undefined,
@@ -2592,6 +2614,26 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   )}
                   {ownsDetail && (
                     <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedManagerTelegramUserId(detail.group.managerTelegramUserId ?? null);
+                        setManagerSheetOpen(true);
+                      }}
+                      className="order-3 mt-2 flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.065] active:scale-[0.99]"
+                    >
+                      <span className="min-w-0">
+                        <b className="block text-xs text-slate-200">{tx("Менеджер группы", "Community manager")}</b>
+                        <small className="mt-0.5 block truncate text-[10px] text-slate-500">
+                          {detail.group.managerName
+                            ? `${detail.group.managerName}${detail.group.managerUsername ? ` · @${detail.group.managerUsername}` : ""}`
+                            : tx("Не выбран", "Not selected")}
+                        </small>
+                      </span>
+                      <UserRound className="h-4 w-4 shrink-0 text-[#8fb9ff]" />
+                    </button>
+                  )}
+                  {ownsDetail && (
+                    <button
                       onClick={() => openGiveawayCreate(detail.group)}
                       className="order-3 mt-2 flex w-full items-center justify-between rounded-lg border border-amber-200/25 bg-amber-300/[0.08] px-3 py-2 text-xs font-semibold text-amber-100"
                     >
@@ -3179,6 +3221,40 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         </SheetContent>
       </Sheet>
 
+      <Sheet open={managerSheetOpen} onOpenChange={open => setManagerSheetOpen(open)}>
+        <SheetContent side="bottom" className="max-h-[78dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4">
+            <SheetTitle className="text-slate-100">{tx("Менеджер группы", "Community manager")}</SheetTitle>
+            <p className="text-xs leading-5 text-slate-500">{tx("Выберите администратора Telegram. Он будет указан как менеджер этой площадки в TG TOP.", "Choose a Telegram administrator to display as the community manager in TG TOP.")}</p>
+          </SheetHeader>
+          <div className="space-y-3 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
+            {groupAdministratorsQuery.isLoading ? (
+              <p className="rounded-xl border border-white/8 bg-white/[0.035] px-3 py-5 text-center text-xs text-slate-500">{ui.loading}</p>
+            ) : groupAdministratorsQuery.error ? (
+              <p className="rounded-xl border border-rose-300/15 bg-rose-300/[0.05] px-3 py-4 text-center text-xs leading-5 text-rose-200">{groupAdministratorsQuery.error.message}</p>
+            ) : (groupAdministratorsQuery.data ?? []).length ? (
+              <div className="space-y-2">
+                {(groupAdministratorsQuery.data ?? []).map(admin => {
+                  const selected = admin.telegramUserId === selectedManagerTelegramUserId;
+                  return (
+                    <button key={admin.telegramUserId} type="button" onClick={() => setSelectedManagerTelegramUserId(admin.telegramUserId)} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${selected ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">{admin.name.slice(0, 1).toUpperCase()}</span>
+                      <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{admin.name}</b>{admin.username && <small className="mt-0.5 block truncate text-[10px] text-slate-500">@{admin.username}</small>}</span>
+                      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed border-white/12 px-3 py-5 text-center text-xs leading-5 text-slate-500">{tx("Администраторы не найдены. Добавьте @TGTOP_robot в администраторы группы и обновите список.", "No administrators found. Add @TGTOP_robot as an admin and try again.")}</p>
+            )}
+            <button type="button" onClick={() => { if (!selectedManagerTelegramUserId || !selectedGroupId) return; setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId }); }} disabled={!selectedManagerTelegramUserId || setGroupManager.isPending || groupAdministratorsQuery.isLoading} className="flex w-full items-center justify-center rounded-xl bg-[#1688f5] px-4 py-3.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45">
+              {setGroupManager.isPending ? ui.loading : tx("Сохранить менеджера", "Save manager")}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <Sheet open={outbidOpen} onOpenChange={open => { setOutbidOpen(open); if (!open) setTargetSlot(null); }}>
         <SheetContent side="bottom" className="max-h-[82dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
           <SheetHeader className="px-4">
@@ -3328,6 +3404,20 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {listingRankingPreviewSlotNumber ? <><small className="block text-[10px] uppercase tracking-[0.1em] text-slate-500">{tx("Предпросмотр позиции", "Placement preview")}</small><small className="mt-1 block truncate text-[10px] font-medium text-[#a6c8ff]">{tx("Рейтинг: ", "Ranking: ")}{listingRankingScope}</small><b className="mt-1 block text-sm text-white">{tx(`Займёт ${listingRankingPreviewSlotNumber}-ю позицию`, `Will take position ${listingRankingPreviewSlotNumber}`)}</b><small className="mt-1 block text-[10px] text-slate-400">{listingRankingMinimum !== null ? tx(`Для этой ячейки нужно от ${formatTon(listingRankingMinimum)} GRAM`, `This cell requires at least ${formatTon(listingRankingMinimum)} GRAM`) : ""}</small></> : <><b className="block text-sm text-amber-100">{tx("С этой суммой группа не попадёт в Top", "This amount will not enter Top")}</b><small className="mt-1 block text-[10px] text-slate-500">{tx("Увеличьте ставку, чтобы занять доступную ячейку.", "Increase the bid to take an available cell.")}</small></>}
                 </div>
                 <button type="button" onClick={() => { if (!listingRankingPreviewSlot || !canPayListingRanking) return; setTargetSlot(listingRankingPreviewSlot); setAmount(formatTon(listingRankingBidAmount)); setPaymentMethod("gram"); setListingOpen(false); window.setTimeout(() => setStarsPaymentGroup(selectedListingGroup), 160); }} disabled={!canPayListingRanking} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#1688f5] px-4 py-3 text-left text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45"><span>{tx("Залистить", "List community")}</span><span>{formatTon(listingRankingBidAmount)} GRAM</span></button>
+              </section>
+            )}
+
+            {selectedListingGroups.length === 1 && (
+              <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs">
+                    <b className="block text-slate-200">{tx("Объявление о листинге", "Listing announcement")}</b>
+                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("@TGTOP_robot опубликует сообщение в группе после сохранения листинга.", "@TGTOP_robot will post a message in the community after saving the listing.")}</small>
+                  </span>
+                  <button type="button" role="switch" aria-checked={listingAnnouncementEnabled} aria-label={tx("Переключить объявление о листинге", "Toggle listing announcement")} onClick={() => setListingAnnouncementEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${listingAnnouncementEnabled ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
+                    <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${listingAnnouncementEnabled ? "translate-x-6" : "translate-x-0"}`} />
+                  </button>
+                </div>
               </section>
             )}
 

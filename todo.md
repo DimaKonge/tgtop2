@@ -357,6 +357,8 @@
 - [x] Put the public-profile toggle beside the owner row; when disabled, replace name and @username with «Анонимное размещение» after paid Top refresh
 - [x] Let an owner reduce their own price down to 0.1 GRAM and show a red message before payment if the placement will move lower
 - [x] Move the owner visibility toggle directly above the single «Обновить ставку» payment action and remove the duplicate Top-update button
+- [ ] Let an owner select and save a group manager from the Telegram administrators returned by @TGTOP_robot
+- [ ] Let an owner enable or disable @TGTOP_robot listing announcements in their channel or chat
 - [ ] Keep sale price, visibility, and entry-bonus configuration exclusively inside the owned community detail card
 - [ ] Order all ranking and lower-list placements by GRAM price descending, while allowing 0.1 GRAM entries below higher prices and preserving first-listed order on equal prices
 - [ ] Build the low-cost lower row as a lightweight first-come live feed with smooth card movement under high concurrent placement traffic
@@ -453,3 +455,5 @@
 - [x] Keep the self-bid amount as editable text while typing, normalize it only on blur or submission, and preserve 0.1 GRAM validation
 - [x] Add sourced audience-growth chart from bot-observed audience snapshots, explicitly omitting unobserved historical data and unavailable daily leave history
 - [x] Start the chosen GRAM payment directly from an owned community’s self-bid control without reopening the price-selection sheet
+- [x] Add an owned-community manager selector backed by the current Telegram administrator list
+- [x] Add a persisted switch that controls @TGTOP_robot listing announcements

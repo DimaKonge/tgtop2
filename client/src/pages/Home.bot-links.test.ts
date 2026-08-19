@@ -347,5 +347,16 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Другие смогут перейти в ваш профиль", "Others can open your profile")');
     expect(source).toContain('Чтобы изменения вступили в силу, обновите ставку.');
     expect(source).not.toContain('tx("Обновить Top", "Refresh Top")');
+    expect(source).toContain('const groupAdministratorsQuery = trpc.tgTop.getGroupAdministrators.useQuery');
+    expect(source).toContain('const setGroupManager = trpc.tgTop.setGroupManager.useMutation');
+    expect(source).toContain('tx("Менеджер группы", "Community manager")');
+    expect(source).toContain('setManagerSheetOpen(true)');
+    expect(source).toContain('setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId })');
+    expect(source).toContain('managerTelegramUserId?: string | null;');
+    expect(source).toContain('listingAnnouncementEnabled?: boolean;');
+    expect(source).toContain('setListingAnnouncementEnabled(firstGroup?.listingAnnouncementEnabled ?? true);');
+    expect(source).toContain('listingAnnouncementEnabled,');
+    expect(source).toContain('tx("Объявление о листинге", "Listing announcement")');
+    expect(source).toContain('@TGTOP_robot опубликует сообщение в группе после сохранения листинга.');
   });
 });

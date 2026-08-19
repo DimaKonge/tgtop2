@@ -1,0 +1,1 @@
+ALTER TABLE `groups_catalog` ADD `listingAnnouncementEnabled` boolean DEFAULT true NOT NULL;
