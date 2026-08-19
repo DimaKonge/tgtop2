@@ -348,7 +348,7 @@
 - [ ] Make Russian the sole visible interface language and rename the My Groups management tab to «Рабочее пространство»
 - [x] Replace the bottom navigation with four primary sections: «Каталог», «Розыгрыши», «Заработать» and «Мой кабинет»
 - [x] Add an owner-facing «Добавить свой розыгрыш» action with owned-community selection, prize, end time, and participation conditions
-- [ ] Add a prefilled «Создать розыгрыш» action to owned-community cards in «Моём кабинете» and their detail screens
+- [x] Add a prefilled «Создать розыгрыш» action to owned-community cards in «Моём кабинете» and their detail screens
 - [x] Add a private-by-default public-account switch that opts an owner into profile visibility and the owner leaderboard
 - [x] Restrict the owner leaderboard to public-account opt-ins and allow an anonymous listing to expose only its configured contact
 - [x] Place the private-by-default public-profile switch directly above the owner leaderboard with opt-in explanatory copy

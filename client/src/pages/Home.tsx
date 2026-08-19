@@ -335,6 +335,7 @@ function SortableMyGroupTile({
   disabled,
   onOpen,
   onTogglePin,
+  onCreateGiveaway,
   selectionMode,
   selected,
   onSelect,
@@ -344,6 +345,7 @@ function SortableMyGroupTile({
   disabled?: boolean;
   onOpen: () => void;
   onTogglePin: () => void;
+  onCreateGiveaway: () => void;
   selectionMode: boolean;
   selected: boolean;
   onSelect: () => void;
@@ -393,7 +395,8 @@ function SortableMyGroupTile({
       ) : (
         <>
           <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} aria-label={isEnglish ? `Drag ${group.title}` : `Перетащить ${group.title}`} className="absolute bottom-2 left-2 z-20 grid h-6 w-6 touch-none place-items-center rounded-md bg-black/20 text-slate-200/80 backdrop-blur-sm transition-colors hover:bg-white/15 hover:text-white active:bg-[#3f8cff]/30"><GripVertical className="h-3.5 w-3.5" /></button>
-          <div className="absolute bottom-2 right-2 z-20">
+          <div className="absolute bottom-2 right-2 z-20 flex items-center gap-1">
+            <button type="button" onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onCreateGiveaway(); }} aria-label={isEnglish ? `Create giveaway for ${group.title}` : `Создать розыгрыш для ${group.title}`} className="grid h-6 w-6 place-items-center rounded-md bg-amber-300/12 text-amber-100 transition-colors hover:bg-amber-300/22"><Star className="h-3.5 w-3.5 fill-current" /></button>
             <button type="button" onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onTogglePin(); }} aria-label={group.ownerPinned ? (isEnglish ? "Unpin community" : "Открепить группу") : (isEnglish ? "Pin community" : "Закрепить группу")} className={`grid h-6 w-6 place-items-center rounded-md transition-colors ${group.ownerPinned ? "bg-[#3f8cff]/16 text-[#9cc3ff]" : "text-slate-500 hover:bg-white/7 hover:text-slate-200"}`}>{group.ownerPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}</button>
           </div>
         </>
@@ -1580,6 +1583,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setRewardPerManualAdd(firstGroup?.rewardPerManualAdd ? formatGram(firstGroup.rewardPerManualAdd) : "0.01");
     setListingOpen(true);
   };
+  const openGiveawayCreate = (group: Group) => {
+    setGiveawayGroupId(String(group.id));
+    setGiveawayTitle(`Розыгрыш ${group.title}`);
+    setGiveawayPrizeTitle("");
+    setGiveawayRules("");
+    setGiveawayEndsAt("");
+    setPage("giveaways");
+    window.setTimeout(() => setGiveawayCreateOpen(true), 0);
+  };
   const saveListing = () => {
     if (!selectedGroupIds.length) return toast.error(tx("Выберите хотя бы одну группу", "Select a community that is already listed."));
     const canConfigureRewards = selectedListingGroups.length === 1;
@@ -2208,7 +2220,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <div className="flex items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#72a8ff]"><Pin className="h-3 w-3" />{tx("Закреплено", "Pinned")}</div>
                       <SortableContext items={visiblePinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
                         <div className="grid grid-cols-3 gap-2">
-                          {visiblePinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
+                          {visiblePinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} onCreateGiveaway={() => openGiveawayCreate(group)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
                         </div>
                       </SortableContext>
                     </section>
@@ -2217,7 +2229,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     {visiblePinnedMyGroups.length > 0 && <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{tx("Остальные", "Others")}</div>}
                     <SortableContext items={visibleUnpinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
                       <div className="grid grid-cols-3 gap-2">
-                        {visibleUnpinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
+                        {visibleUnpinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} onCreateGiveaway={() => openGiveawayCreate(group)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
                         {!myGroupsSelectionMode && Array.from({ length: Math.max(1, 3 - (visibleUnpinnedMyGroups.length % 3)) }).map((_, index) => (
                           <button key={`add-group-${index}`} type="button" onClick={() => setMyGroupsAddOpen(true)} className="aspect-square rounded-xl border border-dashed border-[#3f8cff]/28 bg-[#3f8cff]/[0.035] p-2 text-center text-[#8fb9ff] transition-colors hover:bg-[#3f8cff]/10 active:scale-[0.98]">
                             <Plus className="mx-auto h-4 w-4" />
@@ -2470,6 +2482,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       className="mt-3 w-full rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 py-2 text-xs font-semibold text-[#a6c8ff]"
                     >
                       {tx("Настроить листинг", "Edit listing")}
+                    </button>
+                  )}
+                  {ownsDetail && (
+                    <button
+                      onClick={() => openGiveawayCreate(detail.group)}
+                      className="mt-2 flex w-full items-center justify-between rounded-lg border border-amber-200/25 bg-amber-300/[0.08] px-3 py-2 text-xs font-semibold text-amber-100"
+                    >
+                      <span>Создать розыгрыш</span>
+                      <Star className="h-3.5 w-3.5 fill-current" />
                     </button>
                   )}
                   {ownsDetail && detail.group.category === "Чаты" && (
