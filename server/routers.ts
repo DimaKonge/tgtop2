@@ -58,7 +58,7 @@ export const appRouter = router({
         const intent = await db.placeBid(
           input.slotId,
           Math.round(input.bidAmount * 1000),
-          `${formatTonAmount(input.bidAmount)} TON`,
+          `${formatTonAmount(input.bidAmount)} GRAM`,
           group.username ?? group.title,
           ctx.user.openId,
           input.groupId

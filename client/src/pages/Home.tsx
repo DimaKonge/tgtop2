@@ -6,6 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -231,12 +232,16 @@ const formatTon = (value: number | string | null | undefined) => {
 const formatPositionDuration = (updatedAt: Date | string | null | undefined, now: number) => {
   const startedAt = updatedAt ? new Date(updatedAt).getTime() : now;
   const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
-  const days = Math.floor(seconds / 86_400);
-  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const hours = Math.floor(seconds / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
   const remainingSeconds = seconds % 60;
-  const clock = [hours, minutes, remainingSeconds].map(value => String(value).padStart(2, "0")).join(":");
-  return days > 0 ? `${days}д ${clock}` : clock;
+  return [hours, minutes, remainingSeconds].map(value => String(value).padStart(2, "0")).join(":");
+};
+const getRankingFloorGram = (slotNumber: number) => slotNumber <= 1 ? 0.3 : slotNumber <= 3 ? 0.2 : 0.1;
+const getMinimumRankingBidGram = (slot: Pick<Slot, "slotNumber" | "bidAmount" | "group">) => {
+  const floor = getRankingFloorGram(slot.slotNumber);
+  if (!slot.group) return floor;
+  return Math.max(floor, Math.round((slot.bidAmount / 1000 + 0.1) * 10) / 10);
 };
 const getCategoryLabel = (category: Group["category"], language: Language) =>
   language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
@@ -1374,7 +1379,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? slots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
   const detailMinimumBid = selectedSlot
-    ? Math.max(0.1, selectedSlot.bidAmount / 1000 + 0.001)
+    ? getMinimumRankingBidGram(selectedSlot)
     : null;
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
   const detailEntryUrl = detail?.group.monthlyEntryInviteLink ?? (detail?.group.username
@@ -1429,7 +1434,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   };
   const openMine = (slot?: Slot) => {
     if (slot) {
-      const nextBid = slot.group ? Math.max(0.1, slot.bidAmount / 1000 + 0.001) : 0.1;
+      const nextBid = getMinimumRankingBidGram(slot);
       setAmount(formatTon(nextBid));
     }
     setTargetSlot(slot ?? null);
@@ -1591,24 +1596,22 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         tx("Эта позиция будет доступна после создания рейтинговой доски.", "This placement will be available after the ranking board is created.")
       );
     const value = Number(amount);
-    const current = targetSlot.bidAmount / 1000;
-    const minimum = targetSlot.group ? Math.max(0.1, current + 0.001) : 0.1;
-    if (!Number.isFinite(value) || value < minimum)
-      return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} TON`, `Minimum bid: ${formatTon(minimum)} TON`));
+    const minimum = getMinimumRankingBidGram(targetSlot);
+    if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10)
+      return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`));
     placeBid.mutate({
       slotId: targetSlot.id,
       groupId: group.id,
       bidAmount: value,
-      currentBid: `${formatTon(value)} TON`,
+      currentBid: `${formatTon(value)} GRAM`,
     });
   };
   const openStarsPayment = (group: Group) => {
     if (!targetSlot?.id) return toast.error(tx("Эта позиция пока недоступна.", "This placement is not available yet."));
     const value = Number(amount);
-    const current = targetSlot.bidAmount / 1000;
-    const minimum = targetSlot.group ? Math.max(0.1, current + 0.001) : 0.1;
-    if (!Number.isFinite(value) || value < minimum) {
-      return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} TON`, `Minimum bid: ${formatTon(minimum)} TON`));
+    const minimum = getMinimumRankingBidGram(targetSlot);
+    if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) {
+      return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`));
     }
     setStarsPaymentGroup(group);
   };
@@ -1970,11 +1973,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <b className="block text-xs text-slate-100">{tx("Выберите группу для позиции", "Choose a group for this placement")}</b>
                   <small className="mt-0.5 block text-[11px] text-slate-400">
                     {targetSlot.group
-                      ? tx(`Перебитие · от ${amount} TON`, `Outbid · from ${amount} TON`)
-                      : tx(`Свободная позиция · от ${formatTon(0.1)} TON`, `Vacant position · from ${formatTon(0.1)} TON`)}
+                      ? tx(`Ставка · от ${amount} GRAM`, `Bid · from ${amount} GRAM`)
+                      : tx(`Свободная позиция · от ${amount} GRAM`, `Vacant position · from ${amount} GRAM`)}
                   </small>
                   <small className="mt-0.5 block text-[10px] text-slate-500">
-                    {tx("Ставка фиксируется в журнале и в боте; TON пока не отправляется.", "The bid is recorded in the journal and bot; TON is not sent yet.")}
+                    {tx("После выбора группы откроется ползунок ставки и оплата через Telegram Stars.", "After you select a community, choose the amount and pay via Telegram Stars.")}
                   </small>
                 </span>
                 <button
@@ -2122,7 +2125,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               {(targetSlot ? orderedMyGroups : visibleMyGroups).map(group => (
                 <div
                   key={group.id}
-                  className="relative h-[64px] overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2"
+                  className={`relative overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2 ${targetSlot ? "min-h-[116px]" : "h-[64px]"}`}
                 >
                   <div className="flex items-center gap-2">
                     {!targetSlot && myGroupsSelectionMode && <button
@@ -2176,9 +2179,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <div className="mt-3">
                       <button
                         onClick={() => openStarsPayment(group)}
-                        className="w-full rounded-lg bg-[#3f8cff] py-2 text-xs font-semibold"
+                        className="w-full rounded-lg bg-[#3f8cff] py-2 text-xs font-semibold active:scale-[0.98]"
                       >
-                        {tx("Выбрать для ставки", "Choose for placement")}
+                        {tx("Выбрать и настроить ставку", "Choose and set bid")}
                       </button>
                     </div>
                   )}
@@ -2427,7 +2430,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           disabled={createProtectedGroupDeal.isPending || !isAuthenticated}
                           className="rounded-lg bg-[#3f8cff] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                         >
-                          {isAuthenticated ? tx("Создать офер", "Create offer") : tx("Войти через Telegram", "Sign in with Telegram")}
+                          {isAuthenticated ? tx(`Купить за ${formatTon(detail.group.salePriceTon)} TON`, `Buy for ${formatTon(detail.group.salePriceTon)} TON`) : tx("Войти через Telegram", "Sign in with Telegram")}
                         </button>
                       </div>
                     </div>
@@ -2870,36 +2873,39 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       </Sheet>
 
       <Sheet open={Boolean(starsPaymentGroup)} onOpenChange={open => !open && setStarsPaymentGroup(null)}>
-        <SheetContent side="bottom" className="rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">
+        <SheetContent side="bottom" className="max-h-[88dvh] rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
           <SheetHeader className="px-4">
-            <SheetTitle className="text-slate-100">{tx("Оплата ставки", "Bid payment")}</SheetTitle>
+            <SheetTitle className="text-slate-100">{tx("Выберите цену места", "Set placement price")}</SheetTitle>
             <p className="text-xs leading-5 text-slate-500">
               {starsPaymentGroup?.title} · {tx(`позиция ${targetSlot?.slotNumber ?? "—"}`, `placement ${targetSlot?.slotNumber ?? "—"}`)}
             </p>
           </SheetHeader>
-          <div className="space-y-3 px-4 pb-5">
-            <button
-              onClick={() => starsPaymentGroup && createStarsRankingPayment.mutate({ slotId: targetSlot!.id, groupId: starsPaymentGroup.id, bidAmount: Number(amount) })}
-              disabled={createStarsRankingPayment.isPending}
-              className="flex w-full items-center justify-between rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 p-4 text-left disabled:opacity-55"
-            >
-              <span>
-                <b className="block text-sm text-[#a6c8ff]">{tx("Оплатить Telegram Stars", "Pay with Telegram Stars")}</b>
-                <small className="mt-1 block text-[11px] leading-4 text-slate-400">{tx("Telegram покажет защищённое подтверждение списания.", "Telegram will show its protected payment confirmation.")}</small>
-              </span>
-              <b className="shrink-0 text-lg text-white">{Math.max(10, Math.ceil(Number(amount) * 100))} ★</b>
-            </button>
-            <button
-              onClick={() => {
-                if (starsPaymentGroup) submitPlacement(starsPaymentGroup);
-                setStarsPaymentGroup(null);
-              }}
-              disabled={placeBid.isPending}
-              className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-left disabled:opacity-55"
-            >
-              <b className="block text-xs text-slate-200">{tx("Записать TON-ставку без оплаты", "Record a TON bid without payment")}</b>
-              <small className="mt-1 block text-[10px] leading-4 text-slate-500">{tx("Только журнал TG TOP. TON не списывается и не отправляется.", "TG TOP journal only. No TON is charged or sent.")}</small>
-            </button>
+          <div className="space-y-4 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2">
+            {starsPaymentGroup && targetSlot && (() => {
+              const minimum = getMinimumRankingBidGram(targetSlot);
+              const rawAmount = Number(amount);
+              const bidAmount = Number.isFinite(rawAmount) ? Math.max(minimum, Math.round(rawAmount * 10) / 10) : minimum;
+              const maximum = Math.min(100000, Math.max(minimum + 3, Math.ceil(bidAmount * 1.5 * 10) / 10));
+              const ratio = bidAmount / minimum;
+              const tone = ratio <= 1.2
+                ? { text: "text-emerald-300", range: "[&_[data-slot=slider-range]]:!bg-emerald-400 [&_[data-slot=slider-thumb]]:!border-emerald-100 [&_[data-slot=slider-thumb]]:!bg-emerald-400" }
+                : ratio <= 1.5
+                  ? { text: "text-amber-300", range: "[&_[data-slot=slider-range]]:!bg-amber-400 [&_[data-slot=slider-thumb]]:!border-amber-100 [&_[data-slot=slider-thumb]]:!bg-amber-400" }
+                  : { text: "text-fuchsia-300", range: "[&_[data-slot=slider-range]]:!bg-fuchsia-400 [&_[data-slot=slider-thumb]]:!border-fuchsia-100 [&_[data-slot=slider-thumb]]:!bg-fuchsia-400" };
+              const setBid = (next: number) => setAmount(formatTon(Math.min(100000, Math.max(minimum, Math.round(next * 10) / 10))));
+              const starsAmount = Math.max(10, Math.ceil(bidAmount * 100));
+              return <>
+                <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.035] p-3">
+                  <Avatar group={starsPaymentGroup} compact />
+                  <span className="min-w-0 flex-1"><b className="block truncate text-sm text-white">{starsPaymentGroup.title}</b><small className="mt-0.5 block text-[11px] text-slate-500">{tx(`Минимум для позиции: ${formatTon(minimum)} GRAM`, `Placement minimum: ${formatTon(minimum)} GRAM`)}</small></span>
+                </div>
+                <label className="block"><span className="mb-2 block text-xs text-slate-400">{tx("Ваша ставка", "Your bid")}</span><span className="flex items-center rounded-2xl border border-white/8 bg-[#0b0f14] px-4"><Input value={amount} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setAmount(value); }} onBlur={() => setBid(Number(amount))} aria-label={tx("Сумма ставки в GRAM", "Bid amount in GRAM")} className="h-14 border-0 bg-transparent px-0 text-3xl font-semibold text-white focus-visible:ring-0" /><b className="text-sm text-slate-400">GRAM</b></span></label>
+                <div><div className="mb-2 flex items-center justify-between text-[10px] text-slate-500"><span>{formatTon(minimum)} GRAM</span><span className={tone.text}>{ratio <= 1.2 ? tx("Минимальная", "Minimum") : ratio <= 1.5 ? tx("Уверенная", "Confident") : tx("Максимальная", "Maximum")}</span><span>{formatTon(maximum)} GRAM</span></div><Slider value={[bidAmount]} min={minimum} max={maximum} step={0.1} onValueChange={([value]) => setBid(value)} className={`py-3 [&_[data-slot=slider-track]]:h-3 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-thumb]]:size-7 ${tone.range}`} /></div>
+                <div className="grid grid-cols-4 gap-2">{[{ label: "+10%", value: bidAmount * 1.1 }, { label: "+30%", value: bidAmount * 1.3 }, { label: "+50%", value: bidAmount * 1.5 }, { label: tx("Минимум", "Minimum"), value: minimum }].map(item => <button key={item.label} onClick={() => setBid(item.value)} className="rounded-xl border border-white/8 bg-white/[0.04] px-2 py-2.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.08] active:scale-[0.97]">{item.label}</button>)}</div>
+                <p className="text-center text-xs text-slate-400">{tx(`${formatTon(bidAmount)} GRAM · шаг 0.1 GRAM`, `${formatTon(bidAmount)} GRAM · 0.1 GRAM step`)}</p>
+                <button onClick={() => createStarsRankingPayment.mutate({ slotId: targetSlot.id, groupId: starsPaymentGroup.id, bidAmount })} disabled={createStarsRankingPayment.isPending || !isAuthenticated} className="flex w-full items-center justify-between rounded-2xl bg-[#1688f5] px-5 py-4 text-left text-white shadow-lg shadow-[#1688f5]/20 transition-transform active:scale-[0.98] disabled:opacity-55"><span><b className="block text-base">{isAuthenticated ? tx("Оплатить место", "Pay for placement") : tx("Войти через Telegram", "Sign in with Telegram")}</b><small className="mt-0.5 block text-[11px] text-white/70">{tx("Telegram покажет защищённое подтверждение.", "Telegram will show a protected confirmation.")}</small></span><b className="text-lg">{starsAmount} ★</b></button>
+              </>;
+            })()}
           </div>
         </SheetContent>
       </Sheet>

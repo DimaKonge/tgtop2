@@ -1,4 +1,5 @@
 export const VACANT_RANKING_MINIMUM_MILLITON = 100;
+export const RANKING_BID_STEP_MILLITON = 100;
 
 export function getRankingFloorMilliTon(slotNumber: number) {
   if (slotNumber <= 1) return 300;
@@ -8,12 +9,12 @@ export function getRankingFloorMilliTon(slotNumber: number) {
 
 export function getMinimumRankingBidMilliTon(currentBidMilliTon: number, occupied: boolean, floorMilliTon = VACANT_RANKING_MINIMUM_MILLITON) {
   return occupied
-    ? Math.max(floorMilliTon, currentBidMilliTon + 1)
+    ? Math.max(floorMilliTon, currentBidMilliTon + RANKING_BID_STEP_MILLITON)
     : floorMilliTon;
 }
 
 export function isQualifyingRankingBid(bidMilliTon: number, currentBidMilliTon: number, occupied: boolean, floorMilliTon = VACANT_RANKING_MINIMUM_MILLITON) {
-  return bidMilliTon >= getMinimumRankingBidMilliTon(currentBidMilliTon, occupied, floorMilliTon);
+  return bidMilliTon % RANKING_BID_STEP_MILLITON === 0 && bidMilliTon >= getMinimumRankingBidMilliTon(currentBidMilliTon, occupied, floorMilliTon);
 }
 
 export type RankingEntry = {

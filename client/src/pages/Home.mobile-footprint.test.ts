@@ -12,6 +12,6 @@ describe("TG TOP Global mobile featured board", () => {
     expect(source).toContain('className="grid w-full grid-cols-2 gap-2"');
     expect(source).toContain('className="grid w-full grid-cols-4 gap-2"');
     expect(source).toContain('!targetSlot && myGroupsSelectionMode');
-    expect(source).toContain('Выбрать для ставки');
+    expect(source).toContain('Выбрать и настроить ставку');
   });
 });

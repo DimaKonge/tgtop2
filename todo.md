@@ -392,3 +392,8 @@
 - [x] Enforce strict ranking order by GRAM bid, breaking equal-price ties by earliest occupancy and displacing lower positions predictably
 - [x] Make public owner cards open the owner’s Telegram account directly when a public @username is available
 - [x] Rebuild and test the outbid auction with explicit scenarios for insertion by price, equal-price time priority, downward displacement, and per-cell timer resets
+- [x] Format the exact-cell occupancy timer exclusively as total hours, minutes, and seconds, without a day unit
+- [x] Replace the protected-sale «Создать офер» control with a direct «Купить за … TON» action for a listed sale
+- [x] Correct every ranking minimum label and bid step to GRAM: a 0.1 GRAM floor and 0.1 GRAM increment where applicable
+- [x] Add a slot-linked GRAM bid slider that selects an eligible community and opens the official payment flow for the chosen ranking place
+- [x] Style the ranking-bid sheet as a Telegram-native pricing panel with selected community, large GRAM amount, colour-responsive slider, quick raise controls, and one «Оплатить место» action

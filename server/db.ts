@@ -403,7 +403,7 @@ export async function createStarsRankingPaymentIntent(input: { userOpenId: strin
   const group = await getGroupById(input.groupId);
   if (!group || group.ownerOpenId !== input.userOpenId) throw new Error("Выберите свою группу из личной папки");
   const [slot] = await db.select().from(auctionSlots).where(eq(auctionSlots.id, input.slotId)).limit(1);
-  if (!slot || !isQualifyingRankingBid(input.bidAmount, slot.bidAmount, slot.groupId !== null)) {
+  if (!slot || !isQualifyingRankingBid(input.bidAmount, slot.bidAmount, slot.groupId !== null, getRankingFloorMilliTon(slot.slotNumber))) {
     throw new Error("Ставка больше недействительна. Обновите рейтинг и повторите попытку.");
   }
   const payload = `tg_top_rank_${randomBytes(18).toString("hex")}`;
@@ -435,7 +435,7 @@ export async function approveStarsRankingPayment(input: { payload: string; teleg
   if (intent.userOpenId !== `telegram:${input.telegramUserId}` || intent.starsAmount !== input.starsAmount) return { approved: false, reason: "Параметры счёта не совпадают" };
   const group = await getGroupById(intent.groupId);
   const [slot] = await db.select().from(auctionSlots).where(eq(auctionSlots.id, intent.slotId)).limit(1);
-  if (!group || group.ownerOpenId !== intent.userOpenId || !slot || !isQualifyingRankingBid(intent.bidAmount, slot.bidAmount, slot.groupId !== null)) {
+  if (!group || group.ownerOpenId !== intent.userOpenId || !slot || !isQualifyingRankingBid(intent.bidAmount, slot.bidAmount, slot.groupId !== null, getRankingFloorMilliTon(slot.slotNumber))) {
     return { approved: false, reason: "Позиция изменилась. Обновите рейтинг и создайте новый счёт." };
   }
   await db.update(starsRankingPaymentIntents).set({ status: "pre_checkout_approved", telegramUserId: String(input.telegramUserId) }).where(eq(starsRankingPaymentIntents.id, intent.id));
@@ -465,7 +465,7 @@ export async function settleStarsRankingPayment(input: { payload: string; telegr
   const group = await getGroupById(intent.groupId);
   if (!group) throw new Error("Группа для подтверждённой ставки больше недоступна");
   try {
-    await placeBid(intent.slotId, intent.bidAmount, `${formatTonAmount(intent.bidAmount / 1000)} TON`, group.username ?? group.title, intent.userOpenId, intent.groupId);
+    await placeBid(intent.slotId, intent.bidAmount, `${formatTonAmount(intent.bidAmount / 1000)} GRAM`, group.username ?? group.title, intent.userOpenId, intent.groupId);
     await db.update(starsRankingPaymentIntents).set({
       status: "paid",
       telegramPaymentChargeId: input.telegramPaymentChargeId,

@@ -40,10 +40,10 @@ export async function notifyRecordedRankingBid(input: { openId: string; groupTit
     "",
     `Группа: ${input.groupTitle}`,
     `Позиция: ${input.slotNumber}`,
-    `Ставка: ${amount} TON`,
+    `Ставка: ${amount} GRAM`,
     "Статус: записано во внутреннем журнале TG TOP.",
     "",
-    "Это не подтверждение оплаты: TON не отправлялся и не списывался.",
+    "Это не подтверждение оплаты: GRAM не списывались.",
   ].join("\n");
 
   try {
