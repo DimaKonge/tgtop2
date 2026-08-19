@@ -1441,7 +1441,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setDetailBidInput(selectedSlot && detailMinimumBid !== null ? formatTon(detailMinimumBid) : "");
   }, [detailMinimumBid, selectedSlot?.id]);
   const detailCatalogPath = detail
-    ? [tx("Все", "All"), getCountryLabel(detailBoardScope?.country ?? detail.group.country, language), (detailBoardScope?.category ?? detail.group.category) === "Все" ? tx("Все", "All") : getCategoryLabel((detailBoardScope?.category ?? detail.group.category) as "Каналы" | "Чаты", language), getSubcategoryLabel(detailBoardScope?.subcategory ?? detail.group.subcategory, language), detailBoardScope?.city && detailBoardScope.city !== "Все" ? getCityLabel(detailBoardScope.country, detailBoardScope.city, language) : null].filter((part): part is string => Boolean(part)).join(" · ")
+    ? [tx("Все", "All"), getCountryLabel(detailBoardScope?.country ?? detail.group.country, language), (detailBoardScope?.category ?? detail.group.category) === "Все" ? tx("Все", "All") : getCategoryLabel((detailBoardScope?.category ?? detail.group.category) as "Каналы" | "Чаты", language), getSubcategoryLabel(detailBoardScope?.subcategory ?? detail.group.subcategory, language)].filter((part): part is string => Boolean(part)).join(" · ")
     : "";
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
   const detailEntryUrl = detail?.group.monthlyEntryInviteLink ?? (detail?.group.username
@@ -2550,16 +2550,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         </span>
                         <span className="rounded-full border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-slate-300">{tx(`минимум ${formatTon(detailMinimumBid)} GRAM`, `minimum ${formatTon(detailMinimumBid)} GRAM`)}</span>
                       </div>
-                      <div className="mt-3 flex items-center justify-between border-t border-white/8 pt-2 text-[11px]">
+                      <div className="mt-3 flex items-center justify-between rounded-lg bg-black/15 px-2.5 py-2 text-[11px]">
                         <span className="text-slate-500">{tx("На этой позиции", "In this position")}</span>
                         <b className="font-mono tabular-nums text-slate-200">{formatPositionDuration(selectedSlot.updatedAt, positionClock)}</b>
                       </div>
-                      <div className="mt-2 border-t border-white/8 pt-2 text-[11px]">
+                      <div className="mt-2 rounded-lg bg-black/15 px-2.5 py-2 text-[11px]">
                         <small className="block text-slate-500">{tx("Адрес в каталоге", "Catalog location")}</small>
                         <b className="mt-1 block truncate font-medium text-slate-300">{detailCatalogPath}</b>
                       </div>
                       {ownsDetail && (
-                        <div className="mt-3 border-t border-white/8 pt-3">
+                        <div className="mt-3 rounded-lg bg-black/15 p-2.5">
                           <div className="flex items-center justify-between gap-3">
                             <span>
                               <b className="block text-xs text-[#c7dcff]">{tx("Поднять выше в рейтинге", "Move higher in ranking")}</b>

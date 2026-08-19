@@ -427,7 +427,7 @@
 - [ ] Reorder the target ranking board immediately after every successful paid bid so a higher bid moves above lower bids and cascades other groups downward
 - [x] Derive every displayed current position from the group’s actual persisted ranking cell in the same board, preventing mismatches such as a second cell showing fifth place
 - [x] Temporarily remove Telegram Stars as a ranking-payment option and allow ranking payments only through internal GRAM balance
-- [ ] Redesign the owned-community ranking card without horizontal divider lines, using compact visual grouping and clear spacing instead
+- [x] Redesign the owned-community ranking card without horizontal divider lines, using compact visual grouping and clear spacing instead
 - [ ] Make live ranking price, current place, occupancy timer, and bid slider the primary block in an owned community detail page; move secondary actions below it
 - [x] Replace the oversized owner action card with a compact inline owner row so the live ranking controls remain visually primary
 - [x] Show the owner’s display name prominently in the compact owner row, with the @username smaller beneath it
