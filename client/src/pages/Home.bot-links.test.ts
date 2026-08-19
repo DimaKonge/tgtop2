@@ -318,5 +318,11 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('paymentMethod === "stars"');
     expect(source).toContain('const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null)');
     expect(source).toContain('Удалить группу из платформы?');
+    expect(source).toContain('className="flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-5"');
+    expect(source).toContain('className="order-1 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3"');
+    expect(source).toContain('function AudienceGrowthChart');
+    expect(source).toContain('Снимки @TGTOP_robot с первого наблюдения.');
+    expect(source).toContain('История до подключения не моделируется.');
+    expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} />');
   });
 });

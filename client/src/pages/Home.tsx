@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -46,6 +47,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
+import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 type Page = "top" | "catalog" | "giveaways" | "earn" | "mine" | "details" | "owner" | "profile";
 type Audience = "all" | "small" | "medium" | "large";
@@ -72,6 +74,61 @@ const parseGramInput = (value: string): number | undefined => {
   const units = Math.round(Number(normalized) * 100);
   return Number.isSafeInteger(units) ? units : undefined;
 };
+
+type AudienceSnapshot = {
+  membersCount: number;
+  messagesCount: number;
+  joinedCount: number;
+  recordedAt: Date;
+};
+
+function AudienceGrowthChart({ snapshots, language }: { snapshots: AudienceSnapshot[]; language: Language }) {
+  const dateFormatter = new Intl.DateTimeFormat(language === "en" ? "en-US" : "ru-RU", { day: "numeric", month: "short" });
+  const pointsByDate = new Map<string, AudienceSnapshot>();
+  [...snapshots]
+    .sort((left, right) => new Date(left.recordedAt).getTime() - new Date(right.recordedAt).getTime())
+    .forEach(snapshot => {
+      const recordedAt = new Date(snapshot.recordedAt);
+      pointsByDate.set(recordedAt.toISOString().slice(0, 10), snapshot);
+    });
+  const chartData = Array.from(pointsByDate.values()).map(snapshot => ({
+    date: dateFormatter.format(new Date(snapshot.recordedAt)),
+    members: Math.max(0, snapshot.membersCount),
+  }));
+  const first = chartData[0];
+  const last = chartData.at(-1);
+  const netGrowth = first && last ? last.members - first.members : 0;
+
+  return (
+    <section className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+      <div className="flex items-start justify-between gap-3">
+        <span>
+          <b className="block text-sm text-slate-100">{language === "en" ? "Audience growth" : "Динамика аудитории"}</b>
+          <small className="mt-1 block text-[10px] text-slate-500">{language === "en" ? "Recorded by @TGTOP_robot from the first observation." : "Снимки @TGTOP_robot с первого наблюдения."}</small>
+        </span>
+        {first && last && <b className={`text-xs ${netGrowth > 0 ? "text-emerald-300" : netGrowth < 0 ? "text-rose-300" : "text-slate-400"}`}>{netGrowth > 0 ? "+" : ""}{n(netGrowth, language)}</b>}
+      </div>
+      {chartData.length >= 2 ? (
+        <ChartContainer config={{ members: { label: language === "en" ? "Members" : "Участники", color: "#4d96ff" } }} className="mt-3 h-36 w-full">
+          <AreaChart accessibilityLayer data={chartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="audience-growth-fill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="5%" stopColor="#4d96ff" stopOpacity={0.38} />
+                <stop offset="95%" stopColor="#4d96ff" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" />
+            <XAxis dataKey="date" axisLine={false} tickLine={false} tickMargin={8} minTickGap={22} />
+            <ChartTooltip cursor={{ stroke: "rgba(148, 184, 255, 0.4)", strokeWidth: 1 }} content={<ChartTooltipContent indicator="line" />} />
+            <Area dataKey="members" type="monotone" stroke="#71a5ff" strokeWidth={2} fill="url(#audience-growth-fill)" />
+          </AreaChart>
+        </ChartContainer>
+      ) : (
+        <p className="mt-4 rounded-lg bg-black/15 px-3 py-3 text-center text-xs leading-5 text-slate-500">{language === "en" ? "The chart will appear after at least two bot observations. Historical values are not invented." : "График появится после двух наблюдений бота. История до подключения не моделируется."}</p>
+      )}
+    </section>
+  );
+}
 type ListingType = "catalog" | "sale";
 type ListingCountry = "Global" | "UA" | "PL" | "DE" | "GB" | "US" | "RU" | "FR" | "ES" | "IT" | "NL" | "CZ" | "RO" | "TR" | "CA" | "AU" | "AE" | "KZ";
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
@@ -2363,8 +2420,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <ArrowLeft className="h-4 w-4" />
                   {ui.back}
                 </button>
-                <div className="rounded-2xl border border-white/8 bg-[#111720] p-5">
-                  <div className="flex items-start gap-4">
+                <div className="flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-5">
+                  <div className="order-0 flex items-start gap-4">
                     <Avatar group={detail.group} large />
                     <span className="min-w-0">
                       <h1 className="truncate text-xl font-semibold">
@@ -2394,7 +2451,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <a
                       href={detailEntryUrl}
                       onClick={event => { event.preventDefault(); openTelegramCommunityLink(detailEntryUrl); }}
-                      className="mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
+                      className="order-2 mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45 bg-[#3f8cff]/14 px-4 text-sm font-semibold text-[#c8ddff] transition-colors hover:bg-[#3f8cff]/22 active:scale-[0.99]"
                     >
                       <span>{detailHasPaidEntry
                         ? tx(`Войти за ${detail.group.monthlyEntryStars} Stars`, `Join for ${detail.group.monthlyEntryStars} Stars`)
@@ -2408,7 +2465,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <button
                       type="button"
                       onClick={() => openListing([detail.group.id])}
-                      className="mt-3 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-4 text-sm font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/16 active:scale-[0.99]"
+                      className="order-3 mt-3 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-4 text-sm font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/16 active:scale-[0.99]"
                     >
                       <span>{tx("Разместить в каталоге", "List in catalog")}</span>
                       <Plus className="h-4 w-4" />
@@ -2418,7 +2475,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <a
                       href={detailEntryUrl}
                       onClick={event => { event.preventDefault(); openTelegramCommunityLink(detailEntryUrl); }}
-                      className="mt-3 flex min-h-12 w-full items-center justify-between rounded-xl border border-amber-200/25 bg-amber-300/[0.09] px-4 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-300/[0.14] active:scale-[0.99]"
+                      className="order-2 mt-3 flex min-h-12 w-full items-center justify-between rounded-xl border border-amber-200/25 bg-amber-300/[0.09] px-4 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-300/[0.14] active:scale-[0.99]"
                     >
                       <span>{tx(`Подписаться и получить +${formatGram(subscriptionReward)} GRAM`, `Subscribe and earn +${formatGram(subscriptionReward)} GRAM`)}</span>
                       <Star className="h-4 w-4 fill-current" />
@@ -2462,7 +2519,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         if (detailOwner.telegramUsername) openTelegramCommunityLink(`https://t.me/${detailOwner.telegramUsername}`);
                       }}
                       disabled={!detailOwner.telegramUsername}
-                      className="mt-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.05] active:scale-[0.99] disabled:cursor-default disabled:opacity-70"
+                      className="order-3 mt-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.05] active:scale-[0.99] disabled:cursor-default disabled:opacity-70"
                     >
                       <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-200">
                         {detailOwner.avatarUrl ? <img src={detailOwner.avatarUrl} alt="" className="h-full w-full object-cover" /> : (detailOwner.name ?? detailOwner.telegramUsername ?? "T").slice(0, 1).toUpperCase()}
@@ -2477,7 +2534,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {ownsDetail && (
                     <button
                       onClick={() => openListing([detail.group.id])}
-                      className="mt-3 w-full rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 py-2 text-xs font-semibold text-[#a6c8ff]"
+                      className="order-3 mt-3 w-full rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 py-2 text-xs font-semibold text-[#a6c8ff]"
                     >
                       {tx("Настроить листинг", "Edit listing")}
                     </button>
@@ -2485,14 +2542,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {ownsDetail && (
                     <button
                       onClick={() => openGiveawayCreate(detail.group)}
-                      className="mt-2 flex w-full items-center justify-between rounded-lg border border-amber-200/25 bg-amber-300/[0.08] px-3 py-2 text-xs font-semibold text-amber-100"
+                      className="order-3 mt-2 flex w-full items-center justify-between rounded-lg border border-amber-200/25 bg-amber-300/[0.08] px-3 py-2 text-xs font-semibold text-amber-100"
                     >
                       <span>Создать розыгрыш</span>
                       <Star className="h-3.5 w-3.5 fill-current" />
                     </button>
                   )}
                   {ownsDetail && detail.group.category === "Чаты" && (
-                    <div className="mt-3 rounded-xl border border-white/8 bg-white/4 p-3 space-y-3">
+                    <div className="order-3 mt-3 space-y-3 rounded-xl border border-white/8 bg-white/4 p-3">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-xs">
                           <b className="block text-slate-200">{tx("Автоочистка чата", "Chat auto-cleanup")}</b>
@@ -2515,7 +2572,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   )}
                   {ownsDetail && (
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="order-3 mt-2 flex items-center gap-2">
                       {detail.group.status === "listed" ? (
                         <button
                           onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
@@ -2542,7 +2599,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   )}
                   {selectedSlot && (
-                    <section className="mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
+                    <section className="order-1 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
                       <div className="flex items-start justify-between gap-3">
                         <span>
                           <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[#8fb9ff]">{tx(`Текущее место · #${selectedSlot.slotNumber}`, `Current place · #${selectedSlot.slotNumber}`)}</small>
@@ -2580,7 +2637,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </section>
                   )}
                   {!ownsDetail && detail.group.salePriceTon && detail.group.listingType === "sale" && (
-                    <div className="mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 p-3">
+                    <div className="order-2 mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 p-3">
                       <div className="flex items-baseline justify-between gap-3">
                         <span>
                           <b className="block text-sm text-slate-100">{tx("Безопасная покупка", "Protected purchase")}</b>
@@ -2614,6 +2671,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <Metric label={tx("Приглашения", "Invites")} value={n(detail.group.invitedCount)} note={tx("зафиксировано ботом", "recorded by the bot")} />
                   {detail.group.messagesCount > 0 && <Metric label={tx("Публикации", "Posts")} value={n(detail.group.messagesCount)} note={tx("увиденные ботом", "observed by the bot")} />}
                 </div>
+
+                <AudienceGrowthChart snapshots={detail.snapshots} language={language} />
 
                 <NftShowcase nfts={detail.ownerNfts} language={language} title={tx("NFT-витрина площадки", "Community NFT showcase")} />
               </>

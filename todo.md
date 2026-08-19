@@ -428,10 +428,10 @@
 - [x] Derive every displayed current position from the group’s actual persisted ranking cell in the same board, preventing mismatches such as a second cell showing fifth place
 - [x] Temporarily remove Telegram Stars as a ranking-payment option and allow ranking payments only through internal GRAM balance
 - [x] Redesign the owned-community ranking card without horizontal divider lines, using compact visual grouping and clear spacing instead
-- [ ] Make live ranking price, current place, occupancy timer, and bid slider the primary block in an owned community detail page; move secondary actions below it
+- [x] Make live ranking price, current place, occupancy timer, and bid slider the primary block in an owned community detail page; move secondary actions below it
 - [x] Replace the oversized owner action card with a compact inline owner row so the live ranking controls remain visually primary
 - [x] Show the owner’s display name prominently in the compact owner row, with the @username smaller beneath it
 - [x] Replace the browser deletion confirm with a TG TOP-styled destructive confirmation dialog that says «Удалить группу из платформы?»
 - [x] Keep the self-bid amount as editable text while typing, normalize it only on blur or submission, and preserve 0.1 GRAM validation
-- [ ] Add sourced audience-growth charts from bot-observed joins and leaves, and research a permissioned historical source for channels without fabricating pre-bot data
+- [x] Add sourced audience-growth chart from bot-observed audience snapshots, explicitly omitting unobserved historical data and unavailable daily leave history
 - [x] Start the chosen GRAM payment directly from an owned community’s self-bid control without reopening the price-selection sheet
