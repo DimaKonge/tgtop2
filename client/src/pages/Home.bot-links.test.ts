@@ -127,7 +127,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Реальные бонусы, ставки, Stars, сделки и передачи NFT.');
     expect(source).toContain('const verifiedTasks');
     expect(source).toContain('item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")');
-    expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}`');
+    expect(source).toContain('refetchInterval: 12_000');
+    expect(source).toContain('const rankingSnapshotKey = board.map(slot => `${slot.slotNumber}:${slot.group?.id ?? 0}:${slot.bidAmount}`).join("|")');
+    expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}:${rankingSnapshotKey}`');
     expect(source).toContain('import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"');
     expect(source).not.toContain('const canApplyAnonymousListing = selectedListingGroups.length > 0');
     expect(source).not.toContain('anonymousListing: selectedListingGroups.length ? anonymousListing : undefined');

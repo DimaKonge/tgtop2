@@ -910,6 +910,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     country: country === "Все" ? "Global" : country,
     subcategory,
     city,
+  }, {
+    refetchInterval: 12_000,
+    refetchIntervalInBackground: false,
   });
   const slots = (slotsQuery.data ?? []) as Slot[];
   useEffect(() => {
@@ -1270,7 +1273,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const leadSlot = board[0];
   const secondTier = board.slice(1, 3);
   const thirdTier = board.slice(3, 7);
-  const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}`;
+  const rankingSnapshotKey = board.map(slot => `${slot.slotNumber}:${slot.group?.id ?? 0}:${slot.bidAmount}`).join("|");
+  const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}:${rankingSnapshotKey}`;
   const bonus = (
     (account?.user?.bonusBalance ?? user?.bonusBalance ?? 0) / 100
   ).toFixed(1);

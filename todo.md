@@ -324,7 +324,7 @@
 - [ ] Let the bidder select one of their eligible communities before submitting its placement into the chosen ranking slot
 - [ ] Cap the ranking bid slider at 100000 TON and provide a synchronized direct amount input for large bids
 - [ ] Present occupied ranking placements as auction lots with a transparent arrow trigger, current bid, and an automatic minimum outbid amount
-- [ ] Refresh the active ranking board at a short interval and animate remotely outbid lots without requiring a page reload
+- [x] Refresh the active ranking board at a short interval and animate remotely outbid lots without requiring a page reload
 - [x] Notify a displaced owner in @TGTOP_robot with the competitor price and a Restore place button that opens the lot at competitor price + 0.1 TON
 - [ ] Show the same primary outbid panel inside an occupied community’s detail screen, with current price, minimum price, group selection, and bid controls
 - [ ] In community details, show active giveaway status first, then contextual ranking action, entry, analytics, and a purchase action only for sale listings
