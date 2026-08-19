@@ -15,4 +15,12 @@ describe("ranking placement persistence", () => {
     expect(source).toContain("? getMinimumRankingBidMilliTon(target.bidAmount, true, slotFloor)");
     expect(source).toContain(": slotFloor;");
   });
+
+  it("persists a chosen public or anonymous profile mode inside the paid ranking placement", () => {
+    const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+    expect(source).toContain("visibility?: { anonymousListing: boolean; showOwnerContact: boolean }");
+    expect(source).toContain("await tx.update(groupsCatalog).set({");
+    expect(source).toContain("anonymousListing: visibility.anonymousListing");
+    expect(source).toContain("showOwnerContact: visibility.showOwnerContact");
+  });
 });

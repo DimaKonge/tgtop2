@@ -392,7 +392,7 @@ export async function getAuctionSlots(category?: string, country?: string, subca
   return slots.map(slot => ({ ...slot, group: slot.groupId ? groupMap.get(slot.groupId) ?? null : null }));
 }
 
-export async function placeBid(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number) {
+export async function placeBid(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, visibility?: { anonymousListing: boolean; showOwnerContact: boolean }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -470,6 +470,12 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
         updatedAt: now,
       }).where(eq(auctionSlots.id, slot.id));
     }
+    if (visibility) {
+      await tx.update(groupsCatalog).set({
+        anonymousListing: visibility.anonymousListing,
+        showOwnerContact: visibility.showOwnerContact,
+      }).where(eq(groupsCatalog.id, group.id));
+    }
 
     const inserted = await tx.insert(rankingBidIntents).values({
       slotId: target.id,
@@ -484,7 +490,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   return { id: rankingIntentId, slotNumber: target.slotNumber, bidAmount, groupTitle: group.title, outbid };
 }
 
-export async function payRankingBidWithGramCredit(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number) {
+export async function payRankingBidWithGramCredit(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, visibility?: { anonymousListing: boolean; showOwnerContact: boolean }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const spendUnits = Math.round((bidAmount / 1000) * 100);
@@ -498,7 +504,7 @@ export async function payRankingBidWithGramCredit(slotId: number, bidAmount: num
   });
 
   try {
-    return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId);
+    return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId, visibility);
   } catch (error) {
     await db.transaction(async tx => {
       await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${spendUnits}` }).where(eq(users.openId, leaderUserId));

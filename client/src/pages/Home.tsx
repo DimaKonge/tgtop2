@@ -842,6 +842,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [amount, setAmount] = useState("0.1");
   const [listingRankingBid, setListingRankingBid] = useState("0.1");
   const [starsPaymentGroup, setStarsPaymentGroup] = useState<Group | null>(null);
+  const [outbidOpen, setOutbidOpen] = useState(false);
+  const [outbidGroupId, setOutbidGroupId] = useState<number | null>(null);
+  const [outbidBidInput, setOutbidBidInput] = useState("0.1");
+  const [outbidVisibility, setOutbidVisibility] = useState<"public" | "anonymous">("anonymous");
+  const [detailVisibility, setDetailVisibility] = useState<"public" | "anonymous">("anonymous");
   const [paymentMethod, setPaymentMethod] = useState<"gram" | "stars">("gram");
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [myGroupsSelectionMode, setMyGroupsSelectionMode] = useState(false);
@@ -1230,8 +1235,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       toast.success(tx("Ставка оплачена GRAM и размещена в рейтинге.", "Bid paid with GRAM and placed in the ranking."));
       setTargetSlot(null);
       setStarsPaymentGroup(null);
+      setOutbidOpen(false);
+      setOutbidGroupId(null);
       setAmount("0.1");
       void utils.tgTop.getSlots.invalidate();
+      void utils.tgTop.getGroupDetail.invalidate();
       void utils.tgTop.getAccount.invalidate();
       void utils.tgTop.getAccountActivity.invalidate();
     },
@@ -1487,8 +1495,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const selectedSlot = detail
     ? detailSlots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
-  const detailMinimumBid = selectedSlot
+  const ownsDetail = detail?.group.ownerOpenId === user?.openId;
+  const detailPlacementIsPublic = Boolean(detail?.group.showOwnerContact && !detail?.group.anonymousListing);
+  const detailVisibilityChanged = ownsDetail && detailPlacementIsPublic !== (detailVisibility === "public");
+  const detailOutbidMinimum = selectedSlot
     ? getMinimumRankingBidGram(selectedSlot)
+    : null;
+  const detailMinimumBid = selectedSlot
+    ? ownsDetail ? getRankingFloorGram(selectedSlot.slotNumber) : detailOutbidMinimum ?? getRankingFloorGram(selectedSlot.slotNumber)
     : null;
   const rawDetailRankingBid = Number(detailBidInput);
   const detailRankingBidAmount = detailMinimumBid !== null && Number.isFinite(rawDetailRankingBid)
@@ -1497,9 +1511,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const detailRankingPreviewSlotNumber = detail && selectedSlot
     ? getSimulatedRankingSlotNumber(detailSlots, detail.group.id, detailRankingBidAmount)
     : null;
+  const detailWillDrop = Boolean(selectedSlot && detailRankingPreviewSlotNumber && detailRankingPreviewSlotNumber > selectedSlot.slotNumber);
   useEffect(() => {
-    setDetailBidInput(selectedSlot && detailMinimumBid !== null ? formatTon(detailMinimumBid) : "");
-  }, [detailMinimumBid, selectedSlot?.id]);
+    setDetailBidInput(selectedSlot ? formatTon(selectedSlot.bidAmount / 1000) : "");
+  }, [selectedSlot?.id]);
+  useEffect(() => {
+    setDetailVisibility(detailPlacementIsPublic ? "public" : "anonymous");
+  }, [detail?.group.id, detailPlacementIsPublic]);
   const detailBoardCategory = selectedSlot?.category ?? detailBoardScope?.category ?? detail?.group.category ?? "Все";
   const detailBoardCountry = selectedSlot?.country ?? detailBoardScope?.country ?? detail?.group.country ?? "Global";
   const detailBoardSubcategory = selectedSlot?.subcategory ?? detailBoardScope?.subcategory ?? detail?.group.subcategory ?? "Все";
@@ -1511,7 +1529,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         detailBoardSubcategory !== "Все" ? getSubcategoryLabel(detailBoardSubcategory, language) : null,
       ].filter((part): part is string => Boolean(part)).join(" · ")
     : "";
-  const ownsDetail = detail?.group.ownerOpenId === user?.openId;
+  const outbidCandidates = targetSlot
+    ? mine.filter(group =>
+        (targetSlot.category === "Все" || targetSlot.category === group.category)
+        && (targetSlot.subcategory === "Все" || targetSlot.subcategory === group.subcategory)
+      )
+    : [];
+  const selectedOutbidGroup = outbidCandidates.find(group => group.id === outbidGroupId) ?? null;
+  const outbidMinimum = targetSlot ? getMinimumRankingBidGram(targetSlot) : 0.1;
+  const rawOutbidBid = Number(outbidBidInput);
+  const outbidBidAmount = Number.isFinite(rawOutbidBid)
+    ? Math.min(MAX_RANKING_BID_GRAM, Math.max(outbidMinimum, Math.round(rawOutbidBid * 10) / 10))
+    : outbidMinimum;
   const detailEntryUrl = detail?.group.monthlyEntryInviteLink ?? (detail?.group.username
     ? `https://t.me/${detail.group.username}`
     : detail?.group.inviteLink ?? null);
@@ -1596,6 +1625,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     }
     setTargetSlot(slot ?? null);
     setPage("mine");
+  };
+  const openOutbid = (slot: Slot) => {
+    const minimum = getMinimumRankingBidGram(slot);
+    setTargetSlot(slot);
+    setOutbidGroupId(null);
+    setOutbidBidInput(formatTon(minimum));
+    setOutbidVisibility("anonymous");
+    setOutbidOpen(true);
   };
   const toggleGroupSelection = (groupId: number) => {
     setSelectedGroupIds(current =>
@@ -2518,7 +2555,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                     </div>
                   )}
-                  {!detailOwner ? (
+                  {!detailPlacementIsPublic || !detailOwner ? (
                     <div className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] p-3">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">A</span>
                       <span className="min-w-0 flex-1">
@@ -2544,6 +2581,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                       <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
                     </button>
+                  )}
+                  {ownsDetail && selectedSlot && (
+                    <div className="order-3 mt-2 rounded-xl border border-white/8 bg-black/15 p-3">
+                      <button type="button" onClick={() => setDetailVisibility(value => value === "public" ? "anonymous" : "public")} className="flex w-full items-center justify-between gap-3 text-left">
+                        <span><b className="block text-xs text-slate-200">{detailVisibility === "public" ? tx("Публичное размещение", "Public placement") : tx("Анонимное размещение", "Anonymous placement")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detailVisibility === "public" ? tx("Другие смогут перейти в ваш профиль", "Others can open your profile") : tx("Постинг будет анонимным", "Placement stays anonymous")}</small></span>
+                        <span role="switch" aria-checked={detailVisibility === "public"} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${detailVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detailVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></span>
+                      </button>
+                      {detailVisibilityChanged && <button type="button" onClick={() => placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: detailRankingBidAmount, currentBid: `${formatTon(detailRankingBidAmount)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous" })} disabled={placeBid.isPending} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{placeBid.isPending ? tx("Оплата…", "Paying…") : tx("Обновить Top", "Refresh Top")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("Повторная оплата обновит размещение", "Repayment refreshes the placement")}</small></span><b className="text-xs text-[#a6c8ff]">{formatTon(detailRankingBidAmount)} GRAM</b></button>}
+                    </div>
                   )}
                   {ownsDetail && (
                     <button
@@ -2633,7 +2679,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <div className="mt-3 rounded-lg bg-black/15 p-2.5">
                           <div className="flex items-center justify-between gap-3">
                             <span>
-                              <b className="block text-xs text-[#c7dcff]">{tx("Поднять выше в рейтинге", "Move higher in ranking")}</b>
+                              <b className="block text-xs text-[#c7dcff]">{tx("Обновить ставку", "Update bid")}</b>
                               <small className="mt-0.5 block text-[10px] text-slate-500">{detailRankingPreviewSlotNumber ? tx(`Предпросмотр: ${detailRankingPreviewSlotNumber}-я позиция`, `Preview: position ${detailRankingPreviewSlotNumber}`) : tx("Сумма вне рейтинга", "Amount is outside the ranking")}</small>
                             </span>
                             <b className="text-xs text-[#a6c8ff]">{formatTon(detailRankingBidAmount)} GRAM</b>
@@ -2644,10 +2690,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             <button type="button" onClick={() => setDetailBidInput(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label={tx("Увеличить ставку", "Increase bid")} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"><Plus className="h-4 w-4" /></button>
                           </div>
                           <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
-                          <button type="button" onClick={() => { if (!detail || !selectedSlot) return; const value = detailRankingBidAmount; const minimum = getMinimumRankingBidGram(selectedSlot); if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`)); placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM` }); }} disabled={!detailRankingPreviewSlotNumber || placeBid.isPending} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{placeBid.isPending ? tx("Оплата…", "Paying…") : tx("Поднять ставку", "Raise bid")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("Оплата GRAM с баланса TG TOP", "GRAM payment from TG TOP balance")}</small></span><b className="text-xs text-[#a6c8ff]">{formatTon(detailRankingBidAmount)} GRAM</b></button>
+                          {detailWillDrop && <p className="mt-2 rounded-lg border border-rose-300/20 bg-rose-400/[0.07] px-2.5 py-2 text-[10px] font-medium text-rose-200">{tx(`Группа опустится с ${selectedSlot.slotNumber}-й на ${detailRankingPreviewSlotNumber}-ю позицию`, `The community will drop from ${selectedSlot.slotNumber} to ${detailRankingPreviewSlotNumber}`)}</p>}
+                          <button type="button" onClick={() => { if (!detail || !selectedSlot) return; const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`)); placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous" }); }} disabled={!detailRankingPreviewSlotNumber || placeBid.isPending} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{placeBid.isPending ? tx("Оплата…", "Paying…") : tx("Обновить ставку", "Update bid")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("Оплата GRAM с баланса TG TOP", "GRAM payment from TG TOP balance")}</small></span><b className="text-xs text-[#a6c8ff]">{formatTon(detailRankingBidAmount)} GRAM</b></button>
                         </div>
                       )}
-                      {!ownsDetail && isAuthenticated && <button onClick={() => openMine(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Перебить лот", "Outbid lot")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Следующая ставка: от ${formatTon(detailMinimumBid)} GRAM`, `Next bid: from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
+                      {!ownsDetail && isAuthenticated && <button onClick={() => openOutbid(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Перебить лот", "Outbid lot")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Следующая ставка: от ${formatTon(detailMinimumBid)} GRAM`, `Next bid: from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
                     </section>
                   )}
                   {!ownsDetail && detail.group.salePriceTon && detail.group.listingType === "sale" && (
@@ -3132,6 +3179,41 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <div className="flex gap-2 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
             <button type="button" onClick={() => setPendingGroupDeletion(null)} className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/[0.05]">{tx("Отмена", "Cancel")}</button>
             <button type="button" onClick={() => { if (!pendingGroupDeletion) return; deleteGroups.mutate({ groupIds: [pendingGroupDeletion.id] }, { onSuccess: () => { setPendingGroupDeletion(null); setPage("mine"); } }); }} disabled={deleteGroups.isPending} className="flex-1 rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-400 disabled:opacity-50">{deleteGroups.isPending ? tx("Удаляем…", "Removing…") : tx("Удалить", "Remove")}</button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={outbidOpen} onOpenChange={open => { setOutbidOpen(open); if (!open) setTargetSlot(null); }}>
+        <SheetContent side="bottom" className="max-h-[82dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4">
+            <SheetTitle className="text-slate-100">{tx("Перебить лот", "Outbid lot")}</SheetTitle>
+            <p className="text-xs leading-5 text-slate-500">{tx(`Новая ставка — от ${formatTon(outbidMinimum)} GRAM`, `New bid starts at ${formatTon(outbidMinimum)} GRAM`)}</p>
+          </SheetHeader>
+          <div className="space-y-4 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2">
+            <section>
+              <div className="mb-2 flex items-center justify-between"><b className="text-xs text-slate-200">{tx("Ваша группа", "Your community")}</b><small className="text-[10px] text-slate-500">{tx("Одна группа", "One community")}</small></div>
+              <div className="space-y-2">
+                {outbidCandidates.map(group => {
+                  const selected = group.id === outbidGroupId;
+                  return <button key={group.id} type="button" onClick={() => setOutbidGroupId(group.id)} className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-colors ${selected ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+                    <Avatar group={group} compact />
+                    <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{getCommunityAccessLabel(group, language)}</small></span>
+                    <span className={`grid h-5 w-5 place-items-center rounded-md border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+                  </button>;
+                })}
+                {!outbidCandidates.length && <p className="rounded-xl border border-dashed border-white/12 px-3 py-4 text-center text-xs text-slate-500">{tx("Нет подходящей своей группы для этого рейтинга.", "No owned community matches this ranking.")}</p>}
+              </div>
+            </section>
+            <section className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-black/15 p-3">
+              <span><b className="block text-xs text-slate-200">{outbidVisibility === "public" ? tx("Публичное размещение", "Public placement") : tx("Анонимное размещение", "Anonymous placement")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{outbidVisibility === "public" ? tx("Другие смогут перейти в ваш профиль", "Others can open your profile") : tx("Постинг будет анонимным", "Placement stays anonymous")}</small></span>
+              <button type="button" role="switch" aria-checked={outbidVisibility === "public"} aria-label={tx("Переключить доступность профиля", "Toggle profile availability")} onClick={() => setOutbidVisibility(value => value === "public" ? "anonymous" : "public")} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${outbidVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${outbidVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></button>
+            </section>
+            <section>
+              <div className="mb-2 flex items-center justify-between"><b className="text-xs text-slate-200">{tx("Ваша ставка", "Your bid")}</b><small className="text-[10px] text-slate-500">{tx("Только выше текущей", "Higher only")}</small></div>
+              <div className="flex items-center rounded-xl border border-white/8 bg-[#0b0f14] p-1"><button type="button" onClick={() => setOutbidBidInput(formatTon(Math.max(outbidMinimum, outbidBidAmount - 0.1)))} className="grid h-10 w-10 place-items-center rounded-lg text-slate-300"><Minus className="h-4 w-4" /></button><Input value={outbidBidInput} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setOutbidBidInput(value); }} onBlur={() => setOutbidBidInput(formatTon(outbidBidAmount))} aria-label={tx("Ставка перебития в GRAM", "Outbid in GRAM")} className="h-10 flex-1 border-0 bg-transparent px-0 text-center text-lg font-semibold text-white focus-visible:ring-0" /><b className="mr-2 text-xs text-slate-400">GRAM</b><button type="button" onClick={() => setOutbidBidInput(formatTon(Math.min(MAX_RANKING_BID_GRAM, outbidBidAmount + 0.1)))} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff]"><Plus className="h-4 w-4" /></button></div>
+              <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, outbidBidAmount)]} min={outbidMinimum} max={Math.max(outbidMinimum, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setOutbidBidInput(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
+            </section>
+            <button type="button" onClick={() => { if (!targetSlot || !selectedOutbidGroup) return; placeBid.mutate({ slotId: targetSlot.id, groupId: selectedOutbidGroup.id, bidAmount: outbidBidAmount, currentBid: `${formatTon(outbidBidAmount)} GRAM`, showOwnerContact: outbidVisibility === "public", anonymousListing: outbidVisibility === "anonymous" }); }} disabled={!selectedOutbidGroup || placeBid.isPending} className="flex w-full items-center justify-between rounded-xl bg-[#1688f5] px-4 py-3.5 text-left text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45"><span>{placeBid.isPending ? tx("Оплата…", "Paying…") : tx("Перебить лот", "Outbid lot")}</span><span>{formatTon(outbidBidAmount)} GRAM</span></button>
           </div>
         </SheetContent>
       </Sheet>

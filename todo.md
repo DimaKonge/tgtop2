@@ -344,6 +344,19 @@
 - [x] Place the «Перейти в группу» action immediately below the community identity and above the live ranking card
 - [x] Derive the «Адрес в каталоге» line from the actual ranking-board category, country, and subcategory, without generic fallback «Все» segments
 - [x] Allow a new 0.1 GRAM listing only below every higher-priced lot and append it after the existing 0.1 GRAM queue
+- [x] Allow an owner to lower their own bid from 0.1 GRAM with a red preview showing the lower resulting ranking position
+- [x] Keep visitor bidding strictly above the current lot price and expose no bid-reduction controls to non-owners
+- [ ] Add a compact in-card placement drawer with selectable owned groups, anonymous/public visibility, optional sale price, and entry-bonus settings
+- [x] Make «Перебить лот» select exactly one owned group and set only a higher bid
+- [x] Ask whether the selected outbid community should be listed publicly or anonymously before payment
+- [x] Hide the owner @username in a community detail card whenever that placement is anonymous
+- [x] Replace the verbose visibility caption with concise Russian copy in the compact outbid card
+- [x] Use one profile-access toggle: enabled lets other users open the owner profile; disabled makes the placement anonymous
+- [x] Style the profile-access toggle as a Telegram-like settings row with a right-aligned blue switch and concise status copy
+- [x] Allow visibility changes from an already ranked owner detail card, charging the current Top price in GRAM to refresh the placement
+- [x] Put the public-profile toggle beside the owner row; when disabled, replace name and @username with «Анонимное размещение» after paid Top refresh
+- [x] Let an owner reduce their own price down to 0.1 GRAM and show a red message before payment if the placement will move lower
+- [ ] Keep sale price, visibility, and entry-bonus configuration exclusively inside the owned community detail card
 - [ ] Order all ranking and lower-list placements by GRAM price descending, while allowing 0.1 GRAM entries below higher prices and preserving first-listed order on equal prices
 - [ ] Build the low-cost lower row as a lightweight first-come live feed with smooth card movement under high concurrent placement traffic
 - [x] Design a free-entry giveaways block with visible prizes, rules, participation counts, and end times before adding any draw mechanics

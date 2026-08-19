@@ -335,5 +335,16 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('detailBoardSubcategory !== "Все"');
     expect(source).toContain('const listingTargetIsOwnSlot = listingRankingPreviewSlot?.group?.id === selectedListingGroup?.id');
     expect(source).toContain('listingTargetIsOwnSlot ? getRankingFloorGram(listingRankingPreviewSlot.slotNumber) : getMinimumRankingBidGram(listingRankingPreviewSlot)');
+    expect(source).toContain('const [outbidOpen, setOutbidOpen] = useState(false);');
+    expect(source).toContain('const openOutbid = (slot: Slot) => {');
+    expect(source).toContain('onClick={() => openOutbid(selectedSlot)}');
+    expect(source).toContain('Другие смогут перейти в ваш профиль');
+    expect(source).toContain('Постинг будет анонимным');
+    expect(source).toContain('!detailPlacementIsPublic || !detailOwner');
+    expect(source).toContain('const detailWillDrop = Boolean(selectedSlot && detailRankingPreviewSlotNumber && detailRankingPreviewSlotNumber > selectedSlot.slotNumber);');
+    expect(source).toContain('Группа опустится с ${selectedSlot.slotNumber}-й на ${detailRankingPreviewSlotNumber}-ю позицию');
+    expect(source).toContain('tx("Обновить ставку", "Update bid")');
+    expect(source).toContain('tx("Другие смогут перейти в ваш профиль", "Others can open your profile")');
+    expect(source).toContain('tx("Обновить Top", "Refresh Top")');
   });
 });

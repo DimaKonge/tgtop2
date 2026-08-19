@@ -49,6 +49,8 @@ export const appRouter = router({
         bidAmount: z.number().positive().max(1_000),
         currentBid: z.string(),
         groupId: z.number(),
+        anonymousListing: z.boolean().optional(),
+        showOwnerContact: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const group = await db.getGroupById(input.groupId);
@@ -61,7 +63,10 @@ export const appRouter = router({
           `${formatTonAmount(input.bidAmount)} GRAM`,
           group.username ?? group.title,
           ctx.user.openId,
-          input.groupId
+          input.groupId,
+          input.anonymousListing === undefined && input.showOwnerContact === undefined
+            ? undefined
+            : { anonymousListing: Boolean(input.anonymousListing), showOwnerContact: Boolean(input.showOwnerContact) }
         );
         void notifyRecordedRankingBid({
           openId: ctx.user.openId,
