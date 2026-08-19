@@ -400,3 +400,4 @@
 - [x] Use users.publicProfile, rather than the retired anonymous-listing field, when projecting owner cards in catalog and ranking server queries
 - [x] Cap every ranking-bid slider, input, and server payment request at 1,000 GRAM
 - [x] Add a listing-settings ranking-price slider that previews the exact ranking position a selected community would occupy before payment
+- [x] Apply a higher paid bid when the same community remains in its current ranking cell without resetting its cell-occupancy timer

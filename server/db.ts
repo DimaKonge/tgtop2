@@ -279,7 +279,7 @@ export async function getAuctionSlots(category?: string, country?: string, subca
           groupId: source.groupId,
           title: source.title,
           subtitle: source.subtitle,
-          updatedAt: now,
+          updatedAt: source.groupId === target.groupId ? target.updatedAt : now,
         } : {
           bidAmount: 0,
           currentBid: "0 GRAM",
@@ -380,8 +380,9 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
     for (let index = 0; index < board.length; index += 1) {
       const slot = board[index];
       const source = strictOrder[index];
-      const changed = slot.groupId !== (source?.groupId ?? null);
-      if (!changed) continue;
+      const groupChanged = slot.groupId !== (source?.groupId ?? null);
+      const bidChanged = slot.bidAmount !== (source?.bidAmount ?? 0);
+      if (!groupChanged && !bidChanged) continue;
       await tx.update(auctionSlots).set(source ? {
         bidAmount: source.bidAmount,
         currentBid: source.currentBid,
@@ -390,7 +391,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
         groupId: source.groupId,
         title: source.title,
         subtitle: source.subtitle,
-        updatedAt: now,
+        updatedAt: groupChanged ? now : slot.updatedAt,
       } : {
         bidAmount: 0,
         currentBid: "0 GRAM",
