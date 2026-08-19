@@ -11,6 +11,7 @@ import { getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRank
 import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
 import { DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
+import { canExposeOwnerProfile } from "./ownerVisibilityPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -301,21 +302,22 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     ownerName: users.name,
     ownerTelegramUsername: users.telegramUsername,
     ownerAvatarUrl: users.avatarUrl,
+    ownerPublicProfile: users.publicProfile,
   }).from(groupsCatalog)
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
     .where(and(...groupConditions));
-  const groupMap = new Map(groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => {
+  const groupMap = new Map(groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl, ownerPublicProfile }) => {
     const publicGroup = toPublicGroup(group);
     return [
     group.id,
     {
       ...publicGroup,
-      owner: group.anonymousListing ? undefined : {
+      owner: canExposeOwnerProfile(ownerPublicProfile) ? {
         openId: group.ownerOpenId,
         name: ownerName,
         telegramUsername: ownerTelegramUsername,
         avatarUrl: ownerAvatarUrl,
-      },
+      } : undefined,
     },
   ];
   }));
@@ -497,20 +499,21 @@ export async function getGroupsCatalog(category?: string, country?: string, subc
     ownerName: users.name,
     ownerTelegramUsername: users.telegramUsername,
     ownerAvatarUrl: users.avatarUrl,
+    ownerPublicProfile: users.publicProfile,
   }).from(groupsCatalog)
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
     .where(and(...conditions))
     .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
-  return groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl }) => {
+  return groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl, ownerPublicProfile }) => {
     const publicGroup = toPublicGroup(group);
     return {
       ...publicGroup,
-      owner: group.anonymousListing ? undefined : {
+      owner: canExposeOwnerProfile(ownerPublicProfile) ? {
         openId: group.ownerOpenId,
         name: ownerName,
         telegramUsername: ownerTelegramUsername,
         avatarUrl: ownerAvatarUrl,
-      },
+      } : undefined,
     };
   });
 }
@@ -520,8 +523,7 @@ export async function getPublicOwnerProfile(openId: string) {
   if (!db) return undefined;
   const groups = await db.select().from(groupsCatalog).where(and(
     eq(groupsCatalog.ownerOpenId, openId),
-    eq(groupsCatalog.status, "listed"),
-    eq(groupsCatalog.anonymousListing, false)
+    eq(groupsCatalog.status, "listed")
   )).orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
   if (!groups.length) return undefined;
   const [owner] = await db.select({
@@ -568,7 +570,7 @@ export async function getOwnerLeaderboard(limit = 25) {
     totalMembers,
   }).from(groupsCatalog)
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
-    .where(and(eq(groupsCatalog.status, "listed"), eq(groupsCatalog.anonymousListing, false), eq(users.publicProfile, true)))
+    .where(and(eq(groupsCatalog.status, "listed"), eq(users.publicProfile, true)))
     .groupBy(groupsCatalog.ownerOpenId, users.name, users.telegramUsername, users.avatarUrl)
     .orderBy(desc(totalMembers), desc(activeListings), asc(groupsCatalog.ownerOpenId))
     .limit(Math.min(Math.max(limit, 1), 100));
@@ -669,24 +671,25 @@ export async function getGroupDetail(id: number) {
     ownerName: users.name,
     ownerTelegramUsername: users.telegramUsername,
     ownerAvatarUrl: users.avatarUrl,
+    ownerPublicProfile: users.publicProfile,
   }).from(groupsCatalog)
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
     .where(eq(groupsCatalog.id, id))
     .limit(1);
   if (!detailRow) return undefined;
-  const { group, ownerName, ownerTelegramUsername, ownerAvatarUrl } = detailRow;
+  const { group, ownerName, ownerTelegramUsername, ownerAvatarUrl, ownerPublicProfile } = detailRow;
   const snapshots = await db.select().from(groupStatsSnapshots).where(eq(groupStatsSnapshots.groupId, id)).orderBy(desc(groupStatsSnapshots.recordedAt)).limit(30);
   const ownerNfts = await db.select().from(nftUsernames)
     .where(and(eq(nftUsernames.showcaseGroupId, group.id), eq(nftUsernames.status, "available")))
     .orderBy(desc(nftUsernames.createdAt));
   return {
     group: toDetailGroup(group),
-    owner: group.anonymousListing ? undefined : {
+    owner: canExposeOwnerProfile(ownerPublicProfile) ? {
       openId: group.ownerOpenId,
       name: ownerName,
       telegramUsername: ownerTelegramUsername,
       avatarUrl: ownerAvatarUrl,
-    },
+    } : undefined,
     ownerContact: group.showOwnerContact && ownerTelegramUsername ? {
       telegramUsername: ownerTelegramUsername,
     } : undefined,

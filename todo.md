@@ -397,3 +397,4 @@
 - [x] Correct every ranking minimum label and bid step to GRAM: a 0.1 GRAM floor and 0.1 GRAM increment where applicable
 - [x] Add a slot-linked GRAM bid slider that selects an eligible community and opens the official payment flow for the chosen ranking place
 - [x] Style the ranking-bid sheet as a Telegram-native pricing panel with selected community, large GRAM amount, colour-responsive slider, quick raise controls, and one «Оплатить место» action
+- [x] Use users.publicProfile, rather than the retired anonymous-listing field, when projecting owner cards in catalog and ranking server queries
