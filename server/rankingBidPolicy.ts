@@ -1,11 +1,33 @@
 export const VACANT_RANKING_MINIMUM_MILLITON = 100;
 
-export function getMinimumRankingBidMilliTon(currentBidMilliTon: number, occupied: boolean) {
-  return occupied
-    ? Math.max(VACANT_RANKING_MINIMUM_MILLITON, currentBidMilliTon + 1)
-    : VACANT_RANKING_MINIMUM_MILLITON;
+export function getRankingFloorMilliTon(slotNumber: number) {
+  if (slotNumber <= 1) return 300;
+  if (slotNumber <= 3) return 200;
+  return VACANT_RANKING_MINIMUM_MILLITON;
 }
 
-export function isQualifyingRankingBid(bidMilliTon: number, currentBidMilliTon: number, occupied: boolean) {
-  return bidMilliTon >= getMinimumRankingBidMilliTon(currentBidMilliTon, occupied);
+export function getMinimumRankingBidMilliTon(currentBidMilliTon: number, occupied: boolean, floorMilliTon = VACANT_RANKING_MINIMUM_MILLITON) {
+  return occupied
+    ? Math.max(floorMilliTon, currentBidMilliTon + 1)
+    : floorMilliTon;
+}
+
+export function isQualifyingRankingBid(bidMilliTon: number, currentBidMilliTon: number, occupied: boolean, floorMilliTon = VACANT_RANKING_MINIMUM_MILLITON) {
+  return bidMilliTon >= getMinimumRankingBidMilliTon(currentBidMilliTon, occupied, floorMilliTon);
+}
+
+export type RankingEntry = {
+  bidAmount: number;
+  heldSince: Date;
+  groupId: number | null;
+};
+
+export function sortRankingEntriesByBid<T extends RankingEntry>(entries: T[]) {
+  return [...entries].sort((left, right) => {
+    const priceOrder = right.bidAmount - left.bidAmount;
+    if (priceOrder) return priceOrder;
+    const occupancyOrder = left.heldSince.getTime() - right.heldSince.getTime();
+    if (occupancyOrder) return occupancyOrder;
+    return Number(left.groupId ?? 0) - Number(right.groupId ?? 0);
+  });
 }

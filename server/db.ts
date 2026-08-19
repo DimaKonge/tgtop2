@@ -4,11 +4,10 @@ import { randomBytes } from "node:crypto";
 import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
-import { cascadeRankedOccupants } from "./auctionCascade";
 import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline } from "./protectedDeals";
 import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
 import { isCatalogSubcategory } from "./catalogTaxonomy";
-import { getMinimumRankingBidMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
+import { getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid, sortRankingEntriesByBid } from "./rankingBidPolicy";
 import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
 import { DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
@@ -259,10 +258,37 @@ export async function getAuctionSlots(category?: string, country?: string, subca
   const db = await getDb();
   if (!db) return [];
 
-  const slots = await db.select().from(auctionSlots).where(and(
+  let slots = await db.select().from(auctionSlots).where(and(
     eq(auctionSlots.category, "Все"),
     eq(auctionSlots.country, "Global")
   )).orderBy(asc(auctionSlots.slotNumber));
+  const rankedSlots = sortRankingEntriesByBid(slots.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt })));
+  const vacantSlots = slots.filter(slot => slot.groupId === null);
+  const strictOrder = [...rankedSlots, ...vacantSlots];
+  if (strictOrder.some((source, index) => source.id !== slots[index]?.id)) {
+    const now = new Date();
+    await db.transaction(async tx => {
+      for (let index = 0; index < strictOrder.length; index += 1) {
+        const source = strictOrder[index];
+        const target = slots[index];
+        if (!target || source.id === target.id) continue;
+        await tx.update(auctionSlots).set({
+          bidAmount: source.bidAmount,
+          currentBid: source.currentBid,
+          leaderUsername: source.leaderUsername,
+          leaderUserId: source.leaderUserId,
+          groupId: source.groupId,
+          title: source.title,
+          subtitle: source.subtitle,
+          updatedAt: now,
+        }).where(eq(auctionSlots.id, target.id));
+      }
+    });
+    slots = await db.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, "Все"),
+      eq(auctionSlots.country, "Global")
+    )).orderBy(asc(auctionSlots.slotNumber));
+  }
   const groupIds = slots.map(slot => slot.groupId).filter((id): id is number => id !== null);
   if (groupIds.length === 0) return slots.map(slot => ({ ...slot, group: null }));
   const groupConditions = [inArray(groupsCatalog.id, groupIds)];
@@ -304,9 +330,10 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   if (!groupId || !group) throw new Error("Группа недоступна для размещения");
   const target = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
   if (!target) throw new Error("Позиция рейтинга не найдена");
-  if (!isQualifyingRankingBid(bidAmount, target.bidAmount, target.groupId !== null)) {
-    const requiredMilliTon = getMinimumRankingBidMilliTon(target.bidAmount, target.groupId !== null);
-    throw new Error(`Минимальная ставка для этой позиции — ${formatTonAmount(requiredMilliTon / 1000)} TON`);
+  const slotFloor = getRankingFloorMilliTon(target.slotNumber);
+  if (!isQualifyingRankingBid(bidAmount, target.bidAmount, target.groupId !== null, slotFloor)) {
+    const requiredMilliTon = getMinimumRankingBidMilliTon(target.bidAmount, target.groupId !== null, slotFloor);
+    throw new Error(`Минимальная ставка для этой позиции — ${formatTonAmount(requiredMilliTon / 1000)} GRAM`);
   }
   const board = await db.select().from(auctionSlots).where(and(
     eq(auctionSlots.category, target.category),
@@ -315,30 +342,26 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
 
   let rankingIntentId = 0;
   await db.transaction(async tx => {
-    const originalByGroupId = new Map(board.filter(slot => slot.groupId !== null).map(slot => [slot.groupId!, slot]));
-    const cascaded = cascadeRankedOccupants(
-      board.map(slot => ({ slotNumber: slot.slotNumber, occupant: slot.groupId })),
-      target.slotNumber,
-      groupId
-    );
+    const now = new Date();
+    const incoming = {
+      bidAmount,
+      currentBid: currentBidStr,
+      leaderUsername,
+      leaderUserId,
+      groupId,
+      title: group.title,
+      subtitle: group.username ? `@${group.username}` : group.category,
+      heldSince: now,
+    };
+    const strictOrder = sortRankingEntriesByBid([
+      ...board.filter(slot => slot.groupId !== null && slot.groupId !== groupId).map(slot => ({ ...slot, heldSince: slot.updatedAt })),
+      incoming,
+    ]);
 
-    for (const slot of board) {
-      const nextGroupId = cascaded.find(item => item.slotNumber === slot.slotNumber)?.occupant ?? null;
-      if (slot.id === target.id) {
-        await tx.update(auctionSlots).set({
-          bidAmount,
-          currentBid: currentBidStr,
-          leaderUsername,
-          leaderUserId,
-          groupId,
-          title: group.title,
-          subtitle: group.username ? `@${group.username}` : group.category,
-          updatedAt: new Date(),
-        }).where(eq(auctionSlots.id, slot.id));
-        continue;
-      }
-      const source = nextGroupId ? originalByGroupId.get(nextGroupId) : undefined;
-      const changed = slot.groupId !== nextGroupId;
+    for (let index = 0; index < board.length; index += 1) {
+      const slot = board[index];
+      const source = strictOrder[index];
+      const changed = slot.groupId !== (source?.groupId ?? null);
       if (!changed) continue;
       await tx.update(auctionSlots).set(source ? {
         bidAmount: source.bidAmount,
@@ -348,16 +371,16 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
         groupId: source.groupId,
         title: source.title,
         subtitle: source.subtitle,
-        updatedAt: new Date(),
+        updatedAt: now,
       } : {
         bidAmount: 0,
-        currentBid: "0 TON",
+        currentBid: "0 GRAM",
         leaderUsername: "-",
         leaderUserId: null,
         groupId: null,
         title: "Свободное место",
         subtitle: "Ждет листинга",
-        updatedAt: new Date(),
+        updatedAt: now,
       }).where(eq(auctionSlots.id, slot.id));
     }
 

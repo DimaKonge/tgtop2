@@ -377,9 +377,18 @@
 - [x] Open community links through Telegram WebApp navigation so returning from a group preserves the current TG TOP Mini App session and detail screen
 - [x] Refine My Groups into a clear workspace for adding communities, selecting several cards, listing them, removing them from the catalog, and deleting them from the cabinet
 - [x] Refine Profile hierarchy around balance, wallet, reward status, public visibility, leaderboard, and compact account activity
-- [ ] Remove anonymous-listing controls from the listing sheet so owner visibility follows only the public-profile setting
-- [ ] Hide paid-entry UI completely when the selected community is not eligible instead of showing an unavailable-state explanation
-- [ ] Format debit activity with one minus sign and remove technical operation-code labels from Profile history
-- [ ] Show a live per-second timer for a group’s continuous occupancy of its exact ranking cell and reset it whenever the group moves to another cell
-- [ ] Make a public owner card open that owner’s TG TOP portfolio directly; keep the leaderboard as an additional entry point
-- [ ] Make public owner cards open the owner’s TG TOP profile and offer direct Telegram-account navigation when a public @username is available
+- [x] Remove anonymous-listing controls from the listing sheet so owner visibility follows only the public-profile setting
+- [x] Hide paid-entry UI completely when the selected community is not eligible instead of showing an unavailable-state explanation
+- [x] Format debit activity with one minus sign and remove technical operation-code labels from Profile history
+- [x] Show a live per-second timer for a group’s continuous occupancy of its exact ranking cell and reset it whenever the group moves to another cell
+- [x] Make a public owner card open the owner’s Telegram account directly when a public @username is available
+- [ ] Reconcile the accepted TG TOP requirements against local code and production before further feature changes, resolving only verified gaps in one tested release
+- [x] Enforce strict ranking order by GRAM bid, breaking equal-price ties by earliest occupancy and displacing lower positions predictably
+- [x] Replace the ranking-card price badge with a subtle integrated price treatment and show a visible live per-second cell-occupancy timer in the lot-price card
+- [x] Make the owner’s «Управлять этой группой» action open editable listing settings for that exact already listed community
+- [x] Add a downward swipe-to-close gesture on an owner’s group detail that returns to the originating list without interfering with normal scrolling
+- [x] Add a downward swipe-to-close gesture on an owner’s group detail that returns to the originating list without interfering with normal scrolling
+- [x] Add a downward swipe-to-close gesture on an owner’s group detail that returns to the originating list without interfering with normal scrolling
+- [x] Enforce strict ranking order by GRAM bid, breaking equal-price ties by earliest occupancy and displacing lower positions predictably
+- [x] Make public owner cards open the owner’s Telegram account directly when a public @username is available
+- [x] Rebuild and test the outbid auction with explicit scenarios for insertion by price, equal-price time priority, downward displacement, and per-cell timer resets

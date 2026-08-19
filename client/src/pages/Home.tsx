@@ -176,6 +176,7 @@ type Slot = {
   id: number;
   slotNumber: number;
   bidAmount: number;
+  updatedAt?: Date;
   group: Group | null;
 };
 type Nft = {
@@ -226,6 +227,16 @@ const getTelegramAvatarSrc = (group: Group) =>
 const formatTon = (value: number | string | null | undefined) => {
   const amount = typeof value === "number" ? value : Number(value);
   return Number.isFinite(amount) ? amount.toFixed(9).replace(/\.?0+$/, "") : "0";
+};
+const formatPositionDuration = (updatedAt: Date | string | null | undefined, now: number) => {
+  const startedAt = updatedAt ? new Date(updatedAt).getTime() : now;
+  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+  const remainingSeconds = seconds % 60;
+  const clock = [hours, minutes, remainingSeconds].map(value => String(value).padStart(2, "0")).join(":");
+  return days > 0 ? `${days}д ${clock}` : clock;
 };
 const getCategoryLabel = (category: Group["category"], language: Language) =>
   language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
@@ -388,7 +399,7 @@ function GroupCard({
   const lead = variant === "lead";
   const compact = variant === "compact";
   const rankingPlacement = variant !== "list";
-  const rankingFloor = compact ? 0.1 : 0.3;
+  const rankingFloor = lead ? 0.3 : variant === "secondary" ? 0.2 : 0.1;
   const rankingPriceLabel = bidAmount > 0
     ? `${formatTon(bidAmount / 1000)} GRAM`
     : `от ${formatTon(rankingFloor)} GRAM`;
@@ -419,7 +430,7 @@ function GroupCard({
       className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
     >
       {rankingPlacement && (
-        <span className={`absolute left-0 top-0 z-10 rounded-br-lg border-b border-r border-white/10 bg-black/45 px-2 py-1 font-semibold leading-none text-white backdrop-blur-md ${lead ? "text-[11px]" : compact ? "text-[7px]" : "text-[9px]"}`}>
+        <span className={`absolute left-2 top-2 z-10 rounded-full bg-black/55 px-2 py-1 font-medium tracking-tight text-white/95 shadow-sm shadow-black/25 backdrop-blur-sm ${lead ? "text-[11px]" : compact ? "text-[7px]" : "text-[9px]"}`}>
           {rankingPriceLabel}
         </span>
       )}
@@ -791,7 +802,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [listingSubcategory, setListingSubcategory] = useState("General");
   const [salePriceTon, setSalePriceTon] = useState("");
   const [isListingForSale, setIsListingForSale] = useState(false);
-  const [anonymousListing, setAnonymousListing] = useState(true);
   const [showOwnerContact, setShowOwnerContact] = useState(false);
   const [monthlyEntryEnabled, setMonthlyEntryEnabled] = useState(false);
   const [monthlyEntryStars, setMonthlyEntryStars] = useState("");
@@ -809,10 +819,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [preparedNftTransfer, setPreparedNftTransfer] = useState<PreparedNftTransfer | null>(null);
   const [showcaseNftId, setShowcaseNftId] = useState<number | null>(null);
   const [visibleActivityCount, setVisibleActivityCount] = useState(5);
+  const [positionClock, setPositionClock] = useState(() => Date.now());
+  const [detailReturnPage, setDetailReturnPage] = useState<Page>("top");
+  const detailSwipeStart = useRef<{ x: number; y: number; scrollY: number } | null>(null);
 
   useEffect(() => {
     localStorage.setItem("tg-top-language", language);
   }, [language]);
+  useEffect(() => {
+    const interval = window.setInterval(() => setPositionClock(Date.now()), 1_000);
+    return () => window.clearInterval(interval);
+  }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     let listingId = Number(params.get("listing"));
@@ -1393,21 +1410,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? selectedListingGroups[0]?.category
     : null;
   const listingSubcategoryOptions = listingCategory ? CATEGORY_SUBCATEGORIES[listingCategory] : [];
-  const canApplyAnonymousListing = selectedListingGroups.length > 0;
   const monthlyEntryEligibleGroup = selectedListingGroups.length === 1 && selectedListingGroups[0]?.category === "Каналы" && !selectedListingGroups[0]?.username
     ? selectedListingGroups[0]
     : null;
   const selectedListingGroup = selectedListingGroups.length === 1 ? selectedListingGroups[0] : null;
-  const paidEntryUnavailableReason = selectedListingGroup?.category === "Чаты"
-    ? "Telegram поддерживает платный вход Stars только для каналов."
-    : selectedListingGroup?.category === "Каналы" && selectedListingGroup.username
-      ? "Для платного входа сделайте канал приватным: публичная ссылка обходит оплату."
-      : null;
   const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
   const showcaseNft = myNfts.find(nft => nft.id === showcaseNftId) ?? null;
   const reviewedRecipient = nftRecipientQuery.data;
 
   const openGroup = (id: number) => {
+    setDetailReturnPage(page === "details" ? "top" : page);
     setSelectedGroupId(id);
     setPage("details");
   };
@@ -1465,7 +1477,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "");
     setSalePriceTon(firstGroup?.salePriceTon ?? "");
     setIsListingForSale(Boolean(firstGroup?.salePriceTon));
-    setAnonymousListing(firstGroup?.anonymousListing ?? !Boolean(account?.user?.publicProfile));
     setShowOwnerContact(Boolean(firstGroup?.showOwnerContact));
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
     setMonthlyEntryStars(firstGroup?.monthlyEntryStars ? String(firstGroup.monthlyEntryStars) : "");
@@ -1494,7 +1505,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       city: listingCity === "Все" ? undefined : listingCity,
       subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined,
       salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
-      anonymousListing: selectedListingGroups.length ? anonymousListing : undefined,
       showOwnerContact: selectedListingGroups.length ? showOwnerContact : undefined,
       monthlyEntryEnabled,
       monthlyEntryStars: monthlyEntryEnabled ? Number(monthlyEntryStars) : undefined,
@@ -2189,11 +2199,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         )}
 
         {page === "details" && (
-          <section className="space-y-4">
+          <section
+            className="space-y-4"
+            onTouchStart={event => {
+              detailSwipeStart.current = { x: event.touches[0]?.clientX ?? 0, y: event.touches[0]?.clientY ?? 0, scrollY: window.scrollY };
+            }}
+            onTouchEnd={event => {
+              const start = detailSwipeStart.current;
+              const end = event.changedTouches[0];
+              detailSwipeStart.current = null;
+              if (!start || !end || !ownsDetail || start.scrollY > 8) return;
+              const distanceY = end.clientY - start.y;
+              const distanceX = Math.abs(end.clientX - start.x);
+              if (distanceY >= 88 && distanceX <= 72) setPage(detailReturnPage);
+            }}
+          >
             {detail ? (
               <>
                 <button
-                  onClick={() => setPage("top")}
+                  onClick={() => setPage(detailReturnPage)}
                   className="flex items-center gap-1 text-xs text-slate-400"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -2284,7 +2308,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                     </div>
                   )}
-                  {detail.group.anonymousListing ? (
+                  {!detailOwner ? (
                     <div className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] p-3">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">A</span>
                       <span className="min-w-0 flex-1">
@@ -2295,8 +2319,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   ) : detailOwner && (
                     <button
                       type="button"
-                      onClick={() => openOwner(detailOwner.openId)}
-                      className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] p-3 text-left transition-colors hover:bg-white/[0.07] active:scale-[0.99]"
+                      onClick={() => {
+                        if (detailOwner.telegramUsername) openTelegramCommunityLink(`https://t.me/${detailOwner.telegramUsername}`);
+                      }}
+                      disabled={!detailOwner.telegramUsername}
+                      className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] p-3 text-left transition-colors hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-default disabled:opacity-70"
                     >
                       <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-200">
                         {detailOwner.avatarUrl ? <img src={detailOwner.avatarUrl} alt="" className="h-full w-full object-cover" /> : (detailOwner.name ?? detailOwner.telegramUsername ?? "T").slice(0, 1).toUpperCase()}
@@ -2308,22 +2335,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
                     </button>
                   )}
-                  <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-white/8 pt-4 text-xs">
-                    <span className="rounded-md bg-white/5 px-2 py-1 text-slate-300">
-                      {detail.group.status === "listed"
-                        ? tx(`В каталоге с ${date(detail.group.listedAt)}`, `Listed since ${date(detail.group.listedAt)}`)
-                        : tx("Не размещена в каталоге", "Not listed")}
-                    </span>
-                    <span className="rounded-md bg-white/5 px-2 py-1 text-slate-400">
-                      {selectedSlot ? tx("Выделенная позиция", "Featured placement") : tx("Общий список", "General list")}
-                    </span>
-                  </div>
                   {ownsDetail && (
                     <button
-                      onClick={() => openMine()}
+                      onClick={() => openListing([detail.group.id])}
                       className="mt-3 w-full rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 py-2 text-xs font-semibold text-[#a6c8ff]"
                     >
-                      {tx("Управлять этой группой", "Manage this group")}
+                      {tx("Настроить листинг", "Edit listing")}
                     </button>
                   )}
                   {ownsDetail && detail.group.category === "Чаты" && (
@@ -2380,8 +2397,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   )}
                   {selectedSlot && (
                     <section className="mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
-                      <div className="flex items-start justify-between gap-3"><span><small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[#8fb9ff]">{tx("Рынок позиции", "Position market")}</small><b className="mt-1 block text-sm text-slate-100">{tx(`Актуально: ${formatTon(selectedSlot.bidAmount / 1000)} GRAM`, `Current: ${formatTon(selectedSlot.bidAmount / 1000)} GRAM`)}</b></span><span className="rounded-md border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-slate-300">{tx(`от ${formatTon(detailMinimumBid)} GRAM`, `from ${formatTon(detailMinimumBid)} GRAM`)}</span></div>
-                      {!ownsDetail && isAuthenticated && <button onClick={() => openMine(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Перебить ставку", "Outbid placement")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM`, `Minimum bid: ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
+                      <div className="flex items-start justify-between gap-3">
+                        <span>
+                          <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[#8fb9ff]">{tx("Цена лота", "Lot price")}</small>
+                          <b className="mt-1 block text-base text-slate-100">{formatTon(selectedSlot.bidAmount / 1000)} GRAM</b>
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-slate-300">{tx(`минимум ${formatTon(detailMinimumBid)} GRAM`, `minimum ${formatTon(detailMinimumBid)} GRAM`)}</span>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between border-t border-white/8 pt-2 text-[11px]">
+                        <span className="text-slate-500">{tx("На этой позиции", "In this position")}</span>
+                        <b className="font-mono tabular-nums text-slate-200">{formatPositionDuration(selectedSlot.updatedAt, positionClock)}</b>
+                      </div>
+                      {!ownsDetail && isAuthenticated && <button onClick={() => openMine(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Цена лота", "Lot price")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Установить от ${formatTon(detailMinimumBid)} GRAM`, `Set from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
                     </section>
                   )}
                   {!ownsDetail && detail.group.salePriceTon && detail.group.listingType === "sale" && (
@@ -3016,12 +3043,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </section>
             )}
 
-            {paidEntryUnavailableReason && (
-              <section className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-                <b className="block text-xs text-slate-300">Платный вход недоступен</b>
-                <small className="mt-1 block text-[11px] leading-4 text-slate-500">{paidEntryUnavailableReason}</small>
-              </section>
-            )}
+
 
             {selectedListingGroups.length === 1 && (() => {
               const rewardGroup = selectedListingGroups[0];
@@ -3071,19 +3093,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <p className="rounded-lg border border-dashed border-white/10 bg-[#0b0f14] px-3 py-2 text-[11px] leading-4 text-slate-500">{tx("Ежемесячный вход в Stars доступен после перевода канала в приватный режим.", "Monthly Stars entry is available after the channel becomes private.")}</p>
             )}
 
-            {selectedListingGroups.length > 0 && (
-              <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs">
-                    <b className="block text-slate-200">{tx("Анонимное размещение", "Anonymous listing")}</b>
-                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Не показывать владельца в карточках TG TOP для всех выбранных площадок", "Do not show the owner on TG TOP cards for all selected communities")}</small>
-                  </span>
-                  <button type="button" role="switch" aria-checked={anonymousListing} aria-label={tx("Переключить анонимное размещение", "Toggle anonymous listing")} onClick={() => setAnonymousListing(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${anonymousListing ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
-                    <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${anonymousListing ? "translate-x-6" : "translate-x-0"}`} />
-                  </button>
-                </div>
-              </section>
-            )}
+
 
             {selectedListingGroups.length > 0 && (
               <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
