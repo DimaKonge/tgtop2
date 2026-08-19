@@ -50,6 +50,7 @@ type Page = "top" | "catalog" | "giveaways" | "earn" | "mine" | "details" | "own
 type Audience = "all" | "small" | "medium" | "large";
 type MyGroupsViewMode = "list" | "grid";
 type Language = "ru" | "en";
+const getRussianLanguage = (): Language => "ru";
 const n = (value: number, language: Language = "ru") =>
   new Intl.NumberFormat(language === "en" ? "en-US" : "ru-RU").format(value);
 const date = (value?: Date | null, language: Language = "ru") =>
@@ -708,23 +709,18 @@ function GramBalanceChart({ transactions, currentBalance, language }: { transact
 function SettingsSheet({
   open,
   onOpenChange,
-  language,
-  onLanguageChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  language: Language;
-  onLanguageChange: (language: Language) => void;
 }) {
   const { appearance, setAppearance } = useTheme();
-  const isEnglish = language === "en";
   const appearanceItems: Array<{
     value: Appearance;
     label: string;
     icon: typeof Moon;
   }> = [
-    { value: "dark", label: isEnglish ? "Dark" : "Темная", icon: Moon },
-    { value: "light", label: isEnglish ? "Light" : "Светлая", icon: Sun },
+    { value: "dark", label: "Темная", icon: Moon },
+    { value: "light", label: "Светлая", icon: Sun },
   ];
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -734,41 +730,14 @@ function SettingsSheet({
       >
         <SheetHeader className="px-4 pb-1">
           <SheetTitle className="text-sm font-semibold text-slate-100">
-            {isEnglish ? "Preferences" : "Настройки"}
+            Настройки
           </SheetTitle>
         </SheetHeader>
         <div className="mx-4 overflow-hidden rounded-xl border border-white/8 bg-black/10">
           <section className="flex h-12 items-center justify-between gap-3 px-3">
             <div className="flex items-center gap-2 text-xs text-slate-300">
-              <Globe2 className="h-4 w-4" />
-              {isEnglish ? "Language" : "Язык"}
-            </div>
-            <ToggleGroup
-              type="single"
-              value={language}
-              onValueChange={value => {
-                if (value) onLanguageChange(value as Language);
-              }}
-              className="inline-flex w-auto overflow-hidden rounded-md border border-white/8 bg-[#0b0f14] p-0.5"
-            >
-              <ToggleGroupItem
-                value="ru"
-                className="h-7 min-w-10 border-0 px-2 text-[10px] text-slate-400 data-[state=on]:rounded data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
-              >
-                RU
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="en"
-                className="h-7 min-w-10 border-0 px-2 text-[10px] text-slate-400 data-[state=on]:rounded data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white"
-              >
-                EN
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </section>
-          <section className="flex h-12 items-center justify-between gap-3 border-t border-white/8 px-3">
-            <div className="flex items-center gap-2 text-xs text-slate-300">
               <Sun className="h-4 w-4" />
-              {isEnglish ? "Appearance" : "Оформление"}
+              Оформление
             </div>
             <div className="inline-flex overflow-hidden rounded-md border border-white/8 bg-[#0b0f14] p-0.5">
               {appearanceItems.map(item => {
@@ -782,7 +751,7 @@ function SettingsSheet({
                     className={`flex h-7 items-center gap-1 rounded px-2 text-[10px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-400"}`}
                   >
                     <Icon className="h-3 w-3" />
-                    {item.value === "dark" ? (isEnglish ? "Dark" : "Темн.") : (isEnglish ? "Light" : "Светл.")}
+                    {item.value === "dark" ? "Темн." : "Светл."}
                   </button>
                 );
               })}
@@ -809,9 +778,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [topSearchQuery, setTopSearchQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
-  const [language, setLanguage] = useState<Language>(() =>
-    localStorage.getItem("tg-top-language") === "en" ? "en" : "ru"
-  );
+  const language = getRussianLanguage();
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [selectedOwnerOpenId, setSelectedOwnerOpenId] = useState<string | null>(null);
   const [targetSlot, setTargetSlot] = useState<Slot | null>(null);
@@ -850,9 +817,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [detailReturnPage, setDetailReturnPage] = useState<Page>("top");
   const detailSwipeStart = useRef<{ x: number; y: number; scrollY: number } | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem("tg-top-language", language);
-  }, [language]);
   useEffect(() => {
     const interval = window.setInterval(() => setPositionClock(Date.now()), 1_000);
     return () => window.clearInterval(interval);
@@ -2099,7 +2063,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <section className={`space-y-4 ${myGroupsSelectionMode ? "pb-[12rem]" : ""}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-semibold">{tx("Мои группы", "My groups")}</h1>
+                <h1 className="text-2xl font-semibold">Рабочее пространство</h1>
                 <p className="mt-1 text-sm text-slate-500">
                   {tx("Подключите бота, чтобы получить статистику и разместить площадку.", "Add the bot as an administrator to get analytics and list your community.")}
                 </p>
@@ -3547,8 +3511,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <SettingsSheet
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
-        language={language}
-        onLanguageChange={setLanguage}
       />
       <Sheet open={Boolean(adminGuideKind)} onOpenChange={open => !open && setAdminGuideKind(null)}>
         <SheetContent side="bottom" className="!bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[52dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-[calc(1rem+env(safe-area-inset-bottom))] text-slate-100">

@@ -103,7 +103,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const getCommunityAccessLabel = (group: Pick<Group, "username">, language: Language)');
     expect(source).toContain('group.username ? `@${group.username}` : language === "en" ? "Private" : "Приватный"');
     expect(source).toContain('detailOwner &&');
-    expect(source).toContain('tx("Мои группы", "My groups")');
+    expect(source).toContain('Рабочее пространство');
+    expect(source).toContain('const getRussianLanguage = (): Language => "ru";');
+    expect(source).not.toContain('localStorage.getItem("tg-top-language")');
     expect(source).not.toContain('tx("Личная папка", "Personal cabinet")');
     expect(source).toContain('tx("Разместил", "Listed by")');
     expect(source).not.toContain('onOwnerClick');
@@ -248,7 +250,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx(`Войти за ${detail.group.monthlyEntryStars} Stars`');
     expect(source).toContain('tx("Сделать вход платным", "Make entry paid")');
     expect(source).toContain('max-h-[34dvh] rounded-t-[20px]');
-    expect(source).toContain('min-w-10 border-0 px-2 text-[10px]');
+    expect(source).toContain('Оформление');
+    expect(source).not.toContain('onLanguageChange');
     expect(source).toContain('tx("Весь мир", "Worldwide")');
     expect(source).toContain('<Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)}');
     expect(source).toContain('globalDirection === "NFT" ? tx("Поиск NFT", "Search NFT")');
