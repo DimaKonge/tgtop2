@@ -461,3 +461,4 @@
 - [x] Replace the revoked @TGTOP_robot token on production and verify long-polling recovery
 - [x] Prevent the web-server production bundle from starting a second Telegram long-polling loop
 - [x] Show the selected community manager and their Telegram account in public details even when the owner listing is anonymous
+- [x] Replace «Менеджер группы» with the shorter «Менеджер» label while retaining the public manager card and Telegram link

@@ -2597,7 +2597,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         >
                           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#3f8cff]/25 bg-[#3f8cff]/10 text-xs font-semibold text-[#b6d1ff]">{detail.group.managerName.slice(0, 1).toUpperCase()}</span>
                           <span className="min-w-0 flex-1">
-                            <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Менеджер группы", "Community manager")}</small>
+                            <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Менеджер", "Manager")}</small>
                             <b className="mt-0.5 block truncate text-xs text-slate-200">{detail.group.managerName}</b>
                             {detail.group.managerUsername && <small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">@{detail.group.managerUsername}</small>}
                           </span>
