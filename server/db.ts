@@ -403,8 +403,11 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   if (target.category !== "Все" && group.category !== target.category) throw new Error("Выберите группу из той же категории рейтинга");
   if (target.subcategory !== "Все" && group.subcategory !== target.subcategory) throw new Error("Выберите группу из той же подкатегории рейтинга");
   const slotFloor = getRankingFloorMilliTon(target.slotNumber);
-  if (!isQualifyingRankingBid(bidAmount, target.bidAmount, target.groupId !== null, slotFloor)) {
-    const requiredMilliTon = getMinimumRankingBidMilliTon(target.bidAmount, target.groupId !== null, slotFloor);
+  const targetIsHeldByAnotherGroup = target.groupId !== null && target.groupId !== groupId;
+  if (!isQualifyingRankingBid(bidAmount, targetIsHeldByAnotherGroup ? target.bidAmount : 0, targetIsHeldByAnotherGroup, slotFloor)) {
+    const requiredMilliTon = targetIsHeldByAnotherGroup
+      ? getMinimumRankingBidMilliTon(target.bidAmount, true, slotFloor)
+      : slotFloor;
     throw new Error(`Минимальная ставка для этой позиции — ${formatTonAmount(requiredMilliTon / 1000)} GRAM`);
   }
   const outbid = target.groupId && target.groupId !== groupId && target.leaderUserId

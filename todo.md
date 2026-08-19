@@ -343,6 +343,7 @@
 - [x] Show the current lot price and the next minimum bid with identical wording for both owners and visitors in every ranked community detail view
 - [x] Place the «Перейти в группу» action immediately below the community identity and above the live ranking card
 - [x] Derive the «Адрес в каталоге» line from the actual ranking-board category, country, and subcategory, without generic fallback «Все» segments
+- [x] Allow a new 0.1 GRAM listing only below every higher-priced lot and append it after the existing 0.1 GRAM queue
 - [ ] Order all ranking and lower-list placements by GRAM price descending, while allowing 0.1 GRAM entries below higher prices and preserving first-listed order on equal prices
 - [ ] Build the low-cost lower row as a lightweight first-come live feed with smooth card movement under high concurrent placement traffic
 - [x] Design a free-entry giveaways block with visible prizes, rules, participation counts, and end times before adding any draw mechanics

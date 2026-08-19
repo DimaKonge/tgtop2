@@ -7,4 +7,12 @@ describe("ranking placement persistence", () => {
     expect(source).toContain("const bidChanged = slot.bidAmount !== (source?.bidAmount ?? 0);");
     expect(source).toContain("updatedAt: groupChanged ? now : slot.updatedAt");
   });
+
+  it("allows the owner to re-list their own slot at the 0.1 GRAM floor without treating it as an outbid", () => {
+    const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+    expect(source).toContain("const targetIsHeldByAnotherGroup = target.groupId !== null && target.groupId !== groupId;");
+    expect(source).toContain("targetIsHeldByAnotherGroup ? target.bidAmount : 0");
+    expect(source).toContain("? getMinimumRankingBidMilliTon(target.bidAmount, true, slotFloor)");
+    expect(source).toContain(": slotFloor;");
+  });
 });

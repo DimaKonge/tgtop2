@@ -1566,7 +1566,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const listingRankingPreviewSlot = listingRankingPreviewSlotNumber
     ? listingSlots.find(slot => slot.slotNumber === listingRankingPreviewSlotNumber) ?? null
     : null;
-  const listingRankingMinimum = listingRankingPreviewSlot ? getMinimumRankingBidGram(listingRankingPreviewSlot) : null;
+  const listingTargetIsOwnSlot = listingRankingPreviewSlot?.group?.id === selectedListingGroup?.id;
+  const listingRankingMinimum = listingRankingPreviewSlot
+    ? listingTargetIsOwnSlot ? getRankingFloorGram(listingRankingPreviewSlot.slotNumber) : getMinimumRankingBidGram(listingRankingPreviewSlot)
+    : null;
   const canPayListingRanking = Boolean(listingRankingPreviewSlot && listingRankingMinimum !== null && listingRankingBidAmount >= listingRankingMinimum);
   const listingRankingScope = selectedListingGroup
     ? [getCategoryLabel(selectedListingGroup.category, language), listingSubcategory ? getSubcategoryLabel(listingSubcategory, language) : null, getCountryLabel(listingCountry, language)].filter((part): part is string => Boolean(part)).join(" · ")

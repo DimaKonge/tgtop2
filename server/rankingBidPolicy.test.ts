@@ -36,13 +36,13 @@ describe("TG TOP paid ranking policy", () => {
     expect(getRankingFloorMilliTon(4)).toBe(100);
   });
 
-  it("orders higher bids first and prioritizes the newer equal bid", () => {
+  it("orders higher bids first and preserves the existing equal-bid queue", () => {
     const ranked = sortRankingEntriesByBid([
       { groupId: 1, bidAmount: 100, heldSince: new Date("2026-08-19T10:00:00Z") },
       { groupId: 2, bidAmount: 300, heldSince: new Date("2026-08-19T10:03:00Z") },
       { groupId: 3, bidAmount: 100, heldSince: new Date("2026-08-19T10:02:00Z") },
     ]);
-    expect(ranked.map(entry => entry.groupId)).toEqual([2, 3, 1]);
+    expect(ranked.map(entry => entry.groupId)).toEqual([2, 1, 3]);
   });
 
   it("compacts every qualifying community upward without vacant slots above it", () => {

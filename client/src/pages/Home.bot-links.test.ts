@@ -333,5 +333,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const detailBoardCountry = selectedSlot?.country');
     expect(source).toContain('tx("Все сообщества", "All communities")');
     expect(source).toContain('detailBoardSubcategory !== "Все"');
+    expect(source).toContain('const listingTargetIsOwnSlot = listingRankingPreviewSlot?.group?.id === selectedListingGroup?.id');
+    expect(source).toContain('listingTargetIsOwnSlot ? getRankingFloorGram(listingRankingPreviewSlot.slotNumber) : getMinimumRankingBidGram(listingRankingPreviewSlot)');
   });
 });
