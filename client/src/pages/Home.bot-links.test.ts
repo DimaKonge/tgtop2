@@ -72,7 +72,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('language === "en" ? "Connected" : "Подключён"');
     expect(source).toContain('balanceTon} TON');
     expect(source).toContain('createStarsRankingPayment');
-    expect(source).toContain('Оплатить место');
+    expect(source).toContain('Оплатить GRAM');
     expect(source).toContain('шаг 0.1 GRAM');
     expect(source).toContain('getMinimumRankingBidGram');
     expect(source).toContain('<Slider value={[bidAmount]}');
@@ -242,11 +242,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('openTelegramCommunityLink(`https://t.me/${detailOwner.telegramUsername}`)');
     expect(source).toContain('const rankSlotId = Number(params.get("rankSlot"));');
     expect(source).toContain('setRankSlotLinkId(rankSlotId)');
-    expect(source).toContain('const MAX_RANKING_BID_GRAM = 1_000');
+    expect(source).toContain('const MAX_RANKING_BID_GRAM = 100');
     expect(source).toContain('getSimulatedRankingSlotNumber');
     expect(source).toContain('Цена места в рейтинге');
     expect(source).toContain('Предпросмотр позиции');
-    expect(source).toContain('Оплатить место');
+    expect(source).toContain('Выбрать оплату');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('detailHasPaidEntry');
     expect(source).toContain('tx(`Войти за ${detail.group.monthlyEntryStars} Stars`');
@@ -264,6 +264,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const rankingPriceLabel = bidAmount > 0');
     expect(source).toContain('`${formatTon(bidAmount / 1000)} GRAM`');
     expect(source).toContain('bidAmount={leadSlot.bidAmount}');
+    expect(source).toContain('slotNumber={leadSlot.slotNumber}');
     expect(source).toContain('grid-cols-4 grid-rows-3 gap-[2px]');
     expect(source).toContain('col-start-2 row-start-1');
     expect(source).toContain('const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const');

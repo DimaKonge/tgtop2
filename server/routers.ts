@@ -46,7 +46,7 @@ export const appRouter = router({
     placeBid: protectedProcedure
       .input(z.object({
         slotId: z.number(),
-        bidAmount: z.number().positive().max(1_000),
+        bidAmount: z.number().positive().max(100),
         currentBid: z.string(),
         groupId: z.number(),
       }))
@@ -55,7 +55,7 @@ export const appRouter = router({
         if (!group || group.ownerOpenId !== ctx.user.openId) {
           throw new Error("Выберите свою группу из личной папки");
         }
-        const intent = await db.placeBid(
+        const intent = await db.payRankingBidWithGramCredit(
           input.slotId,
           Math.round(input.bidAmount * 1000),
           `${formatTonAmount(input.bidAmount)} GRAM`,
@@ -69,11 +69,11 @@ export const appRouter = router({
           bidAmount: intent.bidAmount,
           slotNumber: intent.slotNumber,
         });
-        return { success: true, rankingIntentId: intent.id, paymentStatus: "recorded" as const };
+        return { success: true, rankingIntentId: intent.id, paymentStatus: "paid_gram" as const };
       }),
 
     createStarsRankingPayment: protectedProcedure
-      .input(z.object({ slotId: z.number().int().positive(), groupId: z.number().int().positive(), bidAmount: z.number().positive().max(1_000) }))
+      .input(z.object({ slotId: z.number().int().positive(), groupId: z.number().int().positive(), bidAmount: z.number().positive().max(100) }))
       .mutation(async ({ ctx, input }) => {
         const intent = await db.createStarsRankingPaymentIntent({
           userOpenId: ctx.user.openId,

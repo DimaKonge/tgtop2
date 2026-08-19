@@ -345,6 +345,7 @@
 - [x] Design a free-entry giveaways block with visible prizes, rules, participation counts, and end times before adding any draw mechanics
 - [x] Use a compact Telegram-native giveaway layout: prize card, rule toggles, countdown, participant count, and one clear create or join action
 - [x] Allow boost-only giveaway participation only after server-side verification that the user boosted the selected Telegram community
+- [x] Render profile debits with one minus sign and replace all technical activity codes with clear Russian labels
 - [x] Make Russian the sole visible interface language and rename the My Groups management tab to «Рабочее пространство»
 - [x] Replace the bottom navigation with four primary sections: «Каталог», «Розыгрыши», «Заработать» and «Мой кабинет»
 - [x] Add an owner-facing «Добавить свой розыгрыш» action with owned-community selection, prize, end time, and participation conditions
@@ -401,3 +402,12 @@
 - [x] Cap every ranking-bid slider, input, and server payment request at 1,000 GRAM
 - [x] Add a listing-settings ranking-price slider that previews the exact ranking position a selected community would occupy before payment
 - [x] Apply a higher paid bid when the same community remains in its current ranking cell without resetting its cell-occupancy timer
+- [x] Set every ranking slot floor to 0.1 GRAM and automatically promote listed communities into any vacant higher slot by bid and occupancy time
+- [x] Replace large rank numerals inside ranking cards with a compact position ribbon in the upper corner
+- [x] Offer GRAM and Telegram Stars as explicit payment choices in the ranking bid panel while preserving the selected bid amount
+- [x] Enforce a compact ranking invariant: no occupied slot may have any vacant slot above it
+- [x] Cap ranking price controls at 100 GRAM and provide a 0.1 GRAM slider step, plus/minus buttons, and validated manual price entry with live position preview
+- [x] Show every ranking amount in GRAM; remove Stars-only amount labels from listing settings and keep the payment method choice explicit
+- [x] Hide the community-description block entirely when Telegram did not provide a description
+- [x] Show an owned community’s current ranking place, current bid, catalog category, and location path in its management view
+- [x] Add an in-context 0.1 GRAM slider with − / + controls in group management to preview and pay for a higher ranking position

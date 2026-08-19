@@ -30,6 +30,7 @@ import {
   GripVertical,
   LayoutGrid,
   List,
+  Minus,
   Moon,
   Plus,
   Pin,
@@ -239,13 +240,13 @@ const formatPositionDuration = (updatedAt: Date | string | null | undefined, now
   const remainingSeconds = seconds % 60;
   return [hours, minutes, remainingSeconds].map(value => String(value).padStart(2, "0")).join(":");
 };
-const getRankingFloorGram = (slotNumber: number) => slotNumber <= 1 ? 0.3 : slotNumber <= 3 ? 0.2 : 0.1;
+const getRankingFloorGram = (_slotNumber: number) => 0.1;
 const getMinimumRankingBidGram = (slot: Pick<Slot, "slotNumber" | "bidAmount" | "group">) => {
   const floor = getRankingFloorGram(slot.slotNumber);
   if (!slot.group) return floor;
   return Math.max(floor, Math.round((slot.bidAmount / 1000 + 0.1) * 10) / 10);
 };
-const MAX_RANKING_BID_GRAM = 1_000;
+const MAX_RANKING_BID_GRAM = 100;
 const getSimulatedRankingSlotNumber = (slots: Slot[], candidateGroupId: number, bidAmountGram: number) => {
   const candidateBid = Math.round(bidAmountGram * 1000);
   if (!Number.isSafeInteger(candidateBid) || candidateBid <= 0 || candidateBid > MAX_RANKING_BID_GRAM * 1000) return null;
@@ -414,18 +415,20 @@ function GroupCard({
   onClick,
   language = "ru",
   bidAmount = 0,
+  slotNumber,
 }: {
   group?: Group | null;
   variant?: GroupCardVariant;
   onClick: () => void;
   language?: Language;
   bidAmount?: number;
+  slotNumber?: number;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const lead = variant === "lead";
   const compact = variant === "compact";
   const rankingPlacement = variant !== "list";
-  const rankingFloor = lead ? 0.3 : variant === "secondary" ? 0.2 : 0.1;
+  const rankingFloor = 0.1;
   const rankingPriceLabel = bidAmount > 0
     ? `${formatTon(bidAmount / 1000)} GRAM`
     : `от ${formatTon(rankingFloor)} GRAM`;
@@ -455,8 +458,13 @@ function GroupCard({
       aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
       className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
     >
+      {rankingPlacement && slotNumber && (
+        <span className={`absolute left-0 top-0 z-20 rounded-br-xl border-b border-r border-white/10 bg-[#0b0f14]/82 px-2 py-1 font-bold leading-none text-white/85 shadow-sm shadow-black/30 backdrop-blur-sm ${lead ? "text-xs" : compact ? "text-[8px]" : "text-[10px]"}`}>
+          #{slotNumber}
+        </span>
+      )}
       {rankingPlacement && (
-        <span className={`absolute left-2 top-2 z-10 rounded-full bg-black/55 px-2 py-1 font-medium tracking-tight text-white/95 shadow-sm shadow-black/25 backdrop-blur-sm ${lead ? "text-[11px]" : compact ? "text-[7px]" : "text-[9px]"}`}>
+        <span className={`absolute left-2 z-10 rounded-full bg-black/55 px-2 py-1 font-medium tracking-tight text-white/95 shadow-sm shadow-black/25 backdrop-blur-sm ${slotNumber ? (lead ? "top-9" : compact ? "top-6" : "top-8") : "top-2"} ${lead ? "text-[11px]" : compact ? "text-[7px]" : "text-[9px]"}`}>
           {rankingPriceLabel}
         </span>
       )}
@@ -786,6 +794,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [amount, setAmount] = useState("0.1");
   const [listingRankingBid, setListingRankingBid] = useState("0.1");
   const [starsPaymentGroup, setStarsPaymentGroup] = useState<Group | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"gram" | "stars">("gram");
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [myGroupsSelectionMode, setMyGroupsSelectionMode] = useState(false);
   const myGroupsSelectionHoldTimer = useRef<number | null>(null);
@@ -1163,10 +1172,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const placeBid = trpc.tgTop.placeBid.useMutation({
     onSuccess: () => {
-      toast.success(tx("Ставка зафиксирована в журнале TG TOP. TON не отправлялся.", "Bid recorded in the TG TOP journal. No TON was sent."));
+      toast.success(tx("Ставка оплачена GRAM и размещена в рейтинге.", "Bid paid with GRAM and placed in the ranking."));
       setTargetSlot(null);
+      setStarsPaymentGroup(null);
       setAmount("0.1");
       void utils.tgTop.getSlots.invalidate();
+      void utils.tgTop.getAccount.invalidate();
+      void utils.tgTop.getAccountActivity.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -1423,6 +1435,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const detailMinimumBid = selectedSlot
     ? getMinimumRankingBidGram(selectedSlot)
     : null;
+  const rawDetailRankingBid = Number(amount);
+  const detailRankingBidAmount = detailMinimumBid !== null && Number.isFinite(rawDetailRankingBid)
+    ? Math.min(MAX_RANKING_BID_GRAM, Math.max(detailMinimumBid, Math.round(rawDetailRankingBid * 10) / 10))
+    : detailMinimumBid ?? 0.1;
+  const detailRankingPreviewSlotNumber = detail && selectedSlot
+    ? getSimulatedRankingSlotNumber(slots, detail.group.id, detailRankingBidAmount)
+    : null;
+  const detailCatalogPath = detail
+    ? [tx("Каталог", "Catalog"), getCategoryLabel(detail.group.category, language), getSubcategoryLabel(detail.group.subcategory, language), getCountryLabel(detail.group.country, language), detail.group.city ? getCityLabel(detail.group.country, detail.group.city, language) : null].filter((part): part is string => Boolean(part)).join(" · ")
+    : "";
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
   const detailEntryUrl = detail?.group.monthlyEntryInviteLink ?? (detail?.group.username
     ? `https://t.me/${detail.group.username}`
@@ -1842,6 +1864,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   variant="lead"
                   language={language}
                   bidAmount={leadSlot.bidAmount}
+                  slotNumber={leadSlot.slotNumber}
                   onClick={() =>
                     leadSlot.group
                       ? openGroup(leadSlot.group.id)
@@ -1857,6 +1880,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       variant="secondary"
                       language={language}
                       bidAmount={slot.bidAmount}
+                      slotNumber={slot.slotNumber}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id) : openMine(slot)
                       }
@@ -1872,6 +1896,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       variant="compact"
                       language={language}
                       bidAmount={slot.bidAmount}
+                      slotNumber={slot.slotNumber}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id) : openMine(slot)
                       }
@@ -2353,10 +2378,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             : detail.group.category}
                         </p>
                       )}
-                      <p className="mt-3 text-sm leading-5 text-slate-400">
-                        {detail.group.description ||
-                          tx("Описание не передано Telegram API.", "Telegram did not provide a description.")}
-                      </p>
+                      {detail.group.description?.trim() ? (
+                        <p className="mt-3 text-sm leading-5 text-slate-400">{detail.group.description}</p>
+                      ) : null}
                     </span>
                   </div>
                   {detailEntryUrl && (
@@ -2516,7 +2540,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <section className="mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
                       <div className="flex items-start justify-between gap-3">
                         <span>
-                          <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[#8fb9ff]">{tx("Цена лота", "Lot price")}</small>
+                          <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[#8fb9ff]">{tx(`Текущее место · #${selectedSlot.slotNumber}`, `Current place · #${selectedSlot.slotNumber}`)}</small>
                           <b className="mt-1 block text-base text-slate-100">{formatTon(selectedSlot.bidAmount / 1000)} GRAM</b>
                         </span>
                         <span className="rounded-full border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-slate-300">{tx(`минимум ${formatTon(detailMinimumBid)} GRAM`, `minimum ${formatTon(detailMinimumBid)} GRAM`)}</span>
@@ -2525,6 +2549,28 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <span className="text-slate-500">{tx("На этой позиции", "In this position")}</span>
                         <b className="font-mono tabular-nums text-slate-200">{formatPositionDuration(selectedSlot.updatedAt, positionClock)}</b>
                       </div>
+                      <div className="mt-2 border-t border-white/8 pt-2 text-[11px]">
+                        <small className="block text-slate-500">{tx("Адрес в каталоге", "Catalog location")}</small>
+                        <b className="mt-1 block truncate font-medium text-slate-300">{detailCatalogPath}</b>
+                      </div>
+                      {ownsDetail && (
+                        <div className="mt-3 border-t border-white/8 pt-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <span>
+                              <b className="block text-xs text-[#c7dcff]">{tx("Поднять выше в рейтинге", "Move higher in ranking")}</b>
+                              <small className="mt-0.5 block text-[10px] text-slate-500">{detailRankingPreviewSlotNumber ? tx(`Предпросмотр: ${detailRankingPreviewSlotNumber}-я позиция`, `Preview: position ${detailRankingPreviewSlotNumber}`) : tx("Сумма вне рейтинга", "Amount is outside the ranking")}</small>
+                            </span>
+                            <b className="text-xs text-[#a6c8ff]">{formatTon(detailRankingBidAmount)} GRAM</b>
+                          </div>
+                          <div className="mt-3 flex items-center rounded-xl border border-white/8 bg-[#0b0f14] p-1">
+                            <button type="button" onClick={() => setAmount(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label={tx("Уменьшить ставку", "Decrease bid")} className="grid h-10 w-10 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.07]"><Minus className="h-4 w-4" /></button>
+                            <Input value={formatTon(detailRankingBidAmount)} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setAmount(value); }} aria-label={tx("Новая ставка в GRAM", "New bid in GRAM")} className="h-10 flex-1 border-0 bg-transparent px-1 text-center text-base font-semibold text-white focus-visible:ring-0" />
+                            <button type="button" onClick={() => setAmount(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label={tx("Увеличить ставку", "Increase bid")} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"><Plus className="h-4 w-4" /></button>
+                          </div>
+                          <Slider value={[detailRankingBidAmount]} min={detailMinimumBid ?? 0.1} max={MAX_RANKING_BID_GRAM} step={0.1} onValueChange={([value]) => setAmount(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
+                          <button type="button" onClick={() => { setTargetSlot(selectedSlot); setAmount(formatTon(detailRankingBidAmount)); setPaymentMethod("gram"); setStarsPaymentGroup(detail.group); }} disabled={!detailRankingPreviewSlotNumber} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{tx("Выбрать оплату", "Choose payment")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("GRAM или Telegram Stars", "GRAM or Telegram Stars")}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>
+                        </div>
+                      )}
                       {!ownsDetail && isAuthenticated && <button onClick={() => openMine(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Цена лота", "Lot price")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Установить от ${formatTon(detailMinimumBid)} GRAM`, `Set from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
                     </section>
                   )}
@@ -2758,6 +2804,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       : item.title === "reward_invite_referral" ? tx("Награда за приглашение", "Invite referral reward")
                       : item.title === "reward_manual_add" ? tx("Награда за добавление участника", "Manual member-add reward")
                       : item.title === "catalog_listing" ? tx("Размещение в каталоге", "Catalog listing")
+                      : item.title === "ranking_spend" ? tx("Оплата места в рейтинге", "Ranking placement payment")
+                      : item.title === "ranking_refund" ? tx("Возврат оплаты за место", "Ranking placement refund")
                       : item.title === "ranking_stars" ? tx("Ставка через Telegram Stars", "Telegram Stars bid")
                       : item.title === "ranking_bid" ? tx("Зафиксированная ставка", "Recorded bid")
                       : item.title === "group_buy" ? tx("Защищённая покупка группы", "Protected group purchase")
@@ -2770,14 +2818,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       : item.status === "pending" ? tx("Ожидает оплаты", "Awaiting payment")
                       : item.status === "cancelled" ? tx("Отменено", "Cancelled")
                       : item.status === "expired" ? tx("Истекло", "Expired")
-                      : item.status;
+                      : item.status === "listing_spend" ? tx("Списано", "Debited")
+                      : item.status === "ranking_spend" ? tx("Оплачено GRAM", "Paid with GRAM")
+                      : item.status === "ranking_refund" ? tx("Возвращено", "Refunded")
+                      : item.status === "group_connection_bonus" ? tx("Начислено", "Credited")
+                      : item.status === "manual_bonus" ? tx("Начислено", "Credited")
+                      : item.status === "reward_campaign_reserve" ? tx("Зарезервировано", "Reserved")
+                      : item.status === "reward_campaign_release" ? tx("Возвращено", "Released")
+                      : item.status === "reward_subscription" ? tx("Начислено", "Credited")
+                      : item.status === "reward_invite_referral" ? tx("Начислено", "Credited")
+                      : item.status === "reward_manual_add" ? tx("Начислено", "Credited")
+                      : tx("Зафиксировано", "Recorded");
                     const absoluteAmount = item.amount === null ? null : Math.abs(item.amount);
                     const amount = absoluteAmount === null || !item.currency ? null : `${item.direction === "in" ? "+" : item.direction === "out" ? "−" : ""}${item.currency === "Stars" ? n(absoluteAmount, language) : formatTon(absoluteAmount)} ${item.currency}`;
                     return <div key={item.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 text-[11px] font-semibold text-[#a6c8ff]">{item.type === "stars" ? "★" : item.type === "nft_transfer" ? "NFT" : item.type === "deal" ? "D" : item.type === "bid" ? "B" : "G"}</span>
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-sm">{title}</b>
-                        <small className="mt-1 block truncate text-xs text-slate-500">{item.subject} · {date(item.createdAt, language)}</small>
+                        <small className="mt-1 block truncate text-xs text-slate-500">{item.subject} · {date(item.createdAt, language)} · {status}</small>
                       </span>
                       <span className="shrink-0 text-right">
                         {amount && <b className={`block text-sm ${item.direction === "in" ? "text-[#72a8ff]" : "text-slate-200"}`}>{amount}</b>}
@@ -3014,11 +3072,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <Avatar group={starsPaymentGroup} compact />
                   <span className="min-w-0 flex-1"><b className="block truncate text-sm text-white">{starsPaymentGroup.title}</b><small className="mt-0.5 block text-[11px] text-slate-500">{tx(`Минимум для позиции: ${formatTon(minimum)} GRAM`, `Placement minimum: ${formatTon(minimum)} GRAM`)}</small></span>
                 </div>
-                <label className="block"><span className="mb-2 block text-xs text-slate-400">{tx("Ваша ставка", "Your bid")}</span><span className="flex items-center rounded-2xl border border-white/8 bg-[#0b0f14] px-4"><Input value={amount} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setAmount(value); }} onBlur={() => setBid(Number(amount))} aria-label={tx("Сумма ставки в GRAM", "Bid amount in GRAM")} className="h-14 border-0 bg-transparent px-0 text-3xl font-semibold text-white focus-visible:ring-0" /><b className="text-sm text-slate-400">GRAM</b></span></label>
+                <label className="block"><span className="mb-2 block text-xs text-slate-400">{tx("Ваша ставка", "Your bid")}</span><span className="flex items-center rounded-2xl border border-white/8 bg-[#0b0f14] p-1"><button type="button" onClick={() => setBid(bidAmount - 0.1)} aria-label={tx("Уменьшить ставку", "Decrease bid")} className="grid h-12 w-12 place-items-center rounded-xl text-slate-300 transition-colors hover:bg-white/[0.06]"><Minus className="h-4 w-4" /></button><Input value={amount} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setAmount(value); }} onBlur={() => setBid(Number(amount))} aria-label={tx("Сумма ставки в GRAM", "Bid amount in GRAM")} className="h-12 flex-1 border-0 bg-transparent px-0 text-center text-3xl font-semibold text-white focus-visible:ring-0" /><b className="mr-2 text-sm text-slate-400">GRAM</b><button type="button" onClick={() => setBid(bidAmount + 0.1)} aria-label={tx("Увеличить ставку", "Increase bid")} className="grid h-12 w-12 place-items-center rounded-xl text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/10"><Plus className="h-4 w-4" /></button></span></label>
                 <div><div className="mb-2 flex items-center justify-between text-[10px] text-slate-500"><span>{formatTon(minimum)} GRAM</span><span className={tone.text}>{ratio <= 1.2 ? tx("Минимальная", "Minimum") : ratio <= 1.5 ? tx("Уверенная", "Confident") : tx("Максимальная", "Maximum")}</span><span>{formatTon(maximum)} GRAM</span></div><Slider value={[bidAmount]} min={minimum} max={maximum} step={0.1} onValueChange={([value]) => setBid(value)} className={`py-3 [&_[data-slot=slider-track]]:h-3 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-thumb]]:size-7 ${tone.range}`} /></div>
                 <div className="grid grid-cols-4 gap-2">{[{ label: "+10%", value: bidAmount * 1.1 }, { label: "+30%", value: bidAmount * 1.3 }, { label: "+50%", value: bidAmount * 1.5 }, { label: tx("Минимум", "Minimum"), value: minimum }].map(item => <button key={item.label} onClick={() => setBid(item.value)} className="rounded-xl border border-white/8 bg-white/[0.04] px-2 py-2.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.08] active:scale-[0.97]">{item.label}</button>)}</div>
                 <p className="text-center text-xs text-slate-400">{tx(`${formatTon(bidAmount)} GRAM · шаг 0.1 GRAM`, `${formatTon(bidAmount)} GRAM · 0.1 GRAM step`)}</p>
-                <button onClick={() => createStarsRankingPayment.mutate({ slotId: targetSlot.id, groupId: starsPaymentGroup.id, bidAmount })} disabled={createStarsRankingPayment.isPending || !isAuthenticated} className="flex w-full items-center justify-between rounded-2xl bg-[#1688f5] px-5 py-4 text-left text-white shadow-lg shadow-[#1688f5]/20 transition-transform active:scale-[0.98] disabled:opacity-55"><span><b className="block text-base">{isAuthenticated ? tx("Оплатить место", "Pay for placement") : tx("Войти через Telegram", "Sign in with Telegram")}</b><small className="mt-0.5 block text-[11px] text-white/70">{tx("Telegram покажет защищённое подтверждение.", "Telegram will show a protected confirmation.")}</small></span><b className="text-lg">{starsAmount} ★</b></button>
+                <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/8 bg-black/15 p-1"><button type="button" onClick={() => setPaymentMethod("gram")} className={`rounded-lg px-3 py-2 text-left transition-colors ${paymentMethod === "gram" ? "bg-[#3f8cff]/20 text-[#c8ddff]" : "text-slate-400 hover:bg-white/[0.04]"}`}><b className="block text-xs">GRAM</b><small className="mt-0.5 block text-[10px]">{tx("С баланса TG TOP", "From TG TOP balance")}</small></button><button type="button" onClick={() => setPaymentMethod("stars")} className={`rounded-lg px-3 py-2 text-left transition-colors ${paymentMethod === "stars" ? "bg-[#3f8cff]/20 text-[#c8ddff]" : "text-slate-400 hover:bg-white/[0.04]"}`}><b className="block text-xs">Telegram Stars</b><small className="mt-0.5 block text-[10px]">{starsAmount} ★</small></button></div>
+                <button onClick={() => paymentMethod === "gram" ? submitPlacement(starsPaymentGroup) : createStarsRankingPayment.mutate({ slotId: targetSlot.id, groupId: starsPaymentGroup.id, bidAmount })} disabled={(paymentMethod === "gram" ? placeBid.isPending : createStarsRankingPayment.isPending) || !isAuthenticated} className="flex w-full items-center justify-between rounded-2xl bg-[#1688f5] px-5 py-4 text-left text-white shadow-lg shadow-[#1688f5]/20 transition-transform active:scale-[0.98] disabled:opacity-55"><span><b className="block text-base">{isAuthenticated ? paymentMethod === "gram" ? tx("Оплатить GRAM", "Pay with GRAM") : tx("Оплатить через Stars", "Pay with Stars") : tx("Войти через Telegram", "Sign in with Telegram")}</b><small className="mt-0.5 block text-[11px] text-white/70">{paymentMethod === "gram" ? tx("Сумма спишется с баланса TG TOP.", "The amount will be deducted from your TG TOP balance.") : tx("Telegram покажет защищённое подтверждение.", "Telegram will show a protected confirmation.")}</small></span><b className="text-lg">{paymentMethod === "gram" ? `${formatTon(bidAmount)} GRAM` : `${starsAmount} ★`}</b></button>
               </>;
             })()}
           </div>
@@ -3090,17 +3149,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <b className="block text-sm text-[#c7dcff]">{tx("Цена места в рейтинге", "Ranking placement price")}</b>
                     <small className="mt-1 block text-[11px] leading-4 text-slate-400">{tx("Перед оплатой посмотрите, на какую ячейку попадёт эта группа.", "Preview the exact cell this community will receive before paying.")}</small>
                   </span>
-                  <span className="rounded-full border border-[#72a8ff]/25 bg-[#3f8cff]/10 px-2 py-1 text-[10px] font-semibold text-[#a6c8ff]">{tx("до 1 000 GRAM", "up to 1,000 GRAM")}</span>
+                  <span className="rounded-full border border-[#72a8ff]/25 bg-[#3f8cff]/10 px-2 py-1 text-[10px] font-semibold text-[#a6c8ff]">{tx("до 100 GRAM", "up to 100 GRAM")}</span>
                 </div>
-                <div className="mt-3 flex items-center rounded-xl border border-white/8 bg-[#0b0f14] px-3">
-                  <Input value={listingRankingBid} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setListingRankingBid(value); }} onBlur={() => setListingRankingBid(formatTon(listingRankingBidAmount))} aria-label={tx("Цена места в GRAM", "Ranking price in GRAM")} className="h-12 border-0 bg-transparent px-0 text-xl font-semibold text-white focus-visible:ring-0" />
-                  <b className="text-xs text-slate-400">GRAM</b>
+                <div className="mt-3 flex items-center rounded-xl border border-white/8 bg-[#0b0f14] p-1">
+                  <button type="button" onClick={() => setListingRankingBid(formatTon(Math.max(0.1, listingRankingBidAmount - 0.1)))} aria-label={tx("Уменьшить цену", "Decrease price")} className="grid h-10 w-10 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.06]"><Minus className="h-4 w-4" /></button>
+                  <Input value={listingRankingBid} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setListingRankingBid(value); }} onBlur={() => setListingRankingBid(formatTon(listingRankingBidAmount))} aria-label={tx("Цена места в GRAM", "Ranking price in GRAM")} className="h-10 flex-1 border-0 bg-transparent px-0 text-center text-xl font-semibold text-white focus-visible:ring-0" />
+                  <b className="mr-1 text-xs text-slate-400">GRAM</b>
+                  <button type="button" onClick={() => setListingRankingBid(formatTon(Math.min(MAX_RANKING_BID_GRAM, listingRankingBidAmount + 0.1)))} aria-label={tx("Увеличить цену", "Increase price")} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/10"><Plus className="h-4 w-4" /></button>
                 </div>
                 <Slider value={[listingRankingBidAmount]} min={0.1} max={MAX_RANKING_BID_GRAM} step={0.1} onValueChange={([value]) => setListingRankingBid(formatTon(value))} className="mt-3 py-2 [&_[data-slot=slider-track]]:h-2.5 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-6 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
                 <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.035] px-3 py-2.5">
                   {listingRankingPreviewSlotNumber ? <><small className="block text-[10px] uppercase tracking-[0.1em] text-slate-500">{tx("Предпросмотр позиции", "Placement preview")}</small><b className="mt-1 block text-sm text-white">{tx(`Займёт ${listingRankingPreviewSlotNumber}-ю позицию`, `Will take position ${listingRankingPreviewSlotNumber}`)}</b><small className="mt-1 block text-[10px] text-slate-400">{listingRankingMinimum !== null ? tx(`Для этой ячейки нужно от ${formatTon(listingRankingMinimum)} GRAM`, `This cell requires at least ${formatTon(listingRankingMinimum)} GRAM`) : ""}</small></> : <><b className="block text-sm text-amber-100">{tx("С этой суммой группа не попадёт в Top", "This amount will not enter Top")}</b><small className="mt-1 block text-[10px] text-slate-500">{tx("Увеличьте ставку, чтобы занять доступную ячейку.", "Increase the bid to take an available cell.")}</small></>}
                 </div>
-                <button type="button" onClick={() => { if (!listingRankingPreviewSlot || !canPayListingRanking) return; setTargetSlot(listingRankingPreviewSlot); setAmount(formatTon(listingRankingBidAmount)); setListingOpen(false); window.setTimeout(() => setStarsPaymentGroup(selectedListingGroup), 160); }} disabled={!canPayListingRanking} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#1688f5] px-4 py-3 text-left text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45"><span>{tx("Оплатить место", "Pay for placement")}</span><span>{Math.max(10, Math.ceil(listingRankingBidAmount * 100))} ★</span></button>
+                <button type="button" onClick={() => { if (!listingRankingPreviewSlot || !canPayListingRanking) return; setTargetSlot(listingRankingPreviewSlot); setAmount(formatTon(listingRankingBidAmount)); setPaymentMethod("gram"); setListingOpen(false); window.setTimeout(() => setStarsPaymentGroup(selectedListingGroup), 160); }} disabled={!canPayListingRanking} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#1688f5] px-4 py-3 text-left text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45"><span>{tx("Выбрать оплату", "Choose payment")}</span><span>{formatTon(listingRankingBidAmount)} GRAM</span></button>
               </section>
             )}
 

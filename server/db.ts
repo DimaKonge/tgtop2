@@ -196,16 +196,20 @@ export async function getAccountActivity(openId: string) {
                 ? "reward_subscription"
                 : item.kind === "reward_invite_referral"
                   ? "reward_invite_referral"
-                  : item.kind === "reward_manual_add"
+                    : item.kind === "reward_manual_add"
                     ? "reward_manual_add"
-                    : "catalog_listing",
+                    : item.kind === "ranking_spend"
+                      ? "ranking_spend"
+                      : item.kind === "ranking_refund"
+                        ? "ranking_refund"
+                        : "catalog_listing",
       subject: namedGroup(item.groupTitle, item.groupUsername),
       amount: item.amount / 100,
       currency: "GRAM",
       direction: item.amount >= 0 ? "in" as const : "out" as const,
     })),
     ...starsPayments.map(item => ({ id: `stars:${item.id}`, type: "stars" as const, status: item.status, createdAt: item.paidAt ?? item.createdAt, title: "ranking_stars", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.starsAmount, currency: "Stars", direction: "out" as const })),
-    ...bids.map(item => ({ id: `bid:${item.id}`, type: "bid" as const, status: item.status, createdAt: item.createdAt, title: "ranking_bid", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.bidAmount / 1000, currency: "TON", direction: "neutral" as const })),
+    ...bids.map(item => ({ id: `bid:${item.id}`, type: "bid" as const, status: item.status, createdAt: item.createdAt, title: "ranking_bid", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.bidAmount / 1000, currency: "GRAM", direction: "neutral" as const })),
     ...userDeals.map(item => ({ id: `deal:${item.id}`, type: "deal" as const, status: item.status, createdAt: item.createdAt, title: item.dealType, subject: namedGroup(item.groupTitle, item.groupUsername), amount: Number(item.price), currency: "TON", direction: item.buyerOpenId === openId ? "out" as const : "in" as const })),
     ...transfers.map(item => ({ id: `nft:${item.id}`, type: "nft_transfer" as const, status: item.status, createdAt: item.confirmedAt ?? item.createdAt, title: "nft_transfer", subject: item.username ? `@${item.username}` : "NFT", amount: null, currency: null, direction: item.senderOpenId === openId ? "out" as const : "in" as const })),
   ].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime()).slice(0, 100);
@@ -417,6 +421,31 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   });
 
   return { id: rankingIntentId, slotNumber: target.slotNumber, bidAmount, groupTitle: group.title, outbid };
+}
+
+export async function payRankingBidWithGramCredit(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const spendUnits = Math.round((bidAmount / 1000) * 100);
+  const [account] = await db.select({ bonusBalance: users.bonusBalance }).from(users).where(eq(users.openId, leaderUserId)).limit(1);
+  if (!account || account.bonusBalance < spendUnits) {
+    throw new Error(`Недостаточно GRAM на балансе. Нужно ${formatTonAmount(spendUnits / 100)} GRAM`);
+  }
+
+  await db.transaction(async tx => {
+    await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${spendUnits}` }).where(eq(users.openId, leaderUserId));
+    await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -spendUnits, kind: "ranking_spend" });
+  });
+
+  try {
+    return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId);
+  } catch (error) {
+    await db.transaction(async tx => {
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${spendUnits}` }).where(eq(users.openId, leaderUserId));
+      await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: spendUnits, kind: "ranking_refund" });
+    });
+    throw error;
+  }
 }
 
 export async function createStarsRankingPaymentIntent(input: { userOpenId: string; slotId: number; groupId: number; bidAmount: number }) {
