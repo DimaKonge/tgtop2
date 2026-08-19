@@ -462,3 +462,7 @@
 - [x] Prevent the web-server production bundle from starting a second Telegram long-polling loop
 - [x] Show the selected community manager and their Telegram account in public details even when the owner listing is anonymous
 - [x] Replace «Менеджер группы» with the shorter «Менеджер» label while retaining the public manager card and Telegram link
+- [x] Add a visible owner-menu control to switch the community listing between anonymous and public visibility
+- [x] Move listing settings from the separate sheet into a compact, ordered owner-management card without duplicated actions
+- [x] Redesign the primary «Перейти в группу» action as an expressive Telegram-blue entry card with clear visual priority
+- [x] Rename «Обновить ставку» to «Обновить лот» and restyle it as a visually prominent primary action

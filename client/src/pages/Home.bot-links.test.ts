@@ -83,10 +83,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('getPublicOwnerProfile.useQuery');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('tx("Перейти в группу", "Open community")');
-    expect(source).toContain('tx("Перейти в приватную группу", "Open private community")');
+    expect(source).toContain('tx("Открыть приватную группу", "Open private community")');
     expect(source).toContain('ownsDetail && detail.group.status !== "listed"');
     expect(source).toContain('tx("Разместить в каталоге", "List in catalog")');
-    expect(source).toContain('onClick={() => openListing([detail.group.id])}');
+    expect(source).toContain('onClick={() => setInlineListingOpen(true)}');
     expect(source).toContain('const detailMinimumBid = selectedSlot');
     expect(source).toContain('tx("цена лота", "lot price")');
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
@@ -314,12 +314,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Input value={detailBidInput}');
     expect(source).toContain('onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))}');
     expect(source).toContain('onValueChange={([value]) => setDetailBidInput(formatTon(value))}');
-    expect(source).toContain('Оплата GRAM с баланса TG TOP');
+    expect(source).toContain('Применить цену и видимость');
     expect(source).not.toContain('paymentMethod === "stars"');
     expect(source).toContain('const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null)');
     expect(source).toContain('Удалить группу из платформы?');
     expect(source).toContain('className="flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-5"');
-    expect(source).toContain('className="order-1 mt-4 flex min-h-12 w-full items-center justify-between rounded-xl border border-[#4d96ff]/45');
+    expect(source).toContain('className="order-1 mt-4 flex min-h-16 w-full items-center justify-between rounded-2xl border border-[#83b6ff]/65 bg-gradient-to-r from-[#1688f5] via-[#2d82ed] to-[#4d70d8]');
     expect(source).toContain('className="order-2 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3"');
     expect(source).toContain('function AudienceGrowthChart');
     expect(source).toContain('Снимки @TGTOP_robot с первого наблюдения.');
@@ -343,7 +343,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('!detailPlacementIsPublic || !detailOwner');
     expect(source).toContain('const detailWillDrop = Boolean(selectedSlot && detailRankingPreviewSlotNumber && detailRankingPreviewSlotNumber > selectedSlot.slotNumber);');
     expect(source).toContain('Группа опустится с ${selectedSlot.slotNumber}-й на ${detailRankingPreviewSlotNumber}-ю позицию');
-    expect(source).toContain('tx("Обновить ставку", "Update bid")');
+    expect(source).toContain('tx("Обновить лот", "Refresh lot")');
     expect(source).toContain('tx("Другие смогут перейти в ваш профиль", "Others can open your profile")');
     expect(source).toContain('Чтобы изменения вступили в силу, обновите ставку.');
     expect(source).not.toContain('tx("Обновить Top", "Refresh Top")');
@@ -363,5 +363,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('listingAnnouncementEnabled,');
     expect(source).toContain('tx("Объявление о листинге", "Listing announcement")');
     expect(source).toContain('@TGTOP_robot опубликует сообщение в группе после сохранения листинга.');
+    expect(source).toContain('const [inlineListingOpen, setInlineListingOpen] = useState(false);');
+    expect(source).toContain('const saveInlineDetailListing = () => {');
+    expect(source).toContain('tx("Параметры публикации", "Publication settings")');
+    expect(source).toContain('tx("Публичная публикация", "Public publication")');
+    expect(source).toContain('tx("Открыть в Telegram", "Open in Telegram")');
+    expect(source).toContain('tx("Обновить лот", "Refresh lot")');
   });
 });
