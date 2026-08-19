@@ -136,6 +136,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('label: "Мой кабинет"');
     expect(source).toContain('page === "giveaways"');
     expect(source).toContain('page === "earn"');
+    expect(source).toContain('openGiveaways.useQuery');
+    expect(source).toContain('createGiveaway.useMutation');
+    expect(source).toContain('joinGiveaway.useMutation');
+    expect(source).toContain('Добавить свой розыгрыш');
     expect(source).toContain('import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"');
     expect(source).not.toContain('const canApplyAnonymousListing = selectedListingGroups.length > 0');
     expect(source).not.toContain('anonymousListing: selectedListingGroups.length ? anonymousListing : undefined');

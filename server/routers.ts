@@ -100,6 +100,22 @@ export const appRouter = router({
     myGroups: protectedProcedure.query(async ({ ctx }) => {
       return await db.getMyGroups(ctx.user.openId);
     }),
+    openGiveaways: publicProcedure.query(async () => {
+      return await db.getOpenGiveaways();
+    }),
+    createGiveaway: protectedProcedure
+      .input(z.object({
+        groupId: z.number().int().positive(),
+        title: z.string().trim().min(3).max(160),
+        prizeTitle: z.string().trim().min(2).max(160),
+        rules: z.string().trim().max(2_000).optional(),
+        boostOnly: z.boolean().optional(),
+        endsAt: z.coerce.date(),
+      }))
+      .mutation(async ({ ctx, input }) => await db.createGiveaway(ctx.user.openId, input)),
+    joinGiveaway: protectedProcedure
+      .input(z.object({ giveawayId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => await db.joinGiveaway(input.giveawayId, ctx.user.openId)),
 
     saveMyGroupsLayout: protectedProcedure
       .input(z.object({

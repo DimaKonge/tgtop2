@@ -145,6 +145,37 @@ export const rewardInviteLinks = mysqlTable("reward_invite_links", {
 
 export type RewardInviteLink = typeof rewardInviteLinks.$inferSelect;
 
+export const giveaways = mysqlTable("giveaways", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("groupId").notNull(),
+  ownerOpenId: varchar("ownerOpenId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 160 }).notNull(),
+  prizeTitle: varchar("prizeTitle", { length: 160 }).notNull(),
+  rules: text("rules"),
+  boostOnly: boolean("boostOnly").default(false).notNull(),
+  status: mysqlEnum("status", ["open", "closed", "cancelled"]).default("open").notNull(),
+  endsAt: timestamp("endsAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("giveaways_status_ends_idx").on(table.status, table.endsAt),
+  index("giveaways_owner_created_idx").on(table.ownerOpenId, table.createdAt),
+  index("giveaways_group_created_idx").on(table.groupId, table.createdAt),
+]);
+
+export type Giveaway = typeof giveaways.$inferSelect;
+
+export const giveawayParticipants = mysqlTable("giveaway_participants", {
+  id: int("id").autoincrement().primaryKey(),
+  giveawayId: int("giveawayId").notNull(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("giveaway_participants_giveaway_user_unique").on(table.giveawayId, table.userOpenId),
+  index("giveaway_participants_giveaway_joined_idx").on(table.giveawayId, table.joinedAt),
+]);
+
+export type GiveawayParticipant = typeof giveawayParticipants.$inferSelect;
+
 export const auctionSlots = mysqlTable("auction_slots", {
   id: int("id").autoincrement().primaryKey(),
   slotNumber: int("slotNumber").notNull(),

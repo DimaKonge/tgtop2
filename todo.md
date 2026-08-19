@@ -342,12 +342,12 @@
 - [ ] Resolve equal ranking prices by placing the community with the newest recorded bid above earlier equal-price placements
 - [ ] Order all ranking and lower-list placements by GRAM price descending, while allowing 0.1 GRAM entries below higher prices and preserving first-listed order on equal prices
 - [ ] Build the low-cost lower row as a lightweight first-come live feed with smooth card movement under high concurrent placement traffic
-- [ ] Design a free-entry giveaways block with visible prizes, rules, participation counts, and end times before adding any draw mechanics
-- [ ] Use a compact Telegram-native giveaway layout: prize card, rule toggles, countdown, participant count, and one clear create or join action
+- [x] Design a free-entry giveaways block with visible prizes, rules, participation counts, and end times before adding any draw mechanics
+- [x] Use a compact Telegram-native giveaway layout: prize card, rule toggles, countdown, participant count, and one clear create or join action
 - [ ] Allow boost-only giveaway participation only after server-side verification that the user boosted the selected Telegram community
 - [ ] Make Russian the sole visible interface language and rename the My Groups management tab to «Рабочее пространство»
 - [x] Replace the bottom navigation with four primary sections: «Каталог», «Розыгрыши», «Заработать» and «Мой кабинет»
-- [ ] Add an owner-facing «Добавить свой розыгрыш» action with owned-community selection, prize, end time, and participation conditions
+- [x] Add an owner-facing «Добавить свой розыгрыш» action with owned-community selection, prize, end time, and participation conditions
 - [ ] Add a prefilled «Создать розыгрыш» action to owned-community cards in «Моём кабинете» and their detail screens
 - [x] Add a private-by-default public-account switch that opts an owner into profile visibility and the owner leaderboard
 - [x] Restrict the owner leaderboard to public-account opt-ins and allow an anonymous listing to expose only its configured contact

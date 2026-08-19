@@ -1,7 +1,7 @@
-import { eq, and, or, asc, desc, gte, inArray, sql } from "drizzle-orm";
+import { eq, and, or, asc, desc, gte, gt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline } from "./protectedDeals";
@@ -12,6 +12,7 @@ import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
 import { DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
 import { canExposeOwnerProfile } from "./ownerVisibilityPolicy";
+import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -646,6 +647,62 @@ export async function getMyGroups(ownerOpenId: string) {
     .orderBy(desc(groupsCatalog.ownerPinned), asc(groupsCatalog.ownerSortOrder), desc(groupsCatalog.createdAt));
   for (const group of groups) await grantGroupConnectionBonus(ownerOpenId, group.id);
   return groups;
+}
+
+export async function getOpenGiveaways() {
+  const db = await getDb();
+  if (!db) return [];
+  const participantCount = sql<number>`COUNT(${giveawayParticipants.id})`;
+  const rows = await db.select({
+    giveaway: giveaways,
+    groupTitle: groupsCatalog.title,
+    groupUsername: groupsCatalog.username,
+    groupAvatarFileId: groupsCatalog.avatarFileId,
+    participantCount,
+  }).from(giveaways)
+    .leftJoin(groupsCatalog, eq(giveaways.groupId, groupsCatalog.id))
+    .leftJoin(giveawayParticipants, eq(giveawayParticipants.giveawayId, giveaways.id))
+    .where(and(eq(giveaways.status, "open"), gt(giveaways.endsAt, new Date())))
+    .groupBy(giveaways.id, groupsCatalog.title, groupsCatalog.username, groupsCatalog.avatarFileId)
+    .orderBy(asc(giveaways.endsAt), desc(giveaways.createdAt));
+  return rows.map(row => ({
+    ...row.giveaway,
+    group: row.groupTitle ? { title: row.groupTitle, username: row.groupUsername, avatarFileId: row.groupAvatarFileId } : null,
+    participantCount: Number(row.participantCount),
+  }));
+}
+
+export async function createGiveaway(ownerOpenId: string, input: { groupId: number; title: string; prizeTitle: string; rules?: string; boostOnly?: boolean; endsAt: Date }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const group = await getGroupById(input.groupId);
+  if (!group || group.ownerOpenId !== ownerOpenId) throw new Error("Выберите свою группу из личного кабинета");
+  if (!isValidGiveawayEnd(input.endsAt)) throw new Error("Укажите завершение минимум через 5 минут");
+  const inserted = await db.insert(giveaways).values({
+    groupId: group.id,
+    ownerOpenId,
+    title: input.title.trim(),
+    prizeTitle: input.prizeTitle.trim(),
+    rules: input.rules?.trim() || null,
+    boostOnly: input.boostOnly ?? false,
+    endsAt: input.endsAt,
+  });
+  return { id: Number(inserted[0]?.insertId ?? 0) };
+}
+
+export async function joinGiveaway(giveawayId: number, userOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [giveaway] = await db.select().from(giveaways).where(eq(giveaways.id, giveawayId)).limit(1);
+  if (!giveaway || !isGiveawayOpen(giveaway.status, giveaway.endsAt)) throw new Error("Розыгрыш уже завершён или недоступен");
+  if (giveaway.ownerOpenId === userOpenId) throw new Error("Владелец не может участвовать в своём розыгрыше");
+  if (giveaway.boostOnly) throw new Error("Для участия требуется подтверждённый буст сообщества");
+  try {
+    await db.insert(giveawayParticipants).values({ giveawayId, userOpenId });
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+  }
+  return { success: true };
 }
 
 export async function saveMyGroupsLayout(ownerOpenId: string, orderedGroupIds: number[], pinnedGroupIds: number[]) {
