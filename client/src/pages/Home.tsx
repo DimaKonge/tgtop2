@@ -45,7 +45,7 @@ import {
 import { toast } from "sonner";
 import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 
-type Page = "top" | "catalog" | "mine" | "details" | "owner" | "profile";
+type Page = "top" | "catalog" | "giveaways" | "earn" | "mine" | "details" | "owner" | "profile";
 type Audience = "all" | "small" | "medium" | "large";
 type MyGroupsViewMode = "list" | "grid";
 type Language = "ru" | "en";
@@ -2003,6 +2003,36 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           </section>
         )}
 
+        {page === "giveaways" && (
+          <section className="space-y-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-white">Розыгрыши</h1>
+              <p className="mt-1 text-sm text-slate-500">Участвуйте в активностях сообществ и следите за будущими призами.</p>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-[#3f8cff]/20 bg-[radial-gradient(circle_at_top_right,rgba(63,140,255,0.16),transparent_52%),#111720] p-5">
+              <Star className="h-7 w-7 text-[#a6c8ff]" />
+              <h2 className="mt-4 text-lg font-semibold text-white">Новые розыгрыши появятся здесь</h2>
+              <p className="mt-2 max-w-sm text-sm leading-6 text-slate-400">Для участия будут видны правила, условия и срок окончания. Для владельцев — быстрый запуск через свою группу.</p>
+              <button type="button" onClick={() => toast.info("Создание розыгрышей будет доступно в следующем обновлении.")} className="mt-5 inline-flex rounded-xl border border-[#72a8ff]/35 bg-[#3f8cff]/12 px-4 py-2.5 text-sm font-semibold text-[#b8d3ff]">Добавить розыгрыш</button>
+            </div>
+          </section>
+        )}
+
+        {page === "earn" && (
+          <section className="space-y-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-white">Заработать</h1>
+              <p className="mt-1 text-sm text-slate-500">Все подтверждённые вознаграждения и бонусы в одном месте.</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-300/15 bg-[linear-gradient(135deg,rgba(34,197,94,0.12),rgba(16,24,34,0.96)_60%)] p-5">
+              <small className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-200/75">Бонусный баланс</small>
+              <b className="mt-2 block text-3xl tracking-tight text-white">{bonus} GRAM</b>
+              <p className="mt-2 text-sm leading-6 text-slate-400">Получайте GRAM только после подтверждённого действия через бота TG TOP.</p>
+              <button type="button" onClick={() => setPage("profile")} className="mt-5 inline-flex rounded-xl bg-[#1688f5] px-4 py-2.5 text-sm font-semibold text-white">Открыть баланс</button>
+            </div>
+          </section>
+        )}
+
         {page === "mine" && (
           <section className={`space-y-4 ${myGroupsSelectionMode ? "pb-[12rem]" : ""}`}>
             <div className="flex items-start justify-between gap-3">
@@ -2875,12 +2905,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/8 bg-[#0b0f14]/95 backdrop-blur">
-        <div className="mx-auto grid max-w-3xl grid-cols-3 px-3 py-2">
+        <div className="mx-auto grid max-w-3xl grid-cols-4 px-3 py-2">
           {(
             [
-              { key: "top", label: ui.top, icon: Trophy },
-              { key: "mine", label: ui.mine, icon: Users },
-              { key: "profile", label: ui.profile, icon: UserRound },
+              { key: "top", label: "Каталог", icon: Trophy },
+              { key: "giveaways", label: "Розыгрыши", icon: Star },
+              { key: "earn", label: "Заработать", icon: WalletCards },
+              { key: "mine", label: "Мой кабинет", icon: Users },
             ] as const
           ).map(item => {
             const Icon = item.icon;

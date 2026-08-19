@@ -346,7 +346,7 @@
 - [ ] Use a compact Telegram-native giveaway layout: prize card, rule toggles, countdown, participant count, and one clear create or join action
 - [ ] Allow boost-only giveaway participation only after server-side verification that the user boosted the selected Telegram community
 - [ ] Make Russian the sole visible interface language and rename the My Groups management tab to «Рабочее пространство»
-- [ ] Replace the bottom navigation with four primary sections: «Каталог», «Розыгрыши», «Заработать» and «Мой кабинет»
+- [x] Replace the bottom navigation with four primary sections: «Каталог», «Розыгрыши», «Заработать» and «Мой кабинет»
 - [ ] Add an owner-facing «Добавить свой розыгрыш» action with owned-community selection, prize, end time, and participation conditions
 - [ ] Add a prefilled «Создать розыгрыш» action to owned-community cards in «Моём кабинете» and their detail screens
 - [x] Add a private-by-default public-account switch that opts an owner into profile visibility and the owner leaderboard
