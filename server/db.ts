@@ -13,6 +13,7 @@ import { formatTonAmount } from "./tonFormatting";
 import { DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
 import { canExposeOwnerProfile } from "./ownerVisibilityPolicy";
 import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
+import { getTelegramChatIdFromOpenId, verifyTelegramUserChatBoost } from "./telegramNotifications";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -696,7 +697,12 @@ export async function joinGiveaway(giveawayId: number, userOpenId: string) {
   const [giveaway] = await db.select().from(giveaways).where(eq(giveaways.id, giveawayId)).limit(1);
   if (!giveaway || !isGiveawayOpen(giveaway.status, giveaway.endsAt)) throw new Error("Розыгрыш уже завершён или недоступен");
   if (giveaway.ownerOpenId === userOpenId) throw new Error("Владелец не может участвовать в своём розыгрыше");
-  if (giveaway.boostOnly) throw new Error("Для участия требуется подтверждённый буст сообщества");
+  if (giveaway.boostOnly) {
+    const telegramUserId = getTelegramChatIdFromOpenId(userOpenId);
+    const [group] = await db.select({ chatId: groupsCatalog.chatId }).from(groupsCatalog).where(eq(groupsCatalog.id, giveaway.groupId)).limit(1);
+    const verified = telegramUserId && group?.chatId && await verifyTelegramUserChatBoost({ chatId: group.chatId, telegramUserId });
+    if (!verified) throw new Error("Для участия нужен активный буст этого сообщества и права администратора у @TGTOP_robot");
+  }
   try {
     await db.insert(giveawayParticipants).values({ giveawayId, userOpenId });
   } catch (error) {

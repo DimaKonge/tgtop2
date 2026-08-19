@@ -344,7 +344,7 @@
 - [ ] Build the low-cost lower row as a lightweight first-come live feed with smooth card movement under high concurrent placement traffic
 - [x] Design a free-entry giveaways block with visible prizes, rules, participation counts, and end times before adding any draw mechanics
 - [x] Use a compact Telegram-native giveaway layout: prize card, rule toggles, countdown, participant count, and one clear create or join action
-- [ ] Allow boost-only giveaway participation only after server-side verification that the user boosted the selected Telegram community
+- [x] Allow boost-only giveaway participation only after server-side verification that the user boosted the selected Telegram community
 - [x] Make Russian the sole visible interface language and rename the My Groups management tab to «Рабочее пространство»
 - [x] Replace the bottom navigation with four primary sections: «Каталог», «Розыгрыши», «Заработать» and «Мой кабинет»
 - [x] Add an owner-facing «Добавить свой розыгрыш» action with owned-community selection, prize, end time, and participation conditions

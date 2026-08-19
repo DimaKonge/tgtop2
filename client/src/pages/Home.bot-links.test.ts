@@ -145,6 +145,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const openGiveawayCreate = (group: Group)');
     expect(source).toContain('onCreateGiveaway={() => openGiveawayCreate(group)}');
     expect(source).toContain('Создать розыгрыш');
+    expect(source).toContain('Проверить буст и участвовать');
+    expect(source).toContain('Только для бустеров');
     expect(source).toContain('import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"');
     expect(source).not.toContain('const canApplyAnonymousListing = selectedListingGroups.length > 0');
     expect(source).not.toContain('anonymousListing: selectedListingGroups.length ? anonymousListing : undefined');

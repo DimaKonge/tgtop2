@@ -8,6 +8,24 @@ export function getTelegramChatIdFromOpenId(openId: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
+export function hasAnyTelegramBoost(boosts: unknown) {
+  return Array.isArray(boosts) && boosts.length > 0;
+}
+
+export async function verifyTelegramUserChatBoost(input: { chatId: string; telegramUserId: number }) {
+  if (!botToken) return false;
+  try {
+    const response = await axios.post<{ ok: boolean; result?: { boosts?: unknown[] } }>(`https://api.telegram.org/bot${botToken}/getUserChatBoosts`, {
+      chat_id: input.chatId,
+      user_id: input.telegramUserId,
+    }, { timeout: 15_000 });
+    return response.data.ok && hasAnyTelegramBoost(response.data.result?.boosts);
+  } catch (error) {
+    console.warn("[Telegram] Could not verify a user's chat boost:", error);
+    return false;
+  }
+}
+
 export async function notifyRewardCredited(input: { telegramUserId: number; groupTitle: string; amount: number }) {
   if (!botToken) return false;
   const amount = (input.amount / 100).toFixed(2).replace(/\.?0+$/, "");

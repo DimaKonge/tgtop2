@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { getTelegramChatIdFromOpenId } from "./telegramNotifications";
+import { getTelegramChatIdFromOpenId, hasAnyTelegramBoost } from "./telegramNotifications";
 
 describe("ranking intent bot notifications", () => {
   it("only derives a Telegram chat id from a verified Telegram open id", () => {
     expect(getTelegramChatIdFromOpenId("telegram:123456")).toBe(123456);
     expect(getTelegramChatIdFromOpenId("manus-user")).toBeNull();
     expect(getTelegramChatIdFromOpenId("telegram:not-a-number")).toBeNull();
+  });
+
+  it("recognizes a non-empty Telegram boost list", () => {
+    expect(hasAnyTelegramBoost([])).toBe(false);
+    expect(hasAnyTelegramBoost([{}])).toBe(true);
+    expect(hasAnyTelegramBoost(undefined)).toBe(false);
   });
 
   it("prepares an actionable outbid notification with the current competitor price and restore link", () => {
