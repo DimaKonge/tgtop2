@@ -291,6 +291,38 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     eq(auctionSlots.subcategory, boardSubcategory),
     eq(auctionSlots.country, boardCountry)
   )).orderBy(asc(auctionSlots.slotNumber));
+  const eligibleConditions = [eq(groupsCatalog.status, "listed")];
+  if (boardCategory !== "Все") eligibleConditions.push(eq(groupsCatalog.category, boardCategory));
+  if (boardSubcategory !== "Все") eligibleConditions.push(eq(groupsCatalog.subcategory, boardSubcategory));
+  if (boardCountry !== "Global") eligibleConditions.push(eq(groupsCatalog.country, boardCountry));
+  const eligibleGroups = await db.select().from(groupsCatalog).where(and(...eligibleConditions))
+    .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt), asc(groupsCatalog.id));
+  const autoAssignments = planVacantRankingAssignments(slots, eligibleGroups.map(group => group.id));
+  if (autoAssignments.length) {
+    const eligibleById = new Map(eligibleGroups.map(group => [group.id, group]));
+    const now = new Date();
+    await db.transaction(async tx => {
+      for (const assignment of autoAssignments) {
+        const group = eligibleById.get(assignment.groupId);
+        if (!group) continue;
+        await tx.update(auctionSlots).set({
+          groupId: group.id,
+          title: group.title,
+          subtitle: group.username ? `@${group.username}` : group.category,
+          leaderUsername: group.username ?? group.title,
+          leaderUserId: group.ownerOpenId,
+          bidAmount: 100,
+          currentBid: "0.1 GRAM",
+          updatedAt: now,
+        }).where(and(eq(auctionSlots.id, assignment.slotId), sql`${auctionSlots.groupId} IS NULL`));
+      }
+    });
+    slots = await db.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, boardCategory),
+      eq(auctionSlots.subcategory, boardSubcategory),
+      eq(auctionSlots.country, boardCountry)
+    )).orderBy(asc(auctionSlots.slotNumber));
+  }
   const strictOrder = assignRankingEntriesToSlots(slots.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt })), slots);
   if (strictOrder.some((source, index) => source?.groupId !== slots[index]?.groupId || source?.bidAmount !== slots[index]?.bidAmount)) {
     const now = new Date();
@@ -1177,8 +1209,8 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
         subtitle: group.username ? `@${group.username}` : group.category,
         leaderUsername: group.username ?? group.title,
         leaderUserId: group.ownerOpenId,
-        bidAmount: 0,
-        currentBid: "0 TON",
+        bidAmount: 100,
+        currentBid: "0.1 GRAM",
         updatedAt: new Date(),
       }).where(and(eq(auctionSlots.id, assignment.slotId), sql`${auctionSlots.groupId} IS NULL`));
     }
@@ -1294,8 +1326,8 @@ export async function unlistGroups(ownerOpenId: string, groupIds: number[]) {
         subtitle: group.username ? `@${group.username}` : group.category,
         leaderUsername: group.username ?? group.title,
         leaderUserId: group.ownerOpenId,
-        bidAmount: 0,
-        currentBid: "0 TON",
+        bidAmount: 100,
+        currentBid: "0.1 GRAM",
         updatedAt: new Date(),
       }).where(and(eq(auctionSlots.id, assignment.slotId), sql`${auctionSlots.groupId} IS NULL`));
     }

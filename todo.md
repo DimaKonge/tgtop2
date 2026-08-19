@@ -413,3 +413,14 @@
 - [x] Add an in-context 0.1 GRAM slider with − / + controls in group management to preview and pay for a higher ranking position
 - [x] Remove the visible 100 GRAM cap label while keeping the slider range at 100 GRAM and allowing a validated manual price above the slider range
 - [x] Keep an independent persisted Top ranking, bid preview, and auction order for every category and subcategory combination; every empty section starts at place 1 from 0.1 GRAM
+- [x] Format displayed GRAM values without redundant trailing zeroes and limit optional sale-price precision to one decimal place
+- [x] Auto-fill every vacant ranking cell from eligible catalog communities for the active general, category, or subcategory ranking board
+- [x] Remove visible numeric position labels from all ranking cards and empty ranking cells
+- [x] Remove every price and position overlay from occupied and vacant ranking cards; reveal pricing only in the bid-management flow
+- [x] Rename the listing-settings action from «Выбрать оплату» to «Залистить» while retaining the secure payment-confirmation step
+- [x] Make listing position preview use the populated target ranking board so occupied places never incorrectly show first place at 0.1 GRAM
+- [ ] Include each listed community in independent overall, community-type, and selected-subcategory rankings, each with its own place and bid order
+- [x] Show the exact ranking scope in listing preview, including overall, community type, or selected subcategory
+- [x] Show a primary ranking-place control in an owned community detail page with the current bid, slider, ± controls, and direct self-bid increase action
+- [x] Show a primary ranking-place control in an owned community detail page with the current bid, slider, ± controls, and direct self-bid increase action
+- [x] Show the exact ranking scope in listing preview, including community type, subcategory, and country

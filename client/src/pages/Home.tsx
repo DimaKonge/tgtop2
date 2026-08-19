@@ -416,23 +416,17 @@ function GroupCard({
   onClick,
   language = "ru",
   bidAmount = 0,
-  slotNumber,
 }: {
   group?: Group | null;
   variant?: GroupCardVariant;
   onClick: () => void;
   language?: Language;
   bidAmount?: number;
-  slotNumber?: number;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const lead = variant === "lead";
   const compact = variant === "compact";
   const rankingPlacement = variant !== "list";
-  const rankingFloor = 0.1;
-  const rankingPriceLabel = bidAmount > 0
-    ? `${formatTon(bidAmount / 1000)} GRAM`
-    : `от ${formatTon(rankingFloor)} GRAM`;
   const cardStyle = lead
     ? "h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[46vh] sm:p-6"
           : variant === "secondary"
@@ -459,16 +453,6 @@ function GroupCard({
       aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
       className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
     >
-      {rankingPlacement && slotNumber && (
-        <span className={`absolute left-0 top-0 z-20 rounded-br-xl border-b border-r border-white/10 bg-[#0b0f14]/82 px-2 py-1 font-bold leading-none text-white/85 shadow-sm shadow-black/30 backdrop-blur-sm ${lead ? "text-xs" : compact ? "text-[8px]" : "text-[10px]"}`}>
-          #{slotNumber}
-        </span>
-      )}
-      {rankingPlacement && (
-        <span className={`absolute left-2 z-10 rounded-full bg-black/55 px-2 py-1 font-medium tracking-tight text-white/95 shadow-sm shadow-black/25 backdrop-blur-sm ${slotNumber ? (lead ? "top-9" : compact ? "top-6" : "top-8") : "top-2"} ${lead ? "text-[11px]" : compact ? "text-[7px]" : "text-[9px]"}`}>
-          {rankingPriceLabel}
-        </span>
-      )}
       {group?.rewardActive && (group.rewardAmount ?? 0) > 0 && (
         <span aria-label={language === "en" ? `Earn +${formatGram(group.rewardAmount!)} GRAM` : `Получите +${formatGram(group.rewardAmount!)} GRAM`} className={`absolute right-0 top-0 z-10 border-b border-l border-amber-100/25 bg-amber-300/15 px-2.5 py-1 text-[9px] font-bold leading-none text-amber-100 shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${lead ? "px-3 py-1.5 text-[11px]" : compact ? "px-1.5 py-1 text-[7px]" : "px-2 py-1 text-[8px]"}`}>
           +{formatGram(group.rewardAmount)}
@@ -546,7 +530,7 @@ function GroupCard({
             <small
               className={`max-w-full truncate font-light tracking-wide text-slate-500 ${compact ? "text-[9px]" : "text-[11px]"}`}
             >
-              {language === "en" ? "Add group" : "Добавить группу"}
+              {language === "en" ? "Available" : "Свободно"}
             </small>
           </span>
         </span>
@@ -1497,9 +1481,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : 0.1;
   const listingSlotsQuery = trpc.tgTop.getSlots.useQuery({
     category: selectedListingGroup?.category ?? "Все",
-    country: selectedListingGroup?.country ?? "Global",
-    subcategory: selectedListingGroup?.subcategory ?? "Все",
-    city: selectedListingGroup?.city ?? "Все",
+    country: listingCountry,
+    subcategory: listingSubcategory || "Все",
+    city: listingCity,
   }, { enabled: Boolean(selectedListingGroup), refetchInterval: 12_000, refetchIntervalInBackground: false });
   const listingSlots = (listingSlotsQuery.data ?? []) as Slot[];
   const listingRankingPreviewSlotNumber = selectedListingGroup
@@ -1510,6 +1494,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : null;
   const listingRankingMinimum = listingRankingPreviewSlot ? getMinimumRankingBidGram(listingRankingPreviewSlot) : null;
   const canPayListingRanking = Boolean(listingRankingPreviewSlot && listingRankingMinimum !== null && listingRankingBidAmount >= listingRankingMinimum);
+  const listingRankingScope = selectedListingGroup
+    ? [getCategoryLabel(selectedListingGroup.category, language), listingSubcategory ? getSubcategoryLabel(listingSubcategory, language) : null, getCountryLabel(listingCountry, language)].filter((part): part is string => Boolean(part)).join(" · ")
+    : "";
   const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
   const showcaseNft = myNfts.find(nft => nft.id === showcaseNftId) ?? null;
   const reviewedRecipient = nftRecipientQuery.data;
@@ -1572,7 +1559,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingCity(firstGroup?.city ?? "Все");
     setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "");
     setListingRankingBid("0.1");
-    setSalePriceTon(firstGroup?.salePriceTon ?? "");
+    setSalePriceTon(firstGroup?.salePriceTon ? formatTon(firstGroup.salePriceTon) : "");
     setIsListingForSale(Boolean(firstGroup?.salePriceTon));
     setShowOwnerContact(Boolean(firstGroup?.showOwnerContact));
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
@@ -1879,7 +1866,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   variant="lead"
                   language={language}
                   bidAmount={leadSlot.bidAmount}
-                  slotNumber={leadSlot.slotNumber}
                   onClick={() =>
                     leadSlot.group
                       ? openGroup(leadSlot.group.id)
@@ -1895,7 +1881,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       variant="secondary"
                       language={language}
                       bidAmount={slot.bidAmount}
-                      slotNumber={slot.slotNumber}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id) : openMine(slot)
                       }
@@ -1911,7 +1896,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       variant="compact"
                       language={language}
                       bidAmount={slot.bidAmount}
-                      slotNumber={slot.slotNumber}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id) : openMine(slot)
                       }
@@ -2583,7 +2567,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             <button type="button" onClick={() => setAmount(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label={tx("Увеличить ставку", "Increase bid")} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"><Plus className="h-4 w-4" /></button>
                           </div>
                           <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setAmount(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
-                          <button type="button" onClick={() => { setTargetSlot(selectedSlot); setAmount(formatTon(detailRankingBidAmount)); setPaymentMethod("gram"); setStarsPaymentGroup(detail.group); }} disabled={!detailRankingPreviewSlotNumber} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{tx("Выбрать оплату", "Choose payment")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("GRAM или Telegram Stars", "GRAM or Telegram Stars")}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>
+                          <button type="button" onClick={() => { setTargetSlot(selectedSlot); setAmount(formatTon(detailRankingBidAmount)); setPaymentMethod("gram"); setStarsPaymentGroup(detail.group); }} disabled={!detailRankingPreviewSlotNumber} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{tx("Поднять ставку", "Raise bid")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("GRAM или Telegram Stars", "GRAM or Telegram Stars")}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>
                         </div>
                       )}
                       {!ownsDetail && isAuthenticated && <button onClick={() => openMine(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Цена лота", "Lot price")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Установить от ${formatTon(detailMinimumBid)} GRAM`, `Set from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
@@ -3173,9 +3157,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
                 <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, listingRankingBidAmount)]} min={0.1} max={MAX_RANKING_SLIDER_GRAM} step={0.1} onValueChange={([value]) => setListingRankingBid(formatTon(value))} className="mt-3 py-2 [&_[data-slot=slider-track]]:h-2.5 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-6 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
                 <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.035] px-3 py-2.5">
-                  {listingRankingPreviewSlotNumber ? <><small className="block text-[10px] uppercase tracking-[0.1em] text-slate-500">{tx("Предпросмотр позиции", "Placement preview")}</small><b className="mt-1 block text-sm text-white">{tx(`Займёт ${listingRankingPreviewSlotNumber}-ю позицию`, `Will take position ${listingRankingPreviewSlotNumber}`)}</b><small className="mt-1 block text-[10px] text-slate-400">{listingRankingMinimum !== null ? tx(`Для этой ячейки нужно от ${formatTon(listingRankingMinimum)} GRAM`, `This cell requires at least ${formatTon(listingRankingMinimum)} GRAM`) : ""}</small></> : <><b className="block text-sm text-amber-100">{tx("С этой суммой группа не попадёт в Top", "This amount will not enter Top")}</b><small className="mt-1 block text-[10px] text-slate-500">{tx("Увеличьте ставку, чтобы занять доступную ячейку.", "Increase the bid to take an available cell.")}</small></>}
+                  {listingRankingPreviewSlotNumber ? <><small className="block text-[10px] uppercase tracking-[0.1em] text-slate-500">{tx("Предпросмотр позиции", "Placement preview")}</small><small className="mt-1 block truncate text-[10px] font-medium text-[#a6c8ff]">{tx("Рейтинг: ", "Ranking: ")}{listingRankingScope}</small><b className="mt-1 block text-sm text-white">{tx(`Займёт ${listingRankingPreviewSlotNumber}-ю позицию`, `Will take position ${listingRankingPreviewSlotNumber}`)}</b><small className="mt-1 block text-[10px] text-slate-400">{listingRankingMinimum !== null ? tx(`Для этой ячейки нужно от ${formatTon(listingRankingMinimum)} GRAM`, `This cell requires at least ${formatTon(listingRankingMinimum)} GRAM`) : ""}</small></> : <><b className="block text-sm text-amber-100">{tx("С этой суммой группа не попадёт в Top", "This amount will not enter Top")}</b><small className="mt-1 block text-[10px] text-slate-500">{tx("Увеличьте ставку, чтобы занять доступную ячейку.", "Increase the bid to take an available cell.")}</small></>}
                 </div>
-                <button type="button" onClick={() => { if (!listingRankingPreviewSlot || !canPayListingRanking) return; setTargetSlot(listingRankingPreviewSlot); setAmount(formatTon(listingRankingBidAmount)); setPaymentMethod("gram"); setListingOpen(false); window.setTimeout(() => setStarsPaymentGroup(selectedListingGroup), 160); }} disabled={!canPayListingRanking} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#1688f5] px-4 py-3 text-left text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45"><span>{tx("Выбрать оплату", "Choose payment")}</span><span>{formatTon(listingRankingBidAmount)} GRAM</span></button>
+                <button type="button" onClick={() => { if (!listingRankingPreviewSlot || !canPayListingRanking) return; setTargetSlot(listingRankingPreviewSlot); setAmount(formatTon(listingRankingBidAmount)); setPaymentMethod("gram"); setListingOpen(false); window.setTimeout(() => setStarsPaymentGroup(selectedListingGroup), 160); }} disabled={!canPayListingRanking} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#1688f5] px-4 py-3 text-left text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45"><span>{tx("Залистить", "List community")}</span><span>{formatTon(listingRankingBidAmount)} GRAM</span></button>
               </section>
             )}
 
@@ -3204,7 +3188,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     inputMode="decimal"
                     min="0"
                     step="0.1"
-                    onChange={event => setSalePriceTon(event.target.value)}
+                    onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }}
+                    onBlur={() => setSalePriceTon(salePriceTon ? formatTon(salePriceTon) : "")}
                     placeholder={tx("Например, 250", "For example, 250")}
                     className="h-11 border-white/10 bg-[#0b0f14] pr-12 text-sm"
                   />

@@ -7,7 +7,7 @@ import * as db from "./db";
 import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
 import { formatTonAmount } from "./tonFormatting";
 
-const tonAmount = z.string().regex(/^\d+(\.\d{1,9})?$/);
+const tonAmount = z.string().regex(/^\d+(\.\d)?$/);
 const groupListingInput = z.object({
   salePriceTon: tonAmount.optional(),
   country: z.enum(["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"]).optional(),

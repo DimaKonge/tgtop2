@@ -245,12 +245,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const MAX_RANKING_BID_GRAM = 1_000');
     expect(source).toContain('const MAX_RANKING_SLIDER_GRAM = 100');
     expect(source).toContain('const listingSlotsQuery = trpc.tgTop.getSlots.useQuery');
-    expect(source).toContain('subcategory: selectedListingGroup?.subcategory ?? "Все"');
+    expect(source).toContain('subcategory: listingSubcategory || "Все"');
     expect(source).not.toContain('до 100 GRAM');
     expect(source).toContain('getSimulatedRankingSlotNumber');
     expect(source).toContain('Цена места в рейтинге');
     expect(source).toContain('Предпросмотр позиции');
-    expect(source).toContain('Выбрать оплату');
+    expect(source).toContain('Залистить');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('detailHasPaidEntry');
     expect(source).toContain('tx(`Войти за ${detail.group.monthlyEntryStars} Stars`');
@@ -265,10 +265,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('!topSearchQuery.trim() && <div key={rankingMotionKey}');
     expect(source).toContain('bg-emerald-500/30 text-emerald-50');
     expect(source).toContain('clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)');
-    expect(source).toContain('const rankingPriceLabel = bidAmount > 0');
-    expect(source).toContain('`${formatTon(bidAmount / 1000)} GRAM`');
+    expect(source).not.toContain('const rankingPriceLabel = bidAmount > 0');
+    expect(source).not.toContain('`${formatTon(bidAmount / 1000)} GRAM`');
     expect(source).toContain('bidAmount={leadSlot.bidAmount}');
-    expect(source).toContain('slotNumber={leadSlot.slotNumber}');
+    expect(source).not.toContain('slotNumber={leadSlot.slotNumber}');
     expect(source).toContain('grid-cols-4 grid-rows-3 gap-[2px]');
     expect(source).toContain('col-start-2 row-start-1');
     expect(source).toContain('const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const');
