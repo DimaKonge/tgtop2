@@ -37,6 +37,17 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(__private__.getReferralCodeFromStartText("/start ref_invalid-payload")).toBeUndefined();
   });
 
+  it("reduces Telegram polling failures to a safe API summary without request internals", () => {
+    const summary = __private__.getTelegramPollingErrorSummary({
+      config: { url: "https://api.telegram.org/bot-secret/getUpdates" },
+      response: { status: 409, data: { description: "Conflict: terminated by other getUpdates request" } },
+    });
+
+    expect(summary).toBe("Telegram API 409: Conflict: terminated by other getUpdates request");
+    expect(summary).not.toContain("bot-secret");
+    expect(__private__.getTelegramPollingErrorSummary(new Error("request configuration"))).toBe("Unexpected Telegram polling failure");
+  });
+
   it("creates a rich owner confirmation with the GRAM award and both relevant actions", () => {
     const confirmation = __private__.buildOnboardingConfirmation(
       { id: -1001, type: "channel", title: "OATH", username: "o_a_th" },

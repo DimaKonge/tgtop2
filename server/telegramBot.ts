@@ -331,6 +331,16 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
   await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP. Откройте приложение, чтобы управлять каталогом и рейтингом.");
 }
 
+function getTelegramPollingErrorSummary(error: unknown): string {
+  if (!error || typeof error !== "object") return "Unexpected Telegram polling failure";
+  const response = "response" in error ? (error.response as { status?: unknown; data?: { description?: unknown } } | undefined) : undefined;
+  const status = typeof response?.status === "number" ? response.status : undefined;
+  const description = typeof response?.data?.description === "string" ? response.data.description : undefined;
+  if (status && description) return `Telegram API ${status}: ${description}`;
+  if (status) return `Telegram API ${status}`;
+  return "Unexpected Telegram polling failure";
+}
+
 async function run(): Promise<void> {
   if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
   console.info("[Telegram] Starting long-polling for @TGTOP_robot");
@@ -343,12 +353,12 @@ async function run(): Promise<void> {
         try { await handleUpdate(update); } catch (error) { console.error(`[Telegram] Failed to process update ${update.update_id}:`, error); }
       }
     } catch (error) {
-      console.error("[Telegram] Polling error:", error);
+      console.error("[Telegram] Polling error:", getTelegramPollingErrorSummary(error));
       await new Promise(resolve => setTimeout(resolve, 5_000));
     }
   }
 }
 
-export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, isActiveMember, isBotAdmin, isChatOwner, publicGroupUrl };
+export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, publicGroupUrl };
 const isMainModule = process.argv[1] ? new URL(`file://${process.argv[1]}`).href === import.meta.url : false;
 if (isMainModule) void run();

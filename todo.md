@@ -457,3 +457,4 @@
 - [x] Start the chosen GRAM payment directly from an owned community’s self-bid control without reopening the price-selection sheet
 - [x] Add an owned-community manager selector backed by the current Telegram administrator list
 - [x] Add a persisted switch that controls @TGTOP_robot listing announcements
+- [x] Redact Telegram polling failures so bot credentials and request internals never reach production logs
