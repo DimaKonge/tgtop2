@@ -225,6 +225,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('openTelegramCommunityLink(`https://t.me/${detailOwner.telegramUsername}`)');
     expect(source).toContain('const rankSlotId = Number(params.get("rankSlot"));');
     expect(source).toContain('setRankSlotLinkId(rankSlotId)');
+    expect(source).toContain('const MAX_RANKING_BID_GRAM = 1_000');
+    expect(source).toContain('getSimulatedRankingSlotNumber');
+    expect(source).toContain('Цена места в рейтинге');
+    expect(source).toContain('Предпросмотр позиции');
+    expect(source).toContain('Оплатить место');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('detailHasPaidEntry');
     expect(source).toContain('tx(`Войти за ${detail.group.monthlyEntryStars} Stars`');

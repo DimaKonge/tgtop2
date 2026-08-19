@@ -7,7 +7,7 @@ import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./group
 import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline } from "./protectedDeals";
 import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
 import { isCatalogSubcategory } from "./catalogTaxonomy";
-import { getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid, sortRankingEntriesByBid } from "./rankingBidPolicy";
+import { assignRankingEntriesToSlots, getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
 import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
 import { DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
@@ -263,17 +263,15 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     eq(auctionSlots.category, "Все"),
     eq(auctionSlots.country, "Global")
   )).orderBy(asc(auctionSlots.slotNumber));
-  const rankedSlots = sortRankingEntriesByBid(slots.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt })));
-  const vacantSlots = slots.filter(slot => slot.groupId === null);
-  const strictOrder = [...rankedSlots, ...vacantSlots];
-  if (strictOrder.some((source, index) => source.id !== slots[index]?.id)) {
+  const strictOrder = assignRankingEntriesToSlots(slots.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt })), slots);
+  if (strictOrder.some((source, index) => source?.groupId !== slots[index]?.groupId || source?.bidAmount !== slots[index]?.bidAmount)) {
     const now = new Date();
     await db.transaction(async tx => {
       for (let index = 0; index < strictOrder.length; index += 1) {
         const source = strictOrder[index];
         const target = slots[index];
-        if (!target || source.id === target.id) continue;
-        await tx.update(auctionSlots).set({
+        if (!target || (source?.groupId === target.groupId && source?.bidAmount === target.bidAmount)) continue;
+        await tx.update(auctionSlots).set(source ? {
           bidAmount: source.bidAmount,
           currentBid: source.currentBid,
           leaderUsername: source.leaderUsername,
@@ -281,6 +279,15 @@ export async function getAuctionSlots(category?: string, country?: string, subca
           groupId: source.groupId,
           title: source.title,
           subtitle: source.subtitle,
+          updatedAt: now,
+        } : {
+          bidAmount: 0,
+          currentBid: "0 GRAM",
+          leaderUsername: "-",
+          leaderUserId: null,
+          groupId: null,
+          title: "Свободное место",
+          subtitle: "Ждет листинга",
           updatedAt: now,
         }).where(eq(auctionSlots.id, target.id));
       }
@@ -365,10 +372,10 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
       subtitle: group.username ? `@${group.username}` : group.category,
       heldSince: now,
     };
-    const strictOrder = sortRankingEntriesByBid([
+    const strictOrder = assignRankingEntriesToSlots([
       ...board.filter(slot => slot.groupId !== null && slot.groupId !== groupId).map(slot => ({ ...slot, heldSince: slot.updatedAt })),
       incoming,
-    ]);
+    ], board);
 
     for (let index = 0; index < board.length; index += 1) {
       const slot = board[index];

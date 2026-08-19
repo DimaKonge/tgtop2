@@ -46,7 +46,7 @@ export const appRouter = router({
     placeBid: protectedProcedure
       .input(z.object({
         slotId: z.number(),
-        bidAmount: z.number(),
+        bidAmount: z.number().positive().max(1_000),
         currentBid: z.string(),
         groupId: z.number(),
       }))
@@ -73,7 +73,7 @@ export const appRouter = router({
       }),
 
     createStarsRankingPayment: protectedProcedure
-      .input(z.object({ slotId: z.number().int().positive(), groupId: z.number().int().positive(), bidAmount: z.number().positive() }))
+      .input(z.object({ slotId: z.number().int().positive(), groupId: z.number().int().positive(), bidAmount: z.number().positive().max(1_000) }))
       .mutation(async ({ ctx, input }) => {
         const intent = await db.createStarsRankingPaymentIntent({
           userOpenId: ctx.user.openId,

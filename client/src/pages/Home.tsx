@@ -243,6 +243,22 @@ const getMinimumRankingBidGram = (slot: Pick<Slot, "slotNumber" | "bidAmount" | 
   if (!slot.group) return floor;
   return Math.max(floor, Math.round((slot.bidAmount / 1000 + 0.1) * 10) / 10);
 };
+const MAX_RANKING_BID_GRAM = 1_000;
+const getSimulatedRankingSlotNumber = (slots: Slot[], candidateGroupId: number, bidAmountGram: number) => {
+  const candidateBid = Math.round(bidAmountGram * 1000);
+  if (!Number.isSafeInteger(candidateBid) || candidateBid <= 0 || candidateBid > MAX_RANKING_BID_GRAM * 1000) return null;
+  const remaining = slots
+    .filter(slot => slot.group?.id !== candidateGroupId && slot.group)
+    .map(slot => ({ groupId: slot.group!.id, bidAmount: slot.bidAmount, heldSince: new Date(slot.updatedAt ?? 0) }))
+    .concat({ groupId: candidateGroupId, bidAmount: candidateBid, heldSince: new Date() })
+    .sort((left, right) => right.bidAmount - left.bidAmount || left.heldSince.getTime() - right.heldSince.getTime() || left.groupId - right.groupId);
+  for (const slot of [...slots].sort((left, right) => left.slotNumber - right.slotNumber)) {
+    const entryIndex = remaining.findIndex(entry => entry.bidAmount >= getRankingFloorGram(slot.slotNumber) * 1000);
+    const entry = entryIndex >= 0 ? remaining.splice(entryIndex, 1)[0] : undefined;
+    if (entry?.groupId === candidateGroupId) return slot.slotNumber;
+  }
+  return null;
+};
 const getCategoryLabel = (category: Group["category"], language: Language) =>
   language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
 const getCommunityAccessLabel = (group: Pick<Group, "username">, language: Language) =>
@@ -797,6 +813,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [targetSlot, setTargetSlot] = useState<Slot | null>(null);
   const [rankSlotLinkId, setRankSlotLinkId] = useState<number | null>(null);
   const [amount, setAmount] = useState("0.1");
+  const [listingRankingBid, setListingRankingBid] = useState("0.1");
   const [starsPaymentGroup, setStarsPaymentGroup] = useState<Group | null>(null);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [myGroupsSelectionMode, setMyGroupsSelectionMode] = useState(false);
@@ -1435,6 +1452,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? selectedListingGroups[0]
     : null;
   const selectedListingGroup = selectedListingGroups.length === 1 ? selectedListingGroups[0] : null;
+  const rawListingRankingBid = Number(listingRankingBid);
+  const listingRankingBidAmount = Number.isFinite(rawListingRankingBid)
+    ? Math.min(MAX_RANKING_BID_GRAM, Math.max(0.1, Math.round(rawListingRankingBid * 10) / 10))
+    : 0.1;
+  const listingRankingPreviewSlotNumber = selectedListingGroup
+    ? getSimulatedRankingSlotNumber(slots, selectedListingGroup.id, listingRankingBidAmount)
+    : null;
+  const listingRankingPreviewSlot = listingRankingPreviewSlotNumber
+    ? slots.find(slot => slot.slotNumber === listingRankingPreviewSlotNumber) ?? null
+    : null;
+  const listingRankingMinimum = listingRankingPreviewSlot ? getMinimumRankingBidGram(listingRankingPreviewSlot) : null;
+  const canPayListingRanking = Boolean(listingRankingPreviewSlot && listingRankingMinimum !== null && listingRankingBidAmount >= listingRankingMinimum);
   const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
   const showcaseNft = myNfts.find(nft => nft.id === showcaseNftId) ?? null;
   const reviewedRecipient = nftRecipientQuery.data;
@@ -1496,6 +1525,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     );
     setListingCity(firstGroup?.city ?? "Все");
     setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "");
+    setListingRankingBid("0.1");
     setSalePriceTon(firstGroup?.salePriceTon ?? "");
     setIsListingForSale(Boolean(firstGroup?.salePriceTon));
     setShowOwnerContact(Boolean(firstGroup?.showOwnerContact));
@@ -2901,14 +2931,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               const minimum = getMinimumRankingBidGram(targetSlot);
               const rawAmount = Number(amount);
               const bidAmount = Number.isFinite(rawAmount) ? Math.max(minimum, Math.round(rawAmount * 10) / 10) : minimum;
-              const maximum = Math.min(100000, Math.max(minimum + 3, Math.ceil(bidAmount * 1.5 * 10) / 10));
+              const maximum = Math.min(MAX_RANKING_BID_GRAM, Math.max(minimum + 3, Math.ceil(bidAmount * 1.5 * 10) / 10));
               const ratio = bidAmount / minimum;
               const tone = ratio <= 1.2
                 ? { text: "text-emerald-300", range: "[&_[data-slot=slider-range]]:!bg-emerald-400 [&_[data-slot=slider-thumb]]:!border-emerald-100 [&_[data-slot=slider-thumb]]:!bg-emerald-400" }
                 : ratio <= 1.5
                   ? { text: "text-amber-300", range: "[&_[data-slot=slider-range]]:!bg-amber-400 [&_[data-slot=slider-thumb]]:!border-amber-100 [&_[data-slot=slider-thumb]]:!bg-amber-400" }
                   : { text: "text-fuchsia-300", range: "[&_[data-slot=slider-range]]:!bg-fuchsia-400 [&_[data-slot=slider-thumb]]:!border-fuchsia-100 [&_[data-slot=slider-thumb]]:!bg-fuchsia-400" };
-              const setBid = (next: number) => setAmount(formatTon(Math.min(100000, Math.max(minimum, Math.round(next * 10) / 10))));
+              const setBid = (next: number) => setAmount(formatTon(Math.min(MAX_RANKING_BID_GRAM, Math.max(minimum, Math.round(next * 10) / 10))));
               const starsAmount = Math.max(10, Math.ceil(bidAmount * 100));
               return <>
                 <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.035] p-3">
@@ -2983,6 +3013,27 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </Select>
               ) : null}
             </section>
+
+            {selectedListingGroup && (
+              <section className="rounded-2xl border border-[#3f8cff]/30 bg-[#3f8cff]/[0.06] p-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <span>
+                    <b className="block text-sm text-[#c7dcff]">{tx("Цена места в рейтинге", "Ranking placement price")}</b>
+                    <small className="mt-1 block text-[11px] leading-4 text-slate-400">{tx("Перед оплатой посмотрите, на какую ячейку попадёт эта группа.", "Preview the exact cell this community will receive before paying.")}</small>
+                  </span>
+                  <span className="rounded-full border border-[#72a8ff]/25 bg-[#3f8cff]/10 px-2 py-1 text-[10px] font-semibold text-[#a6c8ff]">{tx("до 1 000 GRAM", "up to 1,000 GRAM")}</span>
+                </div>
+                <div className="mt-3 flex items-center rounded-xl border border-white/8 bg-[#0b0f14] px-3">
+                  <Input value={listingRankingBid} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setListingRankingBid(value); }} onBlur={() => setListingRankingBid(formatTon(listingRankingBidAmount))} aria-label={tx("Цена места в GRAM", "Ranking price in GRAM")} className="h-12 border-0 bg-transparent px-0 text-xl font-semibold text-white focus-visible:ring-0" />
+                  <b className="text-xs text-slate-400">GRAM</b>
+                </div>
+                <Slider value={[listingRankingBidAmount]} min={0.1} max={MAX_RANKING_BID_GRAM} step={0.1} onValueChange={([value]) => setListingRankingBid(formatTon(value))} className="mt-3 py-2 [&_[data-slot=slider-track]]:h-2.5 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-6 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
+                <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.035] px-3 py-2.5">
+                  {listingRankingPreviewSlotNumber ? <><small className="block text-[10px] uppercase tracking-[0.1em] text-slate-500">{tx("Предпросмотр позиции", "Placement preview")}</small><b className="mt-1 block text-sm text-white">{tx(`Займёт ${listingRankingPreviewSlotNumber}-ю позицию`, `Will take position ${listingRankingPreviewSlotNumber}`)}</b><small className="mt-1 block text-[10px] text-slate-400">{listingRankingMinimum !== null ? tx(`Для этой ячейки нужно от ${formatTon(listingRankingMinimum)} GRAM`, `This cell requires at least ${formatTon(listingRankingMinimum)} GRAM`) : ""}</small></> : <><b className="block text-sm text-amber-100">{tx("С этой суммой группа не попадёт в Top", "This amount will not enter Top")}</b><small className="mt-1 block text-[10px] text-slate-500">{tx("Увеличьте ставку, чтобы занять доступную ячейку.", "Increase the bid to take an available cell.")}</small></>}
+                </div>
+                <button type="button" onClick={() => { if (!listingRankingPreviewSlot || !canPayListingRanking) return; setTargetSlot(listingRankingPreviewSlot); setAmount(formatTon(listingRankingBidAmount)); setListingOpen(false); window.setTimeout(() => setStarsPaymentGroup(selectedListingGroup), 160); }} disabled={!canPayListingRanking} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#1688f5] px-4 py-3 text-left text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45"><span>{tx("Оплатить место", "Pay for placement")}</span><span>{Math.max(10, Math.ceil(listingRankingBidAmount * 100))} ★</span></button>
+              </section>
+            )}
 
             <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
               <div className="flex items-center justify-between gap-3">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid, RANKING_BID_STEP_MILLITON, sortRankingEntriesByBid, VACANT_RANKING_MINIMUM_MILLITON } from "./rankingBidPolicy";
+import { assignRankingEntriesToSlots, getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid, MAX_RANKING_BID_MILLITON, RANKING_BID_STEP_MILLITON, sortRankingEntriesByBid, VACANT_RANKING_MINIMUM_MILLITON } from "./rankingBidPolicy";
 
 describe("TG TOP paid ranking policy", () => {
   it("requires a 0.1 GRAM minimum bid for every vacant placement", () => {
@@ -15,6 +15,12 @@ describe("TG TOP paid ranking policy", () => {
     expect(isQualifyingRankingBid(200, 200, true)).toBe(false);
     expect(isQualifyingRankingBid(300, 200, true)).toBe(true);
     expect(isQualifyingRankingBid(250, 200, true)).toBe(false);
+  });
+
+  it("caps every qualifying ranking bid at 1,000 GRAM", () => {
+    expect(MAX_RANKING_BID_MILLITON).toBe(1_000_000);
+    expect(isQualifyingRankingBid(MAX_RANKING_BID_MILLITON, 0, false)).toBe(true);
+    expect(isQualifyingRankingBid(MAX_RANKING_BID_MILLITON + RANKING_BID_STEP_MILLITON, 0, false)).toBe(false);
   });
 
   it("keeps the 0.1 GRAM minimum when a seeded occupied slot has no recorded bid yet", () => {
@@ -37,5 +43,14 @@ describe("TG TOP paid ranking policy", () => {
       { groupId: 3, bidAmount: 100, heldSince: new Date("2026-08-19T10:02:00Z") },
     ]);
     expect(ranked.map(entry => entry.groupId)).toEqual([2, 1, 3]);
+  });
+
+  it("only assigns an entry to a slot whose minimum GRAM floor it meets", () => {
+    const assigned = assignRankingEntriesToSlots([
+      { groupId: 1, bidAmount: 100, heldSince: new Date("2026-08-19T10:00:00Z") },
+      { groupId: 2, bidAmount: 200, heldSince: new Date("2026-08-19T10:01:00Z") },
+      { groupId: 3, bidAmount: 300, heldSince: new Date("2026-08-19T10:02:00Z") },
+    ], [{ slotNumber: 1 }, { slotNumber: 2 }, { slotNumber: 3 }, { slotNumber: 4 }]);
+    expect(assigned.map(entry => entry?.groupId ?? null)).toEqual([3, 2, null, 1]);
   });
 });

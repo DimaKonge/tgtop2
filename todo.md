@@ -398,3 +398,5 @@
 - [x] Add a slot-linked GRAM bid slider that selects an eligible community and opens the official payment flow for the chosen ranking place
 - [x] Style the ranking-bid sheet as a Telegram-native pricing panel with selected community, large GRAM amount, colour-responsive slider, quick raise controls, and one «Оплатить место» action
 - [x] Use users.publicProfile, rather than the retired anonymous-listing field, when projecting owner cards in catalog and ranking server queries
+- [x] Cap every ranking-bid slider, input, and server payment request at 1,000 GRAM
+- [x] Add a listing-settings ranking-price slider that previews the exact ranking position a selected community would occupy before payment
