@@ -376,11 +376,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const dailyGrowthPct = latestDetailSnapshot');
     expect(source).toContain('detailSnapshots.find(snapshot => new Date(snapshot.recordedAt).getTime() >= Date.now() - 86_400_000)');
     expect(source).toContain('const detailRewardActive = Boolean(detail?.group.rewardActive');
-    expect(source).toContain('tx(`Лот · #${selectedSlot.slotNumber}`');
+    expect(source).toContain('tx(`ЛОТ · #${selectedSlot.slotNumber}`');
     expect(source).toContain('dailyGrowthPct.toFixed(1).replace(/\\.0$/, "")');
     expect(source).toContain('tx("Купить", "Buy")');
     expect(source).toContain('tx("Анонимный", "Anonymous")');
-    expect(source).toContain('tx("Перейти", "Open")');
+    expect(source).toContain('tx("Перейти в группу", "Open community")');
     expect(source).toContain('tx("Вступили", "Joined")');
     expect(source).toContain('tx("Отписались", "Unsubscribed")');
     expect(source).toContain('Чтобы добавить свою группу, назначьте бота администратором вашей группы.');

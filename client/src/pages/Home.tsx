@@ -2576,11 +2576,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {ui.back}
                 </button>
                 <div className="relative flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-5">
-                  <div className="order-0">
-                  {detailRewardActive && <span aria-label={tx("Активное вознаграждение", "Active reward")} className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-bl-xl rounded-tr-xl border border-amber-100/25 bg-amber-300/15 text-amber-100 shadow-md shadow-black/20 backdrop-blur"><Star className="h-4 w-4 fill-current" /></span>}
-                  <div className="mb-3 flex items-center justify-between gap-3 pr-10">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8fb9ff]">{selectedSlot ? tx(`Лот · #${selectedSlot.slotNumber}`, `Lot · #${selectedSlot.slotNumber}`) : tx("Лот в каталоге", "Catalog lot")}</span>
+                  <div className="relative mb-3 flex items-center justify-between gap-3">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8fb9ff]">{selectedSlot ? tx(`ЛОТ · #${selectedSlot.slotNumber}`, `LOT · #${selectedSlot.slotNumber}`) : tx("ЛОТ В КАТАЛОГЕ", "CATALOG LOT")}</span>
                     {selectedSlot && <span className="font-mono text-xs font-semibold tabular-nums text-slate-200">{formatPositionDuration(selectedSlot.updatedAt, positionClock)}</span>}
+                    {detailRewardActive && <span aria-label={tx("Активное вознаграждение", "Active reward")} className="absolute -right-2 -top-2 z-10 grid h-7 w-7 place-items-center rounded-bl-xl rounded-tr-xl border border-amber-100/25 bg-amber-300/15 text-amber-100 shadow-md shadow-black/20 backdrop-blur"><Star className="h-3.5 w-3.5 fill-current" /></span>}
                   </div>
                   <button
                     type="button"
@@ -2615,12 +2614,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <p className="mt-3 text-sm leading-5 text-slate-400">{detail.group.description}</p>
                       ) : null}
                     </span>
-                    {detailEntryUrl && <span className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-[#8fb9ff]"><ChevronRight className="h-4 w-4" /></span>}
                   </button>
                   <div className={`mt-4 grid gap-2 ${detailIsForSale && !detailPlacementIsPublic ? "grid-cols-3" : detailIsForSale || !detailPlacementIsPublic ? "grid-cols-2" : "grid-cols-1"}`}>
                     {detailIsForSale && <button type="button" onClick={() => createProtectedGroupDeal.mutate({ groupId: detail.group.id })} disabled={createProtectedGroupDeal.isPending || !isAuthenticated} className="flex min-w-0 flex-col justify-center rounded-xl bg-emerald-500 px-3 py-2.5 text-left text-emerald-50 shadow-sm shadow-emerald-950/40 transition-colors hover:bg-emerald-400 active:scale-[0.98] disabled:opacity-50"><b className="truncate text-xs">{createProtectedGroupDeal.isPending ? tx("Оформляем…", "Preparing…") : tx("Купить", "Buy")}</b><small className="mt-0.5 truncate text-[9px] text-emerald-50/70">{formatTon(detail.group.salePriceTon)} TON</small></button>}
                     {!detailPlacementIsPublic && <span className="flex min-w-0 flex-col justify-center rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5 text-left"><b className="truncate text-xs text-slate-200">{tx("Анонимный", "Anonymous")}</b><small className="mt-0.5 truncate text-[9px] text-slate-500">{tx("постинг", "posting")}</small></span>}
-                    <button type="button" onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }} disabled={!detailEntryUrl} className="flex min-w-0 items-center justify-between rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left text-[#b8d3ff] transition-colors hover:bg-[#3f8cff]/16 active:scale-[0.98] disabled:opacity-45"><span className="min-w-0"><b className="block truncate text-xs">{tx("Перейти", "Open")}</b><small className="mt-0.5 block truncate text-[9px] text-[#8fb9ff]/75">{detailHasPaidEntry ? tx("по ссылке", "by link") : tx("в группу", "community")}</small></span><ChevronRight className="h-4 w-4 shrink-0" /></button>
+                    <button type="button" onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }} disabled={!detailEntryUrl} className="flex min-w-0 items-center justify-between rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left text-[#b8d3ff] transition-colors hover:bg-[#3f8cff]/16 active:scale-[0.98] disabled:opacity-45"><span className="min-w-0"><b className="block truncate text-xs">{tx("Перейти в группу", "Open community")}</b><small className="mt-0.5 block truncate text-[9px] text-[#8fb9ff]/75">{detailHasPaidEntry ? tx("по ссылке", "by link") : tx("в Telegram", "in Telegram")}</small></span><ChevronRight className="h-4 w-4 shrink-0" /></button>
                   </div>
                   {detailRewardActive && <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-300/[0.07] px-2.5 py-2 text-[10px] text-amber-100/85"><Star className="h-3.5 w-3.5 shrink-0 fill-current text-amber-200" /><span>{detail.group.category === "Чаты" ? tx(`За подтверждённое вступление · +${formatGram(detail.group.rewardAmount)} GRAM`, `For a confirmed join · +${formatGram(detail.group.rewardAmount)} GRAM`) : tx(`За подтверждённую подписку · +${formatGram(detail.group.rewardAmount)} GRAM`, `For a confirmed subscription · +${formatGram(detail.group.rewardAmount)} GRAM`)}</span></div>}
                   {ownsDetail && detail.group.status !== "listed" && (
@@ -2656,8 +2654,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                     </div>
                   )}
-                  </div>
-                  <section className="order-1 mt-4 space-y-3">
+                  <section className="mt-4 space-y-3">
                     <div className="sticky top-2 z-10 flex items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#101a2a]/95 px-4 py-3 shadow-lg backdrop-blur">
                       <span>
                         <small className="block text-[10px] font-medium uppercase tracking-[0.14em] text-[#a6c8ff]">{tx("Участники", "Members")}</small>
