@@ -2578,12 +2578,32 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   )}
                   {!detailPlacementIsPublic || !detailOwner ? (
-                    <div className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] p-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">A</span>
-                      <span className="min-w-0 flex-1">
-                        <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Разместил", "Listed by")}</small>
-                        <b className="mt-0.5 block truncate text-xs text-slate-200">{tx("Аноним", "Anonymous")}</b>
-                      </span>
+                    <div className="mt-3 w-full rounded-xl border border-white/8 bg-white/[0.035] p-3">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">A</span>
+                        <span className="min-w-0 flex-1">
+                          <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Размещено", "Listed")}</small>
+                          <b className="mt-0.5 block truncate text-xs text-slate-200">{tx("Анонимно", "Anonymously")}</b>
+                        </span>
+                      </div>
+                      {detail.group.managerName && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (detail.group.managerUsername) openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`);
+                          }}
+                          disabled={!detail.group.managerUsername}
+                          className="mt-3 flex w-full items-center gap-2 rounded-lg bg-black/15 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.055] active:scale-[0.99] disabled:cursor-default disabled:opacity-80"
+                        >
+                          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#3f8cff]/25 bg-[#3f8cff]/10 text-xs font-semibold text-[#b6d1ff]">{detail.group.managerName.slice(0, 1).toUpperCase()}</span>
+                          <span className="min-w-0 flex-1">
+                            <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Менеджер группы", "Community manager")}</small>
+                            <b className="mt-0.5 block truncate text-xs text-slate-200">{detail.group.managerName}</b>
+                            {detail.group.managerUsername && <small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">@{detail.group.managerUsername}</small>}
+                          </span>
+                          {detail.group.managerUsername && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#8fb9ff]" />}
+                        </button>
+                      )}
                     </div>
                   ) : detailOwner && (
                     <button

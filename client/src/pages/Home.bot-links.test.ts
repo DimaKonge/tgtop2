@@ -93,7 +93,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const hours = Math.floor(seconds / 3_600);');
     expect(source).not.toContain('const days = Math.floor(seconds / 86_400);');
     expect(source).toContain('!detailOwner ? (');
-    expect(source).toContain('tx("Аноним", "Anonymous")');
+    expect(source).toContain('tx("Анонимно", "Anonymously")');
     expect(source).toContain('const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0');
     expect(source).toContain('rewardPerInvite: isChatRewardCampaign ? 0 : joinRewardUnits');
     expect(source).toContain('Одна ставка применяется и к подписке, и к вступлению по персональной ссылке.');
@@ -107,7 +107,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const getRussianLanguage = (): Language => "ru";');
     expect(source).not.toContain('localStorage.getItem("tg-top-language")');
     expect(source).not.toContain('tx("Личная папка", "Personal cabinet")');
-    expect(source).toContain('tx("Разместил", "Listed by")');
+    expect(source).toContain('tx("Размещено", "Listed")');
     expect(source).not.toContain('onOwnerClick');
     expect(source).toContain('Профиль владельца');
     expect(source).toContain('getOwnerLeaderboard.useQuery');
@@ -153,7 +153,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('Переключить анонимное размещение');
     expect(source).not.toContain('const [anonymousListing, setAnonymousListing] = useState(true)');
     expect(source).toContain('!detailOwner ? (');
-    expect(source).toContain('tx("Аноним", "Anonymous")');
+    expect(source).toContain('tx("Анонимно", "Anonymously")');
     expect(source).toContain('Подписаться и получить +${formatGram(subscriptionReward)} GRAM');
     expect(source).toContain('<Select value={listingCountry}');
     expect(source).toContain('<Select value={listingSubcategory}');
@@ -353,6 +353,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('setManagerSheetOpen(true)');
     expect(source).toContain('setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId })');
     expect(source).toContain('managerTelegramUserId?: string | null;');
+    expect(source).toContain('detail.group.managerName && (');
+    expect(source).toContain('tx("Размещено", "Listed")');
+    expect(source).toContain('tx("Анонимно", "Anonymously")');
+    expect(source).toContain('tx("Менеджер группы", "Community manager")');
+    expect(source).toContain('openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`)');
     expect(source).toContain('listingAnnouncementEnabled?: boolean;');
     expect(source).toContain('setListingAnnouncementEnabled(firstGroup?.listingAnnouncementEnabled ?? true);');
     expect(source).toContain('listingAnnouncementEnabled,');

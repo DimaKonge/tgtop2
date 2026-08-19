@@ -460,3 +460,4 @@
 - [x] Redact Telegram polling failures so bot credentials and request internals never reach production logs
 - [x] Replace the revoked @TGTOP_robot token on production and verify long-polling recovery
 - [x] Prevent the web-server production bundle from starting a second Telegram long-polling loop
+- [x] Show the selected community manager and their Telegram account in public details even when the owner listing is anonymous
