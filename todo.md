@@ -475,3 +475,12 @@
 - [x] Restyle the «Выбрать и настроить ставку» action with a calmer outlined dark presentation
 - [x] Add the compact lot-publication settings to the bottom bid sheet and rename it «Параметры лота»
 - [x] Remove the standalone Telegram-entry button and make the entire community header card open the community
+- [x] Show a green «Купить» action on a lot card only when sale is enabled and a sale price is set
+- [x] Replace the manager action in the public lot card with an anonymous-posting status and retain a direct group-entry action
+- [x] Show a reward caption below group entry only for active reward campaigns
+- [x] Add «Вступили» and «Отписались» metric cells beneath the audience chart using bot-observed data
+- [x] Show the lot number and live position timer in the top row of the community detail card
+- [x] Show daily audience growth percentage below the avatar with direction-aware green or red styling
+- [x] Show a reward star badge in the card corner only for an active reward campaign
+- [x] Keep the completed bottom controls and let guests select only an already connected own group to outbid
+- [x] When a guest has no connected eligible groups, show neutral copy explaining that the bot must be made an administrator of their group

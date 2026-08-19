@@ -1586,6 +1586,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : detail?.group.inviteLink ?? null);
   const detailHasPaidEntry = Boolean(detail?.group.monthlyEntryInviteLink && detail.group.monthlyEntryStars);
   const detailOwner = detail?.owner ?? null;
+  const detailSnapshots = [...(detail?.snapshots ?? [])].sort((left, right) => new Date(left.recordedAt).getTime() - new Date(right.recordedAt).getTime());
+  const latestDetailSnapshot = detailSnapshots.at(-1);
+  const dayAgoDetailSnapshot = detailSnapshots.find(snapshot => new Date(snapshot.recordedAt).getTime() >= Date.now() - 86_400_000) ?? detailSnapshots[0];
+  const dailyGrowthPct = latestDetailSnapshot && dayAgoDetailSnapshot && dayAgoDetailSnapshot.membersCount > 0
+    ? ((latestDetailSnapshot.membersCount - dayAgoDetailSnapshot.membersCount) / dayAgoDetailSnapshot.membersCount) * 100
+    : null;
+  const detailRewardActive = Boolean(detail?.group.rewardActive && (detail?.group.rewardAmount ?? 0) > 0);
+  const detailIsForSale = Boolean(!ownsDetail && detail?.group.listingType === "sale" && Number(detail.group.salePriceTon) > 0);
   const subscriptionReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.subscriptionAmount ?? 0 : 0;
   const inviteReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.inviteAmount ?? 0 : 0;
   const manualAddReward = !ownsDetail && detail?.group.category === "Чаты" ? detail.group.reward?.manualAddAmount ?? 0 : 0;
@@ -2567,14 +2575,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <ArrowLeft className="h-4 w-4" />
                   {ui.back}
                 </button>
-                <div className="flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-5">
+                <div className="relative flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-5">
+                  <div className="order-0">
+                  {detailRewardActive && <span aria-label={tx("Активное вознаграждение", "Active reward")} className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-bl-xl rounded-tr-xl border border-amber-100/25 bg-amber-300/15 text-amber-100 shadow-md shadow-black/20 backdrop-blur"><Star className="h-4 w-4 fill-current" /></span>}
+                  <div className="mb-3 flex items-center justify-between gap-3 pr-10">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8fb9ff]">{selectedSlot ? tx(`Лот · #${selectedSlot.slotNumber}`, `Lot · #${selectedSlot.slotNumber}`) : tx("Лот в каталоге", "Catalog lot")}</span>
+                    {selectedSlot && <span className="font-mono text-xs font-semibold tabular-nums text-slate-200">{formatPositionDuration(selectedSlot.updatedAt, positionClock)}</span>}
+                  </div>
                   <button
                     type="button"
                     onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
                     disabled={!detailEntryUrl}
-                    className={`order-0 flex w-full items-start gap-4 rounded-xl text-left transition-colors ${detailEntryUrl ? "cursor-pointer hover:bg-white/[0.035] active:scale-[0.995]" : "cursor-default"}`}
+                    className={`flex w-full items-start gap-4 rounded-xl text-left transition-colors ${detailEntryUrl ? "cursor-pointer hover:bg-white/[0.035] active:scale-[0.995]" : "cursor-default"}`}
                   >
-                    <Avatar group={detail.group} large />
+                    <span className="flex shrink-0 flex-col items-center gap-1.5">
+                      <Avatar group={detail.group} large />
+                      {dailyGrowthPct !== null && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${dailyGrowthPct > 0 ? "bg-emerald-400/10 text-emerald-300" : dailyGrowthPct < 0 ? "bg-rose-400/10 text-rose-300" : "bg-white/[0.06] text-slate-400"}`}>{dailyGrowthPct > 0 ? "+" : ""}{dailyGrowthPct.toFixed(1).replace(/\.0$/, "")}%</span>}
+                    </span>
                     <span className="min-w-0 flex-1 py-1">
                       <h1 className="truncate text-xl font-semibold">
                         {detail.group.title}
@@ -2600,6 +2617,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </span>
                     {detailEntryUrl && <span className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-[#8fb9ff]"><ChevronRight className="h-4 w-4" /></span>}
                   </button>
+                  <div className={`mt-4 grid gap-2 ${detailIsForSale && !detailPlacementIsPublic ? "grid-cols-3" : detailIsForSale || !detailPlacementIsPublic ? "grid-cols-2" : "grid-cols-1"}`}>
+                    {detailIsForSale && <button type="button" onClick={() => createProtectedGroupDeal.mutate({ groupId: detail.group.id })} disabled={createProtectedGroupDeal.isPending || !isAuthenticated} className="flex min-w-0 flex-col justify-center rounded-xl bg-emerald-500 px-3 py-2.5 text-left text-emerald-50 shadow-sm shadow-emerald-950/40 transition-colors hover:bg-emerald-400 active:scale-[0.98] disabled:opacity-50"><b className="truncate text-xs">{createProtectedGroupDeal.isPending ? tx("Оформляем…", "Preparing…") : tx("Купить", "Buy")}</b><small className="mt-0.5 truncate text-[9px] text-emerald-50/70">{formatTon(detail.group.salePriceTon)} TON</small></button>}
+                    {!detailPlacementIsPublic && <span className="flex min-w-0 flex-col justify-center rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5 text-left"><b className="truncate text-xs text-slate-200">{tx("Анонимный", "Anonymous")}</b><small className="mt-0.5 truncate text-[9px] text-slate-500">{tx("постинг", "posting")}</small></span>}
+                    <button type="button" onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }} disabled={!detailEntryUrl} className="flex min-w-0 items-center justify-between rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left text-[#b8d3ff] transition-colors hover:bg-[#3f8cff]/16 active:scale-[0.98] disabled:opacity-45"><span className="min-w-0"><b className="block truncate text-xs">{tx("Перейти", "Open")}</b><small className="mt-0.5 block truncate text-[9px] text-[#8fb9ff]/75">{detailHasPaidEntry ? tx("по ссылке", "by link") : tx("в группу", "community")}</small></span><ChevronRight className="h-4 w-4 shrink-0" /></button>
+                  </div>
+                  {detailRewardActive && <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-300/[0.07] px-2.5 py-2 text-[10px] text-amber-100/85"><Star className="h-3.5 w-3.5 shrink-0 fill-current text-amber-200" /><span>{detail.group.category === "Чаты" ? tx(`За подтверждённое вступление · +${formatGram(detail.group.rewardAmount)} GRAM`, `For a confirmed join · +${formatGram(detail.group.rewardAmount)} GRAM`) : tx(`За подтверждённую подписку · +${formatGram(detail.group.rewardAmount)} GRAM`, `For a confirmed subscription · +${formatGram(detail.group.rewardAmount)} GRAM`)}</span></div>}
                   {ownsDetail && detail.group.status !== "listed" && (
                     <button
                       type="button"
@@ -2609,16 +2632,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <span>{tx("Разместить в каталоге", "List in catalog")}</span>
                       <Plus className="h-4 w-4" />
                     </button>
-                  )}
-                  {detailEntryUrl && subscriptionReward > 0 && (
-                    <a
-                      href={detailEntryUrl}
-                      onClick={event => { event.preventDefault(); openTelegramCommunityLink(detailEntryUrl); }}
-                      className="order-2 mt-3 flex min-h-12 w-full items-center justify-between rounded-xl border border-amber-200/25 bg-amber-300/[0.09] px-4 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-300/[0.14] active:scale-[0.99]"
-                    >
-                      <span>{tx(`Подписаться и получить +${formatGram(subscriptionReward)} GRAM`, `Subscribe and earn +${formatGram(subscriptionReward)} GRAM`)}</span>
-                      <Star className="h-4 w-4 fill-current" />
-                    </a>
                   )}
                   {inviteReward > 0 && isAuthenticated && (
                     <button
@@ -2643,8 +2656,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                     </div>
                   )}
+                  </div>
+                  <section className="order-1 mt-4 space-y-3">
+                    <div className="sticky top-2 z-10 flex items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#101a2a]/95 px-4 py-3 shadow-lg backdrop-blur">
+                      <span>
+                        <small className="block text-[10px] font-medium uppercase tracking-[0.14em] text-[#a6c8ff]">{tx("Участники", "Members")}</small>
+                        <b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.membersCount)}</b>
+                      </span>
+                      <Users className="h-5 w-5 text-[#72a8ff]" />
+                    </div>
+                    <AudienceGrowthChart snapshots={detail.snapshots} language={language} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <Metric label={tx("Вступили", "Joined")} value={n(detail.group.joinedCount)} note={tx("зафиксировано ботом", "observed by the bot")} />
+                      <Metric label={tx("Отписались", "Unsubscribed")} value={n(detail.group.leavesCount)} note={tx("зафиксировано ботом", "observed by the bot")} />
+                    </div>
+                  </section>
                   {!ownsDetail && (!detailPlacementIsPublic || !detailOwner) ? (
-                    <div className="mt-3 w-full rounded-xl border border-white/8 bg-white/[0.035] p-3">
+                    <div className="order-3 mt-3 w-full rounded-xl border border-white/8 bg-white/[0.035] p-3">
                       <div className="flex items-center gap-3">
                         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">A</span>
                         <span className="min-w-0 flex-1">
@@ -2792,7 +2820,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   )}
                   {selectedSlot && (
-                    <section className="order-2 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
+                    <section className="order-4 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
                       <div className="flex items-start justify-between gap-3">
                         <span>
                           <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[#8fb9ff]">{tx(`Текущее место · #${selectedSlot.slotNumber}`, `Current place · #${selectedSlot.slotNumber}`)}</small>
@@ -2830,44 +2858,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       {!ownsDetail && isAuthenticated && <button onClick={() => openOutbid(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Перебить лот", "Outbid lot")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Следующая ставка: от ${formatTon(detailMinimumBid)} GRAM`, `Next bid: from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
                     </section>
                   )}
-                  {!ownsDetail && detail.group.salePriceTon && detail.group.listingType === "sale" && (
-                    <div className="order-2 mt-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 p-3">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span>
-                          <b className="block text-sm text-slate-100">{tx("Безопасная покупка", "Protected purchase")}</b>
-                          <small className="mt-1 block text-[11px] text-slate-400">{tx("Передача owner-прав · до 21 дня", "Owner-rights transfer · up to 21 days")}</small>
-                        </span>
-                        <b className="text-sm text-[#a6c8ff]">{formatTon(detail.group.salePriceTon)} TON</b>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <small className="text-[10px] text-slate-500">{tx("Комиссия TG TOP · 0%", "TG TOP fee · 0%")}</small>
-                        <button
-                          onClick={() => createProtectedGroupDeal.mutate({ groupId: detail.group.id })}
-                          disabled={createProtectedGroupDeal.isPending || !isAuthenticated}
-                          className="rounded-lg bg-[#3f8cff] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-                        >
-                          {isAuthenticated ? tx(`Купить за ${formatTon(detail.group.salePriceTon)} TON`, `Buy for ${formatTon(detail.group.salePriceTon)} TON`) : tx("Войти через Telegram", "Sign in with Telegram")}
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
-                <div className="sticky top-2 z-10 flex items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#101a2a]/95 px-4 py-3 shadow-lg backdrop-blur">
-                  <span>
-                    <small className="block text-[10px] font-medium uppercase tracking-[0.14em] text-[#a6c8ff]">{tx("Участники", "Members")}</small>
-                    <b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.membersCount)}</b>
-                  </span>
-                  <Users className="h-5 w-5 text-[#72a8ff]" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {detail.group.joinedCount > 0 && <Metric label={tx("Вступления", "Joins")} value={n(detail.group.joinedCount)} note={tx("замеченные ботом", "observed by the bot")} />}
-                  {detail.group.leavesCount > 0 && <Metric label={tx("Выходы", "Leaves")} value={n(detail.group.leavesCount)} note={tx("замеченные ботом", "observed by the bot")} />}
-                  <Metric label={tx("Приглашения", "Invites")} value={n(detail.group.invitedCount)} note={tx("зафиксировано ботом", "recorded by the bot")} />
-                  {detail.group.messagesCount > 0 && <Metric label={tx("Публикации", "Posts")} value={n(detail.group.messagesCount)} note={tx("увиденные ботом", "observed by the bot")} />}
-                </div>
-
-                <AudienceGrowthChart snapshots={detail.snapshots} language={language} />
-
                 <NftShowcase nfts={detail.ownerNfts} language={language} title={tx("NFT-витрина площадки", "Community NFT showcase")} />
               </>
             ) : (
@@ -3368,7 +3359,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <span className={`grid h-5 w-5 place-items-center rounded-md border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
                   </button>;
                 })}
-                {!outbidCandidates.length && <p className="rounded-xl border border-dashed border-white/12 px-3 py-4 text-center text-xs text-slate-500">{tx("Нет подходящей своей группы для этого рейтинга.", "No owned community matches this ranking.")}</p>}
+                {!outbidCandidates.length && <div className="rounded-xl border border-dashed border-white/12 px-3 py-4 text-center">
+                  <b className="block text-xs font-medium text-slate-300">{mine.length ? tx("Нет подключённой группы для этого рейтинга.", "No connected community matches this ranking.") : tx("Чтобы добавить свою группу, назначьте бота администратором вашей группы.", "To add your community, make the bot an administrator of your community.")}</b>
+                  <small className="mt-1 block text-[10px] leading-4 text-slate-500">{mine.length ? tx("Выберите уже подключённую группу с подходящей категорией.", "Choose an already connected community in the matching category.") : tx("После подключения группа появится здесь для выбора.", "After connection, the community will appear here for selection.")}</small>
+                </div>}
               </div>
             </section>
             <section className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-black/15 p-3">
