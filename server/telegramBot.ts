@@ -341,6 +341,10 @@ function getTelegramPollingErrorSummary(error: unknown): string {
   return "Unexpected Telegram polling failure";
 }
 
+function isTelegramBotEntrypoint(entryPath?: string): boolean {
+  return Boolean(entryPath && /(?:^|\/)telegramBot\.(?:ts|js)$/.test(entryPath));
+}
+
 async function run(): Promise<void> {
   if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
   console.info("[Telegram] Starting long-polling for @TGTOP_robot");
@@ -359,6 +363,5 @@ async function run(): Promise<void> {
   }
 }
 
-export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, publicGroupUrl };
-const isMainModule = process.argv[1] ? new URL(`file://${process.argv[1]}`).href === import.meta.url : false;
-if (isMainModule) void run();
+export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, isTelegramBotEntrypoint, publicGroupUrl };
+if (isTelegramBotEntrypoint(process.argv[1])) void run();

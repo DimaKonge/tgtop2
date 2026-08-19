@@ -48,6 +48,13 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(__private__.getTelegramPollingErrorSummary(new Error("request configuration"))).toBe("Unexpected Telegram polling failure");
   });
 
+  it("starts polling only from the dedicated bot entrypoint, never from the web-server bundle", () => {
+    expect(__private__.isTelegramBotEntrypoint("/opt/tgtop/dist/telegramBot.js")).toBe(true);
+    expect(__private__.isTelegramBotEntrypoint("/home/ubuntu/gifts-lab-v2/server/telegramBot.ts")).toBe(true);
+    expect(__private__.isTelegramBotEntrypoint("/opt/tgtop/dist/index.js")).toBe(false);
+    expect(__private__.isTelegramBotEntrypoint(undefined)).toBe(false);
+  });
+
   it("creates a rich owner confirmation with the GRAM award and both relevant actions", () => {
     const confirmation = __private__.buildOnboardingConfirmation(
       { id: -1001, type: "channel", title: "OATH", username: "o_a_th" },
