@@ -773,6 +773,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
   const language = getRussianLanguage();
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [detailBoardScope, setDetailBoardScope] = useState<{ category: "Все" | "Каналы" | "Чаты"; country: string; subcategory: string; city: string } | null>(null);
+  const [detailBidInput, setDetailBidInput] = useState("");
+  const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null);
   const [selectedOwnerOpenId, setSelectedOwnerOpenId] = useState<string | null>(null);
   const [targetSlot, setTargetSlot] = useState<Slot | null>(null);
   const [rankSlotLinkId, setRankSlotLinkId] = useState<number | null>(null);
@@ -1050,10 +1053,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       }
     | undefined;
   const detailSlotsQuery = trpc.tgTop.getSlots.useQuery({
-    category: detail?.group.category ?? "Все",
-    country: detail?.group.country ?? "Global",
-    subcategory: detail?.group.subcategory ?? "Все",
-    city: detail?.group.city ?? "Все",
+    category: detailBoardScope?.category ?? detail?.group.category ?? "Все",
+    country: detailBoardScope?.country ?? detail?.group.country ?? "Global",
+    subcategory: detailBoardScope?.subcategory ?? detail?.group.subcategory ?? "Все",
+    city: detailBoardScope?.city ?? detail?.group.city ?? "Все",
   }, { enabled: Boolean(detail), refetchInterval: 12_000, refetchIntervalInBackground: false });
   const detailSlots = (detailSlotsQuery.data ?? []) as Slot[];
 
@@ -1427,15 +1430,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const detailMinimumBid = selectedSlot
     ? getMinimumRankingBidGram(selectedSlot)
     : null;
-  const rawDetailRankingBid = Number(amount);
+  const rawDetailRankingBid = Number(detailBidInput);
   const detailRankingBidAmount = detailMinimumBid !== null && Number.isFinite(rawDetailRankingBid)
     ? Math.min(MAX_RANKING_BID_GRAM, Math.max(detailMinimumBid, Math.round(rawDetailRankingBid * 10) / 10))
     : detailMinimumBid ?? 0.1;
   const detailRankingPreviewSlotNumber = detail && selectedSlot
     ? getSimulatedRankingSlotNumber(detailSlots, detail.group.id, detailRankingBidAmount)
     : null;
+  useEffect(() => {
+    setDetailBidInput(selectedSlot && detailMinimumBid !== null ? formatTon(detailMinimumBid) : "");
+  }, [detailMinimumBid, selectedSlot?.id]);
   const detailCatalogPath = detail
-    ? [tx("Каталог", "Catalog"), getCategoryLabel(detail.group.category, language), getSubcategoryLabel(detail.group.subcategory, language), getCountryLabel(detail.group.country, language), detail.group.city ? getCityLabel(detail.group.country, detail.group.city, language) : null].filter((part): part is string => Boolean(part)).join(" · ")
+    ? [tx("Все", "All"), getCountryLabel(detailBoardScope?.country ?? detail.group.country, language), (detailBoardScope?.category ?? detail.group.category) === "Все" ? tx("Все", "All") : getCategoryLabel((detailBoardScope?.category ?? detail.group.category) as "Каналы" | "Чаты", language), getSubcategoryLabel(detailBoardScope?.subcategory ?? detail.group.subcategory, language), detailBoardScope?.city && detailBoardScope.city !== "Все" ? getCityLabel(detailBoardScope.country, detailBoardScope.city, language) : null].filter((part): part is string => Boolean(part)).join(" · ")
     : "";
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
   const detailEntryUrl = detail?.group.monthlyEntryInviteLink ?? (detail?.group.username
@@ -1500,9 +1506,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const selectedNft = myNfts.find(nft => nft.id === selectedNftId) ?? null;
   const showcaseNft = myNfts.find(nft => nft.id === showcaseNftId) ?? null;
   const reviewedRecipient = nftRecipientQuery.data;
+  const activeRankingBoardScope = { category, country: country === "Все" ? "Global" : country, subcategory, city };
 
-  const openGroup = (id: number) => {
+  const openGroup = (id: number, boardScope?: { category: "Все" | "Каналы" | "Чаты"; country: string; subcategory: string; city: string }) => {
     setDetailReturnPage(page === "details" ? "top" : page);
+    setDetailBoardScope(boardScope ?? null);
     setSelectedGroupId(id);
     setPage("details");
   };
@@ -1868,7 +1876,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   bidAmount={leadSlot.bidAmount}
                   onClick={() =>
                     leadSlot.group
-                      ? openGroup(leadSlot.group.id)
+                      ? openGroup(leadSlot.group.id, activeRankingBoardScope)
                       : openMine(leadSlot)
                   }
                 />
@@ -1882,7 +1890,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       language={language}
                       bidAmount={slot.bidAmount}
                       onClick={() =>
-                        slot.group ? openGroup(slot.group.id) : openMine(slot)
+                        slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)
                       }
                     />
                   </div>
@@ -1897,7 +1905,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       language={language}
                       bidAmount={slot.bidAmount}
                       onClick={() =>
-                        slot.group ? openGroup(slot.group.id) : openMine(slot)
+                        slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)
                       }
                     />
                   </div>
@@ -2454,16 +2462,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         if (detailOwner.telegramUsername) openTelegramCommunityLink(`https://t.me/${detailOwner.telegramUsername}`);
                       }}
                       disabled={!detailOwner.telegramUsername}
-                      className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] p-3 text-left transition-colors hover:bg-white/[0.07] active:scale-[0.99] disabled:cursor-default disabled:opacity-70"
+                      className="mt-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.05] active:scale-[0.99] disabled:cursor-default disabled:opacity-70"
                     >
-                      <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-200">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-200">
                         {detailOwner.avatarUrl ? <img src={detailOwner.avatarUrl} alt="" className="h-full w-full object-cover" /> : (detailOwner.name ?? detailOwner.telegramUsername ?? "T").slice(0, 1).toUpperCase()}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Владелец", "Owner")}</small>
-                        <b className="mt-0.5 block truncate text-xs text-slate-200">{detailOwner.telegramUsername ? `@${detailOwner.telegramUsername}` : (detailOwner.name ?? tx("Пользователь TG TOP", "TG TOP user"))}</b>
+                        <b className="block truncate text-xs text-slate-200">{detailOwner.name ?? detailOwner.telegramUsername ?? tx("Пользователь TG TOP", "TG TOP user")}</b>
+                        {detailOwner.telegramUsername && <small className="mt-0.5 block truncate text-[10px] text-slate-500">@{detailOwner.telegramUsername}</small>}
                       </span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
                     </button>
                   )}
                   {ownsDetail && (
@@ -2523,9 +2531,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       )}
                       <button
                         onClick={() => {
-                          if (window.confirm(tx("Удалить группу из кабинета?", "Delete community from account?"))) {
-                            deleteGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") });
-                          }
+                          setPendingGroupDeletion(detail.group);
                         }}
                         disabled={deleteGroups.isPending}
                         title={tx("Удалить группу", "Delete community")}
@@ -2562,12 +2568,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             <b className="text-xs text-[#a6c8ff]">{formatTon(detailRankingBidAmount)} GRAM</b>
                           </div>
                           <div className="mt-3 flex items-center rounded-xl border border-white/8 bg-[#0b0f14] p-1">
-                            <button type="button" onClick={() => setAmount(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label={tx("Уменьшить ставку", "Decrease bid")} className="grid h-10 w-10 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.07]"><Minus className="h-4 w-4" /></button>
-                            <Input value={formatTon(detailRankingBidAmount)} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setAmount(value); }} aria-label={tx("Новая ставка в GRAM", "New bid in GRAM")} className="h-10 flex-1 border-0 bg-transparent px-1 text-center text-base font-semibold text-white focus-visible:ring-0" />
-                            <button type="button" onClick={() => setAmount(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label={tx("Увеличить ставку", "Increase bid")} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"><Plus className="h-4 w-4" /></button>
+                            <button type="button" onClick={() => setDetailBidInput(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label={tx("Уменьшить ставку", "Decrease bid")} className="grid h-10 w-10 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.07]"><Minus className="h-4 w-4" /></button>
+                            <Input value={detailBidInput} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setDetailBidInput(value); }} onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))} aria-label={tx("Новая ставка в GRAM", "New bid in GRAM")} className="h-10 flex-1 border-0 bg-transparent px-1 text-center text-base font-semibold text-white focus-visible:ring-0" />
+                            <button type="button" onClick={() => setDetailBidInput(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label={tx("Увеличить ставку", "Increase bid")} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"><Plus className="h-4 w-4" /></button>
                           </div>
-                          <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setAmount(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
-                          <button type="button" onClick={() => { setTargetSlot(selectedSlot); setAmount(formatTon(detailRankingBidAmount)); setPaymentMethod("gram"); setStarsPaymentGroup(detail.group); }} disabled={!detailRankingPreviewSlotNumber} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{tx("Поднять ставку", "Raise bid")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("GRAM или Telegram Stars", "GRAM or Telegram Stars")}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>
+                          <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
+                          <button type="button" onClick={() => { if (!detail || !selectedSlot) return; const value = detailRankingBidAmount; const minimum = getMinimumRankingBidGram(selectedSlot); if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`)); placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM` }); }} disabled={!detailRankingPreviewSlotNumber || placeBid.isPending} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{placeBid.isPending ? tx("Оплата…", "Paying…") : tx("Поднять ставку", "Raise bid")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("Оплата GRAM с баланса TG TOP", "GRAM payment from TG TOP balance")}</small></span><b className="text-xs text-[#a6c8ff]">{formatTon(detailRankingBidAmount)} GRAM</b></button>
                         </div>
                       )}
                       {!ownsDetail && isAuthenticated && <button onClick={() => openMine(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Цена лота", "Lot price")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Установить от ${formatTon(detailMinimumBid)} GRAM`, `Set from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
@@ -3044,6 +3050,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         </SheetContent>
       </Sheet>
 
+      <Sheet open={Boolean(pendingGroupDeletion)} onOpenChange={open => !open && setPendingGroupDeletion(null)}>
+        <SheetContent side="bottom" className="rounded-t-[26px] border-rose-300/15 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4 pb-2">
+            <SheetTitle className="text-slate-100">{tx("Удалить группу из платформы?", "Remove community from platform?")}</SheetTitle>
+            <p className="text-xs leading-5 text-slate-500">{pendingGroupDeletion?.title}. {tx("Группа исчезнет из кабинета, каталога и рейтинга.", "The community will be removed from your workspace, catalog, and ranking.")}</p>
+          </SheetHeader>
+          <div className="flex gap-2 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
+            <button type="button" onClick={() => setPendingGroupDeletion(null)} className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/[0.05]">{tx("Отмена", "Cancel")}</button>
+            <button type="button" onClick={() => { if (!pendingGroupDeletion) return; deleteGroups.mutate({ groupIds: [pendingGroupDeletion.id] }, { onSuccess: () => { setPendingGroupDeletion(null); setPage("mine"); } }); }} disabled={deleteGroups.isPending} className="flex-1 rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-400 disabled:opacity-50">{deleteGroups.isPending ? tx("Удаляем…", "Removing…") : tx("Удалить", "Remove")}</button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <Sheet open={Boolean(starsPaymentGroup)} onOpenChange={open => !open && setStarsPaymentGroup(null)}>
         <SheetContent side="bottom" className="max-h-[88dvh] rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
           <SheetHeader className="px-4">
@@ -3065,7 +3084,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   ? { text: "text-amber-300", range: "[&_[data-slot=slider-range]]:!bg-amber-400 [&_[data-slot=slider-thumb]]:!border-amber-100 [&_[data-slot=slider-thumb]]:!bg-amber-400" }
                   : { text: "text-fuchsia-300", range: "[&_[data-slot=slider-range]]:!bg-fuchsia-400 [&_[data-slot=slider-thumb]]:!border-fuchsia-100 [&_[data-slot=slider-thumb]]:!bg-fuchsia-400" };
               const setBid = (next: number) => setAmount(formatTon(Math.min(MAX_RANKING_BID_GRAM, Math.max(minimum, Math.round(next * 10) / 10))));
-              const starsAmount = Math.max(10, Math.ceil(bidAmount * 100));
               return <>
                 <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.035] p-3">
                   <Avatar group={starsPaymentGroup} compact />
@@ -3075,8 +3093,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <div><div className="mb-2 flex items-center justify-between text-[10px] text-slate-500"><span>{formatTon(minimum)} GRAM</span><span className={tone.text}>{ratio <= 1.2 ? tx("Минимальная", "Minimum") : ratio <= 1.5 ? tx("Уверенная", "Confident") : tx("Максимальная", "Maximum")}</span><span>{formatTon(maximum)} GRAM</span></div><Slider value={[bidAmount]} min={minimum} max={maximum} step={0.1} onValueChange={([value]) => setBid(value)} className={`py-3 [&_[data-slot=slider-track]]:h-3 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-thumb]]:size-7 ${tone.range}`} /></div>
                 <div className="grid grid-cols-4 gap-2">{[{ label: "+10%", value: bidAmount * 1.1 }, { label: "+30%", value: bidAmount * 1.3 }, { label: "+50%", value: bidAmount * 1.5 }, { label: tx("Минимум", "Minimum"), value: minimum }].map(item => <button key={item.label} onClick={() => setBid(item.value)} className="rounded-xl border border-white/8 bg-white/[0.04] px-2 py-2.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.08] active:scale-[0.97]">{item.label}</button>)}</div>
                 <p className="text-center text-xs text-slate-400">{tx(`${formatTon(bidAmount)} GRAM · шаг 0.1 GRAM`, `${formatTon(bidAmount)} GRAM · 0.1 GRAM step`)}</p>
-                <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/8 bg-black/15 p-1"><button type="button" onClick={() => setPaymentMethod("gram")} className={`rounded-lg px-3 py-2 text-left transition-colors ${paymentMethod === "gram" ? "bg-[#3f8cff]/20 text-[#c8ddff]" : "text-slate-400 hover:bg-white/[0.04]"}`}><b className="block text-xs">GRAM</b><small className="mt-0.5 block text-[10px]">{tx("С баланса TG TOP", "From TG TOP balance")}</small></button><button type="button" onClick={() => setPaymentMethod("stars")} className={`rounded-lg px-3 py-2 text-left transition-colors ${paymentMethod === "stars" ? "bg-[#3f8cff]/20 text-[#c8ddff]" : "text-slate-400 hover:bg-white/[0.04]"}`}><b className="block text-xs">Telegram Stars</b><small className="mt-0.5 block text-[10px]">{starsAmount} ★</small></button></div>
-                <button onClick={() => paymentMethod === "gram" ? submitPlacement(starsPaymentGroup) : createStarsRankingPayment.mutate({ slotId: targetSlot.id, groupId: starsPaymentGroup.id, bidAmount })} disabled={(paymentMethod === "gram" ? placeBid.isPending : createStarsRankingPayment.isPending) || !isAuthenticated} className="flex w-full items-center justify-between rounded-2xl bg-[#1688f5] px-5 py-4 text-left text-white shadow-lg shadow-[#1688f5]/20 transition-transform active:scale-[0.98] disabled:opacity-55"><span><b className="block text-base">{isAuthenticated ? paymentMethod === "gram" ? tx("Оплатить GRAM", "Pay with GRAM") : tx("Оплатить через Stars", "Pay with Stars") : tx("Войти через Telegram", "Sign in with Telegram")}</b><small className="mt-0.5 block text-[11px] text-white/70">{paymentMethod === "gram" ? tx("Сумма спишется с баланса TG TOP.", "The amount will be deducted from your TG TOP balance.") : tx("Telegram покажет защищённое подтверждение.", "Telegram will show a protected confirmation.")}</small></span><b className="text-lg">{paymentMethod === "gram" ? `${formatTon(bidAmount)} GRAM` : `${starsAmount} ★`}</b></button>
+                <button onClick={() => submitPlacement(starsPaymentGroup)} disabled={placeBid.isPending || !isAuthenticated} className="flex w-full items-center justify-between rounded-2xl bg-[#1688f5] px-5 py-4 text-left text-white shadow-lg shadow-[#1688f5]/20 transition-transform active:scale-[0.98] disabled:opacity-55"><span><b className="block text-base">{isAuthenticated ? tx("Оплатить GRAM", "Pay with GRAM") : tx("Войти через Telegram", "Sign in with Telegram")}</b><small className="mt-0.5 block text-[11px] text-white/70">{tx("Сумма спишется с баланса TG TOP.", "The amount will be deducted from your TG TOP balance.")}</small></span><b className="text-lg">{formatTon(bidAmount)} GRAM</b></button>
               </>;
             })()}
           </div>

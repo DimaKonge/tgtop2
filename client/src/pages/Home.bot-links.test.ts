@@ -306,5 +306,17 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('CATEGORY_SUBCATEGORIES[category].map(item =>');
     expect(source).toContain('setSubcategory("Все");');
     expect(source).toContain('setCountry("Все");');
+    expect(source).toContain('const [detailBoardScope, setDetailBoardScope] = useState');
+    expect(source).toContain('const [detailBidInput, setDetailBidInput] = useState("")');
+    expect(source).toContain('const activeRankingBoardScope = {');
+    expect(source).toContain('? openGroup(leadSlot.group.id, activeRankingBoardScope)');
+    expect(source).toContain('slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)');
+    expect(source).toContain('Input value={detailBidInput}');
+    expect(source).toContain('onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))}');
+    expect(source).toContain('onValueChange={([value]) => setDetailBidInput(formatTon(value))}');
+    expect(source).toContain('Оплата GRAM с баланса TG TOP');
+    expect(source).not.toContain('paymentMethod === "stars"');
+    expect(source).toContain('const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null)');
+    expect(source).toContain('Удалить группу из платформы?');
   });
 });
