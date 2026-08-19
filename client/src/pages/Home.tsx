@@ -2627,7 +2627,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       : item.status === "cancelled" ? tx("Отменено", "Cancelled")
                       : item.status === "expired" ? tx("Истекло", "Expired")
                       : item.status;
-                    const amount = item.amount === null || !item.currency ? null : `${item.direction === "in" ? "+" : item.direction === "out" ? "−" : ""}${item.currency === "Stars" ? n(item.amount, language) : formatTon(item.amount)} ${item.currency}`;
+                    const absoluteAmount = item.amount === null ? null : Math.abs(item.amount);
+                    const amount = absoluteAmount === null || !item.currency ? null : `${item.direction === "in" ? "+" : item.direction === "out" ? "−" : ""}${item.currency === "Stars" ? n(absoluteAmount, language) : formatTon(absoluteAmount)} ${item.currency}`;
                     return <div key={item.id} className="flex items-center justify-between gap-3 px-4 py-3.5">
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 text-[11px] font-semibold text-[#a6c8ff]">{item.type === "stars" ? "★" : item.type === "nft_transfer" ? "NFT" : item.type === "deal" ? "D" : item.type === "bid" ? "B" : "G"}</span>
                       <span className="min-w-0 flex-1">
@@ -2636,7 +2637,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                       <span className="shrink-0 text-right">
                         {amount && <b className={`block text-sm ${item.direction === "in" ? "text-[#72a8ff]" : "text-slate-200"}`}>{amount}</b>}
-                        <small className="mt-1 inline-block rounded-md bg-white/5 px-1.5 py-0.5 text-[9px] text-slate-400">{status}</small>
                       </span>
                     </div>;
                   })}

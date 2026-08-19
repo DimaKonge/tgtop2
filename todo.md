@@ -377,3 +377,9 @@
 - [x] Open community links through Telegram WebApp navigation so returning from a group preserves the current TG TOP Mini App session and detail screen
 - [x] Refine My Groups into a clear workspace for adding communities, selecting several cards, listing them, removing them from the catalog, and deleting them from the cabinet
 - [x] Refine Profile hierarchy around balance, wallet, reward status, public visibility, leaderboard, and compact account activity
+- [ ] Remove anonymous-listing controls from the listing sheet so owner visibility follows only the public-profile setting
+- [ ] Hide paid-entry UI completely when the selected community is not eligible instead of showing an unavailable-state explanation
+- [ ] Format debit activity with one minus sign and remove technical operation-code labels from Profile history
+- [ ] Show a live per-second timer for a group’s continuous occupancy of its exact ranking cell and reset it whenever the group moves to another cell
+- [ ] Make a public owner card open that owner’s TG TOP portfolio directly; keep the leaderboard as an additional entry point
+- [ ] Make public owner cards open the owner’s TG TOP profile and offer direct Telegram-account navigation when a public @username is available
