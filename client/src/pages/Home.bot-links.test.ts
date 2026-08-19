@@ -345,6 +345,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Группа опустится с ${selectedSlot.slotNumber}-й на ${detailRankingPreviewSlotNumber}-ю позицию');
     expect(source).toContain('tx("Обновить ставку", "Update bid")');
     expect(source).toContain('tx("Другие смогут перейти в ваш профиль", "Others can open your profile")');
-    expect(source).toContain('tx("Обновить Top", "Refresh Top")');
+    expect(source).toContain('Чтобы изменения вступили в силу, обновите ставку.');
+    expect(source).not.toContain('tx("Обновить Top", "Refresh Top")');
   });
 });

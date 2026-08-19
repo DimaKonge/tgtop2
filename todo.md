@@ -356,6 +356,7 @@
 - [x] Allow visibility changes from an already ranked owner detail card, charging the current Top price in GRAM to refresh the placement
 - [x] Put the public-profile toggle beside the owner row; when disabled, replace name and @username with «Анонимное размещение» after paid Top refresh
 - [x] Let an owner reduce their own price down to 0.1 GRAM and show a red message before payment if the placement will move lower
+- [x] Move the owner visibility toggle directly above the single «Обновить ставку» payment action and remove the duplicate Top-update button
 - [ ] Keep sale price, visibility, and entry-bonus configuration exclusively inside the owned community detail card
 - [ ] Order all ranking and lower-list placements by GRAM price descending, while allowing 0.1 GRAM entries below higher prices and preserving first-listed order on equal prices
 - [ ] Build the low-cost lower row as a lightweight first-come live feed with smooth card movement under high concurrent placement traffic
