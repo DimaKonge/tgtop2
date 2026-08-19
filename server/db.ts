@@ -427,13 +427,12 @@ export async function payRankingBidWithGramCredit(slotId: number, bidAmount: num
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const spendUnits = Math.round((bidAmount / 1000) * 100);
-  const [account] = await db.select({ bonusBalance: users.bonusBalance }).from(users).where(eq(users.openId, leaderUserId)).limit(1);
-  if (!account || account.bonusBalance < spendUnits) {
-    throw new Error(`Недостаточно GRAM на балансе. Нужно ${formatTonAmount(spendUnits / 100)} GRAM`);
-  }
 
   await db.transaction(async tx => {
-    await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${spendUnits}` }).where(eq(users.openId, leaderUserId));
+    const result = await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${spendUnits}` }).where(and(eq(users.openId, leaderUserId), gte(users.bonusBalance, spendUnits)));
+    if (Number(result[0]?.affectedRows ?? 0) !== 1) {
+      throw new Error(`Недостаточно GRAM на балансе. Нужно ${formatTonAmount(spendUnits / 100)} GRAM`);
+    }
     await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -spendUnits, kind: "ranking_spend" });
   });
 
