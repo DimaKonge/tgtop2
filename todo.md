@@ -484,3 +484,4 @@
 - [x] Show a reward star badge in the card corner only for an active reward campaign
 - [x] Keep the completed bottom controls and let guests select only an already connected own group to outbid
 - [x] When a guest has no connected eligible groups, show neutral copy explaining that the bot must be made an administrator of their group
+- [x] Restore the production SSH deployment key in the workspace and deploy the saved lot-card revision to tgtop.xyz
