@@ -242,7 +242,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('openTelegramCommunityLink(`https://t.me/${detailOwner.telegramUsername}`)');
     expect(source).toContain('const rankSlotId = Number(params.get("rankSlot"));');
     expect(source).toContain('setRankSlotLinkId(rankSlotId)');
-    expect(source).toContain('const MAX_RANKING_BID_GRAM = 100');
+    expect(source).toContain('const MAX_RANKING_BID_GRAM = 1_000');
+    expect(source).toContain('const MAX_RANKING_SLIDER_GRAM = 100');
+    expect(source).toContain('const listingSlotsQuery = trpc.tgTop.getSlots.useQuery');
+    expect(source).toContain('subcategory: selectedListingGroup?.subcategory ?? "Все"');
+    expect(source).not.toContain('до 100 GRAM');
     expect(source).toContain('getSimulatedRankingSlotNumber');
     expect(source).toContain('Цена места в рейтинге');
     expect(source).toContain('Предпросмотр позиции');

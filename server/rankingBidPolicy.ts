@@ -1,6 +1,6 @@
 export const VACANT_RANKING_MINIMUM_MILLITON = 100;
 export const RANKING_BID_STEP_MILLITON = 100;
-export const MAX_RANKING_BID_MILLITON = 100_000;
+export const MAX_RANKING_BID_MILLITON = 1_000_000;
 
 export function getRankingFloorMilliTon(_slotNumber: number) {
   return VACANT_RANKING_MINIMUM_MILLITON;

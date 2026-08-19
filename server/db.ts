@@ -260,14 +260,36 @@ export async function attributeTelegramReferral(telegramUserId: number, referral
   return true;
 }
 
+const RANKING_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6, 7] as const;
+
+async function ensureAuctionBoard(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, category: "Все" | "Каналы" | "Чаты", subcategory: string, country: string) {
+  await db.insert(auctionSlots).values(RANKING_SLOT_NUMBERS.map(slotNumber => ({
+    slotNumber,
+    category,
+    subcategory,
+    country,
+    title: "Свободное место",
+    subtitle: "Ждет листинга",
+    currentBid: "0 GRAM",
+    bidAmount: 0,
+    leaderUsername: "-",
+  }))).onDuplicateKeyUpdate({ set: { updatedAt: sql`${auctionSlots.updatedAt}` } });
+}
+
 // TG TOP specific queries
 export async function getAuctionSlots(category?: string, country?: string, subcategory?: string, city?: string) {
   const db = await getDb();
   if (!db) return [];
 
+  const boardCategory = category === "Каналы" || category === "Чаты" ? category : "Все";
+  const boardSubcategory = subcategory && subcategory !== "Все" ? subcategory : "Все";
+  const boardCountry = country && country !== "Все" ? country : "Global";
+  await ensureAuctionBoard(db, boardCategory, boardSubcategory, boardCountry);
+
   let slots = await db.select().from(auctionSlots).where(and(
-    eq(auctionSlots.category, "Все"),
-    eq(auctionSlots.country, "Global")
+    eq(auctionSlots.category, boardCategory),
+    eq(auctionSlots.subcategory, boardSubcategory),
+    eq(auctionSlots.country, boardCountry)
   )).orderBy(asc(auctionSlots.slotNumber));
   const strictOrder = assignRankingEntriesToSlots(slots.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt })), slots);
   if (strictOrder.some((source, index) => source?.groupId !== slots[index]?.groupId || source?.bidAmount !== slots[index]?.bidAmount)) {
@@ -299,8 +321,9 @@ export async function getAuctionSlots(category?: string, country?: string, subca
       }
     });
     slots = await db.select().from(auctionSlots).where(and(
-      eq(auctionSlots.category, "Все"),
-      eq(auctionSlots.country, "Global")
+      eq(auctionSlots.category, boardCategory),
+      eq(auctionSlots.subcategory, boardSubcategory),
+      eq(auctionSlots.country, boardCountry)
     )).orderBy(asc(auctionSlots.slotNumber));
   }
   const groupIds = slots.map(slot => slot.groupId).filter((id): id is number => id !== null);
@@ -345,6 +368,8 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   if (!groupId || !group) throw new Error("Группа недоступна для размещения");
   const target = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
   if (!target) throw new Error("Позиция рейтинга не найдена");
+  if (target.category !== "Все" && group.category !== target.category) throw new Error("Выберите группу из той же категории рейтинга");
+  if (target.subcategory !== "Все" && group.subcategory !== target.subcategory) throw new Error("Выберите группу из той же подкатегории рейтинга");
   const slotFloor = getRankingFloorMilliTon(target.slotNumber);
   if (!isQualifyingRankingBid(bidAmount, target.bidAmount, target.groupId !== null, slotFloor)) {
     const requiredMilliTon = getMinimumRankingBidMilliTon(target.bidAmount, target.groupId !== null, slotFloor);
@@ -362,6 +387,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
     : undefined;
   const board = await db.select().from(auctionSlots).where(and(
     eq(auctionSlots.category, target.category),
+    eq(auctionSlots.subcategory, target.subcategory),
     eq(auctionSlots.country, target.country)
   )).orderBy(asc(auctionSlots.slotNumber));
 
@@ -456,6 +482,8 @@ export async function createStarsRankingPaymentIntent(input: { userOpenId: strin
   if (!slot || !isQualifyingRankingBid(input.bidAmount, slot.bidAmount, slot.groupId !== null, getRankingFloorMilliTon(slot.slotNumber))) {
     throw new Error("Ставка больше недействительна. Обновите рейтинг и повторите попытку.");
   }
+  if (slot.category !== "Все" && group.category !== slot.category) throw new Error("Выберите группу из той же категории рейтинга");
+  if (slot.subcategory !== "Все" && group.subcategory !== slot.subcategory) throw new Error("Выберите группу из той же подкатегории рейтинга");
   const payload = `tg_top_rank_${randomBytes(18).toString("hex")}`;
   const expiresAt = new Date(Date.now() + STARS_RANKING_PAYMENT_TTL_MS);
   const starsAmount = getStarsAmountForRankingBid(input.bidAmount);

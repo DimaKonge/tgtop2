@@ -17,8 +17,8 @@ describe("TG TOP paid ranking policy", () => {
     expect(isQualifyingRankingBid(250, 200, true)).toBe(false);
   });
 
-  it("caps every qualifying ranking bid at 100 GRAM", () => {
-    expect(MAX_RANKING_BID_MILLITON).toBe(100_000);
+  it("caps every qualifying ranking bid at 1,000 GRAM", () => {
+    expect(MAX_RANKING_BID_MILLITON).toBe(1_000_000);
     expect(isQualifyingRankingBid(MAX_RANKING_BID_MILLITON, 0, false)).toBe(true);
     expect(isQualifyingRankingBid(MAX_RANKING_BID_MILLITON + RANKING_BID_STEP_MILLITON, 0, false)).toBe(false);
   });

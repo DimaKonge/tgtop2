@@ -246,7 +246,8 @@ const getMinimumRankingBidGram = (slot: Pick<Slot, "slotNumber" | "bidAmount" | 
   if (!slot.group) return floor;
   return Math.max(floor, Math.round((slot.bidAmount / 1000 + 0.1) * 10) / 10);
 };
-const MAX_RANKING_BID_GRAM = 100;
+const MAX_RANKING_BID_GRAM = 1_000;
+const MAX_RANKING_SLIDER_GRAM = 100;
 const getSimulatedRankingSlotNumber = (slots: Slot[], candidateGroupId: number, bidAmountGram: number) => {
   const candidateBid = Math.round(bidAmountGram * 1000);
   if (!Number.isSafeInteger(candidateBid) || candidateBid <= 0 || candidateBid > MAX_RANKING_BID_GRAM * 1000) return null;
@@ -1064,6 +1065,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         analytics: { source: "tgtop_bot_observed"; observedSince: Date };
       }
     | undefined;
+  const detailSlotsQuery = trpc.tgTop.getSlots.useQuery({
+    category: detail?.group.category ?? "Все",
+    country: detail?.group.country ?? "Global",
+    subcategory: detail?.group.subcategory ?? "Все",
+    city: detail?.group.city ?? "Все",
+  }, { enabled: Boolean(detail), refetchInterval: 12_000, refetchIntervalInBackground: false });
+  const detailSlots = (detailSlotsQuery.data ?? []) as Slot[];
 
   const listWithCredits = trpc.tgTop.listGroupsWithCredits.useMutation({
     onSuccess: () => {
@@ -1430,7 +1438,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
       : undefined;
   const selectedSlot = detail
-    ? slots.find(slot => slot.group?.id === detail.group.id)
+    ? detailSlots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
   const detailMinimumBid = selectedSlot
     ? getMinimumRankingBidGram(selectedSlot)
@@ -1440,7 +1448,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? Math.min(MAX_RANKING_BID_GRAM, Math.max(detailMinimumBid, Math.round(rawDetailRankingBid * 10) / 10))
     : detailMinimumBid ?? 0.1;
   const detailRankingPreviewSlotNumber = detail && selectedSlot
-    ? getSimulatedRankingSlotNumber(slots, detail.group.id, detailRankingBidAmount)
+    ? getSimulatedRankingSlotNumber(detailSlots, detail.group.id, detailRankingBidAmount)
     : null;
   const detailCatalogPath = detail
     ? [tx("Каталог", "Catalog"), getCategoryLabel(detail.group.category, language), getSubcategoryLabel(detail.group.subcategory, language), getCountryLabel(detail.group.country, language), detail.group.city ? getCityLabel(detail.group.country, detail.group.city, language) : null].filter((part): part is string => Boolean(part)).join(" · ")
@@ -1487,11 +1495,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const listingRankingBidAmount = Number.isFinite(rawListingRankingBid)
     ? Math.min(MAX_RANKING_BID_GRAM, Math.max(0.1, Math.round(rawListingRankingBid * 10) / 10))
     : 0.1;
+  const listingSlotsQuery = trpc.tgTop.getSlots.useQuery({
+    category: selectedListingGroup?.category ?? "Все",
+    country: selectedListingGroup?.country ?? "Global",
+    subcategory: selectedListingGroup?.subcategory ?? "Все",
+    city: selectedListingGroup?.city ?? "Все",
+  }, { enabled: Boolean(selectedListingGroup), refetchInterval: 12_000, refetchIntervalInBackground: false });
+  const listingSlots = (listingSlotsQuery.data ?? []) as Slot[];
   const listingRankingPreviewSlotNumber = selectedListingGroup
-    ? getSimulatedRankingSlotNumber(slots, selectedListingGroup.id, listingRankingBidAmount)
+    ? getSimulatedRankingSlotNumber(listingSlots, selectedListingGroup.id, listingRankingBidAmount)
     : null;
   const listingRankingPreviewSlot = listingRankingPreviewSlotNumber
-    ? slots.find(slot => slot.slotNumber === listingRankingPreviewSlotNumber) ?? null
+    ? listingSlots.find(slot => slot.slotNumber === listingRankingPreviewSlotNumber) ?? null
     : null;
   const listingRankingMinimum = listingRankingPreviewSlot ? getMinimumRankingBidGram(listingRankingPreviewSlot) : null;
   const canPayListingRanking = Boolean(listingRankingPreviewSlot && listingRankingMinimum !== null && listingRankingBidAmount >= listingRankingMinimum);
@@ -2567,7 +2582,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             <Input value={formatTon(detailRankingBidAmount)} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setAmount(value); }} aria-label={tx("Новая ставка в GRAM", "New bid in GRAM")} className="h-10 flex-1 border-0 bg-transparent px-1 text-center text-base font-semibold text-white focus-visible:ring-0" />
                             <button type="button" onClick={() => setAmount(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label={tx("Увеличить ставку", "Increase bid")} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"><Plus className="h-4 w-4" /></button>
                           </div>
-                          <Slider value={[detailRankingBidAmount]} min={detailMinimumBid ?? 0.1} max={MAX_RANKING_BID_GRAM} step={0.1} onValueChange={([value]) => setAmount(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
+                          <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setAmount(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
                           <button type="button" onClick={() => { setTargetSlot(selectedSlot); setAmount(formatTon(detailRankingBidAmount)); setPaymentMethod("gram"); setStarsPaymentGroup(detail.group); }} disabled={!detailRankingPreviewSlotNumber} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15 disabled:opacity-45"><span><b className="block text-xs text-[#a6c8ff]">{tx("Выбрать оплату", "Choose payment")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("GRAM или Telegram Stars", "GRAM or Telegram Stars")}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>
                         </div>
                       )}
@@ -3058,7 +3073,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               const minimum = getMinimumRankingBidGram(targetSlot);
               const rawAmount = Number(amount);
               const bidAmount = Number.isFinite(rawAmount) ? Math.max(minimum, Math.round(rawAmount * 10) / 10) : minimum;
-              const maximum = Math.min(MAX_RANKING_BID_GRAM, Math.max(minimum + 3, Math.ceil(bidAmount * 1.5 * 10) / 10));
+              const maximum = Math.max(minimum, Math.min(MAX_RANKING_SLIDER_GRAM, Math.max(minimum + 3, Math.ceil(bidAmount * 1.5 * 10) / 10)));
               const ratio = bidAmount / minimum;
               const tone = ratio <= 1.2
                 ? { text: "text-emerald-300", range: "[&_[data-slot=slider-range]]:!bg-emerald-400 [&_[data-slot=slider-thumb]]:!border-emerald-100 [&_[data-slot=slider-thumb]]:!bg-emerald-400" }
@@ -3149,7 +3164,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <b className="block text-sm text-[#c7dcff]">{tx("Цена места в рейтинге", "Ranking placement price")}</b>
                     <small className="mt-1 block text-[11px] leading-4 text-slate-400">{tx("Перед оплатой посмотрите, на какую ячейку попадёт эта группа.", "Preview the exact cell this community will receive before paying.")}</small>
                   </span>
-                  <span className="rounded-full border border-[#72a8ff]/25 bg-[#3f8cff]/10 px-2 py-1 text-[10px] font-semibold text-[#a6c8ff]">{tx("до 100 GRAM", "up to 100 GRAM")}</span>
                 </div>
                 <div className="mt-3 flex items-center rounded-xl border border-white/8 bg-[#0b0f14] p-1">
                   <button type="button" onClick={() => setListingRankingBid(formatTon(Math.max(0.1, listingRankingBidAmount - 0.1)))} aria-label={tx("Уменьшить цену", "Decrease price")} className="grid h-10 w-10 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.06]"><Minus className="h-4 w-4" /></button>
@@ -3157,7 +3171,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <b className="mr-1 text-xs text-slate-400">GRAM</b>
                   <button type="button" onClick={() => setListingRankingBid(formatTon(Math.min(MAX_RANKING_BID_GRAM, listingRankingBidAmount + 0.1)))} aria-label={tx("Увеличить цену", "Increase price")} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/10"><Plus className="h-4 w-4" /></button>
                 </div>
-                <Slider value={[listingRankingBidAmount]} min={0.1} max={MAX_RANKING_BID_GRAM} step={0.1} onValueChange={([value]) => setListingRankingBid(formatTon(value))} className="mt-3 py-2 [&_[data-slot=slider-track]]:h-2.5 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-6 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
+                <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, listingRankingBidAmount)]} min={0.1} max={MAX_RANKING_SLIDER_GRAM} step={0.1} onValueChange={([value]) => setListingRankingBid(formatTon(value))} className="mt-3 py-2 [&_[data-slot=slider-track]]:h-2.5 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-6 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
                 <div className="mt-3 rounded-xl border border-white/8 bg-white/[0.035] px-3 py-2.5">
                   {listingRankingPreviewSlotNumber ? <><small className="block text-[10px] uppercase tracking-[0.1em] text-slate-500">{tx("Предпросмотр позиции", "Placement preview")}</small><b className="mt-1 block text-sm text-white">{tx(`Займёт ${listingRankingPreviewSlotNumber}-ю позицию`, `Will take position ${listingRankingPreviewSlotNumber}`)}</b><small className="mt-1 block text-[10px] text-slate-400">{listingRankingMinimum !== null ? tx(`Для этой ячейки нужно от ${formatTon(listingRankingMinimum)} GRAM`, `This cell requires at least ${formatTon(listingRankingMinimum)} GRAM`) : ""}</small></> : <><b className="block text-sm text-amber-100">{tx("С этой суммой группа не попадёт в Top", "This amount will not enter Top")}</b><small className="mt-1 block text-[10px] text-slate-500">{tx("Увеличьте ставку, чтобы занять доступную ячейку.", "Increase the bid to take an available cell.")}</small></>}
                 </div>

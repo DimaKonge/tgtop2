@@ -411,3 +411,5 @@
 - [x] Hide the community-description block entirely when Telegram did not provide a description
 - [x] Show an owned community’s current ranking place, current bid, catalog category, and location path in its management view
 - [x] Add an in-context 0.1 GRAM slider with − / + controls in group management to preview and pay for a higher ranking position
+- [x] Remove the visible 100 GRAM cap label while keeping the slider range at 100 GRAM and allowing a validated manual price above the slider range
+- [x] Keep an independent persisted Top ranking, bid preview, and auction order for every category and subcategory combination; every empty section starts at place 1 from 0.1 GRAM

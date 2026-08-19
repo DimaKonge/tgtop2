@@ -180,17 +180,18 @@ export const auctionSlots = mysqlTable("auction_slots", {
   id: int("id").autoincrement().primaryKey(),
   slotNumber: int("slotNumber").notNull(),
   category: mysqlEnum("category", ["Все", "Каналы", "Чаты"]).default("Все").notNull(),
+  subcategory: varchar("subcategory", { length: 64 }).default("Все").notNull(),
   country: varchar("country", { length: 64 }).default("Global").notNull(),
   title: varchar("title", { length: 255 }).default("Свободное место").notNull(),
   subtitle: varchar("subtitle", { length: 255 }).default("Ждет листинга").notNull(),
-  currentBid: varchar("currentBid", { length: 64 }).default("0 TON").notNull(),
+  currentBid: varchar("currentBid", { length: 64 }).default("0 GRAM").notNull(),
   bidAmount: int("bidAmount").default(0).notNull(),
   leaderUsername: varchar("leaderUsername", { length: 128 }).default("-").notNull(),
   leaderUserId: varchar("leaderUserId", { length: 64 }),
   groupId: int("groupId"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [
-  uniqueIndex("auction_slots_board_slot_unique").on(table.category, table.country, table.slotNumber),
+  uniqueIndex("auction_slots_board_slot_unique").on(table.category, table.subcategory, table.country, table.slotNumber),
 ]);
 
 export type AuctionSlot = typeof auctionSlots.$inferSelect;
