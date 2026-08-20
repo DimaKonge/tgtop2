@@ -2580,32 +2580,29 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <ArrowLeft className="h-4 w-4" />
                   {ui.back}
                 </button>
-                <div className="relative flex flex-col overflow-hidden rounded-[22px] border border-[#31435f] bg-[radial-gradient(circle_at_50%_0%,rgba(38,83,147,0.20),transparent_38%),linear-gradient(145deg,#111a2b,#0d1524)] p-3.5 shadow-[0_18px_40px_rgba(0,0,0,0.24)]">
-                  {detail.group.rewardActive && <Star className="absolute right-4 top-5 h-8 w-8 fill-[#ffd83d] text-[#ffd83d] drop-shadow-[0_0_12px_rgba(255,216,61,0.65)]" aria-label="Вознаграждение активно" />}
+                <div className="relative flex flex-col overflow-hidden rounded-[22px] border border-[#31435f] bg-[#17212b] p-3">
+                  {detail.group.rewardActive && <Star className="absolute right-3 top-3 h-6 w-6 fill-[#ffd766] text-[#ffd766]" aria-label="Вознаграждение активно" />}
                   <div className="flex items-start justify-between">
-                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300/35 bg-amber-300/[0.09] px-2.5 py-1.5 text-sm font-bold text-amber-200 shadow-inner shadow-amber-300/10">
-                      <Star className="h-4 w-4 fill-current" /> #{selectedSlot?.slotNumber ?? 1}
-                    </span>
-                    <div className="mr-10 flex flex-col items-center leading-none">
-                      <span className="text-[9px] font-bold tracking-[0.14em] text-emerald-400">● В ТОПЕ</span>
-                      <b className="mt-1.5 font-mono text-xl font-bold tracking-[0.08em] text-white">{selectedSlot ? formatPositionDuration(selectedSlot.updatedAt, positionClock) : "00:00:00"}</b>
-                    </div>
-                    <span className="w-[70px]" aria-hidden="true" />
+                    <span className="rounded-lg border border-[#354966] bg-[#202b3a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#c4d8f6]">ЛОТ · #{selectedSlot?.slotNumber ?? 1}</span>
                   </div>
 
-                  <div className="mt-3 flex flex-col items-center text-center">
+                  <div className="mt-1 flex flex-col items-center text-center">
+                    <div className="mb-1.5 flex flex-col items-center leading-none">
+                      <span className="text-[8px] font-bold tracking-[0.14em] text-[#8fc4ff]">● В ТОПЕ</span>
+                      <b className="mt-1 font-mono text-lg font-bold tracking-[0.08em] text-white">{selectedSlot ? formatPositionDuration(selectedSlot.updatedAt, positionClock) : "00:00:00"}</b>
+                    </div>
                     <button type="button" onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }} disabled={!detailEntryUrl} className="rounded-[28px] transition-transform active:scale-[0.98] disabled:cursor-default">
                       <Avatar group={detail.group} hero />
                     </button>
                     <span className={`-mt-1 rounded-lg border px-2 py-0.5 text-xs font-bold shadow-lg ${dailyGrowthPct !== null && dailyGrowthPct < 0 ? "border-rose-400/40 bg-rose-500/20 text-rose-300" : "border-emerald-400/40 bg-emerald-500/20 text-emerald-300"}`}>
                       <TrendingUp className="mr-1 inline h-3.5 w-3.5" />{dailyGrowthPct !== null && dailyGrowthPct > 0 ? "+" : ""}{dailyGrowthPct !== null ? `${dailyGrowthPct.toFixed(1)}%` : "0%"}
                     </span>
-                    <h1 className="mt-3 max-w-full truncate text-[22px] font-bold tracking-tight text-white">{detail.group.title}</h1>
+                    <h1 className="mt-2 max-w-full truncate text-[21px] font-bold tracking-tight text-white">{detail.group.title}</h1>
                     <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-slate-400"><span className="text-sm">▣</span>{detail.group.inviteLink && !detail.group.username ? "Приватное сообщество" : detail.group.category === "Каналы" ? "Канал" : "Группа"}</p>
-                    {detail.group.description && <p className="mt-3 max-w-[340px] text-xs leading-5 text-slate-300">{detail.group.description}</p>}
+                    {detail.group.description && <p className="mt-2 max-w-[340px] text-xs leading-4 text-slate-300">{detail.group.description}</p>}
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-2">
+                  <div className="mt-3 grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -2613,34 +2610,33 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         else if (!ownsDetail && selectedSlot) openOutbid(selectedSlot);
                       }}
                       disabled={ownsDetail || (!isListingForSale && !selectedSlot)}
-                      className="flex min-h-[88px] flex-col justify-center rounded-xl border border-emerald-300/35 bg-[linear-gradient(135deg,#128160,#12a56f)] px-2 text-left text-white shadow-[inset_0_1px_rgba(255,255,255,0.2),0_8px_18px_rgba(12,130,92,0.22)] transition-transform active:scale-[0.98] disabled:cursor-default disabled:opacity-90"
+                      className="flex min-h-[76px] flex-col justify-center rounded-xl border border-[#386a5f] bg-[#203a35] px-2 text-left text-white transition-colors hover:bg-[#26443e] active:scale-[0.98] disabled:cursor-default disabled:opacity-90"
                     >
-                      <span className="flex items-center gap-1.5 text-[10px] text-emerald-100"><WalletCards className="h-3.5 w-3.5" />{isListingForSale && salePriceTon ? "Купить за" : "Текущая ставка"}</span>
-                      <b className="mt-1 text-lg leading-none">{isListingForSale && salePriceTon ? salePriceTon : formatTon((selectedSlot?.bidAmount ?? 0) / 1000)}</b>
-                      <small className="mt-1 text-[10px] text-emerald-100">GRAM</small>
+                      <span className="flex items-center gap-1.5 text-[10px] text-[#b7d8ce]"><WalletCards className="h-3.5 w-3.5" />{isListingForSale && salePriceTon ? "Купить за" : "Текущая ставка"}</span>
+                      <b className="mt-0.5 text-base leading-none">{isListingForSale && salePriceTon ? salePriceTon : formatTon((selectedSlot?.bidAmount ?? 0) / 1000)} <small className="text-[9px] font-medium text-[#b7d8ce]">GRAM</small></b>
                     </button>
                     <button
                       type="button"
-                      onClick={() => { if (detail.group.managerUsername) openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`); }}
-                      disabled={!detail.group.managerUsername}
-                      className="flex min-h-[88px] flex-col justify-center rounded-xl border border-[#334663] bg-[#17233a] px-2 text-left text-slate-100 transition-colors hover:bg-[#1d2c46] active:scale-[0.98] disabled:cursor-default"
+                      onClick={() => { if (managerPublic && detail.group.managerUsername) openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`); }}
+                      disabled={!managerPublic || !detail.group.managerUsername}
+                      className="flex min-h-[76px] flex-col justify-center rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-left text-slate-100 transition-colors hover:bg-[#253247] active:scale-[0.98] disabled:cursor-default"
                     >
-                      <span className="flex items-center gap-1.5 text-[10px] text-slate-400"><UserRound className="h-3.5 w-3.5" />{detail.group.managerName ? "Менеджер" : "Публикация"}</span>
-                      <b className="mt-1 truncate text-xs">{detail.group.managerName ?? "Анонимно"}</b>
-                      <small className="mt-1 truncate text-[10px] text-[#72a8ff]">{detail.group.managerUsername ? `@${detail.group.managerUsername}` : "Без контакта"}</small>
+                      <span className="flex items-center gap-1.5 text-[10px] text-slate-400"><UserRound className="h-3.5 w-3.5" />{managerPublic && detail.group.managerName ? "Менеджер" : "Публикация"}</span>
+                      <b className="mt-0.5 truncate text-xs">{managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"}</b>
+                      <small className="mt-0.5 truncate text-[10px] text-[#72a8ff]">{managerPublic && detail.group.managerUsername ? `@${detail.group.managerUsername}` : "Без контакта"}</small>
                     </button>
                     <button
                       type="button"
                       onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
                       disabled={!detailEntryUrl}
-                      className="flex min-h-[88px] flex-col justify-center rounded-xl border border-[#76b7ff]/45 bg-[linear-gradient(135deg,#2777ef,#4d8df7)] px-2 text-left text-white shadow-[inset_0_1px_rgba(255,255,255,0.2),0_8px_18px_rgba(35,103,229,0.25)] transition-transform active:scale-[0.98] disabled:opacity-50"
+                      className="flex min-h-[76px] flex-col justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2 text-left text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
                     >
                       <Send className="h-5 w-5 text-white/85" />
-                      <b className="mt-1 text-sm leading-4">Перейти<br />в группу</b>
+                      <b className="mt-0.5 text-xs leading-4">Перейти<br />в группу</b>
                     </button>
                   </div>
 
-                  <section className="mt-4 rounded-xl border border-[#30415d] bg-[#121f35]/85 p-3">
+                  <section className="mt-3 rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="text-base font-bold text-white">Динамика аудитории</h2>
                       <span className="text-xs font-semibold text-[#75adff]">{n(detail.group.membersCount)} подписчика</span>
@@ -2651,68 +2647,68 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </section>
 
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div className="rounded-xl border border-[#30415d] bg-[#121f35]/85 p-3">
+                    <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
                       <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-400/10 text-emerald-300"><TrendingUp className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Вступления</small><b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.joinedCount)}</b></span></div>
                       <small className="mt-2 block text-[10px] text-emerald-300">зафиксировано ботом</small>
                     </div>
-                    <div className="rounded-xl border border-[#30415d] bg-[#121f35]/85 p-3">
+                    <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
                       <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-violet-400/10 text-violet-300"><UserPlus className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Приглашения</small><b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.invitedCount)}</b></span></div>
                       <small className="mt-2 block text-[10px] text-violet-300">зафиксировано ботом</small>
                     </div>
                   </div>
-                  {ownsDetail && (
-                    <section className="order-3 mt-3 rounded-xl border border-white/8 bg-white/[0.025] p-2">
-                      <button type="button" onClick={() => setInlineListingOpen(value => !value)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
-                        <span className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/10 text-[#8fb9ff]"><Settings2 className="h-4 w-4" /></span><span><b className="block text-xs text-slate-100">{tx("Параметры публикации", "Publication settings")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detail.group.status === "listed" ? tx("Видимость, объявление, продажа", "Visibility, announcement, sale") : tx("Настройте перед размещением", "Configure before listing")}</small></span></span>
+                  {detail && ownsDetail && (
+                    <section className="hidden order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">
+                      <button type="button" onClick={() => setInlineListingOpen(value => !value)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
+                        <span className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/10 text-[#8fb9ff]"><Settings2 className="h-3.5 w-3.5" /></span><span><b className="block text-xs text-slate-100">{tx("Параметры публикации", "Publication settings")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detail.group.status === "listed" ? tx("Видимость, объявление, продажа", "Visibility, announcement, sale") : tx("Настройте перед размещением", "Configure before listing")}</small></span></span>
                         <ChevronRight className={`h-4 w-4 text-slate-500 transition-transform ${inlineListingOpen ? "rotate-90" : ""}`} />
                       </button>
                       {inlineListingOpen && (
-                        <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
-                          <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2">
+                        <div className="mt-1.5 space-y-1.5 border-t border-white/8 pt-1.5">
+                          <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5">
                             <span><b className="block text-[11px] text-slate-200">{detailVisibility === "public" ? tx("Публичная публикация", "Public publication") : tx("Анонимная публикация", "Anonymous publication")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detailVisibility === "public" ? tx("Другие смогут перейти в ваш профиль", "Others can open your profile") : tx("Владелец не показывается в карточке", "The owner stays hidden in the card")}</small></span>
                             <button type="button" role="switch" aria-checked={detailVisibility === "public"} onClick={() => setDetailVisibility(value => { const next = value === "public" ? "anonymous" : "public"; if (next === "public") setShowOwnerContact(true); return next; })} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${detailVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detailVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></button>
                           </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button>
-                            <button type="button" onClick={() => setShowOwnerContact(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${showOwnerContact ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Контакт", "Contact")}</b><small className={`mt-0.5 block text-[10px] ${showOwnerContact ? "text-[#8fb9ff]" : "text-slate-500"}`}>{showOwnerContact ? tx("Показывать @username", "Show @username") : tx("Скрыт", "Hidden")}</small></button>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button>
+                            <button type="button" onClick={() => setShowOwnerContact(value => !value)} className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${showOwnerContact ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Контакт", "Contact")}</b><small className={`mt-0.5 block text-[10px] ${showOwnerContact ? "text-[#8fb9ff]" : "text-slate-500"}`}>{showOwnerContact ? tx("Показывать @username", "Show @username") : tx("Скрыт", "Hidden")}</small></button>
                           </div>
-                          {detail.group.managerName && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{tx("Показывать менеджера", "Show manager")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{managerPublic ? tx("Гости увидят профиль менеджера", "Guests can open the manager profile") : tx("Скрыт из публичной карточки", "Hidden from public details")}</small></span><button type="button" role="switch" aria-checked={managerPublic} onClick={() => setManagerPublic(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${managerPublic ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${managerPublic ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
-                          <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2">
+                          {detail.group.managerName && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5"><span><b className="block text-[11px] text-slate-200">{tx("Показывать менеджера", "Show manager")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{managerPublic ? tx("Гости увидят профиль менеджера", "Guests can open the manager profile") : tx("Скрыт из публичной карточки", "Hidden from public details")}</small></span><button type="button" role="switch" aria-checked={managerPublic} onClick={() => setManagerPublic(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${managerPublic ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${managerPublic ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
+                          <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5">
                             <span><b className="block text-[11px] text-slate-200">{tx("Выставить на продажу", "Offer for sale")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{isListingForSale ? tx("Цена будет видна покупателям", "Buyers will see the price") : tx("Без продажи", "Not for sale")}</small></span>
                             <button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} /></button>
                           </div>
-                          {isListingForSale && <div className="relative"><Input value={salePriceTon} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }} placeholder={tx("Цена продажи", "Sale price")} className="h-10 border-white/10 bg-black/15 pr-14 text-sm" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-slate-500">GRAM</span></div>}
-                          <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2">
+                          {isListingForSale && <div className="relative"><Input value={salePriceTon} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }} placeholder={tx("Цена продажи", "Sale price")} className="h-9 border-white/10 bg-black/15 pr-14 text-sm" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-slate-500">GRAM</span></div>}
+                          <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5">
                             <span><b className="block text-[11px] text-slate-200">{tx("Вознаграждения", "Rewards")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{rewardCampaignEnabled ? tx("GRAM за подтверждённые действия", "GRAM for confirmed actions") : tx("Выключены", "Off")}</small></span>
                             <button type="button" role="switch" aria-checked={rewardCampaignEnabled} onClick={() => setRewardCampaignEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${rewardCampaignEnabled ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${rewardCampaignEnabled ? "translate-x-6" : "translate-x-0"}`} /></button>
                           </div>
                           {rewardCampaignEnabled && <div className="grid grid-cols-2 gap-2"><div className="relative"><Input value={rewardBudget} inputMode="decimal" onChange={event => setRewardBudget(event.target.value)} placeholder={tx("Бюджет", "Budget")} className="h-9 border-white/10 bg-black/15 pr-10 text-[11px] placeholder:text-[11px]" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-medium text-slate-500">GRAM</span></div><div className="relative"><Input value={rewardPerSubscription} inputMode="decimal" onChange={event => setRewardPerSubscription(event.target.value)} placeholder={detail.group.category === "Чаты" ? tx("За участника", "Per member") : tx("За подписчика", "Per subscriber")} className="h-9 border-white/10 bg-black/15 pr-10 text-[11px] placeholder:text-[11px]" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-medium text-slate-500">GRAM</span></div></div>}
-                          <button type="button" onClick={saveInlineDetailListing} disabled={listWithCredits.isPending} className="flex w-full items-center justify-between rounded-lg bg-[#1688f5] px-3 py-2.5 text-left text-white shadow-md shadow-[#1688f5]/20 transition-transform active:scale-[0.985] disabled:opacity-50"><span><b className="block text-xs">{listWithCredits.isPending ? tx("Сохраняем…", "Saving…") : detail.group.status === "listed" ? tx("Сохранить изменения", "Save changes") : tx("Разместить в каталоге", "List in catalog")}</b><small className="mt-0.5 block text-[10px] text-white/70">{detail.group.status === "listed" ? tx("Без повторной оплаты", "No repeat charge") : tx("От 0.1 GRAM", "From 0.1 GRAM")}</small></span><ChevronRight className="h-4 w-4" /></button>
+                          <button type="button" onClick={saveInlineDetailListing} disabled={listWithCredits.isPending} className="flex w-full items-center justify-between rounded-lg bg-[#1688f5] px-3 py-2 text-left text-white shadow-md shadow-[#1688f5]/20 transition-transform active:scale-[0.985] disabled:opacity-50"><span><b className="block text-xs">{listWithCredits.isPending ? tx("Сохраняем…", "Saving…") : detail.group.status === "listed" ? tx("Сохранить изменения", "Save changes") : tx("Разместить в каталоге", "List in catalog")}</b><small className="mt-0.5 block text-[10px] text-white/70">{detail.group.status === "listed" ? tx("Без повторной оплаты", "No repeat charge") : tx("От 0.1 GRAM", "From 0.1 GRAM")}</small></span><ChevronRight className="h-4 w-4" /></button>
                         </div>
                       )}
                     </section>
                   )}
-                  {ownsDetail && (
-                    <div className="order-3 mt-2 grid grid-cols-2 gap-2">
+                  {detail && ownsDetail && (
+                    <div className="hidden order-3 mt-1.5 grid grid-cols-2 gap-1.5">
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedManagerTelegramUserId(detail.group.managerTelegramUserId ?? null);
                           setManagerSheetOpen(true);
                         }}
-                        className="flex min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-2.5 py-2 text-left transition-colors hover:bg-white/[0.065] active:scale-[0.99]"
+                        className="flex min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-2 py-1.5 text-left transition-colors hover:bg-white/[0.065] active:scale-[0.99]"
                       >
                         <UserRound className="h-4 w-4 shrink-0 text-[#8fb9ff]" />
                         <span className="min-w-0"><b className="block text-[11px] text-slate-200">{tx("Менеджер", "Manager")}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{detail.group.managerName ?? tx("Не выбран", "Not selected")}</small></span>
                       </button>
-                      <button onClick={() => openGiveawayCreate(detail.group)} className="flex items-center justify-between rounded-lg border border-amber-200/25 bg-amber-300/[0.08] px-2.5 py-2 text-left text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-300/[0.12] active:scale-[0.99]">
+                      <button onClick={() => openGiveawayCreate(detail.group)} className="flex items-center justify-between rounded-lg border border-amber-200/25 bg-amber-300/[0.08] px-2 py-1.5 text-left text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-300/[0.12] active:scale-[0.99]">
                         <span>{tx("Розыгрыш", "Giveaway")}</span>
                         <Star className="h-3.5 w-3.5 fill-current" />
                       </button>
                     </div>
                   )}
-                  {ownsDetail && detail.group.category === "Чаты" && (
-                    <div className="order-3 mt-3 space-y-3 rounded-xl border border-white/8 bg-white/4 p-3">
+                  {detail && ownsDetail && detail.group.category === "Чаты" && (
+                    <div className="hidden order-3 mt-3 space-y-3 rounded-xl border border-white/8 bg-white/4 p-3">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-xs">
                           <b className="block text-slate-200">{tx("Автоочистка чата", "Chat auto-cleanup")}</b>
@@ -2734,13 +2730,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                     </div>
                   )}
-                  {ownsDetail && (
-                    <div className="order-3 mt-2 flex items-center gap-2">
+                  {detail && ownsDetail && (
+                    <div className="hidden order-3 mt-1.5 flex items-center gap-1.5">
                       {detail.group.status === "listed" ? (
                         <button
                           onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
                           disabled={unlistGroups.isPending}
-                          className="flex-1 rounded-lg border border-rose-300/20 bg-rose-300/5 py-2 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50"
+                          className="flex-1 rounded-lg border border-rose-300/20 bg-rose-300/5 py-1.5 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50"
                         >
                           {tx("Снять с листинга", "Remove from listing")}
                         </button>
@@ -2761,13 +2757,41 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </button>
                     </div>
                   )}
-                  {selectedSlot && (
-                    <section className="order-2 mt-4 rounded-xl border border-[#3d5070] bg-[#111d32] p-3">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-white">{ownsDetail ? "Обновить лот" : "Сделать ставку"}</h2>
-                        <span className="rounded-full bg-white/[0.06] px-2 py-1 text-[10px] text-slate-400">место #{selectedSlot.slotNumber}</span>
+                  {ownsDetail && selectedSlot && (
+                    <section className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3">
+                      <h2 className="text-sm font-bold text-slate-100">Обновить лот · #{selectedSlot.slotNumber}</h2>
+                      <p className="mt-1 text-[10px] text-slate-500">Настройте размещение перед оплатой.</p>
+
+                      <button type="button" className="mt-2 flex w-full items-center gap-2.5 rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">
+                        <Avatar group={detail.group} compact />
+                        <span className="min-w-0 flex-1"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Ваша группа</small><b className="block truncate text-xs text-slate-100">{detail.group.title}</b><small className="block truncate text-[10px] text-slate-500">{detail.group.username ? `@${detail.group.username}` : "Подключена к TG TOP"}</small></span>
+                        <span className="grid h-5 w-5 place-items-center rounded-full bg-[#3390ec] text-white"><Check className="h-3.5 w-3.5" /></span>
+                      </button>
+
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-xl border p-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3b80c4]/55 bg-[#213750]" : "border-[#354966] bg-[#202b3a]"}`}>
+                          <b className="block text-[11px] text-slate-100">Объявление</b><small className={`mt-1 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fc4ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? "Бот напишет в группе" : "Выключено"}</small>
+                        </button>
+                        <button type="button" onClick={() => { setSelectedManagerTelegramUserId(detail.group.managerTelegramUserId ?? null); setManagerSheetOpen(true); }} className="rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">
+                          <b className="block text-[11px] text-slate-100">Менеджер</b><small className="mt-1 block truncate text-[10px] text-[#8fc4ff]">{managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"}</small>
+                        </button>
                       </div>
-                      <div className="mt-3 grid grid-cols-[76px_minmax(0,1fr)_132px] items-center gap-2">
+
+                      <div className="mt-2 space-y-1 border-t border-white/[0.06] pt-2">
+                        <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1"><span><b className="block text-[11px] text-slate-200">Выставить на продажу</b><small className="block text-[10px] text-slate-500">{isListingForSale ? "Цена видна покупателям" : "Без продажи"}</small></span><button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#3390ec] bg-[#3390ec]" : "border-white/15 bg-[#2b3648]"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} /></button></div>
+                        {isListingForSale && <div className="relative"><Input value={salePriceTon} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }} placeholder="Цена продажи" className="h-9 border-[#354966] bg-[#202b3a] pr-12 text-xs" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-slate-500">GRAM</span></div>}
+                        <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1"><span><b className="block text-[11px] text-slate-200">Вознаграждения</b><small className="block text-[10px] text-slate-500">{rewardCampaignEnabled ? "Включены" : "Выключены"}</small></span><button type="button" role="switch" aria-checked={rewardCampaignEnabled} onClick={() => setRewardCampaignEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${rewardCampaignEnabled ? "border-[#3390ec] bg-[#3390ec]" : "border-white/15 bg-[#2b3648]"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${rewardCampaignEnabled ? "translate-x-6" : "translate-x-0"}`} /></button></div>
+                        {rewardCampaignEnabled && <div className="grid grid-cols-2 gap-2"><Input value={rewardBudget} inputMode="decimal" onChange={event => setRewardBudget(event.target.value)} placeholder="Бюджет, GRAM" className="h-9 border-[#354966] bg-[#202b3a] text-[11px]" /><Input value={rewardPerSubscription} inputMode="decimal" onChange={event => setRewardPerSubscription(event.target.value)} placeholder="За подписчика" className="h-9 border-[#354966] bg-[#202b3a] text-[11px]" /></div>}
+                      </div>
+                    </section>
+                  )}
+                  {selectedSlot && (
+                    <section className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3">
+                      <div className="flex items-center justify-between">
+                        <span><h2 className="text-sm font-bold text-slate-100">{ownsDetail ? "Обновить ставку" : "Перебить ставку"}</h2><small className="mt-0.5 block text-[10px] text-slate-500">{ownsDetail ? `Место #${selectedSlot.slotNumber}` : "Просмотр позиции"}</small></span>
+                        <b className="text-sm text-[#8fc4ff]">{formatTon(detailRankingBidAmount)} GRAM</b>
+                      </div>
+                      <div className="mt-3 grid grid-cols-[76px_minmax(0,1fr)] items-center gap-2">
                         <div className="flex items-center gap-2">
                           <span className="grid h-10 w-10 place-items-center rounded-full bg-[#345675] text-[#d9ebff]"><WalletCards className="h-5 w-5" /></span>
                           <span className="min-w-0"><b className="block truncate text-xl leading-none text-white">{formatTon(detailRankingBidAmount)}</b><small className="mt-1 block text-[10px] text-slate-400">GRAM</small></span>
@@ -2777,23 +2801,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           <Input value={detailBidInput} readOnly={!ownsDetail} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setDetailBidInput(value); }} onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))} aria-label="Новая ставка в GRAM" className="h-10 min-w-0 flex-1 border-0 bg-transparent px-1 text-center text-lg font-bold text-white focus-visible:ring-0" />
                           <button type="button" disabled={!ownsDetail} onClick={() => setDetailBidInput(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label="Увеличить ставку" className="grid h-10 w-9 place-items-center rounded-lg text-[#8ebaff] transition-colors hover:bg-[#3f8cff]/12 disabled:opacity-35"><Plus className="h-4 w-4" /></button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!ownsDetail) return openOutbid(selectedSlot);
-                            const value = detailRankingBidAmount;
-                            const minimum = detailMinimumBid ?? 0.1;
-                            if (!detail || !Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`);
-                            placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous" });
-                          }}
-                          disabled={ownsDetail ? !detailRankingPreviewSlotNumber || placeBid.isPending : !isAuthenticated}
-                          className="h-12 rounded-xl border border-emerald-200/45 bg-[linear-gradient(135deg,#13a66f,#198a62)] px-3 text-center text-sm font-bold text-white shadow-[inset_0_1px_rgba(255,255,255,0.2),0_8px_16px_rgba(8,121,82,0.28)] transition-transform active:scale-[0.98] disabled:opacity-45"
-                        >
-                          {ownsDetail ? (placeBid.isPending ? "Обновляем…" : "Обновить") : "Сделать ставку"}
-                        </button>
                       </div>
-                      {ownsDetail && <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="mt-3 py-1 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-emerald-400 [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:!border-emerald-200 [&_[data-slot=slider-thumb]]:!bg-emerald-400" />}
-                      <p className={`mt-3 text-center text-[10px] ${detailWillDrop ? "text-rose-300" : "text-slate-500"}`}>{detailWillDrop ? `Группа опустится на ${detailRankingPreviewSlotNumber}-ю позицию` : ownsDetail ? `Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM` : `Перебить можно от ${formatTon(detailMinimumBid)} GRAM`}</p>
+                      {ownsDetail && <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="mt-2 py-1 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:bg-[#2b3648] [&_[data-slot=slider-range]]:!bg-[#3390ec] [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3390ec]" />}
+                      <p className={`mt-2 text-center text-[10px] ${detailWillDrop ? "text-rose-300" : "text-slate-500"}`}>{detailWillDrop ? `Группа опустится на ${detailRankingPreviewSlotNumber}-ю позицию` : ownsDetail ? `Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM` : `Перебить можно от ${formatTon(detailMinimumBid)} GRAM`}</p>
+                      <button type="button" onClick={() => { if (!ownsDetail) return openOutbid(selectedSlot); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; if (!detail || !Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, salePriceTon: isListingForSale ? salePriceTon || null : null, rewardActive: rewardCampaignEnabled, rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0 : 0, rewardPerSubscription: rewardCampaignEnabled ? Number(rewardPerSubscription) || 0 : 0, rewardPerManualAdd: 0 }); }} disabled={ownsDetail ? !detailRankingPreviewSlotNumber || placeBid.isPending : !isAuthenticated} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#3390ec] px-3 py-2.5 text-left text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{ownsDetail ? (placeBid.isPending ? "Оплата…" : "Оплатить обновление") : "Выбрать свою группу"}</span><span className="text-xs text-white/80">{formatTon(detailRankingBidAmount)} GRAM</span></button>
                     </section>
                   )}
                 </div>
@@ -3252,6 +3263,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <p className="text-xs leading-5 text-slate-500">{tx("Выберите администратора Telegram. Он будет указан как менеджер этой площадки в TG TOP.", "Choose a Telegram administrator to display as the community manager in TG TOP.")}</p>
           </SheetHeader>
           <div className="space-y-3 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
+            <button type="button" onClick={() => { setManagerPublic(false); setManagerSheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${!managerPublic ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-slate-300"><UserRound className="h-4 w-4" /></span>
+              <span className="min-w-0 flex-1"><b className="block text-sm text-slate-100">Анонимно</b><small className="mt-0.5 block text-[10px] text-slate-500">Не показывать менеджера в карточке</small></span>
+              <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${!managerPublic ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+            </button>
             {groupAdministratorsQuery.isLoading ? (
               <p className="rounded-xl border border-white/8 bg-white/[0.035] px-3 py-5 text-center text-xs text-slate-500">{ui.loading}</p>
             ) : groupAdministratorsQuery.error ? (
@@ -3272,7 +3288,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             ) : (
               <p className="rounded-xl border border-dashed border-white/12 px-3 py-5 text-center text-xs leading-5 text-slate-500">{tx("Администраторы не найдены. Добавьте @TGTOP_robot в администраторы группы и обновите список.", "No administrators found. Add @TGTOP_robot as an admin and try again.")}</p>
             )}
-            <button type="button" onClick={() => { if (!selectedManagerTelegramUserId || !selectedGroupId) return; setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId }); }} disabled={!selectedManagerTelegramUserId || setGroupManager.isPending || groupAdministratorsQuery.isLoading} className="flex w-full items-center justify-center rounded-xl bg-[#1688f5] px-4 py-3.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45">
+            <button type="button" onClick={() => { if (!selectedManagerTelegramUserId || !selectedGroupId) return; setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId }, { onSuccess: () => { setManagerPublic(true); setManagerSheetOpen(false); } }); }} disabled={!selectedManagerTelegramUserId || setGroupManager.isPending || groupAdministratorsQuery.isLoading} className="flex w-full items-center justify-center rounded-xl bg-[#1688f5] px-4 py-3.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45">
               {setGroupManager.isPending ? ui.loading : tx("Сохранить менеджера", "Save manager")}
             </button>
           </div>

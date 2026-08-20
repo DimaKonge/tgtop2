@@ -51,7 +51,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
     expect(source).toContain('Динамика аудитории');
     expect(source).toContain('Приглашения');
-    expect(source).toContain('Сделать ставку');
+    expect(source).toContain('Перебить ставку');
     expect(source).not.toContain('{ value: "rent", title: tx("Аренда", "Rent")');
     expect(source).not.toContain('tx("Условия аренды", "Rental terms")');
     expect(source).toContain('["Каналы", ui.channels]');
@@ -93,7 +93,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
     expect(source).toContain('const hours = Math.floor(seconds / 3_600);');
     expect(source).not.toContain('const days = Math.floor(seconds / 86_400);');
-    expect(source).toContain('detail.group.managerName ?? "Анонимно"');
+    expect(source).toContain('managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"');
     expect(source).not.toContain('!ownsDetail && (!detailPlacementIsPublic || !detailOwner) ? (');
     expect(source).toContain('const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0');
     expect(source).toContain('rewardPerInvite: isChatRewardCampaign ? 0 : joinRewardUnits');
@@ -108,7 +108,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const getRussianLanguage = (): Language => "ru";');
     expect(source).not.toContain('localStorage.getItem("tg-top-language")');
     expect(source).not.toContain('tx("Личная папка", "Personal cabinet")');
-    expect(source).toContain('detail.group.managerName ?? "Анонимно"');
+    expect(source).toContain('managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"');
     expect(source).not.toContain('onOwnerClick');
     expect(source).toContain('Профиль владельца');
     expect(source).toContain('getOwnerLeaderboard.useQuery');
@@ -154,7 +154,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('Переключить анонимное размещение');
     expect(source).not.toContain('const [anonymousListing, setAnonymousListing] = useState(true)');
     expect(source).not.toContain('!ownsDetail && (!detailPlacementIsPublic || !detailOwner) ? (');
-    expect(source).toContain('detail.group.managerName ?? "Анонимно"');
+    expect(source).toContain('managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"');
     expect(source).toContain('Gram');
     expect(source).toContain('<Select value={listingCountry}');
     expect(source).toContain('<Select value={listingSubcategory}');
@@ -320,14 +320,14 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null)');
     expect(source).toContain('Удалить группу из платформы?');
     expect(source).toContain('rounded-[22px] border border-[#31435f]');
-    expect(source).toContain('className="order-2 mt-4 rounded-xl border border-[#3d5070] bg-[#111d32] p-3"');
+    expect(source).toContain('className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3"');
     expect(source).toContain('function AudienceGrowthChart');
     expect(source).toContain('Снимки @TGTOP_robot с первого наблюдения.');
     expect(source).toContain('История до подключения не моделируется.');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
     expect(source).toContain('Текущая ставка');
     expect(source).toContain('Перебить можно от');
-    expect(source).toContain('Сделать ставку');
+    expect(source).toContain('Перебить ставку');
     expect(source).toContain('const detailBoardCategory = selectedSlot?.category');
     expect(source).toContain('const detailBoardCountry = selectedSlot?.country');
     expect(source).toContain('tx("Все сообщества", "All communities")');
@@ -342,7 +342,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('!detailPlacementIsPublic || !detailOwner');
     expect(source).toContain('const detailWillDrop = Boolean(selectedSlot && detailRankingPreviewSlotNumber && detailRankingPreviewSlotNumber > selectedSlot.slotNumber);');
     expect(source).toContain('Группа опустится на ${detailRankingPreviewSlotNumber}-ю позицию');
-    expect(source).toContain('"Обновить лот"');
+    expect(source).toContain('Обновить лот · #');
     expect(source).toContain('tx("Другие смогут перейти в ваш профиль", "Others can open your profile")');
     expect(source).toContain('tx("Параметры публикации", "Publication settings")');
     expect(source).not.toContain('tx("Обновить Top", "Refresh Top")');
@@ -350,9 +350,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const setGroupManager = trpc.tgTop.setGroupManager.useMutation');
     expect(source).toContain('tx("Менеджер группы", "Community manager")');
     expect(source).toContain('setManagerSheetOpen(true)');
-    expect(source).toContain('setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId })');
+    expect(source).toContain('setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId }, {');
     expect(source).toContain('managerTelegramUserId?: string | null;');
-    expect(source).toContain('detail.group.managerName ?? "Анонимно"');
+    expect(source).toContain('managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"');
     expect(source).toContain('tx("Показывать менеджера", "Show manager")');
     expect(source).not.toContain('tx("Размещено", "Listed")');
     expect(source).not.toContain('tx("Анонимно", "Anonymously")');
@@ -368,7 +368,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Параметры публикации", "Publication settings")');
     expect(source).toContain('tx("Публичная публикация", "Public publication")');
     expect(source).toContain('disabled={!detailEntryUrl}');
-    expect(source).toContain('"Обновить лот"');
+    expect(source).toContain('Обновить лот · #');
     expect(source).toContain('Ваш лот будет в Top, пока другую группу не разместят выше по ставке.');
     expect(source).toContain('managerPublic?: boolean;');
     expect(source).toContain('tx("Показывать менеджера", "Show manager")');
