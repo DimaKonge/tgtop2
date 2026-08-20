@@ -36,11 +36,14 @@ import {
   Plus,
   Pin,
   PinOff,
+  Send,
   Settings2,
   Star,
   Sun,
   Trash2,
+  TrendingUp,
   Trophy,
+  UserPlus,
   UserRound,
   Users,
   WalletCards,
@@ -82,7 +85,7 @@ type AudienceSnapshot = {
   recordedAt: Date;
 };
 
-function AudienceGrowthChart({ snapshots, language }: { snapshots: AudienceSnapshot[]; language: Language }) {
+function AudienceGrowthChart({ snapshots, language, embedded = false }: { snapshots: AudienceSnapshot[]; language: Language; embedded?: boolean }) {
   const dateFormatter = new Intl.DateTimeFormat(language === "en" ? "en-US" : "ru-RU", { day: "numeric", month: "short" });
   const pointsByDate = new Map<string, AudienceSnapshot>();
   [...snapshots]
@@ -100,16 +103,16 @@ function AudienceGrowthChart({ snapshots, language }: { snapshots: AudienceSnaps
   const netGrowth = first && last ? last.members - first.members : 0;
 
   return (
-    <section className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
-      <div className="flex items-start justify-between gap-3">
+    <section className={embedded ? "" : "rounded-xl border border-white/8 bg-white/[0.025] p-3"}>
+      {!embedded && <div className="flex items-start justify-between gap-3">
         <span>
           <b className="block text-sm text-slate-100">{language === "en" ? "Audience growth" : "Динамика аудитории"}</b>
           <small className="mt-1 block text-[10px] text-slate-500">{language === "en" ? "Recorded by @TGTOP_robot from the first observation." : "Снимки @TGTOP_robot с первого наблюдения."}</small>
         </span>
         {first && last && <b className={`text-xs ${netGrowth > 0 ? "text-emerald-300" : netGrowth < 0 ? "text-rose-300" : "text-slate-400"}`}>{netGrowth > 0 ? "+" : ""}{n(netGrowth, language)}</b>}
-      </div>
+      </div>}
       {chartData.length >= 2 ? (
-        <ChartContainer config={{ members: { label: language === "en" ? "Members" : "Участники", color: "#4d96ff" } }} className="mt-3 h-36 w-full">
+        <ChartContainer config={{ members: { label: language === "en" ? "Members" : "Участники", color: "#4d96ff" } }} className={`${embedded ? "" : "mt-3"} h-36 w-full`}>
           <AreaChart accessibilityLayer data={chartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="audience-growth-fill" x1="0" x2="0" y1="0" y2="1">
@@ -124,7 +127,7 @@ function AudienceGrowthChart({ snapshots, language }: { snapshots: AudienceSnaps
           </AreaChart>
         </ChartContainer>
       ) : (
-        <p className="mt-4 rounded-lg bg-black/15 px-3 py-3 text-center text-xs leading-5 text-slate-500">{language === "en" ? "The chart will appear after at least two bot observations. Historical values are not invented." : "График появится после двух наблюдений бота. История до подключения не моделируется."}</p>
+        <p className={`${embedded ? "" : "mt-4"} rounded-lg bg-black/15 px-3 py-3 text-center text-xs leading-5 text-slate-500`}>{language === "en" ? "The chart will appear after at least two bot observations. Historical values are not invented." : "График появится после двух наблюдений бота. История до подключения не моделируется."}</p>
       )}
     </section>
   );
@@ -356,14 +359,16 @@ const getCityLabel = (country: string, city: string, language: Language) =>
 function Avatar({
   group,
   large = false,
+  hero = false,
   compact = false,
 }: {
   group: Group;
   large?: boolean;
+  hero?: boolean;
   compact?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
-  const size = large ? "h-16 w-16" : compact ? "h-9 w-9" : "h-11 w-11";
+  const size = hero ? "h-28 w-28" : large ? "h-16 w-16" : compact ? "h-9 w-9" : "h-11 w-11";
   const avatarSrc = getTelegramAvatarSrc(group);
   return (
     <span
@@ -2575,118 +2580,86 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <ArrowLeft className="h-4 w-4" />
                   {ui.back}
                 </button>
-                <div className="relative flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400">{selectedSlot ? `ЛОТ · #${selectedSlot.slotNumber}` : "ЛОТ · #1"}</span>
-                    {selectedSlot ? (
-                      <span className="font-mono text-xs font-semibold tabular-nums text-slate-200">{formatPositionDuration(selectedSlot.updatedAt, positionClock)}</span>
-                    ) : (
-                      <span className="font-mono text-xs font-semibold tabular-nums text-slate-200">18:18:10</span>
-                    )}
+                <div className="relative flex flex-col overflow-hidden rounded-[22px] border border-[#31435f] bg-[radial-gradient(circle_at_50%_0%,rgba(38,83,147,0.20),transparent_38%),linear-gradient(145deg,#111a2b,#0d1524)] p-3.5 shadow-[0_18px_40px_rgba(0,0,0,0.24)]">
+                  {detail.group.rewardActive && <Star className="absolute right-4 top-5 h-8 w-8 fill-[#ffd83d] text-[#ffd83d] drop-shadow-[0_0_12px_rgba(255,216,61,0.65)]" aria-label="Вознаграждение активно" />}
+                  <div className="flex items-start justify-between">
+                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300/35 bg-amber-300/[0.09] px-2.5 py-1.5 text-sm font-bold text-amber-200 shadow-inner shadow-amber-300/10">
+                      <Star className="h-4 w-4 fill-current" /> #{selectedSlot?.slotNumber ?? 1}
+                    </span>
+                    <div className="mr-10 flex flex-col items-center leading-none">
+                      <span className="text-[9px] font-bold tracking-[0.14em] text-emerald-400">● В ТОПЕ</span>
+                      <b className="mt-1.5 font-mono text-xl font-bold tracking-[0.08em] text-white">{selectedSlot ? formatPositionDuration(selectedSlot.updatedAt, positionClock) : "00:00:00"}</b>
+                    </div>
+                    <span className="w-[70px]" aria-hidden="true" />
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="flex shrink-0 flex-col items-center gap-1.5">
-                      <Avatar group={detail.group} large />
-                      <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-slate-400">0%</span>
-                    </div>
-                    <div className="min-w-0 flex-1 pt-0.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-slate-400">-{detail.group.category ? "" : ""}</span>
-                      </div>
-                      <p className="truncate text-sm font-medium text-[#72a8ff]">
-                        {detail.group.username ? `@${detail.group.username}` : "@username"}
-                      </p>
-                      <h1 className="mt-0.5 truncate text-lg font-bold text-white">
-                        {detail.group.title}
-                      </h1>
-                    </div>
+
+                  <div className="mt-3 flex flex-col items-center text-center">
+                    <button type="button" onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }} disabled={!detailEntryUrl} className="rounded-[28px] transition-transform active:scale-[0.98] disabled:cursor-default">
+                      <Avatar group={detail.group} hero />
+                    </button>
+                    <span className={`-mt-1 rounded-lg border px-2 py-0.5 text-xs font-bold shadow-lg ${dailyGrowthPct !== null && dailyGrowthPct < 0 ? "border-rose-400/40 bg-rose-500/20 text-rose-300" : "border-emerald-400/40 bg-emerald-500/20 text-emerald-300"}`}>
+                      <TrendingUp className="mr-1 inline h-3.5 w-3.5" />{dailyGrowthPct !== null && dailyGrowthPct > 0 ? "+" : ""}{dailyGrowthPct !== null ? `${dailyGrowthPct.toFixed(1)}%` : "0%"}
+                    </span>
+                    <h1 className="mt-3 max-w-full truncate text-[22px] font-bold tracking-tight text-white">{detail.group.title}</h1>
+                    <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-slate-400"><span className="text-sm">▣</span>{detail.group.inviteLink && !detail.group.username ? "Приватное сообщество" : detail.group.category === "Каналы" ? "Канал" : "Группа"}</p>
+                    {detail.group.description && <p className="mt-3 max-w-[340px] text-xs leading-5 text-slate-300">{detail.group.description}</p>}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
-                    disabled={!detailEntryUrl}
-                    className="flex w-full items-center justify-between rounded-xl bg-[#182333] px-3.5 py-2.5 text-left text-white transition-colors hover:bg-[#1f2d42] active:scale-[0.99]"
-                  >
-                    <div>
-                      <b className="block text-sm font-medium">{tx("Перейти в группу", "Open in group")}</b>
-                      <small className="block text-xs text-slate-400">{tx("в Telegram", "in Telegram")}</small>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-slate-400" />
-                  </button>
-                  <div className="flex items-center justify-between rounded-xl bg-[#16202e] px-4 py-3.5">
-                    <div>
-                      <small className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">{tx("УЧАСТНИКИ", "MEMBERS")}</small>
-                      <b className="mt-0.5 block text-2xl font-bold text-white">{n(detail.group.membersCount)}</b>
-                    </div>
-                    <Users className="h-5 w-5 text-[#72a8ff]" />
-                  </div>
-                  <div className="rounded-xl bg-[#16202e] p-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-slate-200">{tx("Динамика аудитории", "Audience dynamics")}</span>
-                      <span className="text-xs text-slate-400">0</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mb-3">{tx("Снимки @TGTOP_robot с первого наблюдения.", "Snapshots of @TGTOP_robot since first observation.")}</p>
-                    <AudienceGrowthChart snapshots={detail.snapshots} language={language} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-[#16202e] p-4">
-                      <span className="text-xs text-slate-400">{tx("Вступили", "Joined")}</span>
-                      <b className="mt-1 block text-2xl font-bold text-white">{n(detail.group.joinedCount)}</b>
-                      <span className="mt-1 block text-[11px] text-slate-500">{tx("зафиксировано ботом", "fixed by bot")}</span>
-                    </div>
-                    <div className="rounded-xl bg-[#16202e] p-4">
-                      <span className="text-xs text-slate-400">{tx("Отписались", "Unsubscribed")}</span>
-                      <b className="mt-1 block text-2xl font-bold text-white">{n(detail.group.leavesCount)}</b>
-                      <span className="mt-1 block text-[11px] text-slate-500">{tx("зафиксировано ботом", "fixed by bot")}</span>
-                    </div>
-                  </div>
-                  {!ownsDetail && (!detailPlacementIsPublic || !detailOwner) ? (
-                    <div className="order-3 mt-3 w-full rounded-xl border border-white/8 bg-white/[0.035] p-3">
-                      <div className="flex items-center gap-3">
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">A</span>
-                        <span className="min-w-0 flex-1">
-                          <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Размещено", "Listed")}</small>
-                          <b className="mt-0.5 block truncate text-xs text-slate-200">{tx("Анонимно", "Anonymously")}</b>
-                        </span>
-                      </div>
-                      {detail.group.managerName && detail.group.managerPublic !== false && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (detail.group.managerUsername) openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`);
-                          }}
-                          disabled={!detail.group.managerUsername}
-                          className="mt-3 flex w-full items-center gap-2 rounded-lg bg-black/15 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.055] active:scale-[0.99] disabled:cursor-default disabled:opacity-80"
-                        >
-                          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#3f8cff]/25 bg-[#3f8cff]/10 text-xs font-semibold text-[#b6d1ff]">{detail.group.managerName.slice(0, 1).toUpperCase()}</span>
-                          <span className="min-w-0 flex-1">
-                            <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">{tx("Менеджер", "Manager")}</small>
-                            <b className="mt-0.5 block truncate text-xs text-slate-200">{detail.group.managerName}</b>
-                            {detail.group.managerUsername && <small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">@{detail.group.managerUsername}</small>}
-                          </span>
-                          {detail.group.managerUsername && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#8fb9ff]" />}
-                        </button>
-                      )}
-                    </div>
-                  ) : detailOwner && (
+
+                  <div className="mt-4 grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        if (detailOwner.telegramUsername) openTelegramCommunityLink(`https://t.me/${detailOwner.telegramUsername}`);
+                        if (isListingForSale && salePriceTon && !ownsDetail) createProtectedGroupDeal.mutate({ groupId: detail.group.id });
+                        else if (!ownsDetail && selectedSlot) openOutbid(selectedSlot);
                       }}
-                      disabled={!detailOwner.telegramUsername}
-                      className="order-3 mt-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.05] active:scale-[0.99] disabled:cursor-default disabled:opacity-70"
+                      disabled={ownsDetail || (!isListingForSale && !selectedSlot)}
+                      className="flex min-h-[88px] flex-col justify-center rounded-xl border border-emerald-300/35 bg-[linear-gradient(135deg,#128160,#12a56f)] px-2 text-left text-white shadow-[inset_0_1px_rgba(255,255,255,0.2),0_8px_18px_rgba(12,130,92,0.22)] transition-transform active:scale-[0.98] disabled:cursor-default disabled:opacity-90"
                     >
-                      <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-200">
-                        {detailOwner.avatarUrl ? <img src={detailOwner.avatarUrl} alt="" className="h-full w-full object-cover" /> : (detailOwner.name ?? detailOwner.telegramUsername ?? "T").slice(0, 1).toUpperCase()}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <b className="block truncate text-xs text-slate-200">{detailOwner.name ?? detailOwner.telegramUsername ?? tx("Пользователь TG TOP", "TG TOP user")}</b>
-                        {detailOwner.telegramUsername && <small className="mt-0.5 block truncate text-[10px] text-slate-500">@{detailOwner.telegramUsername}</small>}
-                      </span>
-                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+                      <span className="flex items-center gap-1.5 text-[10px] text-emerald-100"><WalletCards className="h-3.5 w-3.5" />{isListingForSale && salePriceTon ? "Купить за" : "Текущая ставка"}</span>
+                      <b className="mt-1 text-lg leading-none">{isListingForSale && salePriceTon ? salePriceTon : formatTon((selectedSlot?.bidAmount ?? 0) / 1000)}</b>
+                      <small className="mt-1 text-[10px] text-emerald-100">GRAM</small>
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => { if (detail.group.managerUsername) openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`); }}
+                      disabled={!detail.group.managerUsername}
+                      className="flex min-h-[88px] flex-col justify-center rounded-xl border border-[#334663] bg-[#17233a] px-2 text-left text-slate-100 transition-colors hover:bg-[#1d2c46] active:scale-[0.98] disabled:cursor-default"
+                    >
+                      <span className="flex items-center gap-1.5 text-[10px] text-slate-400"><UserRound className="h-3.5 w-3.5" />{detail.group.managerName ? "Менеджер" : "Публикация"}</span>
+                      <b className="mt-1 truncate text-xs">{detail.group.managerName ?? "Анонимно"}</b>
+                      <small className="mt-1 truncate text-[10px] text-[#72a8ff]">{detail.group.managerUsername ? `@${detail.group.managerUsername}` : "Без контакта"}</small>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
+                      disabled={!detailEntryUrl}
+                      className="flex min-h-[88px] flex-col justify-center rounded-xl border border-[#76b7ff]/45 bg-[linear-gradient(135deg,#2777ef,#4d8df7)] px-2 text-left text-white shadow-[inset_0_1px_rgba(255,255,255,0.2),0_8px_18px_rgba(35,103,229,0.25)] transition-transform active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <Send className="h-5 w-5 text-white/85" />
+                      <b className="mt-1 text-sm leading-4">Перейти<br />в группу</b>
+                    </button>
+                  </div>
+
+                  <section className="mt-4 rounded-xl border border-[#30415d] bg-[#121f35]/85 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-base font-bold text-white">Динамика аудитории</h2>
+                      <span className="text-xs font-semibold text-[#75adff]">{n(detail.group.membersCount)} подписчика</span>
+                    </div>
+                    <div className="mt-2">
+                      <AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />
+                    </div>
+                  </section>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-[#30415d] bg-[#121f35]/85 p-3">
+                      <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-400/10 text-emerald-300"><TrendingUp className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Вступления</small><b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.joinedCount)}</b></span></div>
+                      <small className="mt-2 block text-[10px] text-emerald-300">зафиксировано ботом</small>
+                    </div>
+                    <div className="rounded-xl border border-[#30415d] bg-[#121f35]/85 p-3">
+                      <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-violet-400/10 text-violet-300"><UserPlus className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Приглашения</small><b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.invitedCount)}</b></span></div>
+                      <small className="mt-2 block text-[10px] text-violet-300">зафиксировано ботом</small>
+                    </div>
+                  </div>
                   {ownsDetail && (
                     <section className="order-3 mt-3 rounded-xl border border-white/8 bg-white/[0.025] p-2">
                       <button type="button" onClick={() => setInlineListingOpen(value => !value)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
@@ -2789,42 +2762,38 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   )}
                   {selectedSlot && (
-                    <section className="order-4 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <span>
-                          <small className="block text-[10px] font-medium uppercase tracking-[0.12em] text-[#8fb9ff]">{tx(`Текущее место · #${selectedSlot.slotNumber}`, `Current place · #${selectedSlot.slotNumber}`)}</small>
-                          <span className="mt-1 flex items-baseline gap-1.5"><b className="block text-base text-slate-100">{formatTon(selectedSlot.bidAmount / 1000)} GRAM</b><small className="text-[10px] text-slate-500">{tx("цена лота", "lot price")}</small></span>
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-black/15 px-2 py-1 text-[10px] text-slate-300">{tx(`перебить от ${formatTon(detailMinimumBid)} GRAM`, `outbid from ${formatTon(detailMinimumBid)} GRAM`)}</span>
+                    <section className="order-2 mt-4 rounded-xl border border-[#3d5070] bg-[#111d32] p-3">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-white">{ownsDetail ? "Обновить лот" : "Сделать ставку"}</h2>
+                        <span className="rounded-full bg-white/[0.06] px-2 py-1 text-[10px] text-slate-400">место #{selectedSlot.slotNumber}</span>
                       </div>
-                      <div className="mt-3 flex items-center justify-between rounded-lg bg-black/15 px-2.5 py-2 text-[11px]">
-                        <span className="text-slate-500">{tx("На этой позиции", "In this position")}</span>
-                        <b className="font-mono tabular-nums text-slate-200">{formatPositionDuration(selectedSlot.updatedAt, positionClock)}</b>
-                      </div>
-                      <div className="mt-2 rounded-lg bg-black/15 px-2.5 py-2 text-[11px]">
-                        <small className="block text-slate-500">{tx("Адрес в каталоге", "Catalog location")}</small>
-                        <b className="mt-1 block truncate font-medium text-slate-300">{detailCatalogPath}</b>
-                      </div>
-                      {ownsDetail && (
-                        <div className="mt-3 rounded-lg bg-black/15 p-2.5">
-                          <div className="flex items-center justify-between gap-3">
-                            <span>
-                              <b className="block text-xs text-[#c7dcff]">{tx("Обновить лот", "Refresh lot")}</b>
-                              <small className="mt-0.5 block text-[10px] text-slate-500">{detailRankingPreviewSlotNumber ? tx(`Предпросмотр: ${detailRankingPreviewSlotNumber}-я позиция`, `Preview: position ${detailRankingPreviewSlotNumber}`) : tx("Сумма вне рейтинга", "Amount is outside the ranking")}</small>
-                            </span>
-                            <b className="text-xs text-[#a6c8ff]">{formatTon(detailRankingBidAmount)} GRAM</b>
-                          </div>
-                          <div className="mt-3 flex items-center rounded-xl border border-white/8 bg-[#0b0f14] p-1">
-                            <button type="button" onClick={() => setDetailBidInput(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label={tx("Уменьшить ставку", "Decrease bid")} className="grid h-10 w-10 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.07]"><Minus className="h-4 w-4" /></button>
-                            <Input value={detailBidInput} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setDetailBidInput(value); }} onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))} aria-label={tx("Новая ставка в GRAM", "New bid in GRAM")} className="h-10 flex-1 border-0 bg-transparent px-1 text-center text-base font-semibold text-white focus-visible:ring-0" />
-                            <button type="button" onClick={() => setDetailBidInput(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label={tx("Увеличить ставку", "Increase bid")} className="grid h-10 w-10 place-items-center rounded-lg text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"><Plus className="h-4 w-4" /></button>
-                          </div>
-                          <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="mt-2 py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
-                          {detailWillDrop && <p className="mt-2 rounded-lg border border-rose-300/20 bg-rose-400/[0.07] px-2.5 py-2 text-[10px] font-medium text-rose-200">{tx(`Группа опустится с ${selectedSlot.slotNumber}-й на ${detailRankingPreviewSlotNumber}-ю позицию`, `The community will drop from ${selectedSlot.slotNumber} to ${detailRankingPreviewSlotNumber}`)}</p>}
-                          <button type="button" onClick={() => { if (!detail || !selectedSlot) return; const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`)); placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous" }); }} disabled={!detailRankingPreviewSlotNumber || placeBid.isPending} className="mt-3 flex w-full items-center justify-between rounded-xl border border-[#8bbcff]/55 bg-gradient-to-r from-[#1688f5] to-[#557be0] px-3.5 py-3 text-left text-white shadow-lg shadow-[#1688f5]/20 transition-all hover:brightness-110 active:scale-[0.985] disabled:opacity-45"><span><b className="block text-sm">{placeBid.isPending ? tx("Обновляем…", "Refreshing…") : tx("Обновить лот", "Refresh lot")}</b><small className="mt-0.5 block text-[10px] text-white/70">{tx("Применить цену и видимость", "Apply price and visibility")}</small></span><b className="rounded-lg border border-white/25 bg-white/15 px-2.5 py-1.5 text-xs">{formatTon(detailRankingBidAmount)} GRAM</b></button>
+                      <div className="mt-3 grid grid-cols-[76px_minmax(0,1fr)_132px] items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="grid h-10 w-10 place-items-center rounded-full bg-[#345675] text-[#d9ebff]"><WalletCards className="h-5 w-5" /></span>
+                          <span className="min-w-0"><b className="block truncate text-xl leading-none text-white">{formatTon(detailRankingBidAmount)}</b><small className="mt-1 block text-[10px] text-slate-400">GRAM</small></span>
                         </div>
-                      )}
-                      {!ownsDetail && isAuthenticated && <button onClick={() => openOutbid(selectedSlot)} className="mt-3 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#3f8cff]/15"><span><b className="block text-xs text-[#a6c8ff]">{tx("Перебить лот", "Outbid lot")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx(`Следующая ставка: от ${formatTon(detailMinimumBid)} GRAM`, `Next bid: from ${formatTon(detailMinimumBid)} GRAM`)}</small></span><ChevronRight className="h-4 w-4 text-[#a6c8ff]" /></button>}
+                        <div className="flex h-12 items-center rounded-xl border border-[#3b4f70] bg-[#101a2d] p-1">
+                          <button type="button" disabled={!ownsDetail} onClick={() => setDetailBidInput(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label="Уменьшить ставку" className="grid h-10 w-9 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.07] disabled:opacity-35"><Minus className="h-4 w-4" /></button>
+                          <Input value={detailBidInput} readOnly={!ownsDetail} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setDetailBidInput(value); }} onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))} aria-label="Новая ставка в GRAM" className="h-10 min-w-0 flex-1 border-0 bg-transparent px-1 text-center text-lg font-bold text-white focus-visible:ring-0" />
+                          <button type="button" disabled={!ownsDetail} onClick={() => setDetailBidInput(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label="Увеличить ставку" className="grid h-10 w-9 place-items-center rounded-lg text-[#8ebaff] transition-colors hover:bg-[#3f8cff]/12 disabled:opacity-35"><Plus className="h-4 w-4" /></button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!ownsDetail) return openOutbid(selectedSlot);
+                            const value = detailRankingBidAmount;
+                            const minimum = detailMinimumBid ?? 0.1;
+                            if (!detail || !Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`);
+                            placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous" });
+                          }}
+                          disabled={ownsDetail ? !detailRankingPreviewSlotNumber || placeBid.isPending : !isAuthenticated}
+                          className="h-12 rounded-xl border border-emerald-200/45 bg-[linear-gradient(135deg,#13a66f,#198a62)] px-3 text-center text-sm font-bold text-white shadow-[inset_0_1px_rgba(255,255,255,0.2),0_8px_16px_rgba(8,121,82,0.28)] transition-transform active:scale-[0.98] disabled:opacity-45"
+                        >
+                          {ownsDetail ? (placeBid.isPending ? "Обновляем…" : "Обновить") : "Сделать ставку"}
+                        </button>
+                      </div>
+                      {ownsDetail && <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="mt-3 py-1 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-emerald-400 [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:!border-emerald-200 [&_[data-slot=slider-thumb]]:!bg-emerald-400" />}
+                      <p className={`mt-3 text-center text-[10px] ${detailWillDrop ? "text-rose-300" : "text-slate-500"}`}>{detailWillDrop ? `Группа опустится на ${detailRankingPreviewSlotNumber}-ю позицию` : ownsDetail ? `Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM` : `Перебить можно от ${formatTon(detailMinimumBid)} GRAM`}</p>
                     </section>
                   )}
                 </div>
