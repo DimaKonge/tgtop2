@@ -2605,7 +2605,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     type="button"
                     onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
                     disabled={!detailEntryUrl}
-                    className="flex w-full items-center justify-between rounded-xl bg-[#182333] px-4 py-3 text-left text-white transition-colors hover:bg-[#1f2d42] active:scale-[0.99]"
+                    className="flex w-full items-center justify-between rounded-xl bg-[#182333] px-3.5 py-2.5 text-left text-white transition-colors hover:bg-[#1f2d42] active:scale-[0.99]"
                   >
                     <div>
                       <b className="block text-sm font-medium">{tx("Перейти в группу", "Open in group")}</b>
