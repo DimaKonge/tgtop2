@@ -56,6 +56,7 @@ export const appRouter = router({
         showOwnerContact: z.boolean().optional(),
         managerPublic: z.boolean().optional(),
         listingAnnouncementEnabled: z.boolean().optional(),
+        subcategory: z.string().min(2).max(64).optional(),
         salePriceTon: gramAmount.nullable().optional(),
         rewardActive: z.boolean().optional(),
         rewardBudget: z.number().int().min(0).optional(),
@@ -74,13 +75,14 @@ export const appRouter = router({
           group.username ?? group.title,
           ctx.user.openId,
           input.groupId,
-          input.anonymousListing === undefined && input.showOwnerContact === undefined && input.managerPublic === undefined && input.listingAnnouncementEnabled === undefined && input.salePriceTon === undefined && input.rewardActive === undefined && input.rewardBudget === undefined && input.rewardPerSubscription === undefined && input.rewardPerManualAdd === undefined
+          input.anonymousListing === undefined && input.showOwnerContact === undefined && input.managerPublic === undefined && input.listingAnnouncementEnabled === undefined && input.subcategory === undefined && input.salePriceTon === undefined && input.rewardActive === undefined && input.rewardBudget === undefined && input.rewardPerSubscription === undefined && input.rewardPerManualAdd === undefined
             ? undefined
             : {
                 anonymousListing: input.anonymousListing,
                 showOwnerContact: input.showOwnerContact,
                 managerPublic: input.managerPublic,
                 listingAnnouncementEnabled: input.listingAnnouncementEnabled,
+                subcategory: input.subcategory,
                 salePriceTon: input.salePriceTon,
                 rewardActive: input.rewardActive,
                 rewardBudget: input.rewardBudget,

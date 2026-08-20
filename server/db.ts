@@ -420,6 +420,7 @@ export type RankingLotOptions = {
   showOwnerContact?: boolean;
   managerPublic?: boolean;
   listingAnnouncementEnabled?: boolean;
+  subcategory?: string;
   salePriceTon?: string | null;
   rewardActive?: boolean;
   rewardBudget?: number;
@@ -433,6 +434,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
 
   const group = groupId ? await getGroupById(groupId) : undefined;
   if (!groupId || !group) throw new Error("Группа недоступна для размещения");
+  if (options?.subcategory && !isCatalogSubcategory(group.category, options.subcategory)) throw new Error("Выберите подкатегорию, подходящую типу сообщества");
   const requestedTarget = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
   if (!requestedTarget) throw new Error("Позиция рейтинга не найдена");
   const target = requestedTarget.category === "Все" && requestedTarget.subcategory === "Все"
@@ -525,6 +527,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
         ...(options.showOwnerContact !== undefined ? { showOwnerContact: options.showOwnerContact } : {}),
         ...(options.managerPublic !== undefined ? { managerPublic: options.managerPublic } : {}),
         ...(options.listingAnnouncementEnabled !== undefined ? { listingAnnouncementEnabled: options.listingAnnouncementEnabled } : {}),
+        ...(options.subcategory ? { subcategory: options.subcategory } : {}),
         ...(options.salePriceTon !== undefined ? { salePriceTon, listingType: salePriceTon ? "sale" : "catalog" } : {}),
         ...(options.rewardActive !== undefined ? { rewardActive: options.rewardActive } : {}),
         ...(options.rewardBudget !== undefined ? { rewardBudget: options.rewardBudget } : {}),

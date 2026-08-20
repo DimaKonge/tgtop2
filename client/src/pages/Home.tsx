@@ -854,6 +854,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [outbidGroupId, setOutbidGroupId] = useState<number | null>(null);
   const [lotGroupPickerOpen, setLotGroupPickerOpen] = useState(false);
   const [lotGroupId, setLotGroupId] = useState<number | null>(null);
+  const [lotCategory, setLotCategory] = useState<"Каналы" | "Чаты">("Каналы");
   const [outbidBidInput, setOutbidBidInput] = useState("0.1");
   const [outbidVisibility, setOutbidVisibility] = useState<"public" | "anonymous">("anonymous");
   const [detailVisibility, setDetailVisibility] = useState<"public" | "anonymous">("anonymous");
@@ -1526,13 +1527,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? detailSlots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
   const ownsDetail = detail?.group.ownerOpenId === user?.openId;
+  const placementSlot = selectedSlot ?? (ownsDetail ? detailSlots.find(slot => !slot.group) : undefined);
   const detailPlacementIsPublic = Boolean(detail?.group.showOwnerContact && !detail?.group.anonymousListing);
   const detailVisibilityChanged = ownsDetail && detailPlacementIsPublic !== (detailVisibility === "public");
-  const detailOutbidMinimum = selectedSlot
-    ? getMinimumRankingBidGram(selectedSlot)
+  const detailOutbidMinimum = placementSlot
+    ? getMinimumRankingBidGram(placementSlot)
     : null;
-  const detailMinimumBid = selectedSlot
-    ? ownsDetail ? getRankingFloorGram(selectedSlot.slotNumber) : detailOutbidMinimum ?? getRankingFloorGram(selectedSlot.slotNumber)
+  const detailMinimumBid = placementSlot
+    ? ownsDetail ? getRankingFloorGram(placementSlot.slotNumber) : detailOutbidMinimum ?? getRankingFloorGram(placementSlot.slotNumber)
     : null;
   const rawDetailRankingBid = Number(detailBidInput);
   const detailRankingBidAmount = detailMinimumBid !== null && Number.isFinite(rawDetailRankingBid)
@@ -1540,13 +1542,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : detailMinimumBid ?? 0.1;
   const detailRankingPreviewSlotNumber = detail && selectedSlot && ownsDetail
     ? getSimulatedRankingSlotNumber(detailSlots, detail.group.id, detailRankingBidAmount)
-    : selectedSlot?.slotNumber ?? null;
+    : placementSlot?.slotNumber ?? null;
   const detailPriceBelowCurrent = Boolean(ownsDetail && selectedSlot && detailRankingBidAmount < selectedSlot.bidAmount / 1000);
   const detailWillDrop = Boolean(detailPriceBelowCurrent && detailRankingPreviewSlotNumber && selectedSlot && detailRankingPreviewSlotNumber > selectedSlot.slotNumber);
   useEffect(() => {
-    if (!selectedSlot) return setDetailBidInput("");
-    setDetailBidInput(formatTon(ownsDetail ? selectedSlot.bidAmount / 1000 : getMinimumRankingBidGram(selectedSlot)));
-  }, [selectedSlot?.id, selectedSlot?.bidAmount, ownsDetail]);
+    if (!placementSlot) return setDetailBidInput("");
+    setDetailBidInput(formatTon(ownsDetail && selectedSlot ? selectedSlot.bidAmount / 1000 : getMinimumRankingBidGram(placementSlot)));
+  }, [placementSlot?.id, selectedSlot?.bidAmount, ownsDetail]);
   useEffect(() => {
     setDetailVisibility(detailPlacementIsPublic ? "public" : "anonymous");
   }, [detail?.group.id, detailPlacementIsPublic]);
@@ -1555,6 +1557,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const group = detail.group;
     setListingCountry(COUNTRY_OPTIONS.includes(group.country as ListingCountry) ? group.country as ListingCountry : "Global");
     setListingCity(group.city ?? "Все");
+    setLotCategory(group.category);
     setListingSubcategory(group.subcategory ?? "General");
     setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
     setIsListingForSale(group.listingType === "sale" && Boolean(group.salePriceTon));
@@ -1583,13 +1586,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         && (targetSlot.subcategory === "Все" || targetSlot.subcategory === group.subcategory)
       )
     : [];
-  const lotGroupCandidates = selectedSlot
+  const lotGroupCandidates = placementSlot
     ? mine.filter(group =>
-        (selectedSlot.category === "Все" || selectedSlot.category === group.category)
-        && (selectedSlot.subcategory === "Все" || selectedSlot.subcategory === group.subcategory)
+        group.category === lotCategory
+        &&
+        (placementSlot.category === "Все" || placementSlot.category === group.category)
+        && (placementSlot.subcategory === "Все" || placementSlot.subcategory === group.subcategory)
       )
     : [];
-  const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? (ownsDetail ? detail?.group ?? null : null);
+  const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? (ownsDetail && detail?.group.category === lotCategory ? detail?.group ?? null : null);
   const selectedOutbidGroup = outbidCandidates.find(group => group.id === outbidGroupId) ?? null;
   const outbidMinimum = targetSlot ? getMinimumRankingBidGram(targetSlot) : 0.1;
   const rawOutbidBid = Number(outbidBidInput);
@@ -1709,10 +1714,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   };
   const applyLotGroupSettings = (group: Group) => {
     setLotGroupId(group.id);
+    setLotCategory(group.category);
     setDetailVisibility(group.showOwnerContact && !group.anonymousListing ? "public" : "anonymous");
     setSelectedManagerTelegramUserId(group.managerTelegramUserId ?? null);
     setManagerPublic(group.managerPublic !== false);
     setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true);
+    setListingSubcategory(group.subcategory ?? "General");
     setIsListingForSale(group.listingType === "sale" && Boolean(group.salePriceTon));
     setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
     setRewardCampaignEnabled(Boolean(group.rewardActive));
@@ -2680,7 +2687,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       disabled={!detailEntryUrl}
                       className="flex min-h-[58px] flex-col justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2 text-left text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
                     >
-                      <span className="flex items-center gap-1.5"><Send className="h-3.5 w-3.5 text-white/90" /><b className="text-[11px] leading-3">Перейти</b></span>
+                      <span className="flex items-center justify-center gap-1.5"><Send className="h-3.5 w-3.5 text-white/90" /><b className="text-[11px] leading-3">Перейти</b></span>
                       {detailRewardActive && <small className="mt-1 whitespace-nowrap text-[8px] font-semibold leading-none text-emerald-100">+{formatGram(detailEntryReward)} GRAM за вступление</small>}
                     </button>
                   </div>
@@ -2806,15 +2813,32 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </button>
                     </div>
                   )}
-                  {selectedSlot && (
+                  {placementSlot && (
                     <section className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3">
-                      <h2 className="text-sm font-bold text-slate-100">{ownsDetail ? "Обновить лот" : "Перебить лот"} · #{selectedSlot.slotNumber}</h2>
-                      <p className="mt-1 text-[10px] text-slate-500">{ownsDetail ? "Настройте размещение перед оплатой." : "Выберите свою группу и настройте размещение."}</p>
+                      <h2 className="text-sm font-bold text-slate-100">{selectedSlot ? (ownsDetail ? "Обновить лот" : "Перебить лот") : "Разместить в рейтинге"} · #{placementSlot.slotNumber}</h2>
+                      <p className="mt-1 text-[10px] text-slate-500">{selectedSlot ? (ownsDetail ? "Настройте размещение перед оплатой." : "Выберите свою группу и настройте размещение.") : "Настройте свою группу перед первым размещением."}</p>
 
                       <button type="button" onClick={() => setLotGroupPickerOpen(true)} className="mt-2 flex w-full items-center gap-2.5 rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">
                         {selectedLotGroup ? <><Avatar group={selectedLotGroup} compact /><span className="min-w-0 flex-1"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Ваша группа</small><b className="block truncate text-xs text-slate-100">{selectedLotGroup.title}</b><small className="block truncate text-[10px] text-slate-500">{selectedLotGroup.username ? `@${selectedLotGroup.username}` : "Подключена к TG TOP"}</small></span></> : <span className="min-w-0 flex-1"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Ваша группа</small><b className="block truncate text-xs text-slate-100">Выберите свою группу</b><small className="block truncate text-[10px] text-slate-500">Только уже подключённые к TG TOP</small></span>}
                         <span className="grid h-5 w-5 place-items-center rounded-full bg-[#3390ec] text-white"><ChevronRight className="h-3.5 w-3.5" /></span>
                       </button>
+
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <label className="rounded-xl border border-[#354966] bg-[#202b3a] p-2">
+                          <small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Категория</small>
+                          <select value={lotCategory} onChange={event => { const nextCategory = event.target.value as "Каналы" | "Чаты"; setLotCategory(nextCategory); const nextGroup = mine.find(group => group.category === nextCategory && (placementSlot.category === "Все" || placementSlot.category === group.category) && (placementSlot.subcategory === "Все" || placementSlot.subcategory === group.subcategory)); if (nextGroup) applyLotGroupSettings(nextGroup); else { setLotGroupId(null); setListingSubcategory(CATEGORY_SUBCATEGORIES[nextCategory][0] ?? "General"); } }} className="mt-0.5 w-full bg-transparent text-[11px] font-semibold text-slate-100 outline-none">
+                            <option value="Каналы" className="bg-[#202b3a]">Каналы</option>
+                            <option value="Чаты" className="bg-[#202b3a]">Чаты</option>
+                          </select>
+                          <small className="mt-0.5 block text-[9px] text-slate-500">Тип сообщества</small>
+                        </label>
+                        <label className="rounded-xl border border-[#354966] bg-[#202b3a] p-2">
+                          <small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Подкатегория</small>
+                          <select value={listingSubcategory} onChange={event => setListingSubcategory(event.target.value)} className="mt-0.5 w-full bg-transparent text-[11px] font-semibold text-slate-100 outline-none">
+                            {(CATEGORY_SUBCATEGORIES[lotCategory] ?? []).map(option => <option key={option} value={option} className="bg-[#202b3a]">{option}</option>)}
+                          </select>
+                        </label>
+                      </div>
 
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-xl border p-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3b80c4]/55 bg-[#213750]" : "border-[#354966] bg-[#202b3a]"}`}>
@@ -2828,16 +2852,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <div className="mt-2 space-y-1 border-t border-white/[0.06] pt-2">
                         <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1"><span><b className="block text-[11px] text-slate-200">Выставить на продажу</b><small className="block text-[10px] text-slate-500">{isListingForSale ? "Цена видна покупателям" : "Без продажи"}</small></span><button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#3390ec] bg-[#3390ec]" : "border-white/15 bg-[#2b3648]"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} /></button></div>
                         {isListingForSale && <div className="relative"><Input value={salePriceTon} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }} placeholder="Цена продажи" className="h-9 border-[#354966] bg-[#202b3a] pr-12 text-xs" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-slate-500">GRAM</span></div>}
-                        <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1"><span><b className="block text-[11px] text-slate-200">Вознаграждения</b><small className="block text-[10px] text-slate-500">{rewardCampaignEnabled ? "Включены" : "Выключены"}</small></span><button type="button" role="switch" aria-checked={rewardCampaignEnabled} onClick={() => setRewardCampaignEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${rewardCampaignEnabled ? "border-[#3390ec] bg-[#3390ec]" : "border-white/15 bg-[#2b3648]"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${rewardCampaignEnabled ? "translate-x-6" : "translate-x-0"}`} /></button></div>
+                        <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1"><span><b className="flex items-center gap-1 text-[11px] text-slate-200"><Star className="h-3.5 w-3.5 fill-[#ffd766] text-[#ffd766]" />Вознаграждения</b><small className="block text-[10px] text-slate-500">{rewardCampaignEnabled ? "Включены" : "Выключены"}</small></span><button type="button" role="switch" aria-checked={rewardCampaignEnabled} onClick={() => setRewardCampaignEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${rewardCampaignEnabled ? "border-[#3390ec] bg-[#3390ec]" : "border-white/15 bg-[#2b3648]"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${rewardCampaignEnabled ? "translate-x-6" : "translate-x-0"}`} /></button></div>
                         {rewardCampaignEnabled && <div className="grid grid-cols-2 gap-2"><Input value={rewardBudget} inputMode="decimal" onChange={event => setRewardBudget(event.target.value)} placeholder="Бюджет, GRAM" className="h-9 border-[#354966] bg-[#202b3a] text-[11px]" /><Input value={rewardPerSubscription} inputMode="decimal" onChange={event => setRewardPerSubscription(event.target.value)} placeholder="За подписчика" className="h-9 border-[#354966] bg-[#202b3a] text-[11px]" /></div>}
                       </div>
                     </section>
                   )}
-                  {selectedSlot && (
+                  {placementSlot && (
                     <section className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3">
                       <div className="flex items-center justify-between">
-                        <span><h2 className="text-sm font-bold text-slate-100">Текущая цена за лот</h2><small className="mt-0.5 block text-[10px] text-slate-500">Место #{selectedSlot.slotNumber}</small></span>
-                        <b className="text-sm text-[#8fc4ff]">{formatTon(selectedSlot.bidAmount / 1000)} GRAM</b>
+                        <span><h2 className="text-sm font-bold text-slate-100">{selectedSlot ? "Текущая цена за лот" : "Ставка для размещения"}</h2><small className="mt-0.5 block text-[10px] text-slate-500">Место #{placementSlot.slotNumber}</small></span>
+                        <b className="text-sm text-[#8fc4ff]">{formatTon(selectedSlot ? selectedSlot.bidAmount / 1000 : detailMinimumBid ?? 0.1)} GRAM</b>
                       </div>
                       <div className="mt-3 flex h-12 items-center rounded-xl border border-[#354966] bg-[#101a2d] p-1.5">
                         <button type="button" disabled={!selectedLotGroup} onClick={() => setDetailBidInput(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label="Уменьшить ставку" className="grid h-9 w-12 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.07] disabled:opacity-35"><Minus className="h-5 w-5" /></button>
@@ -2846,7 +2870,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                       <div className="mt-2 rounded-xl border border-[#31435f] bg-[#202b3a] px-3 pb-2 pt-1"><Slider disabled={!selectedLotGroup} value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-[#0f1825] [&_[data-slot=slider-range]]:!bg-[#3390ec] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#c8e1ff] [&_[data-slot=slider-thumb]]:!bg-[#3390ec]" /><div className="mt-1 flex justify-between text-[9px] font-medium text-slate-500"><span>от {formatTon(detailMinimumBid)} GRAM</span><span>шаг 0.1</span><span>до {formatTon(MAX_RANKING_SLIDER_GRAM)}</span></div></div>
                       <p className={`mt-2 text-center text-[10px] ${detailWillDrop ? "font-medium text-rose-300" : "text-slate-500"}`}>{detailWillDrop ? `Ваша цена ниже текущей ставки. Лот переместится на место #${detailRankingPreviewSlotNumber}` : ownsDetail ? `Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM` : `Перебить можно от ${formatTon(detailMinimumBid)} GRAM`}</p>
-                      <button type="button" onClick={() => { if (!selectedLotGroup) return setLotGroupPickerOpen(true); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const normalizedSalePrice = getSalePriceForSave(); if (normalizedSalePrice === undefined) return; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardBudgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0; const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Введите сумму в GRAM с точностью до 0.01"); placeBid.mutate({ slotId: selectedSlot.id, groupId: selectedLotGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, salePriceTon: normalizedSalePrice, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: selectedLotGroup.category === "Чаты" ? detailRewardPerSubscriptionUnits : 0 }); }} disabled={Boolean(selectedLotGroup && (!detailRankingPreviewSlotNumber || placeBid.isPending)) || (!ownsDetail && !isAuthenticated)} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{placeBid.isPending ? "Оплата…" : !selectedLotGroup ? "Выбрать свою группу" : ownsDetail ? "Обновить ставку" : "Перебить ставку"}</span></button>
+                      <button type="button" onClick={() => { if (!selectedLotGroup) return setLotGroupPickerOpen(true); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const normalizedSalePrice = getSalePriceForSave(); if (normalizedSalePrice === undefined) return; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardBudgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0; const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Введите сумму в GRAM с точностью до 0.01"); placeBid.mutate({ slotId: placementSlot.id, groupId: selectedLotGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, subcategory: listingSubcategory, salePriceTon: normalizedSalePrice, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: selectedLotGroup.category === "Чаты" ? detailRewardPerSubscriptionUnits : 0 }); }} disabled={Boolean(selectedLotGroup && (!detailRankingPreviewSlotNumber || placeBid.isPending)) || (!ownsDetail && !isAuthenticated)} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{placeBid.isPending ? "Оплата…" : !selectedLotGroup ? "Выбрать свою группу" : !selectedSlot ? "Разместить в рейтинге" : ownsDetail ? "Обновить ставку" : "Перебить ставку"}</span></button>
                     </section>
                   )}
                 </div>
