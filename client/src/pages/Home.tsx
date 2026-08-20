@@ -854,6 +854,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [starsPaymentGroup, setStarsPaymentGroup] = useState<Group | null>(null);
   const [outbidOpen, setOutbidOpen] = useState(false);
   const [outbidGroupId, setOutbidGroupId] = useState<number | null>(null);
+  const [lotGroupPickerOpen, setLotGroupPickerOpen] = useState(false);
+  const [lotGroupId, setLotGroupId] = useState<number | null>(null);
   const [outbidBidInput, setOutbidBidInput] = useState("0.1");
   const [outbidVisibility, setOutbidVisibility] = useState<"public" | "anonymous">("anonymous");
   const [detailVisibility, setDetailVisibility] = useState<"public" | "anonymous">("anonymous");
@@ -1098,8 +1100,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     { enabled: selectedGroupId !== null }
   );
   const groupAdministratorsQuery = trpc.tgTop.getGroupAdministrators.useQuery(
-    { groupId: selectedGroupId ?? 0 },
-    { enabled: managerSheetOpen && selectedGroupId !== null }
+    { groupId: lotGroupId ?? selectedGroupId ?? 0 },
+    { enabled: managerSheetOpen && (lotGroupId ?? selectedGroupId) !== null }
   );
   const publicOwnerQuery = trpc.tgTop.getPublicOwnerProfile.useQuery(
     { openId: selectedOwnerOpenId ?? "" },
@@ -1580,6 +1582,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         && (targetSlot.subcategory === "Все" || targetSlot.subcategory === group.subcategory)
       )
     : [];
+  const lotGroupCandidates = selectedSlot
+    ? mine.filter(group =>
+        (selectedSlot.category === "Все" || selectedSlot.category === group.category)
+        && (selectedSlot.subcategory === "Все" || selectedSlot.subcategory === group.subcategory)
+      )
+    : [];
+  const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? detail?.group ?? null;
   const selectedOutbidGroup = outbidCandidates.find(group => group.id === outbidGroupId) ?? null;
   const outbidMinimum = targetSlot ? getMinimumRankingBidGram(targetSlot) : 0.1;
   const rawOutbidBid = Number(outbidBidInput);
@@ -1664,6 +1673,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const openGroup = (id: number, boardScope?: { category: "Все" | "Каналы" | "Чаты"; country: string; subcategory: string; city: string }) => {
     setDetailReturnPage(page === "details" ? "top" : page);
     setDetailBoardScope(boardScope ?? null);
+    setLotGroupId(null);
     setSelectedGroupId(id);
     setPage("details");
   };
@@ -2762,10 +2772,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <h2 className="text-sm font-bold text-slate-100">Обновить лот · #{selectedSlot.slotNumber}</h2>
                       <p className="mt-1 text-[10px] text-slate-500">Настройте размещение перед оплатой.</p>
 
-                      <button type="button" className="mt-2 flex w-full items-center gap-2.5 rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">
-                        <Avatar group={detail.group} compact />
-                        <span className="min-w-0 flex-1"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Ваша группа</small><b className="block truncate text-xs text-slate-100">{detail.group.title}</b><small className="block truncate text-[10px] text-slate-500">{detail.group.username ? `@${detail.group.username}` : "Подключена к TG TOP"}</small></span>
-                        <span className="grid h-5 w-5 place-items-center rounded-full bg-[#3390ec] text-white"><Check className="h-3.5 w-3.5" /></span>
+                      <button type="button" onClick={() => setLotGroupPickerOpen(true)} className="mt-2 flex w-full items-center gap-2.5 rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">
+                        <Avatar group={selectedLotGroup ?? detail.group} compact />
+                        <span className="min-w-0 flex-1"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Ваша группа</small><b className="block truncate text-xs text-slate-100">{(selectedLotGroup ?? detail.group).title}</b><small className="block truncate text-[10px] text-slate-500">{(selectedLotGroup ?? detail.group).username ? `@${(selectedLotGroup ?? detail.group).username}` : "Подключена к TG TOP"}</small></span>
+                        <span className="grid h-5 w-5 place-items-center rounded-full bg-[#3390ec] text-white"><ChevronRight className="h-3.5 w-3.5" /></span>
                       </button>
 
                       <div className="mt-2 grid grid-cols-2 gap-2">
@@ -2804,7 +2814,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                       {ownsDetail && <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="mt-2 py-1 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:bg-[#2b3648] [&_[data-slot=slider-range]]:!bg-[#3390ec] [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3390ec]" />}
                       <p className={`mt-2 text-center text-[10px] ${detailWillDrop ? "text-rose-300" : "text-slate-500"}`}>{detailWillDrop ? `Группа опустится на ${detailRankingPreviewSlotNumber}-ю позицию` : ownsDetail ? `Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM` : `Перебить можно от ${formatTon(detailMinimumBid)} GRAM`}</p>
-                      <button type="button" onClick={() => { if (!ownsDetail) return openOutbid(selectedSlot); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; if (!detail || !Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); placeBid.mutate({ slotId: selectedSlot.id, groupId: detail.group.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, salePriceTon: isListingForSale ? salePriceTon || null : null, rewardActive: rewardCampaignEnabled, rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0 : 0, rewardPerSubscription: rewardCampaignEnabled ? Number(rewardPerSubscription) || 0 : 0, rewardPerManualAdd: 0 }); }} disabled={ownsDetail ? !detailRankingPreviewSlotNumber || placeBid.isPending : !isAuthenticated} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#3390ec] px-3 py-2.5 text-left text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{ownsDetail ? (placeBid.isPending ? "Оплата…" : "Оплатить обновление") : "Выбрать свою группу"}</span><span className="text-xs text-white/80">{formatTon(detailRankingBidAmount)} GRAM</span></button>
+                      <button type="button" onClick={() => { if (!ownsDetail) return openOutbid(selectedSlot); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const paymentGroup = selectedLotGroup ?? detail.group; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); placeBid.mutate({ slotId: selectedSlot.id, groupId: paymentGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, salePriceTon: isListingForSale ? salePriceTon || null : null, rewardActive: rewardCampaignEnabled, rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0 : 0, rewardPerSubscription: rewardCampaignEnabled ? Number(rewardPerSubscription) || 0 : 0, rewardPerManualAdd: 0 }); }} disabled={ownsDetail ? !detailRankingPreviewSlotNumber || placeBid.isPending : !isAuthenticated} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#3390ec] px-3 py-2.5 text-left text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{ownsDetail ? (placeBid.isPending ? "Оплата…" : "Оплатить обновление") : "Выбрать свою группу"}</span><span className="text-xs text-white/80">{formatTon(detailRankingBidAmount)} GRAM</span></button>
                     </section>
                   )}
                 </div>
@@ -3252,6 +3262,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <div className="flex gap-2 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
             <button type="button" onClick={() => setPendingGroupDeletion(null)} className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/[0.05]">{tx("Отмена", "Cancel")}</button>
             <button type="button" onClick={() => { if (!pendingGroupDeletion) return; deleteGroups.mutate({ groupIds: [pendingGroupDeletion.id] }, { onSuccess: () => { setPendingGroupDeletion(null); setPage("mine"); } }); }} disabled={deleteGroups.isPending} className="flex-1 rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-400 disabled:opacity-50">{deleteGroups.isPending ? tx("Удаляем…", "Removing…") : tx("Удалить", "Remove")}</button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={lotGroupPickerOpen} onOpenChange={setLotGroupPickerOpen}>
+        <SheetContent side="bottom" className="max-h-[72dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4">
+            <SheetTitle className="text-slate-100">Ваша группа</SheetTitle>
+            <p className="text-xs leading-5 text-slate-500">Выберите одну из уже подключённых групп для обновления этого лота.</p>
+          </SheetHeader>
+          <div className="space-y-2 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
+            {lotGroupCandidates.length ? lotGroupCandidates.map(group => {
+              const selected = group.id === (selectedLotGroup?.id ?? detail?.group.id);
+              return <button key={group.id} type="button" onClick={() => { setLotGroupId(group.id); setSelectedManagerTelegramUserId(group.managerTelegramUserId ?? null); setManagerPublic(group.managerPublic !== false); setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true); setLotGroupPickerOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-colors ${selected ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+                <Avatar group={group} compact />
+                <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : "Подключена к TG TOP"}</small></span>
+                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${selected ? "bg-[#3390ec] text-white" : "border border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+              </button>;
+            }) : <p className="rounded-xl border border-dashed border-white/12 px-3 py-5 text-center text-xs leading-5 text-slate-500">Нет других подключённых групп для этой позиции.</p>}
           </div>
         </SheetContent>
       </Sheet>
