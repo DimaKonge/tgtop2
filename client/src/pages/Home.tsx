@@ -1265,6 +1265,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setAmount("0.1");
       void utils.tgTop.getSlots.invalidate();
       void utils.tgTop.getGroupDetail.invalidate();
+      void detailQuery.refetch();
       void utils.tgTop.getAccount.invalidate();
       void utils.tgTop.getAccountActivity.invalidate();
     },
@@ -1550,7 +1551,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingCity(group.city ?? "Все");
     setListingSubcategory(group.subcategory ?? "General");
     setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
-    setIsListingForSale(Boolean(group.salePriceTon));
+    setIsListingForSale(group.listingType === "sale" && Boolean(group.salePriceTon));
     setShowOwnerContact(Boolean(group.showOwnerContact));
     setManagerPublic(group.managerPublic !== false);
     setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true);
@@ -1558,7 +1559,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setRewardBudget(group.rewardBudget ? formatGram(group.rewardBudget) : "");
     const joinReward = group.category === "Чаты" ? group.rewardPerManualAdd : group.rewardPerSubscription;
     setRewardPerSubscription(joinReward ? formatGram(joinReward) : "");
-  }, [detail?.group.id, ownsDetail]);
+  }, [detail?.group.id, detail?.group.listingType, detail?.group.salePriceTon, ownsDetail]);
   const detailBoardCategory = selectedSlot?.category ?? detailBoardScope?.category ?? detail?.group.category ?? "Все";
   const detailBoardCountry = selectedSlot?.country ?? detailBoardScope?.country ?? detail?.group.country ?? "Global";
   const detailBoardSubcategory = selectedSlot?.subcategory ?? detailBoardScope?.subcategory ?? detail?.group.subcategory ?? "Все";
@@ -1606,7 +1607,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       : Number(detail.group.rewardPerSubscription ?? detail.group.reward?.subscriptionAmount ?? detail.group.rewardAmount ?? 0)
     : 0;
   const detailRewardActive = Boolean(detail?.group.rewardActive && detailEntryReward > 0);
-  const detailCanBeBought = Boolean(!ownsDetail && isListingForSale && Number(salePriceTon) > 0);
+  const detailSalePriceUnits = parseGramInput(salePriceTon);
+  const detailSaleEnabled = Boolean(isListingForSale && (detailSalePriceUnits ?? 0) > 0);
+  const detailCanBeBought = Boolean(!ownsDetail && detailSaleEnabled);
   const subscriptionReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.subscriptionAmount ?? 0 : 0;
   const inviteReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.inviteAmount ?? 0 : 0;
   const manualAddReward = !ownsDetail && detail?.group.category === "Чаты" ? detail.group.reward?.manualAddAmount ?? 0 : 0;
@@ -1738,7 +1741,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "");
     setListingRankingBid("0.1");
     setSalePriceTon(firstGroup?.salePriceTon ? formatTon(firstGroup.salePriceTon) : "");
-    setIsListingForSale(Boolean(firstGroup?.salePriceTon));
+    setIsListingForSale(firstGroup?.listingType === "sale" && Boolean(firstGroup.salePriceTon));
     setShowOwnerContact(Boolean(firstGroup?.showOwnerContact));
     setManagerPublic(firstGroup?.managerPublic !== false);
     setListingAnnouncementEnabled(firstGroup?.listingAnnouncementEnabled ?? true);
@@ -1766,6 +1769,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   };
   const saveListing = () => {
     if (!selectedGroupIds.length) return toast.error(tx("Выберите хотя бы одну группу", "Select a community that is already listed."));
+    const normalizedSalePrice = getSalePriceForSave();
+    if (normalizedSalePrice === undefined) return;
     const canConfigureRewards = selectedListingGroups.length === 1;
     const budgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;
     const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;
@@ -1779,7 +1784,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       country: listingCountry,
       city: listingCity === "Все" ? undefined : listingCity,
       subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined,
-      salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
+      salePriceTon: normalizedSalePrice ?? undefined,
       showOwnerContact: selectedListingGroups.length ? showOwnerContact : undefined,
       managerPublic,
       listingAnnouncementEnabled,
@@ -1795,9 +1800,20 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       } : {}),
     });
   };
+  const getSalePriceForSave = (): string | null | undefined => {
+    if (!isListingForSale) return null;
+    const salePriceUnits = parseGramInput(salePriceTon);
+    if (salePriceUnits === undefined || salePriceUnits < 1) {
+      toast.error(tx("Укажите цену продажи от 0.01 GRAM", "Enter a sale price of at least 0.01 GRAM."));
+      return undefined;
+    }
+    return formatGram(salePriceUnits);
+  };
   const saveInlineDetailListing = () => {
     if (!detail) return;
     const group = detail.group;
+    const normalizedSalePrice = getSalePriceForSave();
+    if (normalizedSalePrice === undefined) return;
     const budgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;
     const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;
     if (rewardCampaignEnabled && [budgetUnits, joinRewardUnits].some(value => value === undefined)) {
@@ -1808,7 +1824,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       country: listingCountry,
       city: listingCity === "Все" ? undefined : listingCity,
       subcategory: listingSubcategory || undefined,
-      salePriceTon: isListingForSale ? salePriceTon || undefined : undefined,
+      salePriceTon: normalizedSalePrice ?? undefined,
       anonymousListing: detailVisibility === "anonymous",
       showOwnerContact,
       managerPublic,
@@ -1896,6 +1912,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const minimum = getMinimumRankingBidGram(targetSlot);
     if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10)
       return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`));
+    const normalizedSalePrice = getSalePriceForSave();
+    if (normalizedSalePrice === undefined) return;
     const budgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;
     const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;
     if (rewardCampaignEnabled && [budgetUnits, joinRewardUnits].some(item => item === undefined)) {
@@ -1911,7 +1929,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       showOwnerContact,
       managerPublic,
       listingAnnouncementEnabled,
-      salePriceTon: isListingForSale ? salePriceTon || null : null,
+      salePriceTon: normalizedSalePrice,
       rewardActive: rewardCampaignEnabled,
       rewardBudget: budgetUnits,
       rewardPerSubscription: isChat ? 0 : joinRewardUnits,
@@ -1929,7 +1947,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setShowOwnerContact(Boolean(group.showOwnerContact));
     setManagerPublic(group.managerPublic !== false);
     setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true);
-    setIsListingForSale(Boolean(group.salePriceTon));
+    setIsListingForSale(group.listingType === "sale" && Boolean(group.salePriceTon));
     setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
     setRewardCampaignEnabled(Boolean(group.rewardActive));
     setRewardBudget(group.rewardBudget ? formatGram(group.rewardBudget) : "");
@@ -2615,37 +2633,37 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-2">
+                  <div className="mt-3 grid grid-cols-3 gap-1.5">
                     <button
                       type="button"
                       onClick={() => {
                         if (detailCanBeBought) createProtectedGroupDeal.mutate({ groupId: detail.group.id });
                       }}
                       disabled={!detailCanBeBought}
-                      className={`flex min-h-[64px] flex-col justify-center rounded-xl border px-2.5 text-left transition-colors active:scale-[0.98] disabled:cursor-default ${detailCanBeBought ? "border-[#386a5f] bg-[#203a35] text-white hover:bg-[#26443e]" : "border-[#3d4b5f] bg-[#202936] text-slate-400"}`}
+                      className={`flex min-h-[58px] flex-col justify-center rounded-xl border px-2 text-left transition-colors active:scale-[0.98] disabled:cursor-default ${detailSaleEnabled ? "border-[#386a5f] bg-[#203a35] text-white hover:bg-[#26443e]" : "border-[#3d4b5f] bg-[#202936] text-slate-400"}`}
                     >
-                      <span className={`flex items-center gap-1.5 text-[10px] ${detailCanBeBought ? "text-[#b7d8ce]" : "text-slate-500"}`}><WalletCards className="h-3.5 w-3.5" />{detailCanBeBought ? "Купить за" : "Покупка"}</span>
-                      {detailCanBeBought ? <b className="mt-0.5 text-[15px] leading-none">{salePriceTon} <small className="text-[9px] font-medium text-[#b7d8ce]">GRAM</small></b> : <b className="mt-1 text-[11px] leading-3 text-slate-300">Группа не продаётся</b>}
+                      <span className={`flex items-center gap-1 text-[9px] ${detailSaleEnabled ? "text-[#b7d8ce]" : "text-slate-500"}`}><WalletCards className="h-3 w-3" />{detailSaleEnabled ? (ownsDetail ? "На продаже" : "Купить за") : "Покупка"}</span>
+                      {detailSaleEnabled ? <b className="mt-0.5 text-sm leading-none">{salePriceTon} <small className="text-[8px] font-medium text-[#b7d8ce]">GRAM</small></b> : <b className="mt-0.5 text-[10px] leading-3 text-slate-300">Группа не продаётся</b>}
                     </button>
                     <button
                       type="button"
                       onClick={() => { if (managerPublic && detail.group.managerUsername) openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`); }}
                       disabled={!managerPublic || !detail.group.managerUsername}
-                      className="flex min-h-[64px] flex-col justify-center rounded-xl border border-[#354966] bg-[#202b3a] px-2.5 text-left text-slate-100 transition-colors hover:bg-[#253247] active:scale-[0.98] disabled:cursor-default"
+                      className="flex min-h-[58px] flex-col justify-center rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-left text-slate-100 transition-colors hover:bg-[#253247] active:scale-[0.98] disabled:cursor-default"
                     >
-                      <span className="flex items-center gap-1.5 text-[10px] text-slate-400"><UserRound className="h-3.5 w-3.5" />{managerPublic && detail.group.managerName ? "Менеджер" : "Публикация"}</span>
-                      <b className="mt-0.5 truncate text-xs leading-3">{managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"}</b>
-                      <small className="mt-0.5 truncate text-[9px] leading-3 text-[#72a8ff]">{managerPublic && detail.group.managerUsername ? `@${detail.group.managerUsername}` : "Без контакта"}</small>
+                      <span className="flex items-center gap-1 text-[9px] text-slate-400"><UserRound className="h-3 w-3" />{managerPublic && detail.group.managerName ? "Менеджер" : "Публикация"}</span>
+                      <b className="mt-0.5 truncate text-[11px] leading-3">{managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"}</b>
+                      <small className="truncate text-[8px] leading-3 text-[#72a8ff]">{managerPublic && detail.group.managerUsername ? `@${detail.group.managerUsername}` : "Без контакта"}</small>
                     </button>
                     <button
                       type="button"
                       onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
                       disabled={!detailEntryUrl}
-                      className="flex min-h-[64px] flex-col justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2.5 text-left text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
+                      className="flex min-h-[58px] flex-col justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2 text-left text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
                     >
-                      <Send className="h-4 w-4 text-white/85" />
-                      <b className="mt-0.5 text-xs leading-3">Перейти<br />в группу</b>
-                      {detailRewardActive && <small className="mt-1 whitespace-nowrap text-[8px] font-semibold leading-none text-white/80">За вступление +{formatGram(detailEntryReward)} GRAM</small>}
+                      <Send className="h-3.5 w-3.5 text-white/85" />
+                      <b className="mt-0.5 text-[11px] leading-3">Перейти</b>
+                      {detailRewardActive && <small className="mt-0.5 whitespace-nowrap text-[8px] font-semibold leading-none text-white/80">За вступление +{formatGram(detailEntryReward)} GRAM</small>}
                     </button>
                   </div>
 
@@ -2811,7 +2829,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                       {ownsDetail && <div className="mt-2 rounded-lg border border-[#31435f] bg-[#202b3a] px-2.5 pb-1.5 pt-0.5"><Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="py-0.5 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:bg-[#0f1825] [&_[data-slot=slider-range]]:!bg-[#3390ec] [&_[data-slot=slider-thumb]]:size-3.5 [&_[data-slot=slider-thumb]]:!border-[#c8e1ff] [&_[data-slot=slider-thumb]]:!bg-[#3390ec]" /><div className="mt-1 flex justify-between text-[8px] font-medium text-slate-500"><span>от {formatTon(detailMinimumBid)} GRAM</span><span>шаг 0.1</span><span>до {formatTon(MAX_RANKING_SLIDER_GRAM)}</span></div></div>}
                       <p className={`mt-2 text-center text-[10px] ${detailWillDrop ? "text-rose-300" : "text-slate-500"}`}>{detailWillDrop ? `Группа опустится на ${detailRankingPreviewSlotNumber}-ю позицию` : ownsDetail ? `Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM` : `Перебить можно от ${formatTon(detailMinimumBid)} GRAM`}</p>
-                      <button type="button" onClick={() => { if (!ownsDetail) return openOutbid(selectedSlot); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const paymentGroup = selectedLotGroup ?? detail.group; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardBudgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0; const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Введите сумму в GRAM с точностью до 0.01"); placeBid.mutate({ slotId: selectedSlot.id, groupId: paymentGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, salePriceTon: isListingForSale ? salePriceTon || null : null, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: 0 }); }} disabled={ownsDetail ? !detailRankingPreviewSlotNumber || placeBid.isPending : !isAuthenticated} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{ownsDetail ? (placeBid.isPending ? "Оплата…" : "Перейти") : "Выбрать свою группу"}</span></button>
+                      <button type="button" onClick={() => { if (!ownsDetail) return openOutbid(selectedSlot); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const paymentGroup = selectedLotGroup ?? detail.group; const normalizedSalePrice = getSalePriceForSave(); if (normalizedSalePrice === undefined) return; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardBudgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0; const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Введите сумму в GRAM с точностью до 0.01"); placeBid.mutate({ slotId: selectedSlot.id, groupId: paymentGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, salePriceTon: normalizedSalePrice, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: 0 }); }} disabled={ownsDetail ? !detailRankingPreviewSlotNumber || placeBid.isPending : !isAuthenticated} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{ownsDetail ? (placeBid.isPending ? "Оплата…" : "Перейти") : "Выбрать свою группу"}</span></button>
                     </section>
                   )}
                 </div>

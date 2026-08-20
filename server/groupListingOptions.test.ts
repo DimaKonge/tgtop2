@@ -39,6 +39,13 @@ describe("normalizeGroupListingOptions", () => {
     });
   });
 
+  it("clears the sale state when the owner turns off the sale switch", () => {
+    expect(normalizeGroupListingOptions({ salePriceTon: null })).toMatchObject({
+      listingType: "catalog",
+      salePriceTon: null,
+    });
+  });
+
   it("retains the valid General subcategory used by migrated TG TOP listings", () => {
     expect(normalizeGroupListingOptions({ listingType: "catalog", country: "Global", subcategory: "General" })).toMatchObject({
       listingType: "catalog",

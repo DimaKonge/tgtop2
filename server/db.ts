@@ -1109,7 +1109,7 @@ export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: nu
 }
 
 export type GroupListingOptions = {
-  salePriceTon?: string;
+  salePriceTon?: string | null;
   country?: string;
   city?: string;
   subcategory?: string;
@@ -1595,7 +1595,7 @@ export async function createProtectedGroupDeal(groupId: number, buyerOpenId: str
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const group = await getGroupById(groupId);
-  if (!group || group.status !== "listed" || group.listingType !== "sale" || !group.salePriceTon) {
+  if (!group || group.status !== "listed" || group.listingType !== "sale" || !group.salePriceTon || !Number.isFinite(Number(group.salePriceTon)) || Number(group.salePriceTon) <= 0) {
     throw new Error("Группа недоступна для безопасной покупки");
   }
   if (group.ownerOpenId === buyerOpenId) throw new Error("Нельзя купить собственную группу");

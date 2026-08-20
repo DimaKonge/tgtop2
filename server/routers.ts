@@ -8,9 +8,9 @@ import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteL
 import { getTelegramGroupAdministrators } from "./telegramBot";
 import { formatTonAmount } from "./tonFormatting";
 
-const tonAmount = z.string().regex(/^\d+(\.\d)?$/);
+const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const groupListingInput = z.object({
-  salePriceTon: tonAmount.optional(),
+  salePriceTon: gramAmount.nullable().optional(),
   country: z.enum(["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"]).optional(),
   city: z.string().trim().max(96).optional(),
   subcategory: z.string().min(2).max(64).optional(),
@@ -56,7 +56,7 @@ export const appRouter = router({
         showOwnerContact: z.boolean().optional(),
         managerPublic: z.boolean().optional(),
         listingAnnouncementEnabled: z.boolean().optional(),
-        salePriceTon: z.string().max(64).nullable().optional(),
+        salePriceTon: gramAmount.nullable().optional(),
         rewardActive: z.boolean().optional(),
         rewardBudget: z.number().int().min(0).optional(),
         rewardPerSubscription: z.number().int().min(0).optional(),
