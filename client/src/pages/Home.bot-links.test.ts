@@ -56,7 +56,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const detailSaleEnabled = Boolean((ownsDetail ? isListingForSale : detail?.group.listingType === "sale") && (detailSalePriceUnits ?? 0) > 0);');
     expect(source).toContain('const detailCanBeBought = Boolean(!ownsDetail && detailSaleEnabled);');
     expect(source).not.toContain('Не на продаже');
-    expect(source).toContain('{ownsDetail ? "На продаже" : "Купить за"}');
+    expect(source).not.toContain('{ownsDetail ? "На продаже" : "Купить за"}');
+    expect(source).toContain('<small className="mt-0.5 text-[7px] leading-2 text-[#b7d8ce]">Купить</small>');
     expect(source).toContain('className="mt-3 flex items-stretch gap-1.5"');
     expect(source).toContain('{managerPublic && <button');
     expect(source).toContain('const getSalePriceForSave = (): string | null | undefined => {');
@@ -69,9 +70,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('rewardBudget: detailRewardBudgetUnits');
     expect(source).toContain('rewardPerSubscription: detailRewardPerSubscriptionUnits');
     expect(source).not.toContain('rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0');
-    expect(source).toContain('min-h-[62px]');
-    expect(source).toContain('min-h-[52px] w-[84px]');
-    expect(source).toContain('min-h-[52px] w-[82px]');
+    expect(source).toContain('min-h-[40px]');
+    expect(source).toContain('min-h-[38px] w-[76px]');
+    expect(source).toContain('managerAvatarUrl?: string | null;');
+    expect(source).toContain('detail.group.managerAvatarUrl');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
     expect(source).toContain('Динамика аудитории');
     expect(source).toContain('Приглашения');
@@ -111,7 +113,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
     expect(source).toContain('disabled={!detailEntryUrl}');
-    expect(source).toContain('<span className="flex items-center justify-center gap-1.5"><Send className="h-4 w-4 text-white/90" /><b className="text-sm leading-4">Перейти</b></span>');
+    expect(source).toContain('<span className="flex items-center justify-center gap-1"><Send className="h-3.5 w-3.5 text-white/90" /><b className="text-[12px] leading-3">Перейти</b></span>');
     expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
     expect(source).toContain('const detailMinimumBid = placementSlot');
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
@@ -209,7 +211,7 @@ describe("TG TOP production bot links", () => {
     expect(styles).toContain('--ranking-slot-offset: 26px');
     expect(styles).toContain('.ranking-slot-enter { animation: ranking-slot-enter 360ms');
     expect(source).toContain('isEnglish ? "For sale" : "На продаже"');
-    expect(source).toContain('<b className="text-sm leading-4">Перейти</b>');
+    expect(source).toContain('<b className="text-[12px] leading-3">Перейти</b>');
     expect(source).not.toContain('Перейти<br />в группу');
     expect(source).toContain('isEnglish ? "In catalog" : "В каталоге"');
     expect(source).not.toContain('isEnglish ? "Unlisted" : "Не в листинге"');

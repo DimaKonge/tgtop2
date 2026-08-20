@@ -1,6 +1,7 @@
 import "dotenv/config";
 import axios from "axios";
 import { notifyRewardCredited } from "./telegramNotifications";
+import { storagePut } from "./storage";
 import {
   getGroupByChatId,
   getRewardInviteBeneficiary,
@@ -100,6 +101,9 @@ export type TelegramGroupAdministrator = {
   name: string;
 };
 
+type TelegramFile = { file_path?: string };
+type TelegramUserProfilePhotos = { photos: Array<Array<{ file_id: string }>> };
+
 export async function getTelegramGroupAdministrators(chatId: string): Promise<TelegramGroupAdministrator[]> {
   const administrators = await telegramCall<ChatMember[]>("getChatAdministrators", { chat_id: chatId });
   return administrators
@@ -109,6 +113,21 @@ export async function getTelegramGroupAdministrators(chatId: string): Promise<Te
       username: member.user.username ?? null,
       name: [member.user.first_name, member.user.last_name].filter(Boolean).join(" ") || member.user.username || `ID ${member.user.id}`,
     }));
+}
+
+export async function getTelegramUserAvatarUrl(telegramUserId: string): Promise<string | null> {
+  try {
+    const photos = await telegramCall<TelegramUserProfilePhotos>("getUserProfilePhotos", { user_id: Number(telegramUserId), limit: 1 });
+    const fileId = photos.photos[0]?.at(-1)?.file_id;
+    if (!fileId || !botToken) return null;
+    const file = await telegramCall<TelegramFile>("getFile", { file_id: fileId });
+    if (!file.file_path) return null;
+    const response = await axios.get<ArrayBuffer>(`https://api.telegram.org/file/bot${botToken}/${file.file_path}`, { responseType: "arraybuffer", timeout: 15_000 });
+    const stored = await storagePut(`telegram/managers/${telegramUserId}.jpg`, Buffer.from(response.data), response.headers["content-type"] ?? "image/jpeg");
+    return stored.url;
+  } catch {
+    return null;
+  }
 }
 
 async function getMemberCount(chatId: number): Promise<number> {

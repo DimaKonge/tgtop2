@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
-import { getTelegramGroupAdministrators } from "./telegramBot";
+import { getTelegramGroupAdministrators, getTelegramUserAvatarUrl } from "./telegramBot";
 import { formatTonAmount } from "./tonFormatting";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
@@ -155,8 +155,10 @@ export const appRouter = router({
         }
         const manager = administrators.find(admin => admin.telegramUserId === input.telegramUserId);
         if (!manager) throw new Error("Выбранный аккаунт больше не является администратором этой группы");
-        await db.setGroupManager(ctx.user.openId, group.id, manager);
-        return { success: true, manager };
+        const avatarUrl = await getTelegramUserAvatarUrl(manager.telegramUserId);
+        const managerWithAvatar = { ...manager, avatarUrl };
+        await db.setGroupManager(ctx.user.openId, group.id, managerWithAvatar);
+        return { success: true, manager: managerWithAvatar };
       }),
     openGiveaways: publicProcedure.query(async () => {
       return await db.getOpenGiveaways();

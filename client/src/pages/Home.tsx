@@ -218,6 +218,7 @@ type Group = {
   managerTelegramUserId?: string | null;
   managerUsername?: string | null;
   managerName?: string | null;
+  managerAvatarUrl?: string | null;
   managerPublic?: boolean;
   listingAnnouncementEnabled?: boolean;
   monthlyEntryEnabled?: boolean;
@@ -383,7 +384,7 @@ function Avatar({
   compact?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
-  const size = hero ? "h-28 w-28" : large ? "h-16 w-16" : compact ? "h-9 w-9" : "h-11 w-11";
+  const size = hero ? "h-32 w-32" : large ? "h-16 w-16" : compact ? "h-9 w-9" : "h-11 w-11";
   const avatarSrc = getTelegramAvatarSrc(group);
   return (
     <span
@@ -2685,10 +2686,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       type="button"
                       onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
                       disabled={!detailEntryUrl}
-                      className="flex min-h-[62px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-3 text-center text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
+                      className="flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2 text-center text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
                     >
-                      <span className="flex items-center justify-center gap-1.5"><Send className="h-4 w-4 text-white/90" /><b className="text-sm leading-4">Перейти</b></span>
-                      {detailRewardActive && <span className="mt-1 block text-[8px] leading-3 text-[#d7ffec]">За вступление получите <b className="font-extrabold text-[#63f5b1]">+{formatGram(detailEntryReward)} GRAM</b></span>}
+                      <span className="flex items-center justify-center gap-1"><Send className="h-3.5 w-3.5 text-white/90" /><b className="text-[12px] leading-3">Перейти</b></span>
+                      {detailRewardActive && <span className="mt-0.5 block text-[7px] leading-2 text-[#d7ffec]">За вступление получите <b className="font-extrabold text-[#63f5b1]">+{formatGram(detailEntryReward)} GRAM</b></span>}
                     </button>
                     {detailSaleEnabled && <button
                       type="button"
@@ -2696,19 +2697,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         if (detailCanBeBought) createProtectedGroupDeal.mutate({ groupId: detail.group.id });
                       }}
                       disabled={!detailCanBeBought}
-                      className="flex min-h-[52px] w-[84px] shrink-0 flex-col justify-center rounded-xl border border-[#386a5f] bg-[#203a35] px-2 text-left text-white transition-colors hover:bg-[#26443e] active:scale-[0.98] disabled:cursor-default"
+                      className="flex min-h-[38px] w-[76px] shrink-0 flex-col items-center justify-center rounded-xl border border-[#386a5f] bg-[#203a35] px-1.5 text-center text-white transition-colors hover:bg-[#26443e] active:scale-[0.98] disabled:cursor-default"
                     >
-                      <span className="flex items-center gap-1 text-[9px] text-[#b7d8ce]"><WalletCards className="h-3 w-3" />{ownsDetail ? "На продаже" : "Купить за"}</span><b className="mt-0.5 text-sm leading-none">{detailSalePrice} <small className="text-[8px] font-medium text-[#b7d8ce]">GRAM</small></b>
+                      <b className="text-[12px] leading-3">{detailSalePrice} <small className="text-[7px] font-medium text-[#b7d8ce]">GRAM</small></b><small className="mt-0.5 text-[7px] leading-2 text-[#b7d8ce]">Купить</small>
                     </button>}
                     {managerPublic && <button
                       type="button"
                       onClick={() => { if (managerPublic && detail.group.managerUsername) openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`); }}
                       disabled={!managerPublic || !detail.group.managerUsername}
-                      className="flex min-h-[52px] w-[82px] shrink-0 flex-col justify-center rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-left text-slate-100 transition-colors hover:bg-[#253247] active:scale-[0.98] disabled:cursor-default"
+                      className="flex min-h-[38px] w-[76px] shrink-0 items-center gap-1.5 rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-left text-slate-100 transition-colors hover:bg-[#253247] active:scale-[0.98] disabled:cursor-default"
                     >
-                      <span className="flex items-center gap-1 text-[9px] text-slate-400"><UserRound className="h-3 w-3" />Менеджер</span>
-                      <b className="mt-0.5 truncate text-[10px] leading-3">{detail.group.managerName ?? "Менеджер"}</b>
-                      {managerPublic && detail.group.managerUsername && <small className="truncate text-[8px] leading-3 text-[#72a8ff]">@{detail.group.managerUsername}</small>}
+                      {detail.group.managerAvatarUrl ? <img src={detail.group.managerAvatarUrl} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" /> : <UserRound className="h-4 w-4 shrink-0 text-slate-400" />}
+                      <b className="truncate text-[9px] leading-3">{detail.group.managerName ?? "Менеджер"}</b>
                     </button>}
                   </div>
 

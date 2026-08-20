@@ -40,7 +40,7 @@ function toPublicGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {
   } = group;
   return {
     ...publicGroup,
-    ...(group.managerPublic ? {} : { managerTelegramUserId: null, managerUsername: null, managerName: null }),
+    ...(group.managerPublic ? {} : { managerTelegramUserId: null, managerUsername: null, managerName: null, managerAvatarUrl: null }),
     rewardActive: active,
     rewardAmount,
   };
@@ -793,13 +793,14 @@ export async function getGroupById(id: number) {
   return result[0];
 }
 
-export async function setGroupManager(ownerOpenId: string, groupId: number, manager: { telegramUserId: string; username: string | null; name: string }) {
+export async function setGroupManager(ownerOpenId: string, groupId: number, manager: { telegramUserId: string; username: string | null; name: string; avatarUrl?: string | null }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const result = await db.update(groupsCatalog).set({
     managerTelegramUserId: manager.telegramUserId,
     managerUsername: manager.username,
     managerName: manager.name,
+    managerAvatarUrl: manager.avatarUrl ?? null,
   }).where(and(eq(groupsCatalog.id, groupId), eq(groupsCatalog.ownerOpenId, ownerOpenId)));
   if (!result[0]?.affectedRows) throw new Error("Сообщество недоступно для настройки менеджера");
 }
