@@ -7,7 +7,7 @@ describe("TG TOP Global mobile featured board", () => {
 
     expect(source).toContain('h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5');
     expect(source).toContain('h-[128px] border-white/10 bg-[#111720] p-3');
-    expect(source).toContain('h-[78px] border-white/8 bg-[#111720] p-2');
+    expect(source).toContain('h-[88px] border-white/8 bg-[#111720] p-2');
     expect(source).toContain('className="ranking-slot-enter ranking-slot-lead w-full"');
     expect(source).toContain('className="grid w-full grid-cols-2 gap-2"');
     expect(source).toContain('className="grid w-full grid-cols-4 gap-2"');

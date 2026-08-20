@@ -286,8 +286,10 @@ export async function getAuctionSlots(category?: string, country?: string, subca
   const db = await getDb();
   if (!db) return [];
 
-  const boardCategory = category === "Каналы" || category === "Чаты" ? category : "Все";
-  const boardSubcategory = subcategory && subcategory !== "Все" ? subcategory : "Все";
+  const requestedCategory = category === "Каналы" || category === "Чаты" ? category : "Все";
+  const requestedSubcategory = subcategory && subcategory !== "Все" ? subcategory : "Все";
+  const boardCategory = "Все";
+  const boardSubcategory = "Все";
   const boardCountry = country && country !== "Все" ? country : "Global";
   await ensureAuctionBoard(db, boardCategory, boardSubcategory, boardCountry);
 
@@ -297,8 +299,6 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     eq(auctionSlots.country, boardCountry)
   )).orderBy(asc(auctionSlots.slotNumber));
   const eligibleConditions = [eq(groupsCatalog.status, "listed")];
-  if (boardCategory !== "Все") eligibleConditions.push(eq(groupsCatalog.category, boardCategory));
-  if (boardSubcategory !== "Все") eligibleConditions.push(eq(groupsCatalog.subcategory, boardSubcategory));
   if (boardCountry !== "Global") eligibleConditions.push(eq(groupsCatalog.country, boardCountry));
   const eligibleGroups = await db.select().from(groupsCatalog).where(and(...eligibleConditions))
     .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt), asc(groupsCatalog.id));
@@ -328,7 +328,18 @@ export async function getAuctionSlots(category?: string, country?: string, subca
       eq(auctionSlots.country, boardCountry)
     )).orderBy(asc(auctionSlots.slotNumber));
   }
-  const strictOrder = assignRankingEntriesToSlots(slots.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt })), slots);
+  const globalBoard = boardCategory === "Все"
+    ? slots
+    : await db.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, "Все"),
+      eq(auctionSlots.subcategory, boardSubcategory),
+      eq(auctionSlots.country, boardCountry)
+    )).orderBy(asc(auctionSlots.slotNumber));
+  const globalEntryByGroupId = new Map(globalBoard.filter(slot => slot.groupId !== null).map(slot => [slot.groupId!, slot]));
+  const strictOrder = assignRankingEntriesToSlots(slots.filter(slot => slot.groupId !== null).map(slot => {
+    const canonicalEntry = boardCategory === "Все" ? undefined : globalEntryByGroupId.get(slot.groupId!);
+    return canonicalEntry ? { ...canonicalEntry, id: slot.id, heldSince: canonicalEntry.updatedAt } : { ...slot, heldSince: slot.updatedAt };
+  }), slots);
   if (strictOrder.some((source, index) => source?.groupId !== slots[index]?.groupId || source?.bidAmount !== slots[index]?.bidAmount)) {
     const now = new Date();
     await db.transaction(async tx => {
@@ -366,9 +377,9 @@ export async function getAuctionSlots(category?: string, country?: string, subca
   const groupIds = slots.map(slot => slot.groupId).filter((id): id is number => id !== null);
   if (groupIds.length === 0) return slots.map(slot => ({ ...slot, group: null }));
   const groupConditions = [inArray(groupsCatalog.id, groupIds)];
-  if (category && category !== "Все") groupConditions.push(eq(groupsCatalog.category, category as "Каналы" | "Чаты"));
+  if (requestedCategory !== "Все") groupConditions.push(eq(groupsCatalog.category, requestedCategory));
   if (country && country !== "Все" && country !== "Global") groupConditions.push(eq(groupsCatalog.country, country));
-  if (subcategory && subcategory !== "Все") groupConditions.push(eq(groupsCatalog.subcategory, subcategory));
+  if (requestedSubcategory !== "Все") groupConditions.push(eq(groupsCatalog.subcategory, requestedSubcategory));
   if (city && city !== "Все") groupConditions.push(eq(groupsCatalog.city, city));
   const groups = await db.select({
     group: groupsCatalog,
@@ -394,7 +405,14 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     },
   ];
   }));
-  return slots.map(slot => ({ ...slot, group: slot.groupId ? groupMap.get(slot.groupId) ?? null : null }));
+  const visibleEntries = slots.filter(slot => slot.groupId !== null && groupMap.has(slot.groupId));
+  const emptyTemplates = slots.filter(slot => !visibleEntries.some(entry => entry.id === slot.id));
+  return [...visibleEntries, ...emptyTemplates].slice(0, slots.length).map((slot, index) => {
+    const group = slot.groupId ? groupMap.get(slot.groupId) ?? null : null;
+    return group
+      ? { ...slot, slotNumber: index + 1, group }
+      : { ...slot, slotNumber: index + 1, bidAmount: 0, currentBid: "0 GRAM", leaderUsername: "-", leaderUserId: null, groupId: null, title: "Свободное место", subtitle: "Ждет листинга", group: null };
+  });
 }
 
 export type RankingLotOptions = {
@@ -415,10 +433,17 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
 
   const group = groupId ? await getGroupById(groupId) : undefined;
   if (!groupId || !group) throw new Error("Группа недоступна для размещения");
-  const target = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
-  if (!target) throw new Error("Позиция рейтинга не найдена");
-  if (target.category !== "Все" && group.category !== target.category) throw new Error("Выберите группу из той же категории рейтинга");
-  if (target.subcategory !== "Все" && group.subcategory !== target.subcategory) throw new Error("Выберите группу из той же подкатегории рейтинга");
+  const requestedTarget = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
+  if (!requestedTarget) throw new Error("Позиция рейтинга не найдена");
+  const target = requestedTarget.category === "Все" && requestedTarget.subcategory === "Все"
+    ? requestedTarget
+    : (await db.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, "Все"),
+      eq(auctionSlots.subcategory, "Все"),
+      eq(auctionSlots.country, requestedTarget.country),
+      eq(auctionSlots.slotNumber, requestedTarget.slotNumber)
+    )).limit(1))[0];
+  if (!target) throw new Error("Общая позиция рейтинга не найдена");
   const slotFloor = getRankingFloorMilliTon(target.slotNumber);
   const targetIsHeldByAnotherGroup = target.groupId !== null && target.groupId !== groupId;
   if (!isQualifyingRankingBid(bidAmount, targetIsHeldByAnotherGroup ? target.bidAmount : 0, targetIsHeldByAnotherGroup, slotFloor)) {
@@ -437,11 +462,15 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
         restoreMinimumBidAmount: getMinimumRankingBidMilliTon(bidAmount, true, slotFloor),
       }
     : undefined;
-  const board = await db.select().from(auctionSlots).where(and(
-    eq(auctionSlots.category, target.category),
-    eq(auctionSlots.subcategory, target.subcategory),
-    eq(auctionSlots.country, target.country)
-  )).orderBy(asc(auctionSlots.slotNumber));
+  const rankingCategories = ["Все"] as const;
+  await Promise.all(rankingCategories.map(category => ensureAuctionBoard(db, category, target.subcategory, target.country)));
+  const boards = await Promise.all(rankingCategories.map(category =>
+    db.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, category),
+      eq(auctionSlots.subcategory, target.subcategory),
+      eq(auctionSlots.country, target.country)
+    )).orderBy(asc(auctionSlots.slotNumber))
+  ));
 
   let rankingIntentId = 0;
   await db.transaction(async tx => {
@@ -456,36 +485,38 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
       subtitle: group.username ? `@${group.username}` : group.category,
       heldSince: now,
     };
-    const strictOrder = assignRankingEntriesToSlots([
-      ...board.filter(slot => slot.groupId !== null && slot.groupId !== groupId).map(slot => ({ ...slot, heldSince: slot.updatedAt })),
-      incoming,
-    ], board);
+    for (const board of boards) {
+      const strictOrder = assignRankingEntriesToSlots([
+        ...board.filter(slot => slot.groupId !== null && slot.groupId !== groupId).map(slot => ({ ...slot, heldSince: slot.updatedAt })),
+        incoming,
+      ], board);
 
-    for (let index = 0; index < board.length; index += 1) {
-      const slot = board[index];
-      const source = strictOrder[index];
-      const groupChanged = slot.groupId !== (source?.groupId ?? null);
-      const bidChanged = slot.bidAmount !== (source?.bidAmount ?? 0);
-      if (!groupChanged && !bidChanged) continue;
-      await tx.update(auctionSlots).set(source ? {
-        bidAmount: source.bidAmount,
-        currentBid: source.currentBid,
-        leaderUsername: source.leaderUsername,
-        leaderUserId: source.leaderUserId,
-        groupId: source.groupId,
-        title: source.title,
-        subtitle: source.subtitle,
-        updatedAt: groupChanged ? now : slot.updatedAt,
-      } : {
-        bidAmount: 0,
-        currentBid: "0 GRAM",
-        leaderUsername: "-",
-        leaderUserId: null,
-        groupId: null,
-        title: "Свободное место",
-        subtitle: "Ждет листинга",
-        updatedAt: now,
-      }).where(eq(auctionSlots.id, slot.id));
+      for (let index = 0; index < board.length; index += 1) {
+        const slot = board[index];
+        const source = strictOrder[index];
+        const groupChanged = slot.groupId !== (source?.groupId ?? null);
+        const bidChanged = slot.bidAmount !== (source?.bidAmount ?? 0);
+        if (!groupChanged && !bidChanged) continue;
+        await tx.update(auctionSlots).set(source ? {
+          bidAmount: source.bidAmount,
+          currentBid: source.currentBid,
+          leaderUsername: source.leaderUsername,
+          leaderUserId: source.leaderUserId,
+          groupId: source.groupId,
+          title: source.title,
+          subtitle: source.subtitle,
+          updatedAt: groupChanged ? now : slot.updatedAt,
+        } : {
+          bidAmount: 0,
+          currentBid: "0 GRAM",
+          leaderUsername: "-",
+          leaderUserId: null,
+          groupId: null,
+          title: "Свободное место",
+          subtitle: "Ждет листинга",
+          updatedAt: now,
+        }).where(eq(auctionSlots.id, slot.id));
+      }
     }
     if (options) {
       const salePriceTon = options.salePriceTon?.trim() || null;
