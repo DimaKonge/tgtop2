@@ -270,8 +270,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('`${formatTon(bidAmount / 1000)} GRAM`');
     expect(source).toContain('bidAmount={leadSlot.bidAmount}');
     expect(source).not.toContain('slotNumber={leadSlot.slotNumber}');
-    expect(source).toContain('grid-cols-4 grid-rows-3 gap-[2px]');
-    expect(source).toContain('col-start-2 row-start-1');
+    expect(source).toContain('place-items-center rounded-[9px] border border-[#354966] bg-[#17212b]');
     expect(source).toContain('const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const');
     expect(source).toContain('PL: { ru: "Польша", en: "Poland" }');
     expect(source).toContain('DE: { ru: "Германия", en: "Germany" }');
