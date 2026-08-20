@@ -41,13 +41,21 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('https://t.me/${group.username}');
     expect(source).not.toContain('underline-offset-2');
     expect(source).not.toContain('ПРОВЕРЕНА TG TOP');
-    expect(source).toContain('Текущая ставка');
     expect(source).toContain('const formatTon = (value: number | string | null | undefined)');
     expect(source).toContain('tx(`Свободная позиция · от ${amount} GRAM`');
     expect(source).not.toContain('0.100 TON');
     expect(source).not.toContain('{language === "en" ? "Catalog" : "Каталог"}');
     expect(source).toContain('tx("Снять с листинга", "Remove from listing")');
     expect(source).toContain('grid grid-cols-3 gap-2');
+    expect(source).not.toContain('ЛОТ · #{selectedSlot?.slotNumber ?? 1}');
+    expect(source).toContain('>#{selectedSlot?.slotNumber ?? 1}</span>');
+    expect(source).toContain('detailRewardActive && <Star className="h-3.5 w-3.5 shrink-0 fill-[#ffd766] text-[#ffd766]"');
+    expect(source).toContain('font-mono text-[10px] font-semibold tracking-[0.04em] text-slate-300');
+    expect(source).toContain('const detailCanBeBought = Boolean(!ownsDetail && isListingForSale && Number(salePriceTon) > 0);');
+    expect(source).toContain('Группа не продаётся');
+    expect(source).toContain('За вступление +{formatGram(detailEntryReward)} GRAM');
+    expect(source).toContain('min-h-[64px]');
+    expect(source).not.toContain('min-h-[76px]');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
     expect(source).toContain('Динамика аудитории');
     expect(source).toContain('Приглашения');
@@ -89,7 +97,6 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('disabled={!detailEntryUrl}');
     expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
     expect(source).toContain('const detailMinimumBid = selectedSlot');
-    expect(source).toContain('Текущая ставка');
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
     expect(source).toContain('const hours = Math.floor(seconds / 3_600);');
     expect(source).not.toContain('const days = Math.floor(seconds / 86_400);');
@@ -239,7 +246,6 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Цена в GRAM", "Price in GRAM")');
     expect(source).not.toContain('Telegram поддерживает платный вход Stars только для каналов.');
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
-    expect(source).toContain('Текущая ставка');
     expect(source).toContain('openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`)');
     expect(source).toContain('const rankSlotId = Number(params.get("rankSlot"));');
     expect(source).toContain('setRankSlotLinkId(rankSlotId)');
@@ -324,7 +330,6 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Снимки @TGTOP_robot с первого наблюдения.');
     expect(source).toContain('История до подключения не моделируется.');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
-    expect(source).toContain('Текущая ставка');
     expect(source).toContain('Перебить можно от');
     expect(source).toContain('Перебить ставку');
     expect(source).toContain('const detailBoardCategory = selectedSlot?.category');

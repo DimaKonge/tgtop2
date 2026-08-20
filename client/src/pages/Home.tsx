@@ -1600,8 +1600,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const dailyGrowthPct = latestDetailSnapshot && dayAgoDetailSnapshot && dayAgoDetailSnapshot.membersCount > 0
     ? ((latestDetailSnapshot.membersCount - dayAgoDetailSnapshot.membersCount) / dayAgoDetailSnapshot.membersCount) * 100
     : null;
-  const detailRewardActive = Boolean(detail?.group.rewardActive && (detail?.group.rewardAmount ?? 0) > 0);
-  const detailIsForSale = Boolean(!ownsDetail && detail?.group.listingType === "sale" && Number(detail.group.salePriceTon) > 0);
+  const detailEntryReward = detail
+    ? detail.group.category === "Чаты"
+      ? Number(detail.group.rewardPerManualAdd ?? detail.group.reward?.manualAddAmount ?? detail.group.rewardAmount ?? 0)
+      : Number(detail.group.rewardPerSubscription ?? detail.group.reward?.subscriptionAmount ?? detail.group.rewardAmount ?? 0)
+    : 0;
+  const detailRewardActive = Boolean(detail?.group.rewardActive && detailEntryReward > 0);
+  const detailCanBeBought = Boolean(!ownsDetail && isListingForSale && Number(salePriceTon) > 0);
   const subscriptionReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.subscriptionAmount ?? 0 : 0;
   const inviteReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.inviteAmount ?? 0 : 0;
   const manualAddReward = !ownsDetail && detail?.group.category === "Чаты" ? detail.group.reward?.manualAddAmount ?? 0 : 0;
@@ -2585,10 +2590,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {ui.back}
                 </button>
                 <div className="relative flex flex-col overflow-hidden rounded-[22px] border border-[#31435f] bg-[#17212b] p-3">
-                  {detail.group.rewardActive && <Star className="absolute right-3 top-3 h-6 w-6 fill-[#ffd766] text-[#ffd766]" aria-label="Вознаграждение активно" />}
-                  <div className="flex items-center justify-between pr-8">
-                    <span className="rounded-lg border border-[#354966] bg-[#202b3a] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#c4d8f6]">ЛОТ · #{selectedSlot?.slotNumber ?? 1}</span>
-                    <b className="font-mono text-sm font-bold tracking-[0.08em] text-white">{selectedSlot ? formatPositionDuration(selectedSlot.updatedAt, positionClock) : "00:00:00"}</b>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      {detailRewardActive && <Star className="h-3.5 w-3.5 shrink-0 fill-[#ffd766] text-[#ffd766]" aria-label="Вознаграждение активно" />}
+                      <span className="rounded-lg border border-[#354966] bg-[#202b3a] px-2 py-1 text-[10px] font-bold tracking-[0.08em] text-[#c4d8f6]">#{selectedSlot?.slotNumber ?? 1}</span>
+                    </div>
+                    <b className="shrink-0 font-mono text-[10px] font-semibold tracking-[0.04em] text-slate-300">{selectedSlot ? formatPositionDuration(selectedSlot.updatedAt, positionClock) : "00:00:00"}</b>
                   </div>
 
                   <div className="mt-3 flex items-start gap-3">
@@ -2608,37 +2615,37 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   </div>
 
-                  <div className="mt-5 grid grid-cols-3 gap-2">
+                  <div className="mt-4 grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        if (isListingForSale && salePriceTon && !ownsDetail) createProtectedGroupDeal.mutate({ groupId: detail.group.id });
-                        else if (!ownsDetail && selectedSlot) openOutbid(selectedSlot);
+                        if (detailCanBeBought) createProtectedGroupDeal.mutate({ groupId: detail.group.id });
                       }}
-                      disabled={ownsDetail || (!isListingForSale && !selectedSlot)}
-                      className="flex min-h-[76px] flex-col justify-center rounded-xl border border-[#386a5f] bg-[#203a35] px-2 text-left text-white transition-colors hover:bg-[#26443e] active:scale-[0.98] disabled:cursor-default disabled:opacity-90"
+                      disabled={!detailCanBeBought}
+                      className={`flex min-h-[64px] flex-col justify-center rounded-xl border px-2.5 text-left transition-colors active:scale-[0.98] disabled:cursor-default ${detailCanBeBought ? "border-[#386a5f] bg-[#203a35] text-white hover:bg-[#26443e]" : "border-[#3d4b5f] bg-[#202936] text-slate-400"}`}
                     >
-                      <span className="flex items-center gap-1.5 text-[10px] text-[#b7d8ce]"><WalletCards className="h-3.5 w-3.5" />{isListingForSale && salePriceTon ? "Купить за" : "Текущая ставка"}</span>
-                      <b className="mt-0.5 text-base leading-none">{isListingForSale && salePriceTon ? salePriceTon : formatTon((selectedSlot?.bidAmount ?? 0) / 1000)} <small className="text-[9px] font-medium text-[#b7d8ce]">GRAM</small></b>
+                      <span className={`flex items-center gap-1.5 text-[10px] ${detailCanBeBought ? "text-[#b7d8ce]" : "text-slate-500"}`}><WalletCards className="h-3.5 w-3.5" />{detailCanBeBought ? "Купить за" : "Покупка"}</span>
+                      {detailCanBeBought ? <b className="mt-0.5 text-[15px] leading-none">{salePriceTon} <small className="text-[9px] font-medium text-[#b7d8ce]">GRAM</small></b> : <b className="mt-1 text-[11px] leading-3 text-slate-300">Группа не продаётся</b>}
                     </button>
                     <button
                       type="button"
                       onClick={() => { if (managerPublic && detail.group.managerUsername) openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`); }}
                       disabled={!managerPublic || !detail.group.managerUsername}
-                      className="flex min-h-[76px] flex-col justify-center rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-left text-slate-100 transition-colors hover:bg-[#253247] active:scale-[0.98] disabled:cursor-default"
+                      className="flex min-h-[64px] flex-col justify-center rounded-xl border border-[#354966] bg-[#202b3a] px-2.5 text-left text-slate-100 transition-colors hover:bg-[#253247] active:scale-[0.98] disabled:cursor-default"
                     >
                       <span className="flex items-center gap-1.5 text-[10px] text-slate-400"><UserRound className="h-3.5 w-3.5" />{managerPublic && detail.group.managerName ? "Менеджер" : "Публикация"}</span>
-                      <b className="mt-0.5 truncate text-xs">{managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"}</b>
-                      <small className="mt-0.5 truncate text-[10px] text-[#72a8ff]">{managerPublic && detail.group.managerUsername ? `@${detail.group.managerUsername}` : "Без контакта"}</small>
+                      <b className="mt-0.5 truncate text-xs leading-3">{managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"}</b>
+                      <small className="mt-0.5 truncate text-[9px] leading-3 text-[#72a8ff]">{managerPublic && detail.group.managerUsername ? `@${detail.group.managerUsername}` : "Без контакта"}</small>
                     </button>
                     <button
                       type="button"
                       onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
                       disabled={!detailEntryUrl}
-                      className="flex min-h-[76px] flex-col justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2 text-left text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
+                      className="flex min-h-[64px] flex-col justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2.5 text-left text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
                     >
-                      <Send className="h-5 w-5 text-white/85" />
-                      <b className="mt-0.5 text-xs leading-4">Перейти<br />в группу</b>
+                      <Send className="h-4 w-4 text-white/85" />
+                      <b className="mt-0.5 text-xs leading-3">Перейти<br />в группу</b>
+                      {detailRewardActive && <small className="mt-1 whitespace-nowrap text-[8px] font-semibold leading-none text-white/80">За вступление +{formatGram(detailEntryReward)} GRAM</small>}
                     </button>
                   </div>
 
@@ -2797,20 +2804,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <span><h2 className="text-sm font-bold text-slate-100">{ownsDetail ? "Обновить ставку" : "Перебить ставку"}</h2><small className="mt-0.5 block text-[10px] text-slate-500">{ownsDetail ? `Место #${selectedSlot.slotNumber}` : "Просмотр позиции"}</small></span>
                         <b className="text-sm text-[#8fc4ff]">{formatTon(detailRankingBidAmount)} GRAM</b>
                       </div>
-                      <div className="mt-3 grid grid-cols-[96px_minmax(0,1fr)] items-center gap-2">
-                        <div className="flex h-12 items-center gap-2 rounded-xl border border-[#354966] bg-[#202b3a] px-2">
-                          <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#294a67] text-[#d9ebff]"><WalletCards className="h-4 w-4" /></span>
-                          <span className="min-w-0"><b className="block truncate text-lg leading-none text-white">{formatTon(detailRankingBidAmount)}</b><small className="mt-1 block text-[9px] font-medium text-slate-400">GRAM</small></span>
-                        </div>
-                        <div className="flex h-12 items-center rounded-xl border border-[#354966] bg-[#101a2d] p-1">
-                          <button type="button" disabled={!ownsDetail} onClick={() => setDetailBidInput(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label="Уменьшить ставку" className="grid h-10 w-10 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.07] disabled:opacity-35"><Minus className="h-4 w-4" /></button>
-                          <Input value={detailBidInput} readOnly={!ownsDetail} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setDetailBidInput(value); }} onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))} aria-label="Новая ставка в GRAM" className="h-10 min-w-0 flex-1 rounded-lg border-0 bg-[#17212b] px-1 text-center text-lg font-bold text-white focus-visible:ring-0" />
-                          <button type="button" disabled={!ownsDetail} onClick={() => setDetailBidInput(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label="Увеличить ставку" className="grid h-10 w-10 place-items-center rounded-lg text-[#8fc4ff] transition-colors hover:bg-[#3f8cff]/12 disabled:opacity-35"><Plus className="h-4 w-4" /></button>
-                        </div>
+                      <div className="mt-3 flex h-10 items-center rounded-lg border border-[#354966] bg-[#101a2d] p-1">
+                        <button type="button" disabled={!ownsDetail} onClick={() => setDetailBidInput(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label="Уменьшить ставку" className="grid h-8 w-10 place-items-center rounded-md text-slate-300 transition-colors hover:bg-white/[0.07] disabled:opacity-35"><Minus className="h-4 w-4" /></button>
+                        <Input value={detailBidInput} readOnly={!ownsDetail} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setDetailBidInput(value); }} onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))} aria-label="Новая ставка в GRAM" className="h-8 min-w-0 flex-1 rounded-md border-0 bg-[#17212b] px-1 text-center text-base font-bold text-white focus-visible:ring-0" />
+                        <button type="button" disabled={!ownsDetail} onClick={() => setDetailBidInput(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label="Увеличить ставку" className="grid h-8 w-10 place-items-center rounded-md text-[#8fc4ff] transition-colors hover:bg-[#3f8cff]/12 disabled:opacity-35"><Plus className="h-4 w-4" /></button>
                       </div>
-                      {ownsDetail && <div className="mt-2 rounded-xl border border-[#31435f] bg-[#202b3a] px-3 pb-2 pt-1"><Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="py-1 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:bg-[#0f1825] [&_[data-slot=slider-range]]:!bg-[#3390ec] [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:!border-[#c8e1ff] [&_[data-slot=slider-thumb]]:!bg-[#3390ec]" /><div className="mt-1 flex justify-between text-[9px] font-medium text-slate-500"><span>от {formatTon(detailMinimumBid)} GRAM</span><span>шаг 0.1 GRAM</span><span>до {formatTon(MAX_RANKING_SLIDER_GRAM)} GRAM</span></div></div>}
+                      {ownsDetail && <div className="mt-2 rounded-lg border border-[#31435f] bg-[#202b3a] px-2.5 pb-1.5 pt-0.5"><Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="py-0.5 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:bg-[#0f1825] [&_[data-slot=slider-range]]:!bg-[#3390ec] [&_[data-slot=slider-thumb]]:size-3.5 [&_[data-slot=slider-thumb]]:!border-[#c8e1ff] [&_[data-slot=slider-thumb]]:!bg-[#3390ec]" /><div className="mt-1 flex justify-between text-[8px] font-medium text-slate-500"><span>от {formatTon(detailMinimumBid)} GRAM</span><span>шаг 0.1</span><span>до {formatTon(MAX_RANKING_SLIDER_GRAM)}</span></div></div>}
                       <p className={`mt-2 text-center text-[10px] ${detailWillDrop ? "text-rose-300" : "text-slate-500"}`}>{detailWillDrop ? `Группа опустится на ${detailRankingPreviewSlotNumber}-ю позицию` : ownsDetail ? `Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM` : `Перебить можно от ${formatTon(detailMinimumBid)} GRAM`}</p>
-                      <button type="button" onClick={() => { if (!ownsDetail) return openOutbid(selectedSlot); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const paymentGroup = selectedLotGroup ?? detail.group; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); placeBid.mutate({ slotId: selectedSlot.id, groupId: paymentGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, salePriceTon: isListingForSale ? salePriceTon || null : null, rewardActive: rewardCampaignEnabled, rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0 : 0, rewardPerSubscription: rewardCampaignEnabled ? Number(rewardPerSubscription) || 0 : 0, rewardPerManualAdd: 0 }); }} disabled={ownsDetail ? !detailRankingPreviewSlotNumber || placeBid.isPending : !isAuthenticated} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#3390ec] px-3 py-2.5 text-left text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{ownsDetail ? (placeBid.isPending ? "Оплата…" : "Оплатить обновление") : "Выбрать свою группу"}</span><span className="text-xs text-white/80">{formatTon(detailRankingBidAmount)} GRAM</span></button>
+                      <button type="button" onClick={() => { if (!ownsDetail) return openOutbid(selectedSlot); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const paymentGroup = selectedLotGroup ?? detail.group; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); placeBid.mutate({ slotId: selectedSlot.id, groupId: paymentGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, salePriceTon: isListingForSale ? salePriceTon || null : null, rewardActive: rewardCampaignEnabled, rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0 : 0, rewardPerSubscription: rewardCampaignEnabled ? Number(rewardPerSubscription) || 0 : 0, rewardPerManualAdd: 0 }); }} disabled={ownsDetail ? !detailRankingPreviewSlotNumber || placeBid.isPending : !isAuthenticated} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{ownsDetail ? (placeBid.isPending ? "Оплата…" : "Перейти") : "Выбрать свою группу"}</span></button>
                     </section>
                   )}
                 </div>
