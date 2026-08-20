@@ -2772,7 +2772,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-xl border p-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3b80c4]/55 bg-[#213750]" : "border-[#354966] bg-[#202b3a]"}`}>
                           <b className="block text-[11px] text-slate-100">Объявление</b><small className={`mt-1 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fc4ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? "Бот напишет в группе" : "Выключено"}</small>
                         </button>
-                        <button type="button" onClick={() => { setSelectedManagerTelegramUserId(detail.group.managerTelegramUserId ?? null); setManagerSheetOpen(true); }} className="rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">
+                        <button type="button" onClick={() => { setSelectedManagerTelegramUserId(managerPublic ? detail.group.managerTelegramUserId ?? null : null); setManagerSheetOpen(true); }} className="rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">
                           <b className="block text-[11px] text-slate-100">Менеджер</b><small className="mt-1 block truncate text-[10px] text-[#8fc4ff]">{managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"}</small>
                         </button>
                       </div>
@@ -3263,7 +3263,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <p className="text-xs leading-5 text-slate-500">{tx("Выберите администратора Telegram. Он будет указан как менеджер этой площадки в TG TOP.", "Choose a Telegram administrator to display as the community manager in TG TOP.")}</p>
           </SheetHeader>
           <div className="space-y-3 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
-            <button type="button" onClick={() => { setManagerPublic(false); setManagerSheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${!managerPublic ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+            <button type="button" onClick={() => { setSelectedManagerTelegramUserId(null); setManagerPublic(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${!managerPublic ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-slate-300"><UserRound className="h-4 w-4" /></span>
               <span className="min-w-0 flex-1"><b className="block text-sm text-slate-100">Анонимно</b><small className="mt-0.5 block text-[10px] text-slate-500">Не показывать менеджера в карточке</small></span>
               <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${!managerPublic ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
@@ -3275,9 +3275,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             ) : (groupAdministratorsQuery.data ?? []).length ? (
               <div className="space-y-2">
                 {(groupAdministratorsQuery.data ?? []).map(admin => {
-                  const selected = admin.telegramUserId === selectedManagerTelegramUserId;
+                  const selected = managerPublic && admin.telegramUserId === selectedManagerTelegramUserId;
                   return (
-                    <button key={admin.telegramUserId} type="button" onClick={() => setSelectedManagerTelegramUserId(admin.telegramUserId)} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${selected ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+                    <button key={admin.telegramUserId} type="button" onClick={() => { setSelectedManagerTelegramUserId(admin.telegramUserId); setManagerPublic(true); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${selected ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">{admin.name.slice(0, 1).toUpperCase()}</span>
                       <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{admin.name}</b>{admin.username && <small className="mt-0.5 block truncate text-[10px] text-slate-500">@{admin.username}</small>}</span>
                       <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
@@ -3288,8 +3288,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             ) : (
               <p className="rounded-xl border border-dashed border-white/12 px-3 py-5 text-center text-xs leading-5 text-slate-500">{tx("Администраторы не найдены. Добавьте @TGTOP_robot в администраторы группы и обновите список.", "No administrators found. Add @TGTOP_robot as an admin and try again.")}</p>
             )}
-            <button type="button" onClick={() => { if (!selectedManagerTelegramUserId || !selectedGroupId) return; setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId }, { onSuccess: () => { setManagerPublic(true); setManagerSheetOpen(false); } }); }} disabled={!selectedManagerTelegramUserId || setGroupManager.isPending || groupAdministratorsQuery.isLoading} className="flex w-full items-center justify-center rounded-xl bg-[#1688f5] px-4 py-3.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45">
-              {setGroupManager.isPending ? ui.loading : tx("Сохранить менеджера", "Save manager")}
+            <button type="button" onClick={() => { if (!managerPublic) return setManagerSheetOpen(false); if (!selectedManagerTelegramUserId || !selectedGroupId) return; setGroupManager.mutate({ groupId: selectedGroupId, telegramUserId: selectedManagerTelegramUserId }, { onSuccess: () => { setManagerPublic(true); setManagerSheetOpen(false); } }); }} disabled={(managerPublic && !selectedManagerTelegramUserId) || setGroupManager.isPending || groupAdministratorsQuery.isLoading} className="flex w-full items-center justify-center rounded-xl bg-[#1688f5] px-4 py-3.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45">
+              {setGroupManager.isPending ? ui.loading : !managerPublic ? "Сохранить анонимный режим" : tx("Сохранить менеджера", "Save manager")}
             </button>
           </div>
         </SheetContent>
