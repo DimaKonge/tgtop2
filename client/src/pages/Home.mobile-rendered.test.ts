@@ -36,7 +36,7 @@ describe("TG TOP Global rendered mobile featured board", () => {
     expect(boxes[0].x).toBeGreaterThanOrEqual(12);
     expect(boxes[0].width).toBeGreaterThan(350);
     expect(boxes[0].height).toBe(300);
-    expect(boxes.slice(1, 3).every(box => box.width >= 175 && box.height === 128)).toBe(true);
+    expect(boxes.slice(1, 3).every(box => box.width >= 175 && box.height === 136)).toBe(true);
     expect(boxes.slice(3).every(box => box.width > 80 && box.height === 88)).toBe(true);
     expect(Math.max(...boxes.map(box => box.bottom))).toBeLessThanOrEqual(772);
   });

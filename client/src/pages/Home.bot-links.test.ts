@@ -25,7 +25,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('variant="compact"');
     expect(source).toContain('h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5');
     expect(source).toContain('sm:h-[46vh]');
-    expect(source).toContain('h-[128px] border-white/10 bg-[#111720] p-3');
+    expect(source).toContain('h-[136px] border-white/10 bg-[#111720] p-3');
     expect(source).toContain('h-[88px] border-white/8 bg-[#111720] p-2');
     expect(source).toContain('max-w-full truncate');
     expect(source).toContain('max-w-[132px]');
@@ -156,12 +156,13 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('refetchInterval: 12_000');
     expect(source).toContain('const rankingSnapshotKey = board.map(slot => `${slot.slotNumber}:${slot.group?.id ?? 0}:${slot.bidAmount}`).join("|")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}:${rankingSnapshotKey}`');
-    expect(source).toContain('label: "Каталог"');
+    expect(source).toContain('label: "ТОП"');
     expect(source).toContain('label: "Розыгрыши"');
-    expect(source).toContain('label: "Заработать"');
+    expect(source).not.toContain('label: "Заработать"');
+    expect(source).toContain('label: "Рабочее пространство"');
     expect(source).toContain('label: "Мой кабинет"');
     expect(source).toContain('page === "giveaways"');
-    expect(source).toContain('page === "earn"');
+    expect(source).not.toContain('page === "earn"');
     expect(source).toContain('openGiveaways.useQuery');
     expect(source).toContain('createGiveaway.useMutation');
     expect(source).toContain('joinGiveaway.useMutation');

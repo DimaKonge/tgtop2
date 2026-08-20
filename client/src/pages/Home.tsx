@@ -52,7 +52,7 @@ import { toast } from "sonner";
 import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
-type Page = "top" | "catalog" | "giveaways" | "earn" | "mine" | "details" | "owner" | "profile";
+type Page = "top" | "catalog" | "giveaways" | "mine" | "details" | "owner" | "profile";
 type Audience = "all" | "small" | "medium" | "large";
 type MyGroupsViewMode = "list" | "grid";
 type Language = "ru" | "en";
@@ -514,7 +514,7 @@ function GroupCard({
   const cardStyle = lead
     ? "h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[46vh] sm:p-6"
           : variant === "secondary"
-      ? "h-[128px] border-white/10 bg-[#111720] p-3 sm:h-[160px] sm:p-4"
+      ? "h-[136px] border-white/10 bg-[#111720] p-3 sm:h-[168px] sm:p-4"
       : compact
         ? "h-[88px] border-white/8 bg-[#111720] p-2 sm:h-[124px]"
         : "h-[68px] border-white/8 bg-[#111720] px-3 py-2";
@@ -2367,21 +2367,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           </section>
         )}
 
-        {page === "earn" && (
-          <section className="space-y-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-white">Заработать</h1>
-              <p className="mt-1 text-sm text-slate-500">Все подтверждённые вознаграждения и бонусы в одном месте.</p>
-            </div>
-            <div className="rounded-2xl border border-emerald-300/15 bg-[linear-gradient(135deg,rgba(34,197,94,0.12),rgba(16,24,34,0.96)_60%)] p-5">
-              <small className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-200/75">Бонусный баланс</small>
-              <b className="mt-2 block text-3xl tracking-tight text-white">{bonus} GRAM</b>
-              <p className="mt-2 text-sm leading-6 text-slate-400">Получайте GRAM только после подтверждённого действия через бота TG TOP.</p>
-              <button type="button" onClick={() => setPage("profile")} className="mt-5 inline-flex rounded-xl bg-[#1688f5] px-4 py-2.5 text-sm font-semibold text-white">Открыть баланс</button>
-            </div>
-          </section>
-        )}
-
         {page === "mine" && (
           <section className={`space-y-4 ${myGroupsSelectionMode ? "pb-[12rem]" : ""}`}>
             <div className="flex items-start justify-between gap-3">
@@ -3285,10 +3270,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         <div className="mx-auto grid max-w-3xl grid-cols-4 px-3 py-2">
           {(
             [
-              { key: "top", label: "Каталог", icon: Trophy },
+              { key: "top", label: "ТОП", icon: Trophy },
               { key: "giveaways", label: "Розыгрыши", icon: Star },
-              { key: "earn", label: "Заработать", icon: WalletCards },
-              { key: "mine", label: "Мой кабинет", icon: Users },
+              { key: "mine", label: "Рабочее пространство", icon: LayoutGrid },
+              { key: "profile", label: "Мой кабинет", icon: UserRound },
             ] as const
           ).map(item => {
             const Icon = item.icon;
