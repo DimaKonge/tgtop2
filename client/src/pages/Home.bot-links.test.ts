@@ -69,9 +69,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('rewardBudget: detailRewardBudgetUnits');
     expect(source).toContain('rewardPerSubscription: detailRewardPerSubscriptionUnits');
     expect(source).not.toContain('rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0');
-    expect(source).toContain('min-h-[68px]');
-    expect(source).toContain('min-h-[56px] w-[84px]');
-    expect(source).toContain('min-h-[56px] w-[82px]');
+    expect(source).toContain('min-h-[62px]');
+    expect(source).toContain('min-h-[52px] w-[84px]');
+    expect(source).toContain('min-h-[52px] w-[82px]');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
     expect(source).toContain('Динамика аудитории');
     expect(source).toContain('Приглашения');
