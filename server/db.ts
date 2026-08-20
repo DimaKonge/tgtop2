@@ -420,6 +420,8 @@ export type RankingLotOptions = {
   showOwnerContact?: boolean;
   managerPublic?: boolean;
   listingAnnouncementEnabled?: boolean;
+  country?: string;
+  city?: string;
   subcategory?: string;
   salePriceTon?: string | null;
   rewardActive?: boolean;
@@ -527,6 +529,8 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
         ...(options.showOwnerContact !== undefined ? { showOwnerContact: options.showOwnerContact } : {}),
         ...(options.managerPublic !== undefined ? { managerPublic: options.managerPublic } : {}),
         ...(options.listingAnnouncementEnabled !== undefined ? { listingAnnouncementEnabled: options.listingAnnouncementEnabled } : {}),
+        ...(options.country ? { country: options.country } : {}),
+        ...(options.city !== undefined ? { city: options.city || null } : {}),
         ...(options.subcategory ? { subcategory: options.subcategory } : {}),
         ...(options.salePriceTon !== undefined ? { salePriceTon, listingType: salePriceTon ? "sale" : "catalog" } : {}),
         ...(options.rewardActive !== undefined ? { rewardActive: options.rewardActive } : {}),
