@@ -47,8 +47,8 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('0.100 TON');
     expect(source).not.toContain('{language === "en" ? "Catalog" : "Каталог"}');
     expect(source).toContain('tx("Снять с листинга", "Remove from listing")');
-    expect(source).toContain('flex items-center justify-between rounded-xl border border-white/8 bg-[#151d28] px-4 py-3');
-    expect(source).toContain('tx("ДИНАМИКА", "DYNAMICS")');
+    expect(source).toContain('flex items-center justify-between rounded-xl bg-[#16202e] px-4 py-3.5');
+    expect(source).toContain('tx("Динамика аудитории", "Audience dynamics")');
     expect(source).not.toContain('{ value: "rent", title: tx("Аренда", "Rent")');
     expect(source).not.toContain('tx("Условия аренды", "Rental terms")');
     expect(source).toContain('["Каналы", ui.channels]');
@@ -180,7 +180,7 @@ describe("TG TOP production bot links", () => {
     expect(styles).toContain('--ranking-slot-offset: 26px');
     expect(styles).toContain('.ranking-slot-enter { animation: ranking-slot-enter 360ms');
     expect(source).toContain('isEnglish ? "For sale" : "На продаже"');
-    expect(source).toContain('tx("Купить", "Buy")');
+    expect(source).toContain('tx("Перейти в группу", "Open in group")');
     expect(source).toContain('isEnglish ? "In catalog" : "В каталоге"');
     expect(source).not.toContain('isEnglish ? "Unlisted" : "Не в листинге"');
     expect(source).toContain('ownsDetail && detail.group.category === "Чаты"');
@@ -283,10 +283,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('max-h-[264px] space-y-1 overflow-y-auto pr-1');
     expect(source).toContain('tx("Каталог групп", "Community catalog")');
     expect(source).toContain('tx("По этому фильтру площадок пока нет.", "No communities match this filter yet.")');
-    expect(source).toContain('tx("ДИНАМИКА", "DYNAMICS")');
-    expect(source).toContain('tx("Приглашения", "Invites")');
+    expect(source).toContain('tx("Динамика аудитории", "Audience dynamics")');
+    expect(source).toContain('tx("Отписались", "Unsubscribed")');
     expect(source).toContain('fixed by bot');
-    expect(source).toContain('flex items-center justify-between rounded-xl border border-white/8 bg-[#151d28] px-4 py-3');
+    expect(source).toContain('flex items-center justify-between rounded-xl bg-[#16202e] px-4 py-3.5');
     expect(source).toContain('tx("Загружаем статистику…", "Loading statistics…")');
     expect(source).toContain('"This placement will be available after the ranking board is created."');
     expect(source).toContain('const getProtectedDealGuidance = (status: string, isBuyer: boolean, buyerConfirmed = false) =>');
@@ -316,8 +316,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('paymentMethod === "stars"');
     expect(source).toContain('const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null)');
     expect(source).toContain('Удалить группу из платформы?');
-    expect(source).toContain('className="relative flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-5"');
-    expect(source).toContain('className={`flex w-full items-start gap-4 rounded-xl text-left transition-colors ${detailEntryUrl');
+    expect(source).toContain('className="relative flex flex-col rounded-2xl border border-white/8 bg-[#111720] p-4 space-y-3"');
     expect(source).toContain('className="order-4 mt-4 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-3"');
     expect(source).toContain('function AudienceGrowthChart');
     expect(source).toContain('Снимки @TGTOP_robot с первого наблюдения.');
@@ -377,8 +376,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('selectedSlot.slotNumber');
     expect(source).toContain('dailyGrowthPct');
     expect(source).toContain('createProtectedGroupDeal');
-    expect(source).toContain('tx("Вступления", "Joined")');
-    expect(source).toContain('tx("Приглашения", "Invites")');
+    expect(source).toContain('tx("Вступили", "Joined")');
+    expect(source).toContain('tx("Отписались", "Unsubscribed")');
     expect(source).toContain('Чтобы добавить свою группу, назначьте бота администратором вашей группы.');
     expect(source).toContain('После подключения группа появится здесь для выбора.');
   });
