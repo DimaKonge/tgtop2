@@ -1992,7 +1992,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setGlobalDirection(value);
     if (value !== "NFT") {
       setCategory(value);
-      setSubcategory("Все");
     }
   };
   const resetTopFilters = () => {

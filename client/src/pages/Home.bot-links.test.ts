@@ -278,6 +278,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('GripVertical');
     expect(source).toContain('[-webkit-touch-callout:none]');
     expect(source).toContain('selectGlobalDirection(value)');
+    const directionHandler = source.slice(source.indexOf('const selectGlobalDirection'), source.indexOf('const resetTopFilters'));
+    expect(directionHandler).toContain('setCategory(value);');
+    expect(directionHandler).not.toContain('setSubcategory("Все");');
     expect(source).toContain('tx("Выставить на продажу", "Offer for sale")');
     expect(source).toContain('isListingForSale && (');
     expect(source).toContain('Прогресс подтверждается только действиями, зафиксированными в TG TOP. Награды не начисляются автоматически.');
