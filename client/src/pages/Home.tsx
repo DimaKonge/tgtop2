@@ -145,6 +145,7 @@ type ListingType = "catalog" | "sale";
 type ListingCountry = string;
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
 type TopSection = "communities" | "nft" | "bots";
+type NftMarketCategory = "all" | "gifts" | "usernames" | "anonymous_numbers" | "other";
 const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const;
 const COUNTRY_LABELS: Record<string, { ru: string; en: string }> = {
   Global: { ru: "Весь мир", en: "Worldwide" },
@@ -926,6 +927,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [nftTransferOpen, setNftTransferOpen] = useState(false);
   const [nftTransferStep, setNftTransferStep] = useState<"select" | "review" | "prepared">("select");
   const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
+  const [nftMarketCategory, setNftMarketCategory] = useState<NftMarketCategory>("all");
   const [selectedNftId, setSelectedNftId] = useState<number | null>(null);
   const [recipientInput, setRecipientInput] = useState("");
   const [preparedNftTransfer, setPreparedNftTransfer] = useState<PreparedNftTransfer | null>(null);
@@ -1523,13 +1525,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   );
   const visibleNfts = useMemo(
     () => {
-      const byAssetClass = nftAssetFilter === "all" ? nfts : nfts.filter(nft => nft.assetClass === nftAssetFilter);
+      const byMarketCategory = nftMarketCategory === "all" || nftMarketCategory === "usernames" ? nfts : [];
+      const byAssetClass = nftAssetFilter === "all" ? byMarketCategory : byMarketCategory.filter(nft => nft.assetClass === nftAssetFilter);
       const query = topSearchQuery.trim().toLowerCase();
       return query
         ? byAssetClass.filter(nft => `${nft.username} ${nft.ownerUsername}`.toLowerCase().includes(query))
         : byAssetClass;
     },
-    [nfts, nftAssetFilter, topSearchQuery]
+    [nfts, nftAssetFilter, nftMarketCategory, topSearchQuery]
   );
   const board = useMemo(
     () =>
@@ -2295,6 +2298,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5">
+                  {topSection === "communities" && <button type="button" onClick={() => setFiltersOpen(true)} aria-label={tx("Открыть фильтры сообществ", "Open community filters")} title={tx("Фильтры сообществ", "Community filters")} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/10 bg-white/5 text-slate-400 transition-colors hover:border-[#3390ec]/45 hover:text-[#79a7ff]">
+                    <Filter className="h-3.5 w-3.5" />
+                  </button>}
                   <button type="button" onClick={() => setTopSearchOpen(current => !current)} aria-label={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Открыть поиск", "Open search")} title={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Поиск", "Search")} className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${topSearchOpen ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                     <Search className="h-3.5 w-3.5" />
                   </button>
@@ -2330,13 +2336,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <div className="flex items-baseline justify-between px-1">
                   <span>
                     <h2 className="text-sm font-semibold text-slate-200">{tx("NFT-направление", "NFT marketplace")}</h2>
-                    <span className="text-[10px] text-slate-500">{tx("юзернеймы и права", "usernames and rights")}</span>
+                    <span className="text-[10px] text-slate-500">{tx("цифровые активы Telegram", "Telegram digital assets")}</span>
                   </span>
                   {isAuthenticated && (
                     <button onClick={openNftTransfer} className="rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 py-1.5 text-[10px] font-semibold text-[#a6c8ff]">
                       {tx("Передать NFT", "Send NFT")}
                     </button>
                   )}
+                </div>
+                <div aria-label="Рубрики NFT" className="flex gap-1.5 overflow-x-auto rounded-lg border border-white/8 bg-[#111720] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {([
+                    ["all", tx("Все", "All")],
+                    ["gifts", tx("Гифты", "Gifts")],
+                    ["usernames", tx("Юзернеймы", "Usernames")],
+                    ["anonymous_numbers", tx("Анонимные номера", "Anonymous numbers")],
+                    ["other", tx("Другие NFT", "Other NFTs")],
+                  ] as const).map(([value, label]) => (
+                    <button key={value} type="button" onClick={() => setNftMarketCategory(value)} className={`h-8 shrink-0 rounded-md px-3 text-[10px] font-semibold transition-colors ${nftMarketCategory === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                  ))}
                 </div>
                 <ToggleGroup type="single" value={nftAssetFilter} onValueChange={value => value && setNftAssetFilter(value as typeof nftAssetFilter)} className="grid w-full grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
                   <ToggleGroupItem value="all" className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white">{tx("Все", "All")}</ToggleGroupItem>
@@ -2350,7 +2367,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 ) : (
                   <div className="rounded-2xl border border-dashed border-white/12 bg-[#111720] p-7 text-center">
                     <p className="text-sm font-medium text-slate-300">{tx("В этой категории NFT пока нет", "No NFTs in this category yet")}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">{tx("On-chain активы подтверждаются в TON, Off-chain — в безопасном учете TG TOP.", "On-chain assets are verified on TON; Off-chain assets use TG TOP’s protected ledger.")}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{nftMarketCategory === "usernames" ? tx("Юзернеймы появятся здесь после размещения владельцем.", "Usernames will appear here after owner listing.") : tx("Раздел появится после добавления первых активов.", "This category will appear after the first assets are added.")}</p>
                   </div>
                 )}
               </section>

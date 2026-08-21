@@ -200,6 +200,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const [topSearchOpen, setTopSearchOpen] = useState(false);');
     expect(source).toContain('onClick={() => setTopSearchOpen(current => !current)}');
     expect(source).toContain('{topSearchOpen && <Input value={topSearchQuery}');
+    expect(source).toContain('topSection === "communities" && <button type="button" onClick={() => setFiltersOpen(true)}');
+    expect(source).toContain('aria-label={tx("Открыть фильтры сообществ", "Open community filters")}');
     expect(source).not.toContain('aria-label={tx("Фильтр географии", "Location filter")}');
     expect(source).not.toContain('aria-label={tx("Тематические рубрики", "Topic categories")}');
     expect(source).toContain('const resetTopFilters = () => {');
@@ -350,6 +352,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Весь мир", "Worldwide")');
     expect(source).toContain('<Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)}');
     expect(source).toContain('topSection === "nft" ? tx("Поиск NFT", "Search NFT")');
+    expect(source).toContain('type NftMarketCategory = "all" | "gifts" | "usernames" | "anonymous_numbers" | "other"');
+    expect(source).toContain('aria-label="Рубрики NFT"');
+    expect(source).toContain('tx("Гифты", "Gifts")');
+    expect(source).toContain('tx("Анонимные номера", "Anonymous numbers")');
+    expect(source).toContain('tx("Другие NFT", "Other NFTs")');
+    expect(source).toContain('setNftMarketCategory(value)');
     expect(source).toContain('`${nft.username} ${nft.ownerUsername}`.toLowerCase().includes(query)');
     expect(source).toContain('!topSearchQuery.trim() && <div key={rankingMotionKey}');
     expect(source).toContain('bg-emerald-500/30 text-emerald-50');
