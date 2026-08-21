@@ -370,6 +370,10 @@ const openTelegramCommunityLink = (url: string) => {
   }
   window.open(url, "_blank", "noopener,noreferrer");
 };
+const openTelegramInNewBrowserTab = (url: string) => {
+  const tab = window.open(url, "_blank", "noopener,noreferrer");
+  if (tab) tab.opener = null;
+};
 const getSubcategoryLabel = (subcategory: string, language: Language) =>
   SUBCATEGORY_LABELS[subcategory]?.[language] ?? subcategory;
 const getCountryLabel = (country: string, language: Language) =>
@@ -2704,7 +2708,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
                   <div className="mt-3 flex items-start gap-3">
                     <div className="relative shrink-0">
-                      <button type="button" onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }} disabled={!detailEntryUrl} className="rounded-[22px] transition-transform active:scale-[0.98] disabled:cursor-default">
+                      <button type="button" onClick={() => { if (detailEntryUrl) openTelegramInNewBrowserTab(detailEntryUrl); }} disabled={!detailEntryUrl} className="rounded-[22px] transition-transform active:scale-[0.98] disabled:cursor-default">
                         <Avatar group={detail.group} hero />
                       </button>
                       <span className={`absolute bottom-1 right-1 inline-flex items-center gap-0.5 whitespace-nowrap text-[8px] font-medium leading-none ${dailyGrowthPct !== null && dailyGrowthPct < 0 ? "text-rose-300/75" : "text-emerald-300/75"}`}>
@@ -2721,7 +2725,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div className="mt-3 flex items-stretch gap-1.5">
                     <button
                       type="button"
-                      onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}
+                      onClick={() => { if (detailEntryUrl) openTelegramInNewBrowserTab(detailEntryUrl); }}
                       disabled={!detailEntryUrl}
                       className="flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2 text-center text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
                     >
@@ -2742,7 +2746,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </button>}
                     {managerPublic && <button
                       type="button"
-                      onClick={() => { if (managerPublic && detail.group.managerUsername) openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`); }}
+                      onClick={() => { if (managerPublic && detail.group.managerUsername) openTelegramInNewBrowserTab(`https://t.me/${detail.group.managerUsername}`); }}
                       disabled={!managerPublic || !detail.group.managerUsername}
                       className="flex min-h-[38px] w-[76px] shrink-0 items-center gap-1.5 rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-left text-slate-100 transition-colors hover:bg-[#253247] active:scale-[0.98] disabled:cursor-default"
                     >

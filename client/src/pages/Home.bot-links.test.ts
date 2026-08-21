@@ -59,6 +59,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Недостаточно средств на балансе');
     expect(source).toContain('Чтобы выбрать группу, добавьте бота администратором вашей группы.');
     expect(source).toContain('const isTelegramMiniApp = Boolean(webApp?.initData);');
+    expect(source).toContain('const openTelegramInNewBrowserTab = (url: string) => {');
+    expect(source).toContain('openTelegramInNewBrowserTab(detailEntryUrl)');
+    expect(source).toContain('openTelegramInNewBrowserTab(`https://t.me/${detail.group.managerUsername}`)');
     expect(source).not.toContain('Не на продаже');
     expect(source).not.toContain('{ownsDetail ? "На продаже" : "Купить за"}');
     expect(source).toContain('<small className="mt-0.5 text-[7px] leading-2 text-[#b7d8ce]">Купить</small>');
@@ -119,12 +122,12 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('getPublicOwnerProfile.useQuery');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
-    expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
+    expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramInNewBrowserTab(detailEntryUrl); }}');
     expect(source).toContain('disabled={!detailEntryUrl}');
     expect(source).toContain('const secondary = variant === "secondary";');
     expect(source).toContain('{lead && <>{groupUrl ? <a href={groupUrl}');
     expect(source).toContain('<span className="flex items-center justify-center gap-1"><Send className="h-3.5 w-3.5 text-white/90" /><b className="text-[12px] leading-3">Перейти</b></span>');
-    expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
+    expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramInNewBrowserTab(detailEntryUrl); }}');
     expect(source).toContain('const detailMinimumBid = placementSlot');
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
     expect(source).toContain('const hours = Math.floor(seconds / 3_600);');
@@ -296,7 +299,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('ТОП {selectedLotGroup.category === "Каналы" ? "каналов" : "чатов"}');
     expect(source).toContain('category: detail?.group.ownerOpenId === user?.openId ? "Все" : detailBoardScope?.category ?? detail?.group.category ?? "Все"');
     expect(source).toContain('subcategory: listingSubcategory, salePriceTon: normalizedSalePrice');
-    expect(source).toContain('openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`)');
+    expect(source).toContain('openTelegramInNewBrowserTab(`https://t.me/${detail.group.managerUsername}`)');
     expect(source).toContain('const rankSlotId = Number(params.get("rankSlot"));');
     expect(source).toContain('setRankSlotLinkId(rankSlotId)');
     expect(source).toContain('const MAX_RANKING_BID_GRAM = 1_000');
@@ -310,7 +313,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Залистить');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('detailHasPaidEntry');
-    expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
+    expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramInNewBrowserTab(detailEntryUrl); }}');
     expect(source).toContain('tx("Сделать вход платным", "Make entry paid")');
     expect(source).toContain('max-h-[34dvh] rounded-t-[20px]');
     expect(source).toContain('Оформление');
@@ -418,7 +421,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('tx("Размещено", "Listed")');
     expect(source).not.toContain('tx("Анонимно", "Anonymously")');
     expect(source).toContain('tx("Менеджер группы", "Community manager")');
-    expect(source).toContain('openTelegramCommunityLink(`https://t.me/${detail.group.managerUsername}`)');
+    expect(source).toContain('openTelegramInNewBrowserTab(`https://t.me/${detail.group.managerUsername}`)');
     expect(source).toContain('listingAnnouncementEnabled?: boolean;');
     expect(source).toContain('setListingAnnouncementEnabled(firstGroup?.listingAnnouncementEnabled ?? true);');
     expect(source).toContain('listingAnnouncementEnabled,');
