@@ -569,3 +569,4 @@
 - [x] Исправить production-переход кнопки «Войти через Telegram» в официальный Telegram Login и проверить возврат в сессию TG TOP.
 - [x] Исправить mobile-ошибку Telegram OAuth `redirect_uri_required` и зарегистрировать/передавать корректный адрес возврата TG TOP.
 - [x] Устранить потерю параметров OAuth при запуске Telegram Login из мобильного браузера/Telegram WebView, несмотря на корректно зарегистрированный callback.
+- [x] Исправить Invalid Telegram login state: до создания OAuth cookie перенаправлять www.tgtop.xyz на канонический tgtop.xyz, совпадающий с callback Telegram.

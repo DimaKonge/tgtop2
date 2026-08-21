@@ -41,6 +41,11 @@ export function getTelegramLoginCallbackUrl(origin: string) {
   return `${canonicalOrigin}/api/auth/telegram/callback`;
 }
 
+export function getCanonicalTelegramLoginStartUrl(origin: string, requestPath: string) {
+  if (origin !== "https://www.tgtop.xyz" || !requestPath.startsWith("/api/auth/telegram/login")) return null;
+  return `https://tgtop.xyz${requestPath}`;
+}
+
 function callbackUrl(req: Request) {
   return getTelegramLoginCallbackUrl(requestOrigin(req));
 }
@@ -129,6 +134,11 @@ function clearTelegramLoginCookies(res: Response, secure: boolean) {
 export function registerTelegramLoginRoutes(app: Express) {
   app.get("/api/auth/telegram/login", (req: Request, res: Response) => {
     try {
+      const canonicalStartUrl = getCanonicalTelegramLoginStartUrl(requestOrigin(req), req.originalUrl);
+      if (canonicalStartUrl) {
+        res.redirect(302, canonicalStartUrl);
+        return;
+      }
       const { clientId } = getTelegramLoginConfig();
       const state = base64Url(randomBytes(32));
       const verifier = base64Url(randomBytes(48));
