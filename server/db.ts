@@ -467,6 +467,15 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
     const [topic] = await db.select({ id: catalogTopics.id }).from(catalogTopics).where(and(eq(catalogTopics.category, group.category), eq(catalogTopics.code, options.subcategory))).limit(1);
     if (!topic) throw new Error("Выберите подкатегорию из доступного списка");
   }
+  const effectiveCountry = options?.country ?? group.country;
+  if (options?.country) {
+    const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, options.country)).limit(1);
+    if (!country) throw new Error("Выберите страну из доступного списка");
+  }
+  if (options?.city) {
+    const [city] = await db.select({ id: catalogCities.id }).from(catalogCities).where(and(eq(catalogCities.countryCode, effectiveCountry), eq(catalogCities.code, options.city))).limit(1);
+    if (!city) throw new Error("Выберите город из доступного списка");
+  }
   const requestedTarget = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
   if (!requestedTarget) throw new Error("Позиция рейтинга не найдена");
   const target = requestedTarget.category === "Все" && requestedTarget.subcategory === "Все"
