@@ -158,7 +158,7 @@ export const appRouter = router({
         }
         const manager = administrators.find(admin => admin.telegramUserId === input.telegramUserId);
         if (!manager) throw new Error("Выбранный аккаунт больше не является администратором этой группы");
-        const avatarUrl = await getTelegramUserAvatarUrl(manager.telegramUserId);
+        const avatarUrl = manager.avatarUrl ?? await getTelegramUserAvatarUrl(manager.telegramUserId);
         const managerWithAvatar = { ...manager, avatarUrl };
         await db.setGroupManager(ctx.user.openId, group.id, managerWithAvatar);
         return { success: true, manager: managerWithAvatar };

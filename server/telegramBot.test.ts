@@ -31,6 +31,11 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(__private__.publicGroupUrl({ id: -1002, type: "supergroup" })).toBeUndefined();
   });
 
+  it("keeps both active bots available for administrator avatar retrieval", () => {
+    expect(__private__.getActiveBotTokens("primary", "reserve")).toEqual(["primary", "reserve"]);
+    expect(__private__.getActiveBotTokens("primary", "primary")).toEqual(["primary"]);
+  });
+
   it("accepts a bounded referral payload and rejects unrelated start text", () => {
     expect(__private__.getReferralCodeFromStartText("/start ref_tg8fa43b2c1")).toBe("TG8FA43B2C1");
     expect(__private__.getReferralCodeFromStartText("/start invite-anything")).toBeUndefined();

@@ -400,7 +400,7 @@ function Avatar({
       className={`${size} grid shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#1b2430] text-sm font-semibold text-slate-200`}
     >
       {group.animatedAvatarUrl && !failed ? (
-        <video src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="h-full w-full object-cover" onError={() => setFailed(true)} />
+        <video key={group.animatedAvatarUrl} src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="h-full w-full object-cover" onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }} onError={() => setFailed(true)} />
       ) : avatarSrc && !failed ? (
         <img
           src={avatarSrc}
@@ -421,7 +421,7 @@ function FullBleedGroupArtwork({ group }: { group: Group }) {
   return (
     <span className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_20%,#253a58_0%,#111720_68%)]">
       {group.animatedAvatarUrl && !failed ? (
-        <video src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="pointer-events-none h-full w-full select-none object-cover transition-transform duration-300 group-hover:scale-105 [-webkit-touch-callout:none]" onError={() => setFailed(true)} />
+        <video key={group.animatedAvatarUrl} src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="pointer-events-none h-full w-full select-none object-cover transition-transform duration-300 group-hover:scale-105 [-webkit-touch-callout:none]" onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }} onError={() => setFailed(true)} />
       ) : avatarSrc && !failed ? (
         <img src={avatarSrc} alt="" draggable={false} className="pointer-events-none h-full w-full select-none object-cover transition-transform duration-300 group-hover:scale-105 [-webkit-touch-callout:none]" onError={() => setFailed(true)} />
       ) : (
@@ -563,7 +563,7 @@ function GroupCard({
         <>
           <>
             {animatedAvatarSrc && !imageFailed ? (
-              <video src={animatedAvatarSrc} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="pointer-events-none absolute inset-0 h-full w-full object-cover" onError={() => setImageFailed(true)} />
+              <video key={animatedAvatarSrc} src={animatedAvatarSrc} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="pointer-events-none absolute inset-0 h-full w-full object-cover" onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }} onError={() => setImageFailed(true)} />
             ) : avatarSrc && !imageFailed ? (
               <img
                 src={avatarSrc}
@@ -1451,7 +1451,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const bonusBalanceUnits = account?.user?.bonusBalance ?? user?.bonusBalance ?? 0;
   const bonus = (bonusBalanceUnits / 100).toFixed(1);
   const mainTon = Number(account?.user?.mainBalanceTon ?? 0).toFixed(2);
-  const totalBalanceLabel = `${formatTon(Number(mainTon))} TON · ${formatGram(bonusBalanceUnits)} GRAM`;
+  const totalBalanceLabel = `${formatGram(bonusBalanceUnits)} GRAM`;
   const transactions = account?.transactions ?? [];
   const accountActivity = (accountActivityQuery.data ?? []) as Array<{
     id: string;
@@ -1558,8 +1558,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         : getCategoryLabel(globalDirection, language),
     globalDirection !== "NFT" && subcategory !== "Все" ? getSubcategoryLabel(subcategory, language) : null,
   ].filter((part): part is string => Boolean(part)).join(" · ");
-  const currentTopCountry = globalDirection !== "NFT" && country !== "Все" ? getCountryLabel(country, language) : null;
+  const currentTopCountry = globalDirection !== "NFT" ? (country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)) : null;
   const currentTopCity = globalDirection !== "NFT" && city !== "Все" ? getCityLabel(country, city, language) : null;
+  const topThemeOptions = Array.from(new Set(globalDirection === "Чаты"
+    ? [...CATEGORY_SUBCATEGORIES["Чаты"]]
+    : globalDirection === "Каналы"
+      ? [...CATEGORY_SUBCATEGORIES["Каналы"]]
+      : [...CATEGORY_SUBCATEGORIES["Каналы"], ...CATEGORY_SUBCATEGORIES["Чаты"]]
+  )).filter(item => item !== "General");
   const telegramAvatar =
     typeof window !== "undefined"
       ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
@@ -1630,6 +1636,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       )
     : [];
   const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? (ownsDetail ? detail?.group ?? null : null);
+  const lotSettingsLocked = !selectedLotGroup;
   const detailRankingPreviewSlotNumber = selectedLotGroup
     ? getSimulatedRankingSlotNumber(detailTopPreviewSlots, selectedLotGroup.id, detailRankingBidAmount, selectedLotGroup.category)
     : null;
@@ -2078,10 +2085,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <button
                 onClick={() => setPage("profile")}
                 aria-label="Открыть кабинет с балансом"
-                className="hidden min-[360px]:block text-right leading-tight"
+                className="hidden min-[360px]:block rounded-lg border border-[#3f8cff]/25 bg-[#14263b] px-2.5 py-1.5 text-right leading-tight transition-colors hover:bg-[#19314d]"
               >
-                <small className="block text-[9px] uppercase tracking-[0.08em] text-slate-500">Баланс</small>
-                <b className="mt-0.5 block whitespace-nowrap text-[10px] font-semibold text-[#a6c8ff]">{totalBalanceLabel}</b>
+                <small className="block text-[8px] uppercase tracking-[0.1em] text-[#7f9ab5]">Общий баланс</small>
+                <b className="mt-0.5 block whitespace-nowrap text-[11px] font-bold text-[#b9d6ff]">{totalBalanceLabel}</b>
               </button>
             )}
             <button
@@ -2135,12 +2142,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {currentTopCity && <span className="max-w-[48px] shrink truncate text-[9px] font-medium text-[#7697c7]">· {currentTopCity}</span>}
                   <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
                 </span>
-                {globalDirection !== "NFT" && (
+                {globalDirection !== "NFT" && (<>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="flex h-7 max-w-[132px] shrink-0 items-center gap-1.5 overflow-hidden rounded-md border border-white/10 bg-white/5 px-2 text-[10px] text-slate-400 transition-colors hover:border-[#3f8cff]/35 hover:text-slate-100">
-                        <Globe2 className="h-3.5 w-3.5 shrink-0 text-[#79a7ff]" />
-                        <span className="truncate">{city !== "Все" ? getCityLabel(country, city, language) : country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)}</span>
+                      <button aria-label={tx("Фильтр географии", "Location filter")} title={city !== "Все" ? getCityLabel(country, city, language) : currentTopCountry ?? tx("Весь мир", "Worldwide")} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/10 bg-white/5 text-[#79a7ff] transition-colors hover:border-[#3f8cff]/45 hover:bg-[#3f8cff]/10">
+                        <Globe2 className="h-3.5 w-3.5" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-[min(320px,calc(100vw-24px))] rounded-xl border-white/10 bg-[#10161f] p-2.5 text-slate-100 shadow-2xl shadow-black/45">
@@ -2157,7 +2163,22 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </>}
                     </PopoverContent>
                   </Popover>
-                )}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button aria-label={tx("Тематические рубрики", "Topic categories")} className="flex h-7 max-w-[92px] shrink-0 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2 text-[10px] font-medium text-slate-400 transition-colors hover:border-[#3f8cff]/45 hover:bg-[#3f8cff]/10 hover:text-slate-100">
+                        <Filter className="h-3.5 w-3.5 shrink-0 text-[#79a7ff]" />
+                        <span className="truncate">{subcategory === "Все" ? tx("Рубрики", "Topics") : getSubcategoryLabel(subcategory, language)}</span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-[min(280px,calc(100vw-24px))] rounded-xl border-white/10 bg-[#10161f] p-2.5 text-slate-100 shadow-2xl shadow-black/45">
+                      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tx("Рубрика", "Topic")}</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button type="button" onClick={() => setSubcategory("Все")} className={`rounded-lg border px-2.5 py-2 text-left text-[10px] font-semibold transition-colors ${subcategory === "Все" ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#b8d1ff]" : "border-white/8 text-slate-400 hover:bg-white/[0.035]"}`}>{tx("Все", "All")}</button>
+                        {topThemeOptions.map(item => <button key={item} type="button" onClick={() => setSubcategory(item)} className={`rounded-lg border px-2.5 py-2 text-left text-[10px] font-semibold transition-colors ${subcategory === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#b8d1ff]" : "border-white/8 text-slate-400 hover:bg-white/[0.035]"}`}>{getSubcategoryLabel(item, language)}</button>)}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </>)}
               </div>
             </div>
             <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={globalDirection === "NFT" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={globalDirection === "NFT" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />
@@ -2459,23 +2480,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <span><b className="block text-sm text-[#b8d1ff]">{tx("Добавить сообщество", "Add community")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{tx("Канал или чат с ботом-администратором", "Channel or chat with an administrator bot")}</small></span>
               <span className="grid h-8 w-8 place-items-center rounded-xl border border-[#72a8ff]/35 bg-[#3f8cff]/12 text-[#a6c8ff]"><Plus className="h-4 w-4" /></span>
             </button>
-            {!targetSlot && mine.some(group => group.category === "Чаты") && (
-              <section className="rounded-2xl border border-[#31435f] bg-[#17212b] p-3">
-                <div className="flex items-start gap-2.5">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#3f8cff]/30 bg-[#3f8cff]/10 text-[#9bc5ff]"><Settings2 className="h-4 w-4" /></span>
-                  <span className="min-w-0"><h2 className="text-sm font-bold text-slate-100">Управление каналом / чатом</h2><p className="mt-0.5 text-[10px] leading-4 text-slate-500">Настройки подключённых площадок работают независимо от листинга и ТОПа.</p></span>
-                </div>
-                <div className="mt-3 space-y-2">
-                  {mine.filter(group => group.category === "Чаты").map(group => (
-                    <div key={group.id} className="flex items-center gap-2 rounded-xl border border-[#354966] bg-[#202b3a] p-2">
-                      <Avatar group={group} compact />
-                      <span className="min-w-0 flex-1"><b className="block truncate text-[11px] text-slate-100">{group.title}</b><small className="mt-0.5 block text-[9px] text-slate-500">Очистка системных сообщений</small></span>
-                      <button type="button" role="switch" aria-checked={Boolean(group.deleteServiceMessages)} aria-label={`Переключить очистку системных сообщений: ${group.title}`} onClick={() => toggleServiceMessagesMutation.mutate({ groupId: group.id, deleteServiceMessages: !group.deleteServiceMessages })} disabled={toggleServiceMessagesMutation.isPending} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-50 ${group.deleteServiceMessages ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${group.deleteServiceMessages ? "translate-x-6" : "translate-x-0"}`} /></button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
             {!targetSlot && mine.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 px-0.5">
                 <button type="button" onClick={() => { setMyGroupsViewMode(mode => mode === "list" ? "grid" : "list"); exitMyGroupsSelection(); }} aria-label={myGroupsViewMode === "grid" ? tx("Показать список", "Show list") : tx("Показать сетку", "Show grid")} className="inline-flex h-6 items-center gap-1.5 rounded-full border border-[#3f8cff]/45 bg-[#3f8cff]/12 px-2.5 text-[9px] font-semibold text-[#b8d1ff] transition-colors hover:bg-[#3f8cff]/20">
@@ -2909,15 +2913,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>}
 
                       <div className="mt-2 grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-xl border p-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3b80c4]/55 bg-[#213750]" : "border-[#354966] bg-[#202b3a]"}`}>
+                        <button type="button" disabled={lotSettingsLocked} onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-xl border p-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${listingAnnouncementEnabled ? "border-[#3b80c4]/55 bg-[#213750]" : "border-[#354966] bg-[#202b3a]"}`}>
                           <b className="block text-[11px] text-slate-100">Объявление</b><small className={`mt-1 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fc4ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? "Бот напишет в группе" : "Выключено"}</small>
                         </button>
-                        <button type="button" disabled={!selectedLotGroup} onClick={() => { if (!selectedLotGroup) return; setSelectedManagerTelegramUserId(managerPublic ? selectedLotGroup.managerTelegramUserId ?? null : null); setManagerSheetOpen(true); }} className="rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99] disabled:opacity-45">
+                        <button type="button" disabled={lotSettingsLocked} onClick={() => { if (!selectedLotGroup) return; setSelectedManagerTelegramUserId(managerPublic ? selectedLotGroup.managerTelegramUserId ?? null : null); setManagerSheetOpen(true); }} className="rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-35">
                           <b className="block text-[11px] text-slate-100">Менеджер</b><small className="mt-1 block truncate text-[10px] text-[#8fc4ff]">{managerPublic && selectedLotGroup?.managerName ? selectedLotGroup.managerName : "Анонимно"}</small>
                         </button>
                       </div>
 
-                      <div className="mt-2 space-y-1 border-t border-white/[0.06] pt-2">
+                      <div aria-disabled={lotSettingsLocked} className={`mt-2 space-y-1 border-t border-white/[0.06] pt-2 ${lotSettingsLocked ? "pointer-events-none opacity-35 grayscale" : ""}`}>
                         <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1"><span><b className="block text-[11px] text-slate-200">Выставить на продажу</b><small className="block text-[10px] text-slate-500">{isListingForSale ? "Цена видна покупателям" : "Без продажи"}</small></span><button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#3390ec] bg-[#3390ec]" : "border-white/15 bg-[#2b3648]"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} /></button></div>
                         {isListingForSale && <div className="relative"><Input value={salePriceTon} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }} placeholder="Цена продажи" className="h-9 border-[#354966] bg-[#202b3a] pr-12 text-xs" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-slate-500">GRAM</span></div>}
                         <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1"><span><b className="flex items-center gap-1 text-[11px] text-slate-200"><Star className="h-3.5 w-3.5 fill-[#ffd766] text-[#ffd766]" />Вознаграждения</b><small className="block text-[10px] text-slate-500">{rewardCampaignEnabled ? "Включены" : "Выключены"}</small></span><button type="button" role="switch" aria-checked={rewardCampaignEnabled} onClick={() => setRewardCampaignEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${rewardCampaignEnabled ? "border-[#3390ec] bg-[#3390ec]" : "border-white/15 bg-[#2b3648]"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${rewardCampaignEnabled ? "translate-x-6" : "translate-x-0"}`} /></button></div>
@@ -2926,14 +2930,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </section>
                   )}
                   {placementSlot && (
-                    <section className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3">
+                    <section aria-disabled={lotSettingsLocked} className={`mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3 ${lotSettingsLocked ? "opacity-35 grayscale" : ""}`}>
                       <div className="flex items-center justify-between">
                         <span><h2 className="text-sm font-bold text-slate-100">{selectedSlot ? "Текущая цена за лот" : "Ставка для размещения"}</h2><small className="mt-0.5 block text-[10px] text-slate-500">Место #{placementSlot.slotNumber}</small></span>
                         <b className="text-sm text-[#8fc4ff]">{formatTon(selectedSlot ? selectedSlot.bidAmount / 1000 : detailMinimumBid ?? 0.1)} GRAM</b>
                       </div>
                       <div className="mt-3 flex h-12 items-center rounded-xl border border-[#354966] bg-[#101a2d] p-1.5">
                         <button type="button" disabled={!selectedLotGroup} onClick={() => setDetailBidInput(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label="Уменьшить ставку" className="grid h-9 w-12 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.07] disabled:opacity-35"><Minus className="h-5 w-5" /></button>
-                        <Input value={detailBidInput} readOnly={!selectedLotGroup} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setDetailBidInput(value); }} onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))} aria-label="Новая ставка в GRAM" className="h-9 min-w-0 flex-1 rounded-lg border-0 bg-[#17212b] px-1 text-center text-lg font-bold text-white focus-visible:ring-0" />
+                        <Input value={detailBidInput} disabled={lotSettingsLocked} readOnly={lotSettingsLocked} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setDetailBidInput(value); }} onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))} aria-label="Новая ставка в GRAM" className="h-9 min-w-0 flex-1 rounded-lg border-0 bg-[#17212b] px-1 text-center text-lg font-bold text-white focus-visible:ring-0" />
                         <button type="button" disabled={!selectedLotGroup} onClick={() => setDetailBidInput(formatTon(Math.min(MAX_RANKING_BID_GRAM, detailRankingBidAmount + 0.1)))} aria-label="Увеличить ставку" className="grid h-9 w-12 place-items-center rounded-lg text-[#8fc4ff] transition-colors hover:bg-[#3f8cff]/12 disabled:opacity-35"><Plus className="h-5 w-5" /></button>
                       </div>
                       <div className="mt-2 rounded-xl border border-[#31435f] bg-[#202b3a] px-3 pb-2 pt-1"><Slider disabled={!selectedLotGroup} value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-[#0f1825] [&_[data-slot=slider-range]]:!bg-[#3390ec] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#c8e1ff] [&_[data-slot=slider-thumb]]:!bg-[#3390ec]" /><div className="mt-1 flex justify-between text-[9px] font-medium text-slate-500"><span>от {formatTon(detailMinimumBid)} GRAM</span><span>шаг 0.1</span><span>до {formatTon(MAX_RANKING_SLIDER_GRAM)}</span></div></div>
@@ -3445,7 +3449,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   const selected = managerPublic && admin.telegramUserId === selectedManagerTelegramUserId;
                   return (
                     <button key={admin.telegramUserId} type="button" onClick={() => { setSelectedManagerTelegramUserId(admin.telegramUserId); setManagerPublic(true); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${selected ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">{admin.name.slice(0, 1).toUpperCase()}</span>
+                      <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-300">{admin.avatarUrl ? <img src={admin.avatarUrl} alt="" className="h-full w-full object-cover" /> : admin.name.slice(0, 1).toUpperCase()}</span>
                       <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{admin.name}</b>{admin.username && <small className="mt-0.5 block truncate text-[10px] text-slate-500">@{admin.username}</small>}</span>
                       <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
                     </button>

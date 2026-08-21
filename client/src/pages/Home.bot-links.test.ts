@@ -28,7 +28,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('h-[136px] border-white/10 bg-[#111720] p-3');
     expect(source).toContain('h-[88px] border-white/8 bg-[#111720] p-2');
     expect(source).toContain('max-w-full truncate');
-    expect(source).toContain('max-w-[132px]');
+    expect(source).not.toContain('max-w-[132px]');
+    expect(source).toContain('max-w-[92px]');
     expect(source).toContain('lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"');
     expect(source).toMatch(/<GroupCard\s+key=\{group\.id\}\s+group=\{group\}\s+variant="list"/);
     expect(source).toContain('В TG TOP пока нет площадок');
@@ -83,6 +84,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('animatedAvatarUrl?: string | null;');
     expect(source).toContain('const animatedAvatarSrc = group?.animatedAvatarUrl ?? null;');
     expect(source).toContain('poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto"');
+    expect(source).toContain('onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }}');
     expect(source).toContain('onError={() => setImageFailed(true)}');
     expect(source).toContain('detail.group.managerAvatarUrl');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
@@ -181,8 +183,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('label: "Мой кабинет"');
     expect(source).toContain('aria-label={item.label}');
     expect(source).toContain('<span className="sr-only">{item.label}</span>');
-    expect(source).toContain('const totalBalanceLabel = `${formatTon(Number(mainTon))} TON · ${formatGram(bonusBalanceUnits)} GRAM`;');
-    expect(source).toContain('>Баланс</small>');
+    expect(source).toContain('const totalBalanceLabel = `${formatGram(bonusBalanceUnits)} GRAM`;');
+    expect(source).toContain('>Общий баланс</small>');
+    expect(source).toContain('const topThemeOptions = Array.from(new Set(globalDirection === "Чаты"');
+    expect(source).toContain('aria-label={tx("Фильтр географии", "Location filter")}');
+    expect(source).toContain('aria-label={tx("Тематические рубрики", "Topic categories")}');
     expect(source).toContain('page === "giveaways"');
     expect(source).not.toContain('page === "earn"');
     expect(source).toContain('openGiveaways.useQuery');
@@ -234,6 +239,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('isEnglish ? "In catalog" : "В каталоге"');
     expect(source).not.toContain('isEnglish ? "Unlisted" : "Не в листинге"');
     expect(source).toContain('ownsDetail && detail.group.category === "Чаты"');
+    expect(source).toContain('const lotSettingsLocked = !selectedLotGroup;');
+    expect(source).toContain('aria-disabled={lotSettingsLocked}');
+    expect(source).not.toContain('Управление каналом / чатом');
     expect(source).toContain('role="switch"');
     expect(source).toContain('translate-x-6');
     expect(source).toContain('trpc.tgTop.saveMyGroupsLayout.useMutation');
@@ -339,7 +347,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const currentTopTitle = [');
     expect(source).toContain('tx("Все сообщества", "All communities")');
     expect(source).toContain('getSubcategoryLabel(subcategory, language)');
-    expect(source).toContain('const currentTopCountry = globalDirection !== "NFT" && country !== "Все"');
+    expect(source).toContain('const currentTopCountry = globalDirection !== "NFT" ? (country === "Все" ? tx("Весь мир", "Worldwide")');
     expect(source).toContain('const currentTopCity = globalDirection !== "NFT" && city !== "Все"');
     expect(source).toContain('max-h-[264px] space-y-1 overflow-y-auto pr-1');
     expect(source).toContain('tx("Каталог групп", "Community catalog")');
@@ -406,10 +414,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Параметры публикации", "Publication settings")');
     expect(source).not.toContain('tx("Обновить Top", "Refresh Top")');
     expect(source).toContain('const groupAdministratorsQuery = trpc.tgTop.getGroupAdministrators.useQuery');
-    expect(source).toContain('Управление каналом / чатом');
-    expect(source).toContain('Настройки подключённых площадок работают независимо от листинга и ТОПа.');
-    expect(source).toContain('mine.filter(group => group.category === "Чаты").map(group =>');
-    expect(source).toContain('Переключить очистку системных сообщений: ${group.title}');
+    expect(source).not.toContain('Управление каналом / чатом');
+    expect(source).not.toContain('Настройки подключённых площадок работают независимо от листинга и ТОПа.');
+    expect(source).toContain('ownsDetail && detail.group.category === "Чаты"');
+    expect(source).toContain('Переключить автоочистку чата');
     expect(source).toContain('const setGroupManager = trpc.tgTop.setGroupManager.useMutation');
     expect(source).toContain('tx("Менеджер группы", "Community manager")');
     expect(source).toContain('setManagerSheetOpen(true)');

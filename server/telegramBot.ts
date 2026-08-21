@@ -59,6 +59,7 @@ type TelegramUpdate = {
 };
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const reserveBotToken = process.env.TELEGRAM_RESERVE_BOT_TOKEN;
 const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.xyz";
 const pollTimeoutSeconds = 30;
 
@@ -86,21 +87,30 @@ export function getReferralCodeFromStartText(text?: string): string | undefined 
   const match = text?.trim().match(/^\/start\s+ref_([A-Za-z0-9]{6,32})$/i);
   return match?.[1]?.toUpperCase();
 }
-function getApiUrl(method: string): string {
-  if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
-  return `https://api.telegram.org/bot${botToken}/${method}`;
+function getApiUrl(method: string, token = botToken): string {
+  if (!token) throw new Error("Telegram bot token is not configured");
+  return `https://api.telegram.org/bot${token}/${method}`;
 }
 
 async function telegramCall<T>(method: string, payload: Record<string, unknown> = {}): Promise<T> {
-  const response = await axios.post<{ ok: boolean; result: T; description?: string }>(getApiUrl(method), payload, { timeout: 40_000 });
+  return telegramCallWithToken<T>(botToken, method, payload);
+}
+
+async function telegramCallWithToken<T>(token: string | undefined, method: string, payload: Record<string, unknown> = {}): Promise<T> {
+  const response = await axios.post<{ ok: boolean; result: T; description?: string }>(getApiUrl(method, token), payload, { timeout: 40_000 });
   if (!response.data.ok) throw new Error(response.data.description ?? `Telegram API ${method} failed`);
   return response.data.result;
+}
+
+function getActiveBotTokens(primary = botToken, reserve = reserveBotToken): string[] {
+  return Array.from(new Set([primary, reserve].filter((token): token is string => Boolean(token))));
 }
 
 export type TelegramGroupAdministrator = {
   telegramUserId: string;
   username: string | null;
   name: string;
+  avatarUrl: string | null;
 };
 
 type TelegramFile = { file_path?: string };
@@ -108,28 +118,35 @@ type TelegramUserProfilePhotos = { photos: Array<Array<{ file_id: string }>> };
 
 export async function getTelegramGroupAdministrators(chatId: string): Promise<TelegramGroupAdministrator[]> {
   const administrators = await telegramCall<ChatMember[]>("getChatAdministrators", { chat_id: chatId });
-  return administrators
+  const eligibleAdministrators = administrators
     .filter(member => isBotAdmin(member.status) && !member.user.is_bot)
     .map(member => ({
       telegramUserId: String(member.user.id),
       username: member.user.username ?? null,
       name: [member.user.first_name, member.user.last_name].filter(Boolean).join(" ") || member.user.username || `ID ${member.user.id}`,
     }));
+  return await Promise.all(eligibleAdministrators.map(async administrator => ({
+    ...administrator,
+    avatarUrl: await getTelegramUserAvatarUrl(administrator.telegramUserId),
+  })));
 }
 
 export async function getTelegramUserAvatarUrl(telegramUserId: string): Promise<string | null> {
-  try {
-    const photos = await telegramCall<TelegramUserProfilePhotos>("getUserProfilePhotos", { user_id: Number(telegramUserId), limit: 1 });
-    const fileId = photos.photos[0]?.at(-1)?.file_id;
-    if (!fileId || !botToken) return null;
-    const file = await telegramCall<TelegramFile>("getFile", { file_id: fileId });
-    if (!file.file_path) return null;
-    const response = await axios.get<ArrayBuffer>(`https://api.telegram.org/file/bot${botToken}/${file.file_path}`, { responseType: "arraybuffer", timeout: 15_000 });
-    const stored = await storagePut(`telegram/managers/${telegramUserId}.jpg`, Buffer.from(response.data), response.headers["content-type"] ?? "image/jpeg");
-    return stored.url;
-  } catch {
-    return null;
+  for (const token of getActiveBotTokens()) {
+    try {
+      const photos = await telegramCallWithToken<TelegramUserProfilePhotos>(token, "getUserProfilePhotos", { user_id: Number(telegramUserId), limit: 1 });
+      const fileId = photos.photos[0]?.at(-1)?.file_id;
+      if (!fileId) continue;
+      const file = await telegramCallWithToken<TelegramFile>(token, "getFile", { file_id: fileId });
+      if (!file.file_path) continue;
+      const response = await axios.get<ArrayBuffer>(`https://api.telegram.org/file/bot${token}/${file.file_path}`, { responseType: "arraybuffer", timeout: 15_000 });
+      const stored = await storagePut(`telegram/managers/${telegramUserId}.jpg`, Buffer.from(response.data), response.headers["content-type"] ?? "image/jpeg");
+      return stored.url;
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 async function getMemberCount(chatId: number): Promise<number> {
@@ -408,5 +425,5 @@ export async function runTelegramBot(botLabel = "@TG_TOPBOT"): Promise<void> {
   }
 }
 
-export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, getTelegramEventKey, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, isTelegramBotEntrypoint, publicGroupUrl };
+export const __private__ = { buildOnboardingConfirmation, catalogCategory, getActiveBotTokens, getReferralCodeFromStartText, getTelegramEventKey, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, isTelegramBotEntrypoint, publicGroupUrl };
 if (isTelegramBotEntrypoint(process.argv[1])) void runTelegramBot();

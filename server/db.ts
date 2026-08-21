@@ -1010,6 +1010,7 @@ export async function getPublicSearchGroupByUsername(username: string) {
     membersCount: group.membersCount,
     category: group.category,
     country: group.country,
+    subcategory: group.subcategory,
     managerName: group.managerPublic ? group.managerName : null,
     managerUsername: group.managerPublic ? group.managerUsername : null,
     managerAvatarUrl: group.managerPublic ? group.managerAvatarUrl : null,
