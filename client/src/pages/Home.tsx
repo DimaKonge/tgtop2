@@ -3,6 +3,7 @@ import { closestCenter, DndContext, DragOverlay, KeyboardSensor, PointerSensor, 
 import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -515,7 +516,7 @@ function GroupCard({
   const rankingPlacement = variant !== "list";
   const cardStyle = lead
     ? "h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[46vh] sm:p-6"
-          : variant === "secondary"
+    : variant === "secondary"
       ? "h-[136px] border-white/10 bg-[#111720] p-3 sm:h-[168px] sm:p-4"
       : compact
         ? "h-[88px] border-white/8 bg-[#111720] p-2 sm:h-[124px]"
@@ -849,6 +850,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [audience, setAudience] = useState<Audience>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [topSearchQuery, setTopSearchQuery] = useState("");
+  useEffect(() => {
+    if (!isAuthenticated && page !== "top" && page !== "details" && page !== "owner") {
+      setPage("top");
+    }
+  }, [isAuthenticated, page]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
   const language = getRussianLanguage();
@@ -1715,6 +1721,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setPage("owner");
   };
   const openMine = (slot?: Slot) => {
+    if (!isAuthenticated) {
+      startLogin();
+      return;
+    }
     if (slot) {
       const nextBid = getMinimumRankingBidGram(slot);
       setAmount(formatTon(nextBid));
@@ -2050,30 +2060,40 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             >
               <Settings2 className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => setPage("profile")}
-              className="flex items-center gap-2"
-            >
-              <span className="hidden text-right sm:block">
-                <b className="block text-xs">{user?.name ?? "Telegram user"}</b>
-                <small className="block text-[10px] text-slate-500">
-                  {bonus} GRAM
-                </small>
-              </span>
-              <span className="grid h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold">
-                <>
-                  {(user?.avatarUrl ?? telegramAvatar) ? (
-                    <img
-                      src={user?.avatarUrl ?? telegramAvatar}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    (user?.name?.slice(0, 1).toUpperCase() ?? "T")
-                  )}
-                </>
-              </span>
-            </button>
+            {isAuthenticated ? (
+              <button
+                onClick={() => setPage("profile")}
+                className="flex items-center gap-2"
+              >
+                <span className="hidden text-right sm:block">
+                  <b className="block text-xs">{user?.name ?? "Telegram user"}</b>
+                  <small className="block text-[10px] text-slate-500">
+                    {bonus} GRAM
+                  </small>
+                </span>
+                <span className="grid h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold">
+                  <>
+                    {(user?.avatarUrl ?? telegramAvatar) ? (
+                      <img
+                        src={user?.avatarUrl ?? telegramAvatar}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      (user?.name?.slice(0, 1).toUpperCase() ?? "T")
+                    )}
+                  </>
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={() => startLogin()}
+                className="flex items-center gap-2 rounded-xl border border-[#3f8cff]/40 bg-[#3f8cff]/15 px-3.5 py-1.5 text-xs font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/25"
+              >
+                <Send className="h-3.5 w-3.5 text-[#72a8ff]" />
+                <span>Подключить Telegram</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -3285,29 +3305,41 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/8 bg-[#0b0f14]/95 backdrop-blur">
-        <div className="mx-auto grid max-w-3xl grid-cols-4 px-3 py-2">
-          {(
-            [
-              { key: "top", label: "ТОП", icon: Trophy },
-              { key: "giveaways", label: "Розыгрыши", icon: Star },
-              { key: "mine", label: "Рабочее пространство", icon: LayoutGrid },
-              { key: "profile", label: "Мой кабинет", icon: UserRound },
-            ] as const
-          ).map(item => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.key}
-                onClick={() =>
-                  item.key === "mine" ? openMine() : setPage(item.key)
-                }
-                className={`flex flex-col items-center gap-1 py-1 text-[10px] ${page === item.key ? "text-[#72a8ff]" : "text-slate-500"}`}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </button>
-            );
-          })}
+        <div className="mx-auto flex max-w-3xl items-center justify-center px-3 py-2">
+          {isAuthenticated ? (
+            <div className="grid w-full grid-cols-4">
+              {(
+                [
+                  { key: "top", label: "ТОП", icon: Trophy },
+                  { key: "giveaways", label: "Розыгрыши", icon: Star },
+                  { key: "mine", label: "Рабочее пространство", icon: LayoutGrid },
+                  { key: "profile", label: "Мой кабинет", icon: UserRound },
+                ] as const
+              ).map(item => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() =>
+                      item.key === "mine" ? openMine() : setPage(item.key)
+                    }
+                    className={`flex flex-col items-center gap-1 py-1 text-[10px] ${page === item.key ? "text-[#72a8ff]" : "text-slate-500"}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <button
+              onClick={() => setPage("top")}
+              className="flex flex-col items-center gap-1 py-1 text-[10px] text-[#72a8ff]"
+            >
+              <Trophy className="h-4 w-4" />
+              ТОП
+            </button>
+          )}
         </div>
       </nav>
 
