@@ -1213,7 +1213,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const setModeratorRole = trpc.tgTop.setModeratorRole.useMutation({
     onSuccess: () => {
-      toast.success("Права модератора обновлены");
+      toast.success("Доступ к админ-панели обновлён");
       setModeratorUsernameDraft("");
       void utils.tgTop.getModerators.invalidate();
       void utils.tgTop.getModerationAccess.invalidate();
@@ -3229,14 +3229,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
             {moderationAccess.canManageModerators && (
               <section className="rounded-2xl border border-white/8 bg-[#202b3a] p-4">
-                <h2 className="text-sm font-semibold text-slate-100">Выбранные модераторы</h2>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Модератор видит эту ячейку и может вручную снять лот с ТОПа.</p>
+                <h2 className="text-sm font-semibold text-slate-100">Доступ к админ-панели</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Укажите @username: пользователь получит полный доступ к лотам, странам, городам и рубрикам. Для выдачи доступа он должен хотя бы один раз войти в TG TOP через Telegram.</p>
                 <div className="mt-3 flex gap-2">
                   <Input value={moderatorUsernameDraft} onChange={event => setModeratorUsernameDraft(event.target.value)} placeholder="@username" className="h-10 min-w-0 flex-1 border-white/10 bg-[#17212b] text-xs text-slate-100 placeholder:text-slate-600" />
-                  <button onClick={() => moderatorUsernameDraft.trim().length >= 2 && setModeratorRole.mutate({ telegramUsername: moderatorUsernameDraft, role: "moderator" })} disabled={moderatorUsernameDraft.trim().length < 2 || setModeratorRole.isPending} className="rounded-xl border border-[#3390ec]/35 bg-[#3390ec]/10 px-3 text-[11px] font-medium text-[#b8d7ff] disabled:opacity-40">Добавить</button>
+                  <button onClick={() => moderatorUsernameDraft.trim().length >= 2 && setModeratorRole.mutate({ telegramUsername: moderatorUsernameDraft, role: "moderator" })} disabled={moderatorUsernameDraft.trim().length < 2 || setModeratorRole.isPending} className="rounded-xl border border-[#3390ec]/35 bg-[#3390ec]/10 px-3 text-[11px] font-medium text-[#b8d7ff] disabled:opacity-40">Дать доступ</button>
                 </div>
                 <div className="mt-3 space-y-1.5">
-                  {moderators.map(moderator => <div key={moderator.openId} className="flex items-center justify-between gap-3 rounded-xl bg-[#17212b] px-3 py-2.5"><span className="min-w-0"><b className="block truncate text-[11px] text-slate-200">{moderator.telegramUsername ? `@${moderator.telegramUsername}` : moderator.name ?? moderator.openId}</b><small className="text-[9px] text-slate-500">{moderator.role === "admin" ? "Главный администратор" : "Модератор"}</small></span>{moderator.role === "moderator" && moderator.telegramUsername && <button onClick={() => setModeratorRole.mutate({ telegramUsername: moderator.telegramUsername!, role: "user" })} className="text-[10px] text-red-200">Убрать</button>}</div>)}
+                  {moderators.map(moderator => <div key={moderator.openId} className="flex items-center justify-between gap-3 rounded-xl bg-[#17212b] px-3 py-2.5"><span className="min-w-0"><b className="block truncate text-[11px] text-slate-200">{moderator.telegramUsername ? `@${moderator.telegramUsername}` : moderator.name ?? moderator.openId}</b><small className="text-[9px] text-slate-500">{moderator.role === "admin" ? "Главный администратор" : "Доступ к админ-панели"}</small></span>{moderator.role === "moderator" && moderator.telegramUsername && <button onClick={() => setModeratorRole.mutate({ telegramUsername: moderator.telegramUsername!, role: "user" })} className="text-[10px] text-red-200">Забрать доступ</button>}</div>)}
                 </div>
               </section>
             )}

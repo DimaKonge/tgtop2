@@ -14,5 +14,9 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain("openTelegramInNewBrowserTab(groupUrl)");
     expect(source).toContain('action: "review", reason: moderationReasonDraft.trim()');
     expect(source).toContain("Владельцу отправлена причина");
+    expect(source).toContain("Доступ к админ-панели");
+    expect(source).toContain("Дать доступ");
+    expect(source).toContain("Забрать доступ");
+    expect(source).toContain('setModeratorRole.mutate({ telegramUsername: moderatorUsernameDraft, role: "moderator" })');
   });
 });
