@@ -26,6 +26,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5');
     expect(source).toContain('sm:h-[46vh]');
     expect(source).toContain('h-[136px] border-white/10 bg-[#111720] p-3');
+    expect(source).toContain('{secondary ? getCommunityAccessLabel(group, language) : <>');
     expect(source).toContain('h-[88px] border-white/8 bg-[#111720] p-2');
     expect(source).toContain('max-w-full truncate');
     expect(source).not.toContain('max-w-[132px]');
@@ -150,7 +151,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const detailHeaderAddress = detail?.group.username ? `@${detail.group.username}` : tx("Приватный", "Private");');
     expect(source).toContain('const detailHeaderPath = detail');
     expect(source).toContain('getCountryLabel(detailBoardCountry, language)');
-    expect(source).toContain('className="flex h-10 w-full min-w-0 items-center gap-1.5 rounded-lg px-1');
+    expect(source).toContain('className="flex h-11 w-full min-w-0 items-center gap-2 rounded-lg px-1.5');
+    expect(source).toContain('<p className="mt-1.5 truncate text-[11px] font-medium text-[#92b8ed]">{detailHeaderAddress}</p>');
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('Рабочее пространство');
     expect(source).toContain('const getRussianLanguage = (): Language => "ru";');

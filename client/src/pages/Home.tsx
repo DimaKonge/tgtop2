@@ -589,7 +589,7 @@ function GroupCard({
               className={`mt-1 block max-w-full truncate text-xs text-slate-200/80 ${compact ? "hidden" : ""}`}
             >
               {lead && <>{groupUrl ? <a href={groupUrl} onClick={event => { event.preventDefault(); event.stopPropagation(); openTelegramCommunityLink(groupUrl); }} className="no-underline hover:text-white">{getCommunityAccessLabel(group, language)}</a> : getCommunityAccessLabel(group, language)} ·{" "}</>}
-              {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
+              {secondary ? getCommunityAccessLabel(group, language) : <>{n(group.membersCount, language)} {language === "en" ? "members" : "участников"}</>}
             </small>
           </span>
         </>
@@ -2719,14 +2719,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <>
                 <button
                   onClick={() => setPage(detailReturnPage)}
-                  className="flex h-10 w-full min-w-0 items-center gap-1.5 rounded-lg px-1 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
+                  className="flex h-11 w-full min-w-0 items-center gap-2 rounded-lg px-1.5 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
                 >
-                  <ArrowLeft className="h-4 w-4 shrink-0 text-slate-400" />
-                  <b className="shrink-0 text-xs font-medium text-slate-300">{ui.back}</b>
+                  <ArrowLeft className="h-5 w-5 shrink-0 text-slate-300" />
+                  <b className="shrink-0 text-sm font-medium text-slate-200">{ui.back}</b>
                   <span className="shrink-0 text-[10px] text-slate-600">·</span>
-                  <span className="max-w-[84px] shrink truncate text-[10px] font-medium text-[#92b8ed]">{detailHeaderAddress}</span>
-                  <span className="shrink-0 text-[10px] text-slate-600">·</span>
-                  <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-slate-500">{detailHeaderPath}</span>
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-slate-500">{detailHeaderPath}</span>
                 </button>
                 <div className="relative flex flex-col overflow-hidden rounded-[22px] border border-[#31435f] bg-[#17212b] p-3">
                   <div className="flex items-center justify-between gap-2">
@@ -2750,6 +2748,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <h1 className="mt-1 truncate text-[21px] font-bold tracking-tight text-white">{detail.group.title}</h1>
                       <p className="mt-1 flex items-center gap-1 text-xs font-medium text-slate-400"><span className="text-sm">▣</span>{detail.group.inviteLink && !detail.group.username ? "Приватное сообщество" : detail.group.category === "Каналы" ? "Канал" : "Группа"}</p>
                       {detail.group.description ? <p className="mt-2 line-clamp-4 text-xs leading-4 text-slate-300">{detail.group.description}</p> : <p className="mt-2 text-xs leading-4 text-slate-500">Описание сообщества не добавлено.</p>}
+                      <p className="mt-1.5 truncate text-[11px] font-medium text-[#92b8ed]">{detailHeaderAddress}</p>
                     </div>
                   </div>
 
