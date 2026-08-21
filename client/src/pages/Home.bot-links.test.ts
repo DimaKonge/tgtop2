@@ -122,6 +122,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('Record a TON bid without payment');
     expect(source).toContain('Добавить свою группу в список');
     expect(source).toContain('Добавить свою группу');
+    expect(source).not.toContain('Добавьте первую группу через личную папку.</small>');
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('getPublicOwnerProfile.useQuery');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
@@ -146,6 +147,10 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('+{formatGram(group.rewardAmount)}');
     expect(source).toContain('const getCommunityAccessLabel = (group: Pick<Group, "username">, language: Language)');
     expect(source).toContain('group.username ? `@${group.username}` : language === "en" ? "Private" : "Приватный"');
+    expect(source).toContain('const detailHeaderAddress = detail?.group.username ? `@${detail.group.username}` : tx("Приватный", "Private");');
+    expect(source).toContain('const detailHeaderPath = detail');
+    expect(source).toContain('getCountryLabel(detailBoardCountry, language)');
+    expect(source).toContain('className="flex h-10 w-full min-w-0 items-center gap-1.5 rounded-lg px-1');
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('Рабочее пространство');
     expect(source).toContain('const getRussianLanguage = (): Language => "ru";');

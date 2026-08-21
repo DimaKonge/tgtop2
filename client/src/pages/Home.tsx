@@ -1622,6 +1622,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         detailBoardSubcategory !== "Все" ? getSubcategoryLabel(detailBoardSubcategory, language) : null,
       ].filter((part): part is string => Boolean(part)).join(" · ")
     : "";
+  const detailHeaderPath = detail
+    ? [
+        getCategoryLabel((detailBoardCategory === "Все" ? detail.group.category : detailBoardCategory) as "Каналы" | "Чаты", language),
+        getCountryLabel(detailBoardCountry, language),
+        detailBoardSubcategory !== "Все" ? getSubcategoryLabel(detailBoardSubcategory, language) : null,
+      ].filter((part): part is string => Boolean(part)).join(" · ")
+    : "";
+  const detailHeaderAddress = detail?.group.username ? `@${detail.group.username}` : tx("Приватный", "Private");
   const outbidCandidates = targetSlot
     ? mine.filter(group =>
         (targetSlot.category === "Все" || targetSlot.category === group.category)
@@ -2344,7 +2352,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </span>
                     <span className="min-w-0 flex-1">
                       <b className="block truncate text-xs font-medium text-slate-200">{topSearchQuery ? tx("Ничего не найдено", "Nothing found") : tx("Добавить свою группу", "Add your community")}</b>
-                      <small className="mt-0.5 block truncate text-[11px] text-slate-500">{topSearchQuery ? tx("Измените запрос или добавьте свою площадку", "Change the query or add your community") : ui.globalEmptyBody}</small>
                     </span>
                     <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
                   </button>
@@ -2713,10 +2720,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <>
                 <button
                   onClick={() => setPage(detailReturnPage)}
-                  className="flex items-center gap-1 text-xs text-slate-400"
+                  className="flex h-10 w-full min-w-0 items-center gap-1.5 rounded-lg px-1 text-left transition-colors hover:bg-white/[0.035] active:bg-white/[0.06]"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  {ui.back}
+                  <ArrowLeft className="h-4 w-4 shrink-0 text-slate-400" />
+                  <b className="shrink-0 text-xs font-medium text-slate-300">{ui.back}</b>
+                  <span className="shrink-0 text-[10px] text-slate-600">·</span>
+                  <span className="max-w-[84px] shrink truncate text-[10px] font-medium text-[#92b8ed]">{detailHeaderAddress}</span>
+                  <span className="shrink-0 text-[10px] text-slate-600">·</span>
+                  <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-slate-500">{detailHeaderPath}</span>
                 </button>
                 <div className="relative flex flex-col overflow-hidden rounded-[22px] border border-[#31435f] bg-[#17212b] p-3">
                   <div className="flex items-center justify-between gap-2">
