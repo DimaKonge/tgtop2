@@ -1,4 +1,5 @@
 export const GROUP_TRANSFER_WINDOW_MS = 21 * 24 * 60 * 60 * 1000;
+export const INSUFFICIENT_GRAM_BALANCE_MESSAGE = "Недостаточно средств на балансе";
 
 export type ProtectedDealStatus =
   | "open"
@@ -11,6 +12,13 @@ export type ProtectedDealStatus =
 
 export function getTransferDeadline(fundedAt: Date) {
   return new Date(fundedAt.getTime() + GROUP_TRANSFER_WINDOW_MS);
+}
+
+export function hasSufficientGramBalance(availableUnits: number, requiredUnits: number) {
+  return Number.isSafeInteger(availableUnits)
+    && Number.isSafeInteger(requiredUnits)
+    && requiredUnits > 0
+    && availableUnits >= requiredUnits;
 }
 
 export function canBuyerCancel(status: ProtectedDealStatus) {

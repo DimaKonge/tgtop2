@@ -355,14 +355,16 @@ const getCommunityAccessLabel = (group: Pick<Group, "username">, language: Langu
   group.username ? `@${group.username}` : language === "en" ? "Private" : "Приватный";
 const openTelegramCommunityLink = (url: string) => {
   const webApp = window.Telegram?.WebApp as unknown as {
+    initData?: string;
     openTelegramLink?: (target: string) => void;
     openLink?: (target: string) => void;
   } | undefined;
-  if (/^https:\/\/t\.me\//i.test(url) && webApp?.openTelegramLink) {
+  const isTelegramMiniApp = Boolean(webApp?.initData);
+  if (isTelegramMiniApp && /^https:\/\/t\.me\//i.test(url) && webApp?.openTelegramLink) {
     webApp.openTelegramLink(url);
     return;
   }
-  if (webApp?.openLink) {
+  if (isTelegramMiniApp && webApp?.openLink) {
     webApp.openLink(url);
     return;
   }
@@ -1656,6 +1658,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const detailSalePriceUnits = parseGramInput(detailSalePrice);
   const detailSaleEnabled = Boolean((ownsDetail ? isListingForSale : detail?.group.listingType === "sale") && (detailSalePriceUnits ?? 0) > 0);
   const detailCanBeBought = Boolean(!ownsDetail && detailSaleEnabled);
+  const detailHasEnoughBalanceToBuy = Boolean(detailSalePriceUnits && bonusBalanceUnits >= detailSalePriceUnits);
   const subscriptionReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.subscriptionAmount ?? 0 : 0;
   const inviteReward = !ownsDetail && detail?.group.category === "Каналы" ? detail.group.reward?.inviteAmount ?? 0 : 0;
   const manualAddReward = !ownsDetail && detail?.group.category === "Чаты" ? detail.group.reward?.manualAddAmount ?? 0 : 0;
@@ -2728,7 +2731,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     {detailSaleEnabled && <button
                       type="button"
                       onClick={() => {
-                        if (detailCanBeBought) createProtectedGroupDeal.mutate({ groupId: detail.group.id });
+                        if (!detailCanBeBought) return;
+                        if (!detailHasEnoughBalanceToBuy) return toast.error("Недостаточно средств на балансе");
+                        createProtectedGroupDeal.mutate({ groupId: detail.group.id });
                       }}
                       disabled={!detailCanBeBought}
                       className="flex min-h-[38px] w-[76px] shrink-0 flex-col items-center justify-center rounded-xl border border-[#386a5f] bg-[#203a35] px-1.5 text-center text-white transition-colors hover:bg-[#26443e] active:scale-[0.98] disabled:cursor-default"
@@ -3403,7 +3408,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : "Подключена к TG TOP"}</small></span>
                 <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${selected ? "bg-[#3390ec] text-white" : "border border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
               </button>;
-            }) : <p className="rounded-xl border border-dashed border-white/12 px-3 py-5 text-center text-xs leading-5 text-slate-500">Нет других подключённых групп для этой позиции.</p>}
+            }) : <p className="rounded-xl border border-dashed border-white/12 px-3 py-5 text-center text-xs leading-5 text-slate-500">Чтобы выбрать группу, добавьте бота администратором вашей группы.</p>}
           </div>
         </SheetContent>
       </Sheet>

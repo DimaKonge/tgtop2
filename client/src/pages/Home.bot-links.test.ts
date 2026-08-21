@@ -55,6 +55,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const detailSalePriceUnits = parseGramInput(detailSalePrice);');
     expect(source).toContain('const detailSaleEnabled = Boolean((ownsDetail ? isListingForSale : detail?.group.listingType === "sale") && (detailSalePriceUnits ?? 0) > 0);');
     expect(source).toContain('const detailCanBeBought = Boolean(!ownsDetail && detailSaleEnabled);');
+    expect(source).toContain('const detailHasEnoughBalanceToBuy = Boolean(detailSalePriceUnits && bonusBalanceUnits >= detailSalePriceUnits);');
+    expect(source).toContain('Недостаточно средств на балансе');
+    expect(source).toContain('Чтобы выбрать группу, добавьте бота администратором вашей группы.');
+    expect(source).toContain('const isTelegramMiniApp = Boolean(webApp?.initData);');
     expect(source).not.toContain('Не на продаже');
     expect(source).not.toContain('{ownsDetail ? "На продаже" : "Купить за"}');
     expect(source).toContain('<small className="mt-0.5 text-[7px] leading-2 text-[#b7d8ce]">Купить</small>');

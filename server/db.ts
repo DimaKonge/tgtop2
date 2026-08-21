@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
-import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline } from "./protectedDeals";
+import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
 import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
 import { isCatalogSubcategory } from "./catalogTaxonomy";
 import { assignRankingEntriesToSlots, getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
@@ -1664,6 +1664,11 @@ export async function createProtectedGroupDeal(groupId: number, buyerOpenId: str
     throw new Error("Группа недоступна для безопасной покупки");
   }
   if (group.ownerOpenId === buyerOpenId) throw new Error("Нельзя купить собственную группу");
+  const priceUnits = Math.round(Number(group.salePriceTon) * 100);
+  const buyer = await getUserByOpenId(buyerOpenId);
+  if (!hasSufficientGramBalance(buyer?.bonusBalance ?? 0, priceUnits)) {
+    throw new Error(INSUFFICIENT_GRAM_BALANCE_MESSAGE);
+  }
   const [existing] = await db.select().from(deals).where(and(
     eq(deals.groupId, groupId),
     eq(deals.buyerOpenId, buyerOpenId),
