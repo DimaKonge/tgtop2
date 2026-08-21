@@ -517,6 +517,7 @@ function GroupCard({
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const lead = variant === "lead";
+  const secondary = variant === "secondary";
   const compact = variant === "compact";
   const rankingPlacement = variant !== "list";
   const cardStyle = lead
@@ -579,7 +580,7 @@ function GroupCard({
             <small
               className={`mt-1 block max-w-full truncate text-xs text-slate-200/80 ${compact ? "hidden" : ""}`}
             >
-              {groupUrl ? <a href={groupUrl} onClick={event => { event.preventDefault(); event.stopPropagation(); openTelegramCommunityLink(groupUrl); }} className="no-underline hover:text-white">{getCommunityAccessLabel(group, language)}</a> : getCommunityAccessLabel(group, language)} ·{" "}
+              {lead && <>{groupUrl ? <a href={groupUrl} onClick={event => { event.preventDefault(); event.stopPropagation(); openTelegramCommunityLink(groupUrl); }} className="no-underline hover:text-white">{getCommunityAccessLabel(group, language)}</a> : getCommunityAccessLabel(group, language)} ·{" "}</>}
               {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
             </small>
           </span>
@@ -1439,10 +1440,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const thirdTier = board.slice(3, 7);
   const rankingSnapshotKey = board.map(slot => `${slot.slotNumber}:${slot.group?.id ?? 0}:${slot.bidAmount}`).join("|");
   const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}:${rankingSnapshotKey}`;
-  const bonus = (
-    (account?.user?.bonusBalance ?? user?.bonusBalance ?? 0) / 100
-  ).toFixed(1);
+  const bonusBalanceUnits = account?.user?.bonusBalance ?? user?.bonusBalance ?? 0;
+  const bonus = (bonusBalanceUnits / 100).toFixed(1);
   const mainTon = Number(account?.user?.mainBalanceTon ?? 0).toFixed(2);
+  const totalBalanceLabel = `${formatTon(Number(mainTon))} TON · ${formatGram(bonusBalanceUnits)} GRAM`;
   const transactions = account?.transactions ?? [];
   const accountActivity = (accountActivityQuery.data ?? []) as Array<{
     id: string;
@@ -2073,11 +2074,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 onClick={() => setPage("profile")}
                 className="flex items-center gap-2"
               >
-                <span className="hidden text-right sm:block">
-                  <b className="block text-xs">{user?.name ?? "Telegram user"}</b>
-                  <small className="block text-[10px] text-slate-500">
-                    {bonus} GRAM
-                  </small>
+                <span className="hidden min-[360px]:block text-right leading-tight">
+                  <small className="block text-[9px] uppercase tracking-[0.08em] text-slate-500">Баланс</small>
+                  <b className="mt-0.5 block whitespace-nowrap text-[10px] font-semibold text-[#a6c8ff]">{totalBalanceLabel}</b>
                 </span>
                 <span className="grid h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold">
                   <>
@@ -3313,13 +3312,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/8 bg-[#0b0f14]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-center px-3 py-2">
+        <div className="mx-auto flex max-w-3xl items-center justify-center px-2 py-1.5">
           {isAuthenticated ? (
-            <div className="grid w-full grid-cols-4">
+            <div className="grid w-full grid-cols-3">
               {(
                 [
                   { key: "top", label: "ТОП", icon: Trophy },
-                  { key: "giveaways", label: "Розыгрыши", icon: Star },
                   { key: "mine", label: "Рабочее пространство", icon: LayoutGrid },
                   { key: "profile", label: "Мой кабинет", icon: UserRound },
                 ] as const
@@ -3331,10 +3329,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     onClick={() =>
                       item.key === "mine" ? openMine() : setPage(item.key)
                     }
-                    className={`flex flex-col items-center gap-1 py-1 text-[10px] ${page === item.key ? "text-[#72a8ff]" : "text-slate-500"}`}
+                    className={`flex h-[48px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[9px] font-medium leading-3 tracking-[-0.02em] ${page === item.key ? "text-[#72a8ff]" : "text-slate-500"}`}
                   >
                     <Icon className="h-4 w-4" />
-                    {item.label}
+                    <span className="max-w-full whitespace-nowrap">{item.label}</span>
                   </button>
                 );
               })}
@@ -3342,7 +3340,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           ) : (
             <button
               onClick={() => setPage("top")}
-              className="flex flex-col items-center gap-1 py-1 text-[10px] text-[#72a8ff]"
+              className="flex h-[46px] flex-col items-center justify-center gap-0.5 text-[10px] leading-3 text-[#72a8ff]"
             >
               <Trophy className="h-4 w-4" />
               ТОП

@@ -170,7 +170,7 @@ class SDKServer {
     return this.signSession(
       {
         openId,
-        appId: ENV.appId,
+        appId: resolveSessionAppId(ENV.appId),
         name: options.name || "",
       },
       options
@@ -321,6 +321,11 @@ class SDKServer {
 }
 
 const CRON_OPEN_ID_PREFIX = "cron_";
+const TG_TOP_SESSION_APP_ID = "tgtop";
+
+export function resolveSessionAppId(configuredAppId: string | undefined | null) {
+  return configuredAppId?.trim() || TG_TOP_SESSION_APP_ID;
+}
 
 /** Result of `sdk.authenticateRequest`. Cron callbacks set `isCron=true` and `taskUid`; see `/home/ubuntu/skills/webdev-periodic-updates/SKILL.md`. */
 export type AuthenticatedUser = User & {

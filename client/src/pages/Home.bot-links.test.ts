@@ -117,6 +117,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
     expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
     expect(source).toContain('disabled={!detailEntryUrl}');
+    expect(source).toContain('const secondary = variant === "secondary";');
+    expect(source).toContain('{lead && <>{groupUrl ? <a href={groupUrl}');
     expect(source).toContain('<span className="flex items-center justify-center gap-1"><Send className="h-3.5 w-3.5 text-white/90" /><b className="text-[12px] leading-3">Перейти</b></span>');
     expect(source).toContain('onClick={() => { if (detailEntryUrl) openTelegramCommunityLink(detailEntryUrl); }}');
     expect(source).toContain('const detailMinimumBid = placementSlot');
@@ -165,10 +167,14 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const rankingSnapshotKey = board.map(slot => `${slot.slotNumber}:${slot.group?.id ?? 0}:${slot.bidAmount}`).join("|")');
     expect(source).toContain('const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}:${rankingSnapshotKey}`');
     expect(source).toContain('label: "ТОП"');
-    expect(source).toContain('label: "Розыгрыши"');
+    expect(source).not.toContain('label: "Розыгрыши"');
     expect(source).not.toContain('label: "Заработать"');
+    expect(source).toContain('grid w-full grid-cols-3');
     expect(source).toContain('label: "Рабочее пространство"');
     expect(source).toContain('label: "Мой кабинет"');
+    expect(source).toContain('max-w-full whitespace-nowrap');
+    expect(source).toContain('const totalBalanceLabel = `${formatTon(Number(mainTon))} TON · ${formatGram(bonusBalanceUnits)} GRAM`;');
+    expect(source).toContain('>Баланс</small>');
     expect(source).toContain('page === "giveaways"');
     expect(source).not.toContain('page === "earn"');
     expect(source).toContain('openGiveaways.useQuery');
