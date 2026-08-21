@@ -109,7 +109,7 @@ function AudienceGrowthChart({ snapshots, language, embedded = false }: { snapsh
       {!embedded && <div className="flex items-start justify-between gap-3">
         <span>
           <b className="block text-sm text-slate-100">{language === "en" ? "Audience growth" : "Динамика аудитории"}</b>
-          <small className="mt-1 block text-[10px] text-slate-500">{language === "en" ? "Recorded by @TGTOP_robot from the first observation." : "Снимки @TGTOP_robot с первого наблюдения."}</small>
+          <small className="mt-1 block text-[10px] text-slate-500">{language === "en" ? "Recorded by @TG_TOPBOT from the first observation." : "Снимки @TG_TOPBOT с первого наблюдения."}</small>
         </span>
         {first && last && <b className={`text-xs ${netGrowth > 0 ? "text-emerald-300" : netGrowth < 0 ? "text-rose-300" : "text-slate-400"}`}>{netGrowth > 0 ? "+" : ""}{n(netGrowth, language)}</b>}
       </div>}
@@ -1453,7 +1453,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     {
       id: "connect-community",
       title: tx("Подключить сообщество", "Connect a community"),
-      description: tx("Добавьте @TGTOP_robot администратором своей группы или канала.", "Add @TGTOP_robot as an administrator of your group or channel."),
+      description: tx("Добавьте @TG_TOPBOT администратором своей группы или канала.", "Add @TG_TOPBOT as an administrator of your group or channel."),
       complete: mine.length > 0,
       action: () => openMine(),
     },
@@ -1947,7 +1947,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const query = kind === "channel"
       ? `startchannel&admin=${channelAdminRights}`
       : `startgroup=tgtop_admin&admin=${groupAdminRights}`;
-    window.open(`https://t.me/TGTOP_robot?${query}`, "_blank");
+    window.open(`https://t.me/TG_TOPBOT?${query}`, "_blank");
   };
   const startBotAdminSetup = (kind: "channel" | "group") => {
     setAdminGuideKind(kind);
@@ -2026,7 +2026,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setNftTransferStep("review");
       return;
     }
-    toast.error(language === "en" ? "Recipient was not found in TG TOP. Ask them to open the app through @TGTOP_robot first." : (result.error?.message ?? "Получатель не найден в TG TOP. Попросите его открыть приложение через @TGTOP_robot."));
+    toast.error(language === "en" ? "Recipient was not found in TG TOP. Ask them to open the app through @TG_TOPBOT first." : (result.error?.message ?? "Получатель не найден в TG TOP. Попросите его открыть приложение через @TG_TOPBOT."));
   };
   const prepareNftTransfer = () => {
     if (!selectedNft || !reviewedRecipient) return;
@@ -2564,7 +2564,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center">
                     <FolderPlus className="mx-auto h-7 w-7 text-slate-600" />
                     <p className="mt-3 text-sm">{mine.length ? tx("По этому фильтру групп нет", "No groups match this filter") : tx("Групп пока нет", "No groups yet")}</p>
-                    <p className="mt-1 text-xs text-slate-500">{mine.length ? tx("Смените фильтр или добавьте новую группу.", "Change the filter or add a new community.") : tx("Добавьте @TGTOP_robot в администраторы.", "Add @TGTOP_robot as an administrator.")}</p>
+                    <p className="mt-1 text-xs text-slate-500">{mine.length ? tx("Смените фильтр или добавьте новую группу.", "Change the filter or add a new community.") : tx("Добавьте @TG_TOPBOT в администраторы.", "Add @TG_TOPBOT as an administrator.")}</p>
                   </div>
                 )}
               </div>
@@ -2642,7 +2642,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <FolderPlus className="mx-auto h-7 w-7 text-slate-600" />
                   <p className="mt-3 text-sm">{tx("Групп пока нет", "No groups yet")}</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    {tx("Добавьте @TGTOP_robot в администраторы.", "Add @TGTOP_robot as an administrator.")}
+                    {tx("Добавьте @TG_TOPBOT в администраторы.", "Add @TG_TOPBOT as an administrator.")}
                   </p>
                 </div>
               )}
@@ -3271,7 +3271,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="divide-y divide-white/7">
                 {[
                   [tx("Кошелек", "Wallet"), tx("Подключение кошелька только показывает ваш TON-адрес. TG TOP пока не запрашивает подпись или перевод TON.", "Connecting a wallet shows your TON address. TG TOP does not yet request a TON signature or transfer.")],
-                  [tx("Листинг", "Listing"), tx("Подключите @TGTOP_robot как администратора, получите 0.1 GRAM и настройте каталог, продажу или аренду в личной папке.", "Add @TGTOP_robot as an administrator, receive 0.1 GRAM, then configure catalog, sale, or rental settings in My Groups.")],
+                  [tx("Листинг", "Listing"), tx("Подключите @TG_TOPBOT как администратора, получите 0.1 GRAM и настройте каталог, продажу или аренду в личной папке.", "Add @TG_TOPBOT as an administrator, receive 0.1 GRAM, then configure catalog, sale, or rental settings in My Groups.")],
                   [tx("Рейтинг", "Ranking"), tx("Место в топе меняется при большей ставке. Перед оплатой будет отдельное подтверждение — автоматические TON-платежи еще не включены.", "A higher bid changes the top placement. Payment will require a separate confirmation; automatic TON payments are not enabled yet.")],
                   [tx("NFT и сделки", "NFTs and deals"), tx("Проверяйте владельца и условия вручную. Передача прав и денег будет доступна только через защищенный сценарий сделки после запуска проверки платежей.", "Check the owner and terms manually. Rights and funds transfer only through a protected deal after payment verification launches.")],
                 ].map(([title, text]) => (
@@ -3423,7 +3423,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 })}
               </div>
             ) : (
-              <p className="rounded-xl border border-dashed border-white/12 px-3 py-5 text-center text-xs leading-5 text-slate-500">{tx("Администраторы не найдены. Добавьте @TGTOP_robot в администраторы группы и обновите список.", "No administrators found. Add @TGTOP_robot as an admin and try again.")}</p>
+              <p className="rounded-xl border border-dashed border-white/12 px-3 py-5 text-center text-xs leading-5 text-slate-500">{tx("Администраторы не найдены. Добавьте @TG_TOPBOT в администраторы группы и обновите список.", "No administrators found. Add @TG_TOPBOT as an admin and try again.")}</p>
             )}
             <button type="button" onClick={() => { const managerGroupId = lotGroupId ?? selectedGroupId; if (!managerPublic) return setManagerSheetOpen(false); if (!selectedManagerTelegramUserId || !managerGroupId) return; setGroupManager.mutate({ groupId: managerGroupId, telegramUserId: selectedManagerTelegramUserId }, { onSuccess: () => { setManagerPublic(true); setManagerSheetOpen(false); } }); }} disabled={(managerPublic && !selectedManagerTelegramUserId) || setGroupManager.isPending || groupAdministratorsQuery.isLoading} className="flex w-full items-center justify-center rounded-xl bg-[#1688f5] px-4 py-3.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:opacity-45">
               {setGroupManager.isPending ? ui.loading : !managerPublic ? "Сохранить анонимный режим" : tx("Сохранить менеджера", "Save manager")}
@@ -3604,7 +3604,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs">
                     <b className="block text-slate-200">{tx("Объявление о листинге", "Listing announcement")}</b>
-                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("@TGTOP_robot опубликует сообщение в группе после сохранения листинга.", "@TGTOP_robot will post a message in the community after saving the listing.")}</small>
+                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("@TG_TOPBOT опубликует сообщение в группе после сохранения листинга.", "@TG_TOPBOT will post a message in the community after saving the listing.")}</small>
                   </span>
                   <button type="button" role="switch" aria-checked={listingAnnouncementEnabled} aria-label={tx("Переключить объявление о листинге", "Toggle listing announcement")} onClick={() => setListingAnnouncementEnabled(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${listingAnnouncementEnabled ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
                     <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${listingAnnouncementEnabled ? "translate-x-6" : "translate-x-0"}`} />
@@ -3788,7 +3788,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         <SheetContent side="bottom" className="rounded-t-[22px] border-white/10 bg-[#10161f] pb-5 text-slate-100">
           <SheetHeader className="px-4">
             <SheetTitle className="text-slate-100">{tx("Добавить площадку", "Add community")}</SheetTitle>
-            <p className="text-xs leading-5 text-slate-500">{tx("Выберите тип — Telegram предложит добавить @TGTOP_robot администратором.", "Choose a type — Telegram will offer to add @TGTOP_robot as an administrator.")}</p>
+            <p className="text-xs leading-5 text-slate-500">{tx("Выберите тип — Telegram предложит добавить @TG_TOPBOT администратором.", "Choose a type — Telegram will offer to add @TG_TOPBOT as an administrator.")}</p>
           </SheetHeader>
           <div className="grid grid-cols-2 gap-2 px-4">
             <button type="button" onClick={() => { setMyGroupsAddOpen(false); startBotAdminSetup("channel"); }} className="rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 p-4 text-left transition-colors hover:bg-[#3f8cff]/18">

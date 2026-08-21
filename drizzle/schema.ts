@@ -34,6 +34,14 @@ export const websiteLoginSessions = mysqlTable("website_login_sessions", {
 
 export type WebsiteLoginSession = typeof websiteLoginSessions.$inferSelect;
 
+export const telegramEventReceipts = mysqlTable("telegram_event_receipts", {
+  eventKey: varchar("eventKey", { length: 191 }).primaryKey(),
+  firstBot: varchar("firstBot", { length: 32 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TelegramEventReceipt = typeof telegramEventReceipts.$inferSelect;
+
 export const groupsCatalog = mysqlTable("groups_catalog", {
   id: int("id").autoincrement().primaryKey(),
   chatId: varchar("chatId", { length: 64 }).notNull().unique(),

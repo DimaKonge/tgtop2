@@ -139,7 +139,7 @@ export const appRouter = router({
         try {
           return await getTelegramGroupAdministrators(group.chatId);
         } catch {
-          throw new Error("Не удалось получить администраторов. Добавьте @TGTOP_robot в администраторы группы и повторите попытку.");
+          throw new Error("Не удалось получить администраторов. Добавьте @TG_TOPBOT в администраторы группы и повторите попытку.");
         }
       }),
     setGroupManager: protectedProcedure
@@ -151,7 +151,7 @@ export const appRouter = router({
         try {
           administrators = await getTelegramGroupAdministrators(group.chatId);
         } catch {
-          throw new Error("Не удалось проверить администраторов. Убедитесь, что @TGTOP_robot добавлен в администраторы группы.");
+          throw new Error("Не удалось проверить администраторов. Убедитесь, что @TG_TOPBOT добавлен в администраторы группы.");
         }
         const manager = administrators.find(admin => admin.telegramUserId === input.telegramUserId);
         if (!manager) throw new Error("Выбранный аккаунт больше не является администратором этой группы");

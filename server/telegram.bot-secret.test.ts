@@ -16,7 +16,7 @@ describe("Telegram bot secret", () => {
 
     expect(response.ok, payload.description ?? "Telegram API request failed").toBe(true);
     expect(payload.ok).toBe(true);
-    expect(payload.result?.username?.toLowerCase()).toBe("tgtop_robot");
+    expect(payload.result?.username?.toLowerCase()).toBe("tg_topbot");
   }, 15_000);
 });
 

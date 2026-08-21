@@ -2,10 +2,10 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("TG TOP production bot links", () => {
-  it("uses @TGTOP_robot for both channel and group admin onboarding", () => {
+  it("uses @TG_TOPBOT for both channel and group admin onboarding", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 
-    expect(source).toContain("https://t.me/TGTOP_robot?");
+    expect(source).toContain("https://t.me/TG_TOPBOT?");
     expect(source).toContain('startchannel&admin=${channelAdminRights}');
     expect(source).toContain('startgroup=tgtop_admin&admin=${groupAdminRights}');
     expect(source).toContain('delete_messages+invite_users+pin_messages+manage_chat');
@@ -362,7 +362,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('rounded-[22px] border border-[#31435f]');
     expect(source).toContain('className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3"');
     expect(source).toContain('function AudienceGrowthChart');
-    expect(source).toContain('Снимки @TGTOP_robot с первого наблюдения.');
+    expect(source).toContain('Снимки @TG_TOPBOT с первого наблюдения.');
     expect(source).toContain('Нейтральная линия: данных пока недостаточно');
     expect(source).toContain('M4 38 C48 36, 76 40, 116 37');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
@@ -408,7 +408,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('setListingAnnouncementEnabled(firstGroup?.listingAnnouncementEnabled ?? true);');
     expect(source).toContain('listingAnnouncementEnabled,');
     expect(source).toContain('tx("Объявление о листинге", "Listing announcement")');
-    expect(source).toContain('@TGTOP_robot опубликует сообщение в группе после сохранения листинга.');
+    expect(source).toContain('@TG_TOPBOT опубликует сообщение в группе после сохранения листинга.');
     expect(source).toContain('const [inlineListingOpen, setInlineListingOpen] = useState(false);');
     expect(source).toContain('const saveInlineDetailListing = () => {');
     expect(source).toContain('tx("Параметры публикации", "Publication settings")');

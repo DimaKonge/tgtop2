@@ -13,6 +13,7 @@ import {
   awardTelegramReward,
   observeProtectedGroupTransfer,
   approveStarsRankingPayment,
+  claimTelegramEvent,
   settleStarsRankingPayment,
   upsertTelegramGroup,
   upsertUser,
@@ -31,13 +32,14 @@ type TelegramChat = {
 type TelegramUser = { id: number; first_name?: string; last_name?: string; username?: string; is_bot?: boolean };
 type ChatMember = { status: string; user: TelegramUser };
 type ChatMemberUpdate = {
+  date?: number;
   chat: TelegramChat;
   from: TelegramUser;
   old_chat_member: ChatMember;
   new_chat_member: ChatMember;
   invite_link?: { invite_link?: string; creator?: TelegramUser };
 };
-type TelegramActivity = { chat: TelegramChat; views?: number };
+type TelegramActivity = { chat: TelegramChat; message_id?: number; views?: number };
 type TelegramUpdate = {
   update_id: number;
   message?: TelegramActivity & {
@@ -52,7 +54,7 @@ type TelegramUpdate = {
   };
   channel_post?: TelegramActivity;
   chat_member?: ChatMemberUpdate;
-  my_chat_member?: { chat: TelegramChat; from: TelegramUser; old_chat_member: ChatMember; new_chat_member: ChatMember };
+  my_chat_member?: { date?: number; chat: TelegramChat; from: TelegramUser; old_chat_member: ChatMember; new_chat_member: ChatMember };
   pre_checkout_query?: { id: string; from: TelegramUser; currency: string; total_amount: number; invoice_payload: string };
 };
 
@@ -364,16 +366,40 @@ function isTelegramBotEntrypoint(entryPath?: string): boolean {
   return Boolean(entryPath && /(?:^|\/)telegramBot\.(?:ts|js)$/.test(entryPath));
 }
 
-async function run(): Promise<void> {
+export function getTelegramEventKey(update: TelegramUpdate): string | null {
+  if (update.pre_checkout_query) return `precheckout:${update.pre_checkout_query.id}`;
+  if (update.my_chat_member) {
+    const membership = update.my_chat_member;
+    return `admin:${membership.chat.id}:${membership.from.id}:${membership.date ?? 0}:${membership.new_chat_member.status}`;
+  }
+  if (update.chat_member) {
+    const membership = update.chat_member;
+    return `membership:${membership.chat.id}:${membership.new_chat_member.user.id}:${membership.date ?? 0}:${membership.old_chat_member.status}:${membership.new_chat_member.status}`;
+  }
+  const message = update.message ?? update.channel_post;
+  if (!message) return null;
+  if (update.message?.successful_payment?.telegram_payment_charge_id) return `payment:${update.message.successful_payment.telegram_payment_charge_id}`;
+  if (typeof message.message_id !== "number") return null;
+  return `message:${message.chat.id}:${message.message_id}`;
+}
+
+export async function runTelegramBot(botLabel = "@TG_TOPBOT"): Promise<void> {
   if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
-  console.info("[Telegram] Starting long-polling for @TGTOP_robot");
+  console.info(`[Telegram] Starting long-polling for ${botLabel}`);
   let offset = 0;
   while (true) {
     try {
       const updates = await telegramCall<TelegramUpdate[]>("getUpdates", { offset, timeout: pollTimeoutSeconds, allowed_updates: ["message", "channel_post", "my_chat_member", "chat_member", "pre_checkout_query"] });
       for (const update of updates) {
         offset = update.update_id + 1;
-        try { await handleUpdate(update); } catch (error) { console.error(`[Telegram] Failed to process update ${update.update_id}:`, error); }
+        try {
+          const eventKey = getTelegramEventKey(update);
+          if (eventKey && !(await claimTelegramEvent(eventKey, botLabel))) {
+            console.info(`[Telegram] Duplicate event skipped by ${botLabel}: ${eventKey}`);
+            continue;
+          }
+          await handleUpdate(update);
+        } catch (error) { console.error(`[Telegram] Failed to process update ${update.update_id}:`, error); }
       }
     } catch (error) {
       console.error("[Telegram] Polling error:", getTelegramPollingErrorSummary(error));
@@ -382,5 +408,5 @@ async function run(): Promise<void> {
   }
 }
 
-export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, isTelegramBotEntrypoint, publicGroupUrl };
-if (isTelegramBotEntrypoint(process.argv[1])) void run();
+export const __private__ = { buildOnboardingConfirmation, catalogCategory, getReferralCodeFromStartText, getTelegramEventKey, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, isTelegramBotEntrypoint, publicGroupUrl };
+if (isTelegramBotEntrypoint(process.argv[1])) void runTelegramBot();

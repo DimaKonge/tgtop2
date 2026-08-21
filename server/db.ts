@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline } from "./protectedDeals";
@@ -73,6 +73,18 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+export async function claimTelegramEvent(eventKey: string, firstBot: string) {
+  const db = await getDb();
+  if (!db) return true;
+  try {
+    await db.insert(telegramEventReceipts).values({ eventKey, firstBot });
+    return true;
+  } catch (error) {
+    if ((error as { code?: string }).code === "ER_DUP_ENTRY") return false;
+    throw error;
+  }
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -247,7 +259,7 @@ export async function getReferralOverview(openId: string) {
   const freshUser = await getUserByOpenId(openId);
   return {
     referralCode,
-    referralLink: `https://t.me/TGTOP_robot?start=ref_${referralCode}`,
+    referralLink: `https://t.me/TG_TOPBOT?start=ref_${referralCode}`,
     referralsCount: referrals.length,
     earnings: freshUser?.referralEarnings ?? user.referralEarnings,
   };
@@ -873,7 +885,7 @@ export async function joinGiveaway(giveawayId: number, userOpenId: string) {
     const telegramUserId = getTelegramChatIdFromOpenId(userOpenId);
     const [group] = await db.select({ chatId: groupsCatalog.chatId }).from(groupsCatalog).where(eq(groupsCatalog.id, giveaway.groupId)).limit(1);
     const verified = telegramUserId && group?.chatId && await verifyTelegramUserChatBoost({ chatId: group.chatId, telegramUserId });
-    if (!verified) throw new Error("Для участия нужен активный буст этого сообщества и права администратора у @TGTOP_robot");
+    if (!verified) throw new Error("Для участия нужен активный буст этого сообщества и права администратора у @TG_TOPBOT");
   }
   try {
     await db.insert(giveawayParticipants).values({ giveawayId, userOpenId });
@@ -1501,7 +1513,7 @@ export async function resolveNftTransferRecipient(recipientInput: string) {
       : eq(users.telegramUsername, normalized.value)
   ).limit(1);
 
-  if (!recipient) throw new Error("Получатель не найден в TG TOP. Попросите его открыть приложение через @TGTOP_robot.");
+  if (!recipient) throw new Error("Получатель не найден в TG TOP. Попросите его открыть приложение через @TG_TOPBOT.");
   return recipient;
 }
 

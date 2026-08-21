@@ -120,7 +120,7 @@ export async function notifyCommunityListed(input: {
   salePriceTon?: string | null;
 }) {
   if (!botToken) return false;
-  const listingUrl = `https://t.me/TGTOP_robot?startapp=listing_${input.groupId}`;
+  const listingUrl = `https://t.me/TG_TOPBOT?startapp=listing_${input.groupId}`;
   const text = [
     "✨ Сообщество добавлено в TG TOP",
     "",
@@ -132,7 +132,7 @@ export async function notifyCommunityListed(input: {
     "Откройте карточку сообщества, чтобы увидеть актуальные условия и статистику.",
   ].join("\n");
   try {
-    const miniAppDirectUrl = `https://t.me/TGTOP_robot?startapp=listing_${input.groupId}`;
+    const miniAppDirectUrl = `https://t.me/TG_TOPBOT?startapp=listing_${input.groupId}`;
     const response = await axios.post<{ ok: boolean }>(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       chat_id: input.chatId,
       text,
@@ -188,10 +188,10 @@ function telegramInviteLinkError(error: unknown, fallback: string) {
     ? (error.response?.data as { description?: string } | undefined)?.description
     : error instanceof Error ? error.message : undefined;
   if (/not enough rights|administrator rights|invite users/i.test(description ?? "")) {
-    return new Error("Боту нужны права администратора «Пригласительные ссылки» / «Добавлять пользователей». Откройте права @TGTOP_robot в сообществе и повторите попытку.");
+    return new Error("Боту нужны права администратора «Пригласительные ссылки» / «Добавлять пользователей». Откройте права @TG_TOPBOT в сообществе и повторите попытку.");
   }
   if (/chat not found|chat.*invalid/i.test(description ?? "")) {
-    return new Error("TG TOP не видит это сообщество. Добавьте @TGTOP_robot администратором и обновите список «Мои».");
+    return new Error("TG TOP не видит это сообщество. Добавьте @TG_TOPBOT администратором и обновите список «Мои».");
   }
   return new Error(description ?? fallback);
 }
