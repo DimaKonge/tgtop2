@@ -36,8 +36,13 @@ function requestOrigin(req: Request) {
   return `${protocol}://${req.get("host")}`;
 }
 
+export function getTelegramLoginCallbackUrl(origin: string) {
+  const canonicalOrigin = origin === "https://www.tgtop.xyz" ? "https://tgtop.xyz" : origin;
+  return `${canonicalOrigin}/api/auth/telegram/callback`;
+}
+
 function callbackUrl(req: Request) {
-  return `${requestOrigin(req)}/api/auth/telegram/callback`;
+  return getTelegramLoginCallbackUrl(requestOrigin(req));
 }
 
 function safeReturnTo(value: unknown) {
