@@ -56,3 +56,15 @@ export function validateTelegramInitData(
     return null;
   }
 }
+
+export function validateTelegramInitDataWithTokens(
+  initData: string,
+  botTokens: Array<string | undefined>,
+  maxAgeSeconds = 86_400,
+) {
+  for (const token of Array.from(new Set(botTokens.filter((value): value is string => Boolean(value))))) {
+    const verified = validateTelegramInitData(initData, token, maxAgeSeconds);
+    if (verified) return verified;
+  }
+  return null;
+}

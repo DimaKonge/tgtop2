@@ -288,6 +288,13 @@
       "when": 1787280629053,
       "tag": "0040_nasty_elektra",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1787298761960,
+      "tag": "0041_plain_tyrannus",
+      "breakpoints": true
     }
   ]
 }

@@ -223,6 +223,7 @@ type Group = {
   managerAvatarUrl?: string | null;
   managerPublic?: boolean;
   listingAnnouncementEnabled?: boolean;
+  searchIndexable?: boolean;
   monthlyEntryEnabled?: boolean;
   monthlyEntryStars?: number | null;
   monthlyEntryLinkName?: string | null;
@@ -907,6 +908,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [showOwnerContact, setShowOwnerContact] = useState(false);
   const [managerPublic, setManagerPublic] = useState(true);
   const [listingAnnouncementEnabled, setListingAnnouncementEnabled] = useState(true);
+  const [searchIndexable, setSearchIndexable] = useState(false);
   const [monthlyEntryEnabled, setMonthlyEntryEnabled] = useState(false);
   const [monthlyEntryStars, setMonthlyEntryStars] = useState("");
   const [monthlyEntryLinkName, setMonthlyEntryLinkName] = useState("");
@@ -1598,6 +1600,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setShowOwnerContact(Boolean(group.showOwnerContact));
     setManagerPublic(group.managerPublic !== false);
     setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true);
+    setSearchIndexable(Boolean(group.searchIndexable));
     setRewardCampaignEnabled(Boolean(group.rewardActive));
     setRewardBudget(group.rewardBudget ? formatGram(group.rewardBudget) : "");
     const joinReward = group.category === "Чаты" ? group.rewardPerManualAdd : group.rewardPerSubscription;
@@ -1861,6 +1864,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       showOwnerContact: selectedListingGroups.length ? showOwnerContact : undefined,
       managerPublic,
       listingAnnouncementEnabled,
+      searchIndexable: selectedListingGroups.length === 1 ? searchIndexable : undefined,
       monthlyEntryEnabled,
       monthlyEntryStars: monthlyEntryEnabled ? Number(monthlyEntryStars) : undefined,
       monthlyEntryLinkName: monthlyEntryEnabled ? monthlyEntryLinkName.trim() || undefined : undefined,
@@ -1902,6 +1906,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       showOwnerContact,
       managerPublic,
       listingAnnouncementEnabled,
+      searchIndexable,
       rewardActive: rewardCampaignEnabled,
       rewardBudget: budgetUnits,
       rewardPerSubscription: group.category === "Чаты" ? 0 : joinRewardUnits,
@@ -2792,6 +2797,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             <button type="button" onClick={() => setShowOwnerContact(value => !value)} className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${showOwnerContact ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Контакт", "Contact")}</b><small className={`mt-0.5 block text-[10px] ${showOwnerContact ? "text-[#8fb9ff]" : "text-slate-500"}`}>{showOwnerContact ? tx("Показывать @username", "Show @username") : tx("Скрыт", "Hidden")}</small></button>
                           </div>
                           {detail.group.managerName && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5"><span><b className="block text-[11px] text-slate-200">{tx("Показывать менеджера", "Show manager")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{managerPublic ? tx("Гости увидят профиль менеджера", "Guests can open the manager profile") : tx("Скрыт из публичной карточки", "Hidden from public details")}</small></span><button type="button" role="switch" aria-checked={managerPublic} onClick={() => setManagerPublic(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${managerPublic ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${managerPublic ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
+                          {detail.group.username && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5"><span><b className="block text-[11px] text-slate-200">Показывать в Google</b><small className="mt-0.5 block text-[10px] text-slate-500">Создаст публичную страницу tgtop.xyz/c/{detail.group.username}</small></span><button type="button" role="switch" aria-checked={searchIndexable} onClick={() => setSearchIndexable(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${searchIndexable ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${searchIndexable ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
                           <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5">
                             <span><b className="block text-[11px] text-slate-200">{tx("Выставить на продажу", "Offer for sale")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{isListingForSale ? tx("Цена будет видна покупателям", "Buyers will see the price") : tx("Без продажи", "Not for sale")}</small></span>
                             <button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} /></button>

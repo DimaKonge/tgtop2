@@ -1,10 +1,10 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { validateTelegramInitData } from "./telegramAuth";
+import { validateTelegramInitData, validateTelegramInitDataWithTokens } from "./telegramAuth";
 
 const botToken = "test-token-for-telegram-mini-app-auth";
 
-function makeInitData(authDate = Math.floor(Date.now() / 1000)): string {
+function makeInitData(authDate = Math.floor(Date.now() / 1000), token = botToken): string {
   const params = new URLSearchParams({
     auth_date: String(authDate),
     query_id: "AAHgV3EAAAAAAGBXcQ",
@@ -14,7 +14,7 @@ function makeInitData(authDate = Math.floor(Date.now() / 1000)): string {
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");
-  const secretKey = createHmac("sha256", "WebAppData").update(botToken).digest();
+  const secretKey = createHmac("sha256", "WebAppData").update(token).digest();
   params.set("hash", createHmac("sha256", secretKey).update(dataCheckString).digest("hex"));
   return params.toString();
 }
@@ -28,5 +28,10 @@ describe("Telegram Mini App initData validation", () => {
   it("rejects tampered and expired initialization data", () => {
     expect(validateTelegramInitData(`${makeInitData()}&query_id=tampered`, botToken)).toBeNull();
     expect(validateTelegramInitData(makeInitData(Math.floor(Date.now() / 1000) - 86_401), botToken)).toBeNull();
+  });
+
+  it("accepts initialization data signed by the reserve bot in parallel mode", () => {
+    const reserveToken = "test-token-for-reserve-bot";
+    expect(validateTelegramInitDataWithTokens(makeInitData(undefined, reserveToken), [botToken, reserveToken])?.user.id).toBe(123456);
   });
 });

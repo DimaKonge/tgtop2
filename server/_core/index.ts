@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerTelegramMediaRoutes } from "../telegramMedia";
 import { registerTelegramLoginRoutes } from "../telegramLogin";
+import { registerPublicCommunityPages } from "../publicCommunityPages";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -39,6 +40,7 @@ async function startServer() {
   registerStorageProxy(app);
   registerTelegramMediaRoutes(app);
   registerTelegramLoginRoutes(app);
+  registerPublicCommunityPages(app);
   registerOAuthRoutes(app);
   // tRPC API
   app.use(

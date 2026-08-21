@@ -1,7 +1,7 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
 import { getUserByOpenId, upsertUser } from "../db";
-import { validateTelegramInitData } from "../telegramAuth";
+import { validateTelegramInitDataWithTokens } from "../telegramAuth";
 import { sdk } from "./sdk";
 
 export type TrpcContext = {
@@ -17,8 +17,8 @@ export async function createContext(
 
   try {
     const initData = opts.req.header("x-telegram-init-data");
-    const verifiedTelegram = initData && process.env.TELEGRAM_BOT_TOKEN
-      ? validateTelegramInitData(initData, process.env.TELEGRAM_BOT_TOKEN)
+    const verifiedTelegram = initData
+      ? validateTelegramInitDataWithTokens(initData, [process.env.TELEGRAM_BOT_TOKEN, process.env.TELEGRAM_RESERVE_BOT_TOKEN])
       : null;
 
     if (verifiedTelegram) {

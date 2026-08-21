@@ -14,6 +14,7 @@ import { DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, typ
 import { canExposeOwnerProfile } from "./ownerVisibilityPolicy";
 import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
 import { getTelegramChatIdFromOpenId, verifyTelegramUserChatBoost } from "./telegramNotifications";
+import { getSearchIndexingError } from "./seoPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -446,6 +447,7 @@ export type RankingLotOptions = {
   showOwnerContact?: boolean;
   managerPublic?: boolean;
   listingAnnouncementEnabled?: boolean;
+  searchIndexable?: boolean;
   country?: string;
   city?: string;
   subcategory?: string;
@@ -550,11 +552,14 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
     }
     if (options) {
       const salePriceTon = options.salePriceTon?.trim() || null;
+      const searchIndexingError = getSearchIndexingError({ username: group.username, searchIndexable: options.searchIndexable });
+      if (searchIndexingError) throw new Error(searchIndexingError);
       await tx.update(groupsCatalog).set({
         ...(options.anonymousListing !== undefined ? { anonymousListing: options.anonymousListing } : {}),
         ...(options.showOwnerContact !== undefined ? { showOwnerContact: options.showOwnerContact } : {}),
         ...(options.managerPublic !== undefined ? { managerPublic: options.managerPublic } : {}),
         ...(options.listingAnnouncementEnabled !== undefined ? { listingAnnouncementEnabled: options.listingAnnouncementEnabled } : {}),
+        ...(options.searchIndexable !== undefined ? { searchIndexable: options.searchIndexable } : {}),
         ...(options.country ? { country: options.country } : {}),
         ...(options.city !== undefined ? { city: options.city || null } : {}),
         ...(options.subcategory ? { subcategory: options.subcategory } : {}),
@@ -982,6 +987,51 @@ export async function getGroupDetail(id: number, viewerOpenId?: string) {
   };
 }
 
+export async function getPublicSearchGroupByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [group] = await db.select().from(groupsCatalog).where(and(
+    eq(groupsCatalog.username, username),
+    eq(groupsCatalog.status, "listed"),
+    eq(groupsCatalog.searchIndexable, true),
+  )).limit(1);
+  if (!group?.username) return undefined;
+  const snapshots = await db.select({
+    membersCount: groupStatsSnapshots.membersCount,
+    recordedAt: groupStatsSnapshots.recordedAt,
+  }).from(groupStatsSnapshots).where(eq(groupStatsSnapshots.groupId, group.id)).orderBy(desc(groupStatsSnapshots.recordedAt)).limit(12);
+  return {
+    id: group.id,
+    chatId: group.chatId,
+    title: group.title,
+    username: group.username,
+    description: group.description,
+    avatarFileId: group.avatarFileId,
+    membersCount: group.membersCount,
+    category: group.category,
+    country: group.country,
+    managerName: group.managerPublic ? group.managerName : null,
+    managerUsername: group.managerPublic ? group.managerUsername : null,
+    managerAvatarUrl: group.managerPublic ? group.managerAvatarUrl : null,
+    lastStatsAt: group.lastStatsAt,
+    snapshots: snapshots.reverse(),
+  };
+}
+
+export async function getSearchIndexableGroups() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    username: groupsCatalog.username,
+    lastStatsAt: groupsCatalog.lastStatsAt,
+    listedAt: groupsCatalog.listedAt,
+  }).from(groupsCatalog).where(and(
+    eq(groupsCatalog.status, "listed"),
+    eq(groupsCatalog.searchIndexable, true),
+    sql`${groupsCatalog.username} IS NOT NULL`,
+  )).orderBy(desc(groupsCatalog.lastStatsAt));
+}
+
 export async function recordGroupSnapshot(groupId: number, membersCount: number, messagesCount: number, joinedCount: number) {
   const db = await getDb();
   if (!db) return;
@@ -1182,6 +1232,7 @@ export type GroupListingOptions = {
   showOwnerContact?: boolean;
   managerPublic?: boolean;
   listingAnnouncementEnabled?: boolean;
+  searchIndexable?: boolean;
   monthlyEntryEnabled?: boolean;
   monthlyEntryStars?: number;
   monthlyEntryLinkName?: string;
@@ -1209,6 +1260,7 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
     showOwnerContact: options.showOwnerContact ?? false,
     managerPublic: options.managerPublic ?? true,
     listingAnnouncementEnabled: options.listingAnnouncementEnabled,
+    searchIndexable: options.searchIndexable,
     monthlyEntryEnabled: options.monthlyEntryEnabled,
     monthlyEntryStars: options.monthlyEntryStars,
     monthlyEntryLinkName: options.monthlyEntryLinkName?.trim() || null,
@@ -1234,6 +1286,8 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       throw new Error("Подкатегория не соответствует выбранным группам");
     }
   }
+  const searchIndexingError = groups.map(group => getSearchIndexingError({ username: group.username, searchIndexable: listingOptions.searchIndexable })).find(Boolean);
+  if (searchIndexingError) throw new Error(searchIndexingError);
   if (listingOptions.monthlyEntryEnabled) {
     if (groups.length !== 1 || groups[0].category !== "Каналы" || groups[0].username) {
       throw new Error("Ежемесячный вход в Stars доступен только для одного приватного канала");
@@ -1299,6 +1353,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       ...(listingOptions.showOwnerContact !== undefined ? { showOwnerContact: listingOptions.showOwnerContact } : {}),
       ...(listingOptions.managerPublic !== undefined ? { managerPublic: listingOptions.managerPublic } : {}),
       ...(listingOptions.listingAnnouncementEnabled !== undefined ? { listingAnnouncementEnabled: listingOptions.listingAnnouncementEnabled } : {}),
+      ...(listingOptions.searchIndexable !== undefined ? { searchIndexable: listingOptions.searchIndexable } : {}),
       ...(listingOptions.monthlyEntryEnabled !== undefined ? {
         monthlyEntryEnabled: listingOptions.monthlyEntryEnabled,
         monthlyEntryStars: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryStars ?? null : null,

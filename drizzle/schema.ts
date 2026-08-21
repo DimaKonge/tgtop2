@@ -78,6 +78,7 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   managerAvatarUrl: varchar("managerAvatarUrl", { length: 512 }),
   managerPublic: boolean("managerPublic").default(true).notNull(),
   listingAnnouncementEnabled: boolean("listingAnnouncementEnabled").default(true).notNull(),
+  searchIndexable: boolean("searchIndexable").default(false).notNull(),
   monthlyEntryEnabled: boolean("monthlyEntryEnabled").default(false).notNull(),
   monthlyEntryStars: int("monthlyEntryStars"),
   monthlyEntryLinkName: varchar("monthlyEntryLinkName", { length: 64 }),
@@ -98,6 +99,7 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   index("groups_catalog_owner_idx").on(table.ownerOpenId),
   index("groups_catalog_owner_layout_idx").on(table.ownerOpenId, table.ownerPinned, table.ownerSortOrder),
   index("groups_catalog_listed_at_idx").on(table.listedAt),
+  index("groups_catalog_search_index_idx").on(table.searchIndexable, table.status, table.username),
 ]);
 
 export type GroupCatalog = typeof groupsCatalog.$inferSelect;

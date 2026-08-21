@@ -18,6 +18,7 @@ const groupListingInput = z.object({
   showOwnerContact: z.boolean().optional(),
   managerPublic: z.boolean().optional(),
   listingAnnouncementEnabled: z.boolean().optional(),
+  searchIndexable: z.boolean().optional(),
   monthlyEntryEnabled: z.boolean().optional(),
   monthlyEntryStars: z.number().int().min(1).max(10_000).optional(),
   monthlyEntryLinkName: z.string().trim().max(64).optional(),
@@ -56,6 +57,7 @@ export const appRouter = router({
         showOwnerContact: z.boolean().optional(),
         managerPublic: z.boolean().optional(),
         listingAnnouncementEnabled: z.boolean().optional(),
+        searchIndexable: z.boolean().optional(),
         country: groupListingInput.shape.country,
         city: groupListingInput.shape.city,
         subcategory: z.string().min(2).max(64).optional(),
@@ -77,13 +79,14 @@ export const appRouter = router({
           group.username ?? group.title,
           ctx.user.openId,
           input.groupId,
-          input.anonymousListing === undefined && input.showOwnerContact === undefined && input.managerPublic === undefined && input.listingAnnouncementEnabled === undefined && input.country === undefined && input.city === undefined && input.subcategory === undefined && input.salePriceTon === undefined && input.rewardActive === undefined && input.rewardBudget === undefined && input.rewardPerSubscription === undefined && input.rewardPerManualAdd === undefined
+          input.anonymousListing === undefined && input.showOwnerContact === undefined && input.managerPublic === undefined && input.listingAnnouncementEnabled === undefined && input.searchIndexable === undefined && input.country === undefined && input.city === undefined && input.subcategory === undefined && input.salePriceTon === undefined && input.rewardActive === undefined && input.rewardBudget === undefined && input.rewardPerSubscription === undefined && input.rewardPerManualAdd === undefined
             ? undefined
             : {
                 anonymousListing: input.anonymousListing,
                 showOwnerContact: input.showOwnerContact,
                 managerPublic: input.managerPublic,
                 listingAnnouncementEnabled: input.listingAnnouncementEnabled,
+                searchIndexable: input.searchIndexable,
                 country: input.country,
                 city: input.city,
                 subcategory: input.subcategory,
