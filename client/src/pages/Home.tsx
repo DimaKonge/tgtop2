@@ -1091,7 +1091,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const account = accountQuery.data as
     | {
-        user?: { bonusBalance: number; mainBalanceTon: string | number; publicProfile?: boolean };
+        user?: { bonusBalance: number; mainBalanceTon: string | number; publicProfile?: boolean; role?: "user" | "moderator" | "admin" };
       transactions: Array<{
           id: number;
           amount: number;
@@ -1109,6 +1109,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       };
     }
     | undefined;
+  const moderationAccessQuery = trpc.tgTop.getModerationAccess.useQuery(undefined, { enabled: isAuthenticated });
+  const moderationAccess = moderationAccessQuery.data as { role: "user" | "moderator" | "admin"; canModerate: boolean; canManageModerators: boolean } | undefined;
+  const moderationQueueQuery = trpc.tgTop.getModerationQueue.useQuery(undefined, { enabled: Boolean(moderationAccess?.canModerate) });
+  const moderationQueue = (moderationQueueQuery.data ?? []) as Array<{ id: number; title: string; username: string | null; moderationStatus: "review" | "blocked"; moderationReason: string | null; category: "Каналы" | "Чаты"; country: string }>;
+  const moderatorsQuery = trpc.tgTop.getModerators.useQuery(undefined, { enabled: Boolean(moderationAccess?.canManageModerators) });
+  const moderators = (moderatorsQuery.data ?? []) as Array<{ openId: string; name: string | null; telegramUsername: string | null; role: "admin" | "moderator" }>;
+  const [moderationReasonDraft, setModerationReasonDraft] = useState("");
+  const [moderatorUsernameDraft, setModeratorUsernameDraft] = useState("");
   const dealsQuery = trpc.tgTop.myDeals.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -1155,6 +1163,26 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.getAccount.invalidate();
       void utils.tgTop.getOwnerLeaderboard.invalidate();
       void utils.tgTop.getPublicOwnerProfile.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const moderateGroup = trpc.tgTop.moderateGroup.useMutation({
+    onSuccess: () => {
+      toast.success("Решение модерации сохранено");
+      setModerationReasonDraft("");
+      void utils.tgTop.getModerationQueue.invalidate();
+      void utils.tgTop.getGroups.invalidate();
+      void utils.tgTop.getSlots.invalidate();
+      void utils.tgTop.myGroups.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const setModeratorRole = trpc.tgTop.setModeratorRole.useMutation({
+    onSuccess: () => {
+      toast.success("Права модератора обновлены");
+      setModeratorUsernameDraft("");
+      void utils.tgTop.getModerators.invalidate();
+      void utils.tgTop.getModerationAccess.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -3098,6 +3126,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </button>
               </div>
             </section>
+            {moderationAccess?.canModerate && (
+              <section className="overflow-hidden rounded-2xl border border-amber-400/20 bg-[#171819]">
+                <div className="border-b border-amber-400/15 px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span><h2 className="text-sm font-semibold text-amber-100">Модерация листингов</h2><p className="mt-1 text-xs leading-5 text-slate-500">Подозрительные площадки скрыты из ТОПа до решения. Оплата и история не удаляются.</p></span>
+                    <span className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1 text-[10px] font-medium text-amber-200">{moderationQueue.length}</span>
+                  </div>
+                  <input value={moderationReasonDraft} onChange={event => setModerationReasonDraft(event.target.value)} maxLength={255} placeholder="Причина решения обязательна" className="mt-3 h-9 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-amber-300/40" />
+                </div>
+                {moderationQueue.length ? <div className="divide-y divide-white/7">{moderationQueue.map(group => <div key={group.id} className="px-4 py-3"><div className="flex items-start justify-between gap-3"><span className="min-w-0"><b className="block truncate text-xs text-slate-100">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : "Приватный"} · {group.category} · {group.country}</small><small className="mt-1 block text-[10px] text-amber-200/75">{group.moderationReason ?? "Требуется ручная проверка"}</small></span><span className={`rounded-md px-2 py-1 text-[9px] font-semibold ${group.moderationStatus === "blocked" ? "bg-red-500/15 text-red-200" : "bg-amber-400/10 text-amber-200"}`}>{group.moderationStatus === "blocked" ? "Не допущен" : "Проверка"}</span></div><div className="mt-2 grid grid-cols-3 gap-2"><button onClick={() => moderationReasonDraft.trim().length >= 3 && moderateGroup.mutate({ groupId: group.id, action: "approve", reason: moderationReasonDraft.trim() })} disabled={moderationReasonDraft.trim().length < 3 || moderateGroup.isPending} className="rounded-md border border-emerald-400/25 bg-emerald-400/10 px-2 py-1.5 text-[10px] font-medium text-emerald-200 disabled:opacity-40">Одобрить</button><button onClick={() => moderationReasonDraft.trim().length >= 3 && moderateGroup.mutate({ groupId: group.id, action: "review", reason: moderationReasonDraft.trim() })} disabled={moderationReasonDraft.trim().length < 3 || moderateGroup.isPending} className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1.5 text-[10px] font-medium text-amber-100 disabled:opacity-40">Скрыть</button><button onClick={() => moderationReasonDraft.trim().length >= 3 && moderateGroup.mutate({ groupId: group.id, action: "block", reason: moderationReasonDraft.trim() })} disabled={moderationReasonDraft.trim().length < 3 || moderateGroup.isPending} className="rounded-md border border-red-400/25 bg-red-400/10 px-2 py-1.5 text-[10px] font-medium text-red-200 disabled:opacity-40">Не допустить</button></div></div>)}</div> : <p className="px-4 py-6 text-center text-xs text-slate-500">Очередь проверки пуста</p>}
+                {moderationAccess.canManageModerators && <div className="border-t border-white/7 px-4 py-4"><b className="block text-xs text-slate-200">Выбранные модераторы</b><div className="mt-2 flex gap-2"><input value={moderatorUsernameDraft} onChange={event => setModeratorUsernameDraft(event.target.value)} placeholder="@username" className="h-9 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-[#3f8cff]/40" /><button onClick={() => moderatorUsernameDraft.trim().length >= 2 && setModeratorRole.mutate({ telegramUsername: moderatorUsernameDraft, role: "moderator" })} disabled={moderatorUsernameDraft.trim().length < 2 || setModeratorRole.isPending} className="rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 text-[10px] font-medium text-[#b8d2ff] disabled:opacity-40">Добавить</button></div><div className="mt-3 space-y-1.5">{moderators.map(moderator => <div key={moderator.openId} className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-3 py-2"><span className="min-w-0"><b className="block truncate text-[11px] text-slate-200">{moderator.telegramUsername ? `@${moderator.telegramUsername}` : moderator.name ?? moderator.openId}</b><small className="text-[9px] text-slate-500">{moderator.role === "admin" ? "Главный администратор" : "Модератор"}</small></span>{moderator.role === "moderator" && moderator.telegramUsername && <button onClick={() => setModeratorRole.mutate({ telegramUsername: moderator.telegramUsername!, role: "user" })} className="text-[10px] text-red-200">Убрать</button>}</div>)}</div></div>}
+              </section>
+            )}
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="flex items-start justify-between gap-3 border-b border-white/8 px-4 py-4">
                 <span>

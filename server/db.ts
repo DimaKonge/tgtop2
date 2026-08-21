@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -824,6 +824,108 @@ export async function getGroupById(id: number) {
   return result[0];
 }
 
+export async function flagGroupForModeration(chatId: string, reason: string, evidence?: string) {
+  const db = await getDb();
+  if (!db) return false;
+  const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.chatId, chatId)).limit(1);
+  if (!group || group.moderationStatus === "blocked" || group.moderationStatus === "review") return false;
+  await db.transaction(async tx => {
+    await tx.update(groupsCatalog).set({
+      status: "review",
+      moderationStatus: "review",
+      moderationReason: reason,
+      moderationReviewedAt: new Date(),
+      listedAt: null,
+    }).where(eq(groupsCatalog.id, group.id));
+    await tx.update(auctionSlots).set({
+      groupId: null,
+      leaderUserId: null,
+      leaderUsername: "-",
+      currentBid: "0 TON",
+      bidAmount: 0,
+      title: "Свободное место",
+      subtitle: "Ждет листинга",
+    }).where(eq(auctionSlots.groupId, group.id));
+    await tx.insert(moderationEvents).values({
+      groupId: group.id,
+      action: "auto_review",
+      reason,
+      evidenceSummary: evidence?.slice(0, 255),
+    });
+  });
+  return true;
+}
+
+export async function getModerationQueue() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(groupsCatalog)
+    .where(inArray(groupsCatalog.moderationStatus, ["review", "blocked"]))
+    .orderBy(desc(groupsCatalog.moderationReviewedAt));
+}
+
+export async function moderateGroup(actorOpenId: string, groupId: number, action: "review" | "block" | "approve", reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const status = action === "block" ? "blocked" : action === "review" ? "review" : "pending";
+  const moderationStatus = action === "block" ? "blocked" : action === "review" ? "review" : "approved";
+  await db.transaction(async tx => {
+    await tx.update(groupsCatalog).set({
+      status,
+      moderationStatus,
+      moderationReason: reason,
+      moderationReviewedBy: actorOpenId,
+      moderationReviewedAt: new Date(),
+      listedAt: null,
+    }).where(eq(groupsCatalog.id, groupId));
+    if (action !== "approve") {
+      await tx.update(auctionSlots).set({
+        groupId: null,
+        leaderUserId: null,
+        leaderUsername: "-",
+        currentBid: "0 TON",
+        bidAmount: 0,
+        title: "Свободное место",
+        subtitle: "Ждет листинга",
+      }).where(eq(auctionSlots.groupId, groupId));
+    }
+    await tx.insert(moderationEvents).values({
+      groupId,
+      actorOpenId,
+      action: action === "approve" ? "manual_approve" : action === "block" ? "manual_block" : "manual_review",
+      reason,
+    });
+  });
+}
+
+export async function getModerationAccess(openId: string) {
+  const db = await getDb();
+  if (!db) return { canModerate: false, canManageModerators: false, role: "user" as const };
+  const [user] = await db.select({ role: users.role }).from(users).where(eq(users.openId, openId)).limit(1);
+  const role = user?.role ?? "user";
+  return { role, canModerate: role === "admin" || role === "moderator", canManageModerators: role === "admin" };
+}
+
+export async function getModerators() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ openId: users.openId, name: users.name, telegramUsername: users.telegramUsername, avatarUrl: users.avatarUrl, role: users.role })
+    .from(users).where(inArray(users.role, ["admin", "moderator"])).orderBy(asc(users.role), asc(users.telegramUsername));
+}
+
+export async function setModeratorRole(adminOpenId: string, telegramUsername: string, role: "moderator" | "user") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const access = await getModerationAccess(adminOpenId);
+  if (!access.canManageModerators) throw new Error("Недостаточно прав для управления модераторами");
+  const username = telegramUsername.replace(/^@/, "").trim();
+  const [target] = await db.select().from(users).where(eq(users.telegramUsername, username)).limit(1);
+  if (!target) throw new Error("Пользователь ещё не входил в TG TOP через Telegram");
+  if (target.role === "admin") throw new Error("Главного администратора нельзя изменить этой операцией");
+  await db.update(users).set({ role }).where(eq(users.openId, target.openId));
+  return { openId: target.openId, role };
+}
+
 export async function setGroupManager(ownerOpenId: string, groupId: number, manager: { telegramUserId: string; username: string | null; name: string; avatarUrl?: string | null }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
@@ -1281,6 +1383,9 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
   const listingOptions = normalizeGroupListingOptions(listing);
   const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
   if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) throw new Error("Группа недоступна для размещения");
+  if (groups.some(group => group.moderationStatus === "review" || group.moderationStatus === "blocked")) {
+    throw new Error("Площадка не допущена к листингу до решения модератора");
+  }
   if (listingOptions.subcategory) {
     const categories = Array.from(new Set(groups.map(group => group.category)));
     if (categories.length !== 1 || !isCatalogSubcategory(categories[0], listingOptions.subcategory)) {

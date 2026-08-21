@@ -216,6 +216,41 @@ export const appRouter = router({
         return await db.getOwnerLeaderboard(input?.limit);
       }),
 
+    getModerationAccess: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getModerationAccess(ctx.user.openId);
+    }),
+
+    getModerationQueue: protectedProcedure.query(async ({ ctx }) => {
+      const access = await db.getModerationAccess(ctx.user.openId);
+      if (!access.canModerate) throw new Error("Недостаточно прав для просмотра очереди модерации");
+      return await db.getModerationQueue();
+    }),
+
+    moderateGroup: protectedProcedure
+      .input(z.object({
+        groupId: z.number().int().positive(),
+        action: z.enum(["review", "block", "approve"]),
+        reason: z.string().trim().min(3).max(255),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const access = await db.getModerationAccess(ctx.user.openId);
+        if (!access.canModerate) throw new Error("Недостаточно прав для модерации лотов");
+        await db.moderateGroup(ctx.user.openId, input.groupId, input.action, input.reason);
+        return { success: true } as const;
+      }),
+
+    getModerators: protectedProcedure.query(async ({ ctx }) => {
+      const access = await db.getModerationAccess(ctx.user.openId);
+      if (!access.canManageModerators) throw new Error("Недостаточно прав для управления модераторами");
+      return await db.getModerators();
+    }),
+
+    setModeratorRole: protectedProcedure
+      .input(z.object({ telegramUsername: z.string().trim().min(2).max(128), role: z.enum(["moderator", "user"]) }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.setModeratorRole(ctx.user.openId, input.telegramUsername, input.role);
+      }),
+
     setPublicProfile: protectedProcedure
       .input(z.object({ publicProfile: z.boolean() }))
       .mutation(async ({ ctx, input }) => {

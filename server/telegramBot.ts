@@ -17,7 +17,9 @@ import {
   settleStarsRankingPayment,
   upsertTelegramGroup,
   upsertUser,
+  flagGroupForModeration,
 } from "./db";
+import { inspectLocalContent } from "./localModeration";
 import { notifyRankingOutbid } from "./telegramNotifications";
 
 type TelegramChat = {
@@ -46,13 +48,14 @@ type TelegramUpdate = {
     message_id: number;
     from?: TelegramUser;
     text?: string;
+    caption?: string;
     new_chat_members?: TelegramUser[];
     left_chat_member?: TelegramUser;
     new_chat_title?: string;
     pinned_message?: unknown;
     successful_payment?: { currency: string; total_amount: number; invoice_payload: string; telegram_payment_charge_id: string };
   };
-  channel_post?: TelegramActivity;
+  channel_post?: TelegramActivity & { text?: string; caption?: string; message_id: number };
   chat_member?: ChatMemberUpdate;
   my_chat_member?: { date?: number; chat: TelegramChat; from: TelegramUser; old_chat_member: ChatMember; new_chat_member: ChatMember };
   pre_checkout_query?: { id: string; from: TelegramUser; currency: string; total_amount: number; invoice_payload: string };
@@ -193,15 +196,17 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   const profile = await getChatProfile(chat.id);
   const membersCount = await getMemberCount(chat.id);
   const inviteLink = await getChatInviteLink(chat.id);
+  const initialVerdict = inspectLocalContent([profile.title ?? chat.title, profile.username ?? chat.username, profile.description].filter(Boolean).join("\n"));
   const ownerOpenId = `telegram:${from.id}`;
   await upsertUser({ openId: ownerOpenId, name: from.username ?? from.first_name ?? "Telegram user", telegramUsername: from.username ?? null, loginMethod: "telegram-bot", lastSignedIn: new Date() });
   await upsertTelegramGroup({
     chatId: catalogChatId(chat.id), title: profile.title ?? chat.title ?? "Telegram community", username: profile.username ?? chat.username ?? null,
     inviteLink: inviteLink ?? null,
     description: profile.description ?? null, avatarFileId: profile.photo?.small_file_id ?? null, membersCount, ownerOpenId,
-    category: catalogCategory(chat), country: "Global", status: "pending", messagesCount: 0, joinedCount: 0, lastPostViews: 0, lastStatsAt: new Date(),
+    category: catalogCategory(chat), country: "Global", status: "pending", moderationStatus: initialVerdict.verdict === "review" ? "review" : "approved", moderationReason: initialVerdict.reason ?? null, messagesCount: 0, joinedCount: 0, lastPostViews: 0, lastStatsAt: new Date(),
   });
   const savedGroup = await getGroupByChatId(catalogChatId(chat.id));
+  if (savedGroup && initialVerdict.verdict === "review") await flagGroupForModeration(catalogChatId(chat.id), initialVerdict.reason!, initialVerdict.evidence);
   let awarded = false;
   if (savedGroup) {
     await recordGroupSnapshot(savedGroup.id, membersCount, savedGroup.messagesCount, savedGroup.joinedCount);
@@ -334,6 +339,11 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     await recordGroupActivity(catalogChatId(activity.chat.id), activity.views ?? 0);
     const chatIdStr = catalogChatId(activity.chat.id);
     const group = await getGroupByChatId(chatIdStr);
+    const verdict = inspectLocalContent(("text" in activity ? activity.text : undefined) ?? ("caption" in activity ? activity.caption : undefined));
+    if (group?.status === "listed" && verdict.verdict === "review") {
+      await flagGroupForModeration(chatIdStr, verdict.reason!, verdict.evidence);
+      console.warn(`[Moderation] ${chatIdStr} hidden for review: ${verdict.reason}`);
+    }
     if (group?.deleteServiceMessages && message && (message.new_chat_members || message.left_chat_member || message.new_chat_title || message.pinned_message)) {
       await telegramCall<boolean>("deleteMessage", {
         chat_id: activity.chat.id,

@@ -8,7 +8,7 @@ export const users = mysqlTable("users", {
   avatarUrl: varchar("avatarUrl", { length: 512 }),
   telegramUsername: varchar("telegramUsername", { length: 128 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "moderator", "admin"]).default("user").notNull(),
   publicProfile: boolean("publicProfile").default(false).notNull(),
   referralCode: varchar("referralCode", { length: 32 }).unique(),
   referredBy: varchar("referredBy", { length: 32 }),
@@ -59,7 +59,11 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   subcategory: varchar("subcategory", { length: 64 }).default("General").notNull(),
   country: varchar("country", { length: 64 }).default("Global").notNull(),
   city: varchar("city", { length: 96 }),
-  status: mysqlEnum("status", ["listed", "rented", "sold", "pending"]).default("listed").notNull(),
+  status: mysqlEnum("status", ["listed", "rented", "sold", "pending", "review", "blocked"]).default("listed").notNull(),
+  moderationStatus: mysqlEnum("moderationStatus", ["pending", "approved", "review", "blocked"]).default("pending").notNull(),
+  moderationReason: varchar("moderationReason", { length: 255 }),
+  moderationReviewedBy: varchar("moderationReviewedBy", { length: 64 }),
+  moderationReviewedAt: timestamp("moderationReviewedAt"),
   messagesCount: int("messagesCount").default(0).notNull(),
   joinedCount: int("joinedCount").default(0).notNull(),
   leavesCount: int("leavesCount").default(0).notNull(),
@@ -104,6 +108,16 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
 
 export type GroupCatalog = typeof groupsCatalog.$inferSelect;
 export type InsertGroupCatalog = typeof groupsCatalog.$inferInsert;
+
+export const moderationEvents = mysqlTable("moderation_events", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("groupId").notNull(),
+  action: mysqlEnum("action", ["auto_review", "manual_review", "manual_block", "manual_approve"]).notNull(),
+  actorOpenId: varchar("actorOpenId", { length: 64 }),
+  reason: varchar("reason", { length: 255 }).notNull(),
+  evidenceSummary: varchar("evidenceSummary", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("moderation_events_group_created_idx").on(table.groupId, table.createdAt)]);
 
 export const groupStatsSnapshots = mysqlTable("group_stats_snapshots", {
   id: int("id").autoincrement().primaryKey(),
