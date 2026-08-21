@@ -197,6 +197,7 @@ type Group = {
   inviteLink: string | null;
   description: string | null;
   avatarFileId: string | null;
+  animatedAvatarUrl?: string | null;
   membersCount: number;
   ownerOpenId: string;
   category: "Каналы" | "Чаты";
@@ -391,7 +392,9 @@ function Avatar({
     <span
       className={`${size} grid shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#1b2430] text-sm font-semibold text-slate-200`}
     >
-      {avatarSrc && !failed ? (
+      {group.animatedAvatarUrl && !failed ? (
+        <video src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="h-full w-full object-cover" onError={() => setFailed(true)} />
+      ) : avatarSrc && !failed ? (
         <img
           src={avatarSrc}
           alt=""
@@ -410,7 +413,9 @@ function FullBleedGroupArtwork({ group }: { group: Group }) {
   const avatarSrc = getTelegramAvatarSrc(group);
   return (
     <span className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_20%,#253a58_0%,#111720_68%)]">
-      {avatarSrc && !failed ? (
+      {group.animatedAvatarUrl && !failed ? (
+        <video src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="pointer-events-none h-full w-full select-none object-cover transition-transform duration-300 group-hover:scale-105 [-webkit-touch-callout:none]" onError={() => setFailed(true)} />
+      ) : avatarSrc && !failed ? (
         <img src={avatarSrc} alt="" draggable={false} className="pointer-events-none h-full w-full select-none object-cover transition-transform duration-300 group-hover:scale-105 [-webkit-touch-callout:none]" onError={() => setFailed(true)} />
       ) : (
         <span className="grid h-full w-full place-items-center text-4xl font-semibold text-white/28">{group.title.slice(0, 1).toUpperCase()}</span>
@@ -525,6 +530,7 @@ function GroupCard({
     ? "flex h-full flex-col items-center justify-center gap-2 text-center"
     : "flex h-full items-center gap-3";
   const avatarSrc = group ? getTelegramAvatarSrc(group) : null;
+  const animatedAvatarSrc = group?.animatedAvatarUrl ?? null;
   const groupUrl = group?.username ? `https://t.me/${group.username}` : (group?.inviteLink || null);
   return (
     <div
@@ -548,7 +554,9 @@ function GroupCard({
       {group && rankingPlacement ? (
         <>
           <>
-            {avatarSrc && !imageFailed ? (
+            {animatedAvatarSrc && !imageFailed ? (
+              <video src={animatedAvatarSrc} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="pointer-events-none absolute inset-0 h-full w-full object-cover" onError={() => setImageFailed(true)} />
+            ) : avatarSrc && !imageFailed ? (
               <img
                 src={avatarSrc}
                 alt=""

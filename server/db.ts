@@ -75,14 +75,28 @@ export async function getDb() {
   return _db;
 }
 
+export function isDuplicateTelegramEventError(error: unknown): boolean {
+  const visited = new Set<unknown>();
+  let current: unknown = error;
+  while (current && typeof current === "object" && !visited.has(current)) {
+    visited.add(current);
+    const databaseError = current as { code?: unknown; errno?: unknown; cause?: unknown };
+    if (databaseError.code === "ER_DUP_ENTRY" || databaseError.errno === 1062) return true;
+    current = databaseError.cause;
+  }
+  return false;
+}
+
 export async function claimTelegramEvent(eventKey: string, firstBot: string) {
   const db = await getDb();
   if (!db) return true;
   try {
-    await db.insert(telegramEventReceipts).values({ eventKey, firstBot });
-    return true;
+    const result = await db.insert(telegramEventReceipts).values({ eventKey, firstBot }).onDuplicateKeyUpdate({
+      set: { eventKey: sql`${telegramEventReceipts.eventKey}` },
+    });
+    return Number(result[0]?.affectedRows ?? 0) === 1;
   } catch (error) {
-    if ((error as { code?: string }).code === "ER_DUP_ENTRY") return false;
+    if (isDuplicateTelegramEventError(error)) return false;
     throw error;
   }
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isDuplicateTelegramEventError } from "./db";
 import { __private__ } from "./telegramBot";
 
 describe("parallel Telegram bot event keys", () => {
@@ -32,5 +33,13 @@ describe("parallel Telegram bot event keys", () => {
 
     expect(__private__.getTelegramEventKey(primaryEvent)).toBe("message:-100222:88");
     expect(__private__.getTelegramEventKey(primaryEvent)).toBe(__private__.getTelegramEventKey(reserveEvent));
+  });
+
+  it("recognizes a duplicate-key error wrapped by Drizzle as a normal second-bot skip", () => {
+    const duplicate = Object.assign(new Error("Failed query"), {
+      cause: { code: "ER_DUP_ENTRY", errno: 1062 },
+    });
+    expect(isDuplicateTelegramEventError(duplicate)).toBe(true);
+    expect(isDuplicateTelegramEventError(new Error("Connection lost"))).toBe(false);
   });
 });
