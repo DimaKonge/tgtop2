@@ -928,6 +928,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [nftTransferStep, setNftTransferStep] = useState<"select" | "review" | "prepared">("select");
   const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
   const [nftMarketCategory, setNftMarketCategory] = useState<NftMarketCategory>("all");
+  const [botCategory, setBotCategory] = useState("Все");
   const [selectedNftId, setSelectedNftId] = useState<number | null>(null);
   const [recipientInput, setRecipientInput] = useState("");
   const [preparedNftTransfer, setPreparedNftTransfer] = useState<PreparedNftTransfer | null>(null);
@@ -1122,7 +1123,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const catalogTaxonomy = catalogTaxonomyQuery.data as {
     countries: Array<{ id: number; code: string; label: string; sortOrder: number }>;
     cities: Array<{ id: number; countryCode: string; code: string; label: string; sortOrder: number }>;
-    topics: Array<{ id: number; category: "Каналы" | "Чаты"; code: string; label: string; sortOrder: number }>;
+    topics: Array<{ id: number; category: "Каналы" | "Чаты" | "Боты"; code: string; label: string; sortOrder: number }>;
   } | undefined;
   const activeModerationListingsQuery = trpc.tgTop.getActiveModerationListings.useQuery(undefined, {
     enabled: Boolean(moderationAccess?.canModerate),
@@ -1144,13 +1145,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const moderatorsQuery = trpc.tgTop.getModerators.useQuery(undefined, { enabled: Boolean(moderationAccess?.canManageModerators) });
   const moderators = (moderatorsQuery.data ?? []) as Array<{ openId: string; name: string | null; telegramUsername: string | null; role: "admin" | "moderator" }>;
   const [moderationReasonDraft, setModerationReasonDraft] = useState("");
+  const [detailModerationReason, setDetailModerationReason] = useState("");
   const [moderatorUsernameDraft, setModeratorUsernameDraft] = useState("");
   const [catalogCountryCodeDraft, setCatalogCountryCodeDraft] = useState("");
   const [catalogCountryLabelDraft, setCatalogCountryLabelDraft] = useState("");
   const [catalogCityCountryDraft, setCatalogCityCountryDraft] = useState("Global");
   const [catalogCityCodeDraft, setCatalogCityCodeDraft] = useState("");
   const [catalogCityLabelDraft, setCatalogCityLabelDraft] = useState("");
-  const [catalogTopicCategoryDraft, setCatalogTopicCategoryDraft] = useState<"Каналы" | "Чаты">("Каналы");
+  const [catalogTopicCategoryDraft, setCatalogTopicCategoryDraft] = useState<"Каналы" | "Чаты" | "Боты">("Каналы");
   const [catalogTopicCodeDraft, setCatalogTopicCodeDraft] = useState("");
   const [catalogTopicLabelDraft, setCatalogTopicLabelDraft] = useState("");
   const dealsQuery = trpc.tgTop.myDeals.useQuery(undefined, {
@@ -1206,6 +1208,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     onSuccess: () => {
       toast.success("Лот снят с ТОПа. Владельцу отправлена причина.");
       setModerationReasonDraft("");
+      setDetailModerationReason("");
       void utils.tgTop.getActiveModerationListings.invalidate();
       void utils.tgTop.getGroups.invalidate();
       void utils.tgTop.getSlots.invalidate();
@@ -1831,7 +1834,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : (Object.entries(CATEGORY_SUBCATEGORIES) as Array<["Каналы" | "Чаты", readonly string[]]>).flatMap(([category, topics]) => topics.map(code => ({ id: `${category}:${code}`, category, code, label: getSubcategoryLabel(code, language), sortOrder: 0 })));
   const getManagedCountryLabel = (code: string) => managedCountries.find(country => country.code === code)?.label ?? getCountryLabel(code, language);
   const getManagedCityLabel = (countryCode: string, code: string) => managedCities.find(city => city.countryCode === countryCode && city.code === code)?.label ?? getCityLabel(countryCode, code, language);
-  const getManagedTopicLabel = (category: "Каналы" | "Чаты", code: string) => managedTopics.find(topic => topic.category === category && topic.code === code)?.label ?? getSubcategoryLabel(code, language);
+  const getManagedTopicLabel = (category: "Каналы" | "Чаты" | "Боты", code: string) => managedTopics.find(topic => topic.category === category && topic.code === code)?.label ?? getSubcategoryLabel(code, language);
+  const botTopicOptions = managedTopics.filter(topic => topic.category === "Боты");
   const globalSubcategoryCategory = globalDirection === "Каналы" || globalDirection === "Чаты" ? globalDirection : null;
   const globalSubcategoryOptions = globalSubcategoryCategory ? managedTopics.filter(topic => topic.category === globalSubcategoryCategory).map(topic => topic.code) : [];
   const listingCategory = selectedListingGroups.length && selectedListingGroups.every(group => group.category === selectedListingGroups[0]?.category)
@@ -1888,12 +1892,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       startTelegramLogin();
       return;
     }
+    setStarsPaymentGroup(null);
     if (slot) {
       const nextBid = getMinimumRankingBidGram(slot);
       setAmount(formatTon(nextBid));
     }
     setTargetSlot(slot ?? null);
     setPage("mine");
+  };
+  const getTargetSlotAddress = (slot: Slot) => {
+    const slotCategory = slot.category && slot.category !== "Все" ? getCategoryLabel(slot.category, language) : tx("Все сообщества", "All communities");
+    const slotCountry = slot.country && slot.country !== "Global" ? getCountryLabel(slot.country, language) : tx("Весь мир", "Worldwide");
+    const slotTopic = slot.subcategory && slot.subcategory !== "Все" && slot.subcategory !== "General" ? getSubcategoryLabel(slot.subcategory, language) : null;
+    return [slotCategory, slotCountry, slotTopic].filter(Boolean).join(" · ");
   };
   const openOutbid = (slot: Slot) => {
     const minimum = getMinimumRankingBidGram(slot);
@@ -2183,6 +2194,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) {
       return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`));
     }
+    setAmount(formatTon(minimum));
+    setListingCountry(targetSlot.country && targetSlot.country !== "Все" ? targetSlot.country : "Global");
+    setListingCity("Все");
+    setListingSubcategory(targetSlot.subcategory && targetSlot.subcategory !== "Все" ? targetSlot.subcategory : "General");
     setDetailVisibility(group.anonymousListing === false ? "public" : "anonymous");
     setShowOwnerContact(Boolean(group.showOwnerContact));
     setManagerPublic(group.managerPublic !== false);
@@ -2598,14 +2613,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             {targetSlot && (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-2.5">
                 <span>
-                  <b className="block text-xs text-slate-100">{tx("Выберите группу для позиции", "Choose a group for this placement")}</b>
+                  <b className="block text-xs text-slate-100">{tx(`Выберите группу для места #${targetSlot.slotNumber}`, `Choose a group for placement #${targetSlot.slotNumber}`)}</b>
                   <small className="mt-0.5 block text-[11px] text-slate-400">
-                    {targetSlot.group
-                      ? tx(`Ставка · от ${amount} GRAM`, `Bid · from ${amount} GRAM`)
-                      : tx(`Свободная позиция · от ${amount} GRAM`, `Vacant position · from ${amount} GRAM`)}
+                    {getTargetSlotAddress(targetSlot)}
                   </small>
                   <small className="mt-0.5 block text-[10px] text-slate-500">
-                    {tx("Ваш лот будет в Top, пока другую группу не разместят выше по ставке.", "Your lot stays in Top until another community outbids it.")}
+                    {tx(`Минимальная цена: ${formatTon(getMinimumRankingBidGram(targetSlot))} GRAM`, `Minimum price: ${formatTon(getMinimumRankingBidGram(targetSlot))} GRAM`)}
                   </small>
                 </span>
                 <button
@@ -2753,7 +2766,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               {(targetSlot ? orderedMyGroups : visibleMyGroups).map(group => (
                 <div
                   key={group.id}
-                  className={`relative overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2 ${targetSlot ? "min-h-[116px]" : "h-[64px]"}`}
+                  className="relative overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2 h-[64px]"
                 >
                   <div className="flex items-center gap-2">
                     {!targetSlot && myGroupsSelectionMode && <button
@@ -2776,6 +2789,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           return;
                         }
                         if (myGroupsSelectionMode) toggleGroupSelection(group.id);
+                        else if (targetSlot) openStarsPayment(group);
                         else openGroup(group.id);
                       }}
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
@@ -2803,17 +2817,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <ChevronRight className={`h-4 w-4 text-slate-600 ${myGroupsSelectionMode ? "opacity-0" : ""}`} />
                     </button>
                   </div>
-                  {targetSlot && (
-                    <div className="mt-3">
-                      <button
-                        onClick={() => openStarsPayment(group)}
-                        className="flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/[0.07] px-3 py-2 text-xs font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.13] active:scale-[0.98]"
-                      >
-                        <span>{tx("Выбрать и настроить ставку", "Choose and set bid")}</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
                 </div>
               ))}
               {mine.length === 0 && (
@@ -3011,31 +3014,39 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                     </div>
                   )}
-                  {detail && ownsDetail && (
-                    <div className="hidden order-3 mt-1.5 flex items-center gap-1.5">
-                      {detail.group.status === "listed" ? (
+                  {detail && (ownsDetail || (moderationAccess?.canModerate && detail.group.status === "listed")) && (
+                    <div className="order-3 mt-3 flex items-center gap-1.5 rounded-xl border border-white/8 bg-[#111720] p-2">
+                      {ownsDetail && detail.group.status === "listed" ? (
                         <button
+                          type="button"
                           onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
                           disabled={unlistGroups.isPending}
-                          className="flex-1 rounded-lg border border-rose-300/20 bg-rose-300/5 py-1.5 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50"
+                          className="flex-1 rounded-lg border border-rose-300/20 bg-rose-300/5 py-2 text-[11px] font-semibold text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50"
                         >
                           {tx("Снять с листинга", "Remove from listing")}
                         </button>
-                      ) : (
+                      ) : ownsDetail ? (
                         <div className="flex-1 text-[11px] text-slate-400 px-1">
                           {tx("Группа не в листинге", "Unlisted")}
                         </div>
+                      ) : (
+                        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                          <Input value={detailModerationReason} onChange={event => setDetailModerationReason(event.target.value)} placeholder="Причина снятия" className="h-8 min-w-0 flex-1 border-red-300/15 bg-red-500/[0.04] px-2 text-[10px] text-slate-100 placeholder:text-slate-600" />
+                          <button type="button" onClick={() => moderateGroup.mutate({ groupId: detail.group.id, action: "review", reason: detailModerationReason.trim() })} disabled={detailModerationReason.trim().length < 3 || moderateGroup.isPending} className="shrink-0 rounded-lg border border-rose-300/20 bg-rose-300/5 px-2.5 py-2 text-[10px] font-semibold text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50">{moderateGroup.isPending ? "Снимаем…" : "Снять"}</button>
+                        </div>
                       )}
-                      <button
+                      {ownsDetail && <button
+                        type="button"
                         onClick={() => {
                           setPendingGroupDeletion(detail.group);
                         }}
                         disabled={deleteGroups.isPending}
                         title={tx("Удалить группу", "Delete community")}
-                        className="rounded-lg border border-red-500/20 bg-red-500/5 p-2 text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50 flex items-center justify-center"
+                        aria-label={tx("Удалить группу", "Delete community")}
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-red-500/20 bg-red-500/5 text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </button>}
                     </div>
                   )}
                   {placementSlot && (
@@ -3784,7 +3795,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <SheetHeader className="px-4">
             <SheetTitle className="text-slate-100">{tx("Параметры лота", "Lot settings")}</SheetTitle>
             <p className="text-xs leading-5 text-slate-500">
-              {starsPaymentGroup?.title} · {tx(`позиция ${targetSlot?.slotNumber ?? "—"}`, `placement ${targetSlot?.slotNumber ?? "—"}`)}
+              {starsPaymentGroup?.title} · {tx(`позиция ${targetSlot?.slotNumber ?? "—"}`, `placement ${targetSlot?.slotNumber ?? "—"}`)}{targetSlot ? ` · ${getTargetSlotAddress(targetSlot)}` : ""}
             </p>
           </SheetHeader>
           <div className="space-y-4 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2">
@@ -3804,6 +3815,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.035] p-3">
                   <Avatar group={starsPaymentGroup} compact />
                   <span className="min-w-0 flex-1"><b className="block truncate text-sm text-white">{starsPaymentGroup.title}</b><small className="mt-0.5 block text-[11px] text-slate-500">{tx(`Минимум для позиции: ${formatTon(minimum)} GRAM`, `Placement minimum: ${formatTon(minimum)} GRAM`)}</small></span>
+                </div>
+                <div className="grid grid-cols-[1fr_auto] gap-2 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-2.5">
+                  <span className="min-w-0"><small className="block text-[9px] font-semibold uppercase tracking-[0.1em] text-[#8fb9ff]">{tx("Адрес лота", "Placement address")}</small><b className="mt-1 block truncate text-[11px] text-slate-100">#{targetSlot.slotNumber} · {getTargetSlotAddress(targetSlot)}</b></span>
+                  <span className="text-right"><small className="block text-[9px] text-slate-500">{tx("Минимум", "Minimum")}</small><b className="mt-1 block text-sm text-[#a6c8ff]">{formatTon(minimum)} GRAM</b></span>
                 </div>
                 <label className="block"><span className="mb-2 block text-xs text-slate-400">{tx("Ваша ставка", "Your bid")}</span><span className="flex items-center rounded-2xl border border-white/8 bg-[#0b0f14] p-1"><button type="button" onClick={() => setBid(bidAmount - 0.1)} aria-label={tx("Уменьшить ставку", "Decrease bid")} className="grid h-12 w-12 place-items-center rounded-xl text-slate-300 transition-colors hover:bg-white/[0.06]"><Minus className="h-4 w-4" /></button><Input value={amount} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setAmount(value); }} onBlur={() => setBid(Number(amount))} aria-label={tx("Сумма ставки в GRAM", "Bid amount in GRAM")} className="h-12 flex-1 border-0 bg-transparent px-0 text-center text-3xl font-semibold text-white focus-visible:ring-0" /><b className="mr-2 text-sm text-slate-400">GRAM</b><button type="button" onClick={() => setBid(bidAmount + 0.1)} aria-label={tx("Увеличить ставку", "Increase bid")} className="grid h-12 w-12 place-items-center rounded-xl text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/10"><Plus className="h-4 w-4" /></button></span></label>
                 <div><div className="mb-2 flex items-center justify-between text-[10px] text-slate-500"><span>{formatTon(minimum)} GRAM</span><span className={tone.text}>{ratio <= 1.2 ? tx("Минимальная", "Minimum") : ratio <= 1.5 ? tx("Уверенная", "Confident") : tx("Максимальная", "Maximum")}</span><span>{formatTon(maximum)} GRAM</span></div><Slider value={[bidAmount]} min={minimum} max={maximum} step={0.1} onValueChange={([value]) => setBid(value)} className={`py-3 [&_[data-slot=slider-track]]:h-3 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-thumb]]:size-7 ${tone.range}`} /></div>

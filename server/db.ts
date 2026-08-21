@@ -994,7 +994,7 @@ export async function deleteCatalogCity(adminOpenId: string, cityId: number) {
   await db.delete(catalogCities).where(eq(catalogCities.id, cityId));
 }
 
-export async function addCatalogTopic(adminOpenId: string, input: { category: "Каналы" | "Чаты"; code: string; label: string }) {
+export async function addCatalogTopic(adminOpenId: string, input: { category: "Каналы" | "Чаты" | "Боты"; code: string; label: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await requireCatalogAdmin(adminOpenId);
@@ -1010,7 +1010,9 @@ export async function deleteCatalogTopic(adminOpenId: string, topicId: number) {
   await requireCatalogAdmin(adminOpenId);
   const [topic] = await db.select().from(catalogTopics).where(eq(catalogTopics.id, topicId)).limit(1);
   if (!topic) throw new Error("Рубрика не найдена");
-  const [usedByGroup] = await db.select({ id: groupsCatalog.id }).from(groupsCatalog).where(and(eq(groupsCatalog.category, topic.category), eq(groupsCatalog.subcategory, topic.code))).limit(1);
+  const [usedByGroup] = topic.category === "Боты"
+    ? []
+    : await db.select({ id: groupsCatalog.id }).from(groupsCatalog).where(and(eq(groupsCatalog.category, topic.category), eq(groupsCatalog.subcategory, topic.code))).limit(1);
   if (usedByGroup) throw new Error("Нельзя удалить рубрику: она используется в размещённом сообществе");
   await db.delete(catalogTopics).where(eq(catalogTopics.id, topicId));
 }

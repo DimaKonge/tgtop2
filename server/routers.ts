@@ -252,7 +252,7 @@ export const appRouter = router({
       }),
 
     addCatalogTopic: protectedProcedure
-      .input(z.object({ category: z.enum(["Каналы", "Чаты"]), code: catalogCode.max(64), label: z.string().trim().min(2).max(96) }))
+      .input(z.object({ category: z.enum(["Каналы", "Чаты", "Боты"]), code: catalogCode.max(64), label: z.string().trim().min(2).max(96) }))
       .mutation(async ({ ctx, input }) => {
         return await db.addCatalogTopic(ctx.user.openId, input);
       }),

@@ -45,7 +45,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('underline-offset-2');
     expect(source).not.toContain('ПРОВЕРЕНА TG TOP');
     expect(source).toContain('const formatTon = (value: number | string | null | undefined)');
-    expect(source).toContain('tx(`Свободная позиция · от ${amount} GRAM`');
+    expect(source).toContain('tx(`Минимальная цена: ${formatTon(getMinimumRankingBidGram(targetSlot))} GRAM`');
     expect(source).not.toContain('0.100 TON');
     expect(source).not.toContain('{language === "en" ? "Catalog" : "Каталог"}');
     expect(source).toContain('tx("Снять с листинга", "Remove from listing")');
@@ -202,6 +202,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('{topSearchOpen && <Input value={topSearchQuery}');
     expect(source).toContain('topSection === "communities" && <button type="button" onClick={() => setFiltersOpen(true)}');
     expect(source).toContain('aria-label={tx("Открыть фильтры сообществ", "Open community filters")}');
+    expect(source).toContain('const getTargetSlotAddress = (slot: Slot) => {');
+    expect(source).toContain('Выберите группу для места #${targetSlot.slotNumber}');
+    expect(source).toContain('else if (targetSlot) openStarsPayment(group);');
+    expect(source).toContain('setListingCountry(targetSlot.country && targetSlot.country !== "Все" ? targetSlot.country : "Global");');
+    expect(source).toContain('Адрес лота');
     expect(source).not.toContain('aria-label={tx("Фильтр географии", "Location filter")}');
     expect(source).not.toContain('aria-label={tx("Тематические рубрики", "Topic categories")}');
     expect(source).toContain('const resetTopFilters = () => {');
@@ -238,7 +243,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('h-[68px] border-white/8 bg-[#111720] px-3 py-2');
     expect(source).toContain('group relative flex h-[78px] w-full items-center justify-between gap-3 overflow-hidden rounded-xl');
     expect(source).toContain('flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-dashed');
-    expect(source).toContain('targetSlot ? "min-h-[116px]" : "h-[64px]"');
+    expect(source).toContain('className="relative overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2 h-[64px]"');
     expect(source).toContain('absolute right-3 top-1/2 z-10 grid h-5 w-5 -translate-y-1/2');
     expect(source).toContain('relative h-6 w-11 shrink-0 rounded-full border transition-colors');
     expect(source).toContain('absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform');
@@ -473,7 +478,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('disabled={!detailEntryUrl}');
     expect(source).toContain('const applyLotGroupSettings = (group: Group) => {');
     expect(source).toContain('setDetailVisibility(group.showOwnerContact && !group.anonymousListing ? "public" : "anonymous");');
-    expect(source).toContain('Ваш лот будет в Top, пока другую группу не разместят выше по ставке.');
+    expect(source).toContain('tx(`Минимальная цена: ${formatTon(getMinimumRankingBidGram(targetSlot))} GRAM`');
     expect(source).toContain('managerPublic?: boolean;');
     expect(source).toContain('tx("Показывать менеджера", "Show manager")');
     expect(source).toContain('const dailyGrowthPct = latestDetailSnapshot');

@@ -64,7 +64,7 @@ export const catalogCities = mysqlTable("catalog_cities", {
 
 export const catalogTopics = mysqlTable("catalog_topics", {
   id: int("id").autoincrement().primaryKey(),
-  category: mysqlEnum("category", ["Каналы", "Чаты"]).notNull(),
+  category: mysqlEnum("category", ["Каналы", "Чаты", "Боты"]).notNull(),
   code: varchar("code", { length: 64 }).notNull(),
   label: varchar("label", { length: 96 }).notNull(),
   sortOrder: int("sortOrder").default(0).notNull(),
