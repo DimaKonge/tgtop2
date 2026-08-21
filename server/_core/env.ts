@@ -3,6 +3,8 @@ export const ENV = {
   cookieSecret: process.env.JWT_SECRET ?? "",
   databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+  telegramLoginClientId: process.env.TELEGRAM_LOGIN_CLIENT_ID ?? "",
+  telegramLoginClientSecret: process.env.TELEGRAM_LOGIN_CLIENT_SECRET ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",

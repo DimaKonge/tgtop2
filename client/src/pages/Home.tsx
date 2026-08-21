@@ -3,7 +3,7 @@ import { closestCenter, DndContext, DragOverlay, KeyboardSensor, PointerSensor, 
 import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { startLogin } from "@/const";
+import { startTelegramLogin } from "@/lib/telegramLogin";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1722,7 +1722,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   };
   const openMine = (slot?: Slot) => {
     if (!isAuthenticated) {
-      startLogin();
+      startTelegramLogin();
       return;
     }
     if (slot) {
@@ -2087,11 +2087,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </button>
             ) : (
               <button
-                onClick={() => startLogin()}
+                onClick={() => startTelegramLogin()}
                 className="flex items-center gap-2 rounded-xl border border-[#3f8cff]/40 bg-[#3f8cff]/15 px-3.5 py-1.5 text-xs font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/25"
               >
                 <Send className="h-3.5 w-3.5 text-[#72a8ff]" />
-                <span>Подключить Telegram</span>
+                <span>Войти через Telegram</span>
               </button>
             )}
           </div>

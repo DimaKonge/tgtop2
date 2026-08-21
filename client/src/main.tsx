@@ -5,7 +5,7 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { startLogin } from "./const";
+import { startTelegramLogin } from "./lib/telegramLogin";
 import "./index.css";
 
 type TelegramWebApp = {
@@ -37,7 +37,7 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
     return;
   }
   
-  startLogin();
+  startTelegramLogin();
 };
 
 queryClient.getQueryCache().subscribe(event => {

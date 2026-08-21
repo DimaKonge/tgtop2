@@ -8,6 +8,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerTelegramMediaRoutes } from "../telegramMedia";
+import { registerTelegramLoginRoutes } from "../telegramLogin";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -37,6 +38,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerTelegramMediaRoutes(app);
+  registerTelegramLoginRoutes(app);
   registerOAuthRoutes(app);
   // tRPC API
   app.use(
