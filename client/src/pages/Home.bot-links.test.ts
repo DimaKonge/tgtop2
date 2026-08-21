@@ -172,7 +172,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('grid w-full grid-cols-3');
     expect(source).toContain('label: "Рабочее пространство"');
     expect(source).toContain('label: "Мой кабинет"');
-    expect(source).toContain('max-w-full whitespace-nowrap');
+    expect(source).toContain('aria-label={item.label}');
+    expect(source).toContain('<span className="sr-only">{item.label}</span>');
     expect(source).toContain('const totalBalanceLabel = `${formatTon(Number(mainTon))} TON · ${formatGram(bonusBalanceUnits)} GRAM`;');
     expect(source).toContain('>Баланс</small>');
     expect(source).toContain('page === "giveaways"');

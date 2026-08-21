@@ -2062,6 +2062,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <b className="text-sm tracking-tight">TG TOP</b>
           </button>
           <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <button
+                onClick={() => setPage("profile")}
+                aria-label="Открыть кабинет с балансом"
+                className="hidden min-[360px]:block text-right leading-tight"
+              >
+                <small className="block text-[9px] uppercase tracking-[0.08em] text-slate-500">Баланс</small>
+                <b className="mt-0.5 block whitespace-nowrap text-[10px] font-semibold text-[#a6c8ff]">{totalBalanceLabel}</b>
+              </button>
+            )}
             <button
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
@@ -2072,12 +2082,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             {isAuthenticated ? (
               <button
                 onClick={() => setPage("profile")}
-                className="flex items-center gap-2"
+                aria-label="Открыть профиль"
+                className="flex items-center"
               >
-                <span className="hidden min-[360px]:block text-right leading-tight">
-                  <small className="block text-[9px] uppercase tracking-[0.08em] text-slate-500">Баланс</small>
-                  <b className="mt-0.5 block whitespace-nowrap text-[10px] font-semibold text-[#a6c8ff]">{totalBalanceLabel}</b>
-                </span>
                 <span className="grid h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold">
                   <>
                     {(user?.avatarUrl ?? telegramAvatar) ? (
@@ -3329,10 +3336,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     onClick={() =>
                       item.key === "mine" ? openMine() : setPage(item.key)
                     }
-                    className={`flex h-[48px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 text-[9px] font-medium leading-3 tracking-[-0.02em] ${page === item.key ? "text-[#72a8ff]" : "text-slate-500"}`}
+                    aria-label={item.label}
+                    className={`grid h-[46px] min-w-0 place-items-center rounded-xl transition-colors ${page === item.key ? "bg-[#3f8cff]/10 text-[#72a8ff]" : "text-slate-500"}`}
                   >
-                    <Icon className="h-4 w-4" />
-                    <span className="max-w-full whitespace-nowrap">{item.label}</span>
+                    <Icon className="h-5 w-5" />
+                    <span className="sr-only">{item.label}</span>
                   </button>
                 );
               })}
@@ -3340,10 +3348,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           ) : (
             <button
               onClick={() => setPage("top")}
-              className="flex h-[46px] flex-col items-center justify-center gap-0.5 text-[10px] leading-3 text-[#72a8ff]"
+              aria-label="ТОП"
+              className="grid h-[46px] place-items-center rounded-xl bg-[#3f8cff]/10 text-[#72a8ff]"
             >
-              <Trophy className="h-4 w-4" />
-              ТОП
+              <Trophy className="h-5 w-5" />
+              <span className="sr-only">ТОП</span>
             </button>
           )}
         </div>
