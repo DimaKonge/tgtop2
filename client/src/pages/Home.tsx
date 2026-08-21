@@ -2342,9 +2342,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               ))}
             </div>}
             {topSection === "bots" ? (
-              <section className="rounded-2xl border border-dashed border-[#3390ec]/25 bg-[#202b3a] px-5 py-10 text-center">
-                <b className="block text-sm text-slate-200">Каталог ботов появится здесь</b>
-                <p className="mx-auto mt-2 max-w-[280px] text-xs leading-5 text-slate-500">Скоро можно будет находить и добавлять Telegram-ботов в отдельном разделе.</p>
+              <section className="space-y-2 pt-1">
+                <div aria-label="Рубрики ботов" className="flex gap-1.5 overflow-x-auto rounded-lg border border-white/8 bg-[#111720] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <button type="button" onClick={() => setBotCategory("Все")} className={`h-8 shrink-0 rounded-md px-3 text-[10px] font-semibold transition-colors ${botCategory === "Все" ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{tx("Все", "All")}</button>
+                  {botTopicOptions.map(topic => <button key={topic.id} type="button" onClick={() => setBotCategory(topic.code)} className={`h-8 shrink-0 rounded-md px-3 text-[10px] font-semibold transition-colors ${botCategory === topic.code ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{topic.label}</button>)}
+                </div>
+                <section className="rounded-2xl border border-dashed border-[#3390ec]/25 bg-[#202b3a] px-5 py-10 text-center">
+                  <b className="block text-sm text-slate-200">{botCategory === "Все" ? "Каталог ботов появится здесь" : `Боты в рубрике «${botTopicOptions.find(topic => topic.code === botCategory)?.label ?? botCategory}» появятся здесь`}</b>
+                  <p className="mx-auto mt-2 max-w-[280px] text-xs leading-5 text-slate-500">Добавляйте и удаляйте рубрики ботов в админ-панели. География для ботов не используется.</p>
+                </section>
               </section>
             ) : topSection === "nft" ? (
               <section className="space-y-2 pt-1">
@@ -3244,9 +3250,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </details>
 
               <details className="px-4 py-3">
-                <summary className="cursor-pointer text-xs font-semibold text-slate-200">Тематические рубрики · {catalogTaxonomy?.topics.length ?? 0}</summary>
+                <summary className="cursor-pointer text-xs font-semibold text-slate-200">Рубрики сообществ и ботов · {catalogTaxonomy?.topics.length ?? 0}</summary>
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <Select value={catalogTopicCategoryDraft} onValueChange={value => setCatalogTopicCategoryDraft(value as "Каналы" | "Чаты")}><SelectTrigger className="h-9 border-white/10 bg-[#17212b] text-[11px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="border-white/10 bg-[#111720] text-slate-100"><SelectItem value="Каналы" className="text-xs text-slate-200">Каналы</SelectItem><SelectItem value="Чаты" className="text-xs text-slate-200">Чаты</SelectItem></SelectContent></Select>
+                  <Select value={catalogTopicCategoryDraft} onValueChange={value => setCatalogTopicCategoryDraft(value as "Каналы" | "Чаты" | "Боты")}><SelectTrigger className="h-9 border-white/10 bg-[#17212b] text-[11px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="border-white/10 bg-[#111720] text-slate-100"><SelectItem value="Каналы" className="text-xs text-slate-200">Каналы</SelectItem><SelectItem value="Чаты" className="text-xs text-slate-200">Чаты</SelectItem><SelectItem value="Боты" className="text-xs text-slate-200">Боты</SelectItem></SelectContent></Select>
                   <Input value={catalogTopicCodeDraft} onChange={event => setCatalogTopicCodeDraft(event.target.value)} placeholder="Код рубрики" className="h-9 border-white/10 bg-[#17212b] px-2 text-[11px] text-slate-100 placeholder:text-slate-600" />
                   <Input value={catalogTopicLabelDraft} onChange={event => setCatalogTopicLabelDraft(event.target.value)} placeholder="Название рубрики" className="col-span-2 h-9 border-white/10 bg-[#17212b] px-2 text-[11px] text-slate-100 placeholder:text-slate-600" />
                 </div>

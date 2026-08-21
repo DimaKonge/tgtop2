@@ -22,5 +22,9 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain('value={detailModerationReason}');
     expect(source).toContain('moderateGroup.mutate({ groupId: detail.group.id, action: "review", reason: detailModerationReason.trim() })');
     expect(source).toContain('tx("Снять с листинга", "Remove from listing")');
+    expect(source).toContain('value="Боты"');
+    expect(source).toContain('setCatalogTopicCategoryDraft(value as "Каналы" | "Чаты" | "Боты")');
+    expect(source).toContain('aria-label="Рубрики ботов"');
+    expect(source).toContain('botTopicOptions.map(topic =>');
   });
 });

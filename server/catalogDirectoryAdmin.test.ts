@@ -12,11 +12,15 @@ describe("catalog directory administration", () => {
     expect(dbSource).toContain("Нельзя удалить страну: она используется в размещённом сообществе");
     expect(dbSource).toContain("Нельзя удалить город: он используется в размещённом сообществе");
     expect(dbSource).toContain("Нельзя удалить рубрику: она используется в размещённом сообществе");
+    expect(dbSource).toContain('input: { category: "Каналы" | "Чаты" | "Боты"; code: string; label: string }');
+    expect(dbSource).toContain('topic.category === "Боты"');
     expect(routerSource).toContain("addCatalogCountry: protectedProcedure");
     expect(routerSource).toContain("addCatalogCity: protectedProcedure");
     expect(routerSource).toContain("addCatalogTopic: protectedProcedure");
     expect(homeSource).toContain("География и рубрики");
     expect(homeSource).toContain("Все пользователи с доступом к админ-панели могут менять эти списки.");
     expect(homeSource).toContain("const managedCountries = catalogTaxonomy?.countries?.length");
+    expect(homeSource).toContain('category: "Каналы" | "Чаты" | "Боты"');
+    expect(homeSource).toContain('aria-label="Рубрики ботов"');
   });
 });
