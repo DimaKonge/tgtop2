@@ -49,6 +49,7 @@ import {
   UserRound,
   Users,
   WalletCards,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
@@ -1550,16 +1551,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     return tx(ru, en);
   };
   const globalCount = globalDirection === "NFT" ? visibleNfts.length : visibleGroups.length;
-  const currentTopTitle = [
-    globalDirection === "NFT"
-      ? "NFT"
-      : globalDirection === "Все"
-        ? tx("Все сообщества", "All communities")
-        : getCategoryLabel(globalDirection, language),
-    globalDirection !== "NFT" && subcategory !== "Все" ? getSubcategoryLabel(subcategory, language) : null,
-  ].filter((part): part is string => Boolean(part)).join(" · ");
+  const currentTopTitle = globalDirection === "NFT"
+    ? "NFT"
+    : globalDirection === "Все"
+      ? tx("Все сообщества", "All communities")
+      : getCategoryLabel(globalDirection, language);
   const currentTopCountry = globalDirection !== "NFT" ? (country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)) : null;
   const currentTopCity = globalDirection !== "NFT" && city !== "Все" ? getCityLabel(country, city, language) : null;
+  const currentTopSubcategory = globalDirection !== "NFT" && subcategory !== "Все" ? getSubcategoryLabel(subcategory, language) : null;
   const topThemeOptions = Array.from(new Set(globalDirection === "Чаты"
     ? [...CATEGORY_SUBCATEGORIES["Чаты"]]
     : globalDirection === "Каналы"
@@ -1988,6 +1987,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setSubcategory("Все");
     }
   };
+  const resetTopFilters = () => {
+    setGlobalDirection("Все");
+    setCategory("Все");
+    setSubcategory("Все");
+    setCountry("Все");
+    setCity("Все");
+    setAudience("all");
+    setTopSearchQuery("");
+  };
   const submitPlacement = (group: Group) => {
     if (!targetSlot?.id)
       return toast.error(
@@ -2085,10 +2093,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <button
                 onClick={() => setPage("profile")}
                 aria-label="Открыть кабинет с балансом"
-                className="hidden min-[360px]:block rounded-lg border border-[#3f8cff]/25 bg-[#14263b] px-2.5 py-1.5 text-right leading-tight transition-colors hover:bg-[#19314d]"
+                className="hidden min-[360px]:block rounded-xl border border-[#3f8cff]/20 bg-[#14263b]/35 px-3 py-2 text-right leading-tight shadow-[0_4px_14px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-colors hover:border-[#3f8cff]/35 hover:bg-[#14263b]/55"
               >
-                <small className="block text-[8px] uppercase tracking-[0.1em] text-[#7f9ab5]">Общий баланс</small>
-                <b className="mt-0.5 block whitespace-nowrap text-[11px] font-bold text-[#b9d6ff]">{totalBalanceLabel}</b>
+                <b className="block whitespace-nowrap text-[12px] font-semibold tracking-tight text-[#b9d6ff]">{totalBalanceLabel}</b>
               </button>
             )}
             <button
@@ -2136,12 +2143,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <section className="space-y-2">
             <div className="border-b border-white/8 pb-1.5">
               <div className="flex min-w-0 items-center justify-between gap-2 px-0.5">
-                <span className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden whitespace-nowrap">
-                  <h1 className="min-w-0 shrink text-[clamp(14px,4.7vw,18px)] font-semibold tracking-tight text-white">{currentTopTitle}</h1>
-                  {currentTopCountry && <span className="shrink-0 text-[10px] font-medium text-slate-400">· {currentTopCountry}</span>}
+                <span className="flex min-w-0 flex-1 items-baseline gap-1 overflow-hidden whitespace-nowrap">
+                  <h1 className="shrink-0 text-[clamp(14px,4.7vw,18px)] font-semibold tracking-tight text-white">{currentTopTitle}</h1>
+                  {currentTopCountry && <span className="min-w-0 shrink truncate text-[10px] font-medium text-slate-400">· {currentTopCountry}</span>}
+                  {currentTopSubcategory && <span className="min-w-0 shrink truncate text-[10px] font-medium text-[#7697c7]">· {currentTopSubcategory}</span>}
                   {currentTopCity && <span className="max-w-[48px] shrink truncate text-[9px] font-medium text-[#7697c7]">· {currentTopCity}</span>}
                   <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
                 </span>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <button type="button" onClick={resetTopFilters} aria-label={tx("Сбросить все фильтры", "Reset all filters")} title={tx("Сбросить все фильтры", "Reset all filters")} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-rose-400/25 bg-rose-500/[0.07] text-rose-300 transition-colors hover:border-rose-400/50 hover:bg-rose-500/[0.14]">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 {globalDirection !== "NFT" && (<>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -2165,9 +2177,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </Popover>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button aria-label={tx("Тематические рубрики", "Topic categories")} className="flex h-7 max-w-[92px] shrink-0 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2 text-[10px] font-medium text-slate-400 transition-colors hover:border-[#3f8cff]/45 hover:bg-[#3f8cff]/10 hover:text-slate-100">
-                        <Filter className="h-3.5 w-3.5 shrink-0 text-[#79a7ff]" />
-                        <span className="truncate">{subcategory === "Все" ? tx("Рубрики", "Topics") : getSubcategoryLabel(subcategory, language)}</span>
+                      <button aria-label={tx("Тематические рубрики", "Topic categories")} title={subcategory === "Все" ? tx("Рубрики", "Topics") : getSubcategoryLabel(subcategory, language)} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/10 bg-white/5 text-[#79a7ff] transition-colors hover:border-[#3f8cff]/45 hover:bg-[#3f8cff]/10">
+                        <Filter className="h-3.5 w-3.5" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-[min(280px,calc(100vw-24px))] rounded-xl border-white/10 bg-[#10161f] p-2.5 text-slate-100 shadow-2xl shadow-black/45">
@@ -2179,6 +2190,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </PopoverContent>
                   </Popover>
                 </>)}
+                </span>
               </div>
             </div>
             <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={globalDirection === "NFT" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={globalDirection === "NFT" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />
@@ -2325,16 +2337,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {searchedGeneralList.length === 0 && (
                   <button
                     onClick={() => openMine()}
-                    className="w-full rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#111720] p-6 text-center transition-colors hover:bg-[#151d28]"
+                    className="flex h-[68px] w-full items-center gap-3 rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#111720] px-3 py-2 text-left transition-colors hover:bg-[#151d28]"
                   >
-                    <span className="mx-auto grid h-10 w-10 place-items-center rounded-full border border-[#3f8cff]/35 bg-[#3f8cff]/10 text-[#a6c8ff]">
-                      <Plus className="h-5 w-5" />
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-dashed border-[#3f8cff]/35 bg-[#3f8cff]/10 text-[#a6c8ff]">
+                      <Plus className="h-4 w-4" />
                     </span>
-                    <p className="text-sm font-medium text-slate-300">{topSearchQuery ? tx("Ничего не найдено", "Nothing found") : ui.globalEmptyTitle}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {ui.globalEmptyBody}
-                    </p>
-                    <span className="mt-3 inline-block text-xs font-semibold text-[#a6c8ff]">{tx("Добавить свою группу", "Add your community")}</span>
+                    <span className="min-w-0 flex-1">
+                      <b className="block truncate text-xs font-medium text-slate-200">{topSearchQuery ? tx("Ничего не найдено", "Nothing found") : tx("Добавить свою группу", "Add your community")}</b>
+                      <small className="mt-0.5 block truncate text-[11px] text-slate-500">{topSearchQuery ? tx("Измените запрос или добавьте свою площадку", "Change the query or add your community") : ui.globalEmptyBody}</small>
+                    </span>
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
                   </button>
                 )}
               </div>
@@ -2440,8 +2452,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <section className={`space-y-4 ${myGroupsSelectionMode ? "pb-[12rem]" : ""}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-semibold">Рабочее пространство</h1>
-                <p className="mt-1 text-sm text-slate-500">
+                <h1 className="text-sm font-semibold text-slate-300">Рабочее пространство</h1>
+                <p className="mt-0.5 text-xs text-slate-500">
                   {tx("Подключите бота, чтобы получить статистику и разместить площадку.", "Add the bot as an administrator to get analytics and list your community.")}
                 </p>
               </div>
@@ -2988,6 +3000,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
         {page === "profile" && (
           <section className="space-y-4">
+            <h1 className="px-1 text-sm font-semibold text-slate-300">{tx("Личный кабинет", "Account")}</h1>
             <div className="rounded-2xl border border-white/8 bg-[#111720] p-5">
               <div className="flex items-center gap-3">
                 <span className="grid h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold">
@@ -3002,12 +3015,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   )}
                 </span>
                 <span>
-                  <h1 className="text-lg font-semibold">
+                  <h2 className="text-lg font-semibold">
                     {user?.name ?? tx("Пользователь Telegram", "Telegram user")}
-                  </h1>
-                  <small className="text-xs text-slate-500">
-                    {tx("Личный кабинет TG TOP", "TG TOP account")}
-                  </small>
+                  </h2>
                 </span>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3">
@@ -3022,6 +3032,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   note={tx("для размещения", "for placement")}
                 />
               </div>
+              <div className="mt-3">
+                <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" />
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" disabled aria-label={tx("Пополнение пока недоступно", "Deposit is not available yet")} className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-left opacity-65"><b className="block text-[11px] text-slate-300">{tx("Пополнить", "Deposit")}</b><small className="mt-0.5 block text-[9px] text-slate-500">{tx("Скоро", "Coming soon")}</small></button>
+                  <button type="button" disabled aria-label={tx("Вывод пока недоступен", "Withdrawal is not available yet")} className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-left opacity-65"><b className="block text-[11px] text-slate-300">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-slate-500">{tx("После проверки", "After verification")}</small></button>
+                </div>
+              </div>
             </div>
             <section className="rounded-2xl border border-white/8 bg-[#111720] p-4">
               <div className="flex items-start justify-between gap-3">
@@ -3032,11 +3049,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <span className="rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">GRAM</span>
               </div>
               <GramBalanceChart transactions={transactions} currentBalance={Number(bonus)} language={language} />
-              <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" />
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button type="button" disabled aria-label={tx("Пополнение пока недоступно", "Deposit is not available yet")} className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-left opacity-65"><b className="block text-[11px] text-slate-300">{tx("Пополнить", "Deposit")}</b><small className="mt-0.5 block text-[9px] text-slate-500">{tx("Скоро", "Coming soon")}</small></button>
-                <button type="button" disabled aria-label={tx("Вывод пока недоступен", "Withdrawal is not available yet")} className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-left opacity-65"><b className="block text-[11px] text-slate-300">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-slate-500">{tx("После проверки", "After verification")}</small></button>
-              </div>
             </section>
             {myNfts.length > 0 && (
               <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
@@ -3081,7 +3093,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="flex items-start justify-between gap-3 border-b border-white/8 px-4 py-4">
                 <span>
                   <h2 className="text-sm font-semibold">{tx("Лидерборд владельцев", "Owner leaderboard")}</h2>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">{tx("По суммарной аудитории активных площадок в TG TOP.", "By recorded audience across active TG TOP communities.")}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{tx("По суммарной аудитории подключённых площадок в TG TOP.", "By recorded audience across connected TG TOP communities.")}</p>
                 </span>
                 <span className="rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">{tx("Данные TG TOP", "TG TOP data")}</span>
               </div>
@@ -3096,7 +3108,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </span>
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-xs text-slate-200">{ownerLabel}</b>
-                        <small className="mt-0.5 block text-[10px] text-slate-500">{entry.activeListings} {tx("площадок", "active listings")}</small>
+                        <small className="mt-0.5 block text-[10px] text-slate-500">{entry.activeListings} {tx("площадок", "communities")}</small>
                       </span>
                       <span className="text-right">
                         <b className="block text-xs text-[#a6c8ff]">{n(entry.totalMembers, language)}</b>
@@ -3106,7 +3118,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   })}
                 </div>
               ) : (
-                <p className="px-4 py-8 text-center text-sm text-slate-500">{tx("Лидерборд появится после первых активных листингов.", "The leaderboard appears after the first active listings.")}</p>
+                <p className="px-4 py-8 text-center text-sm text-slate-500">{tx("Включите публичный аккаунт и подключите первую площадку.", "Enable a public account and connect your first community.")}</p>
               )}
             </section>
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">

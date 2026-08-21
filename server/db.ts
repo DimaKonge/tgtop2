@@ -781,7 +781,7 @@ export async function getOwnerLeaderboard(limit = 25) {
     totalMembers,
   }).from(groupsCatalog)
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
-    .where(and(eq(groupsCatalog.status, "listed"), eq(users.publicProfile, true)))
+    .where(and(inArray(groupsCatalog.status, ["listed", "pending"]), eq(users.publicProfile, true)))
     .groupBy(groupsCatalog.ownerOpenId, users.name, users.telegramUsername, users.avatarUrl)
     .orderBy(desc(totalMembers), desc(activeListings), asc(groupsCatalog.ownerOpenId))
     .limit(Math.min(Math.max(limit, 1), 100));
