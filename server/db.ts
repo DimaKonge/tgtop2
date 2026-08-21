@@ -864,12 +864,23 @@ export async function getModerationQueue() {
     .orderBy(desc(groupsCatalog.moderationReviewedAt));
 }
 
+export async function getActiveModerationListings() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(groupsCatalog)
+    .where(eq(groupsCatalog.status, "listed"))
+    .orderBy(desc(groupsCatalog.listedAt), desc(groupsCatalog.createdAt));
+}
+
 export async function moderateGroup(actorOpenId: string, groupId: number, action: "review" | "block" | "approve", reason: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const status = action === "block" ? "blocked" : action === "review" ? "review" : "pending";
   const moderationStatus = action === "block" ? "blocked" : action === "review" ? "review" : "approved";
-  await db.transaction(async tx => {
+  return await db.transaction(async tx => {
+    const [group] = await tx.select({ id: groupsCatalog.id, ownerOpenId: groupsCatalog.ownerOpenId, title: groupsCatalog.title })
+      .from(groupsCatalog).where(eq(groupsCatalog.id, groupId)).limit(1);
+    if (!group) throw new Error("Площадка не найдена");
     await tx.update(groupsCatalog).set({
       status,
       moderationStatus,
@@ -895,6 +906,7 @@ export async function moderateGroup(actorOpenId: string, groupId: number, action
       action: action === "approve" ? "manual_approve" : action === "block" ? "manual_block" : "manual_review",
       reason,
     });
+    return group;
   });
 }
 
@@ -1383,9 +1395,6 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
   const listingOptions = normalizeGroupListingOptions(listing);
   const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
   if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) throw new Error("Группа недоступна для размещения");
-  if (groups.some(group => group.moderationStatus === "review" || group.moderationStatus === "blocked")) {
-    throw new Error("Площадка не допущена к листингу до решения модератора");
-  }
   if (listingOptions.subcategory) {
     const categories = Array.from(new Set(groups.map(group => group.category)));
     if (categories.length !== 1 || !isCatalogSubcategory(categories[0], listingOptions.subcategory)) {

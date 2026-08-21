@@ -50,4 +50,12 @@ describe("community listing announcements", () => {
     expect(source).toContain("startapp=listing_");
     expect(source).toContain("Открыть в TG TOP");
   });
+
+  it("notifies an owner with the moderator's reason after a manual removal", () => {
+    const source = readFileSync(new URL("./telegramNotifications.ts", import.meta.url), "utf8");
+    expect(source).toContain("notifyCommunityRemovedFromTop");
+    expect(source).toContain("Размещение в TG TOP остановлено");
+    expect(source).toContain("Причина: ${input.reason}");
+    expect(source).toContain("снято с ТОПа");
+  });
 });

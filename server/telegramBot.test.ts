@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { __private__ } from "./telegramBot";
 
 describe("TG TOP Telegram catalog onboarding", () => {
@@ -72,5 +73,12 @@ describe("TG TOP Telegram catalog onboarding", () => {
       expect.arrayContaining([expect.objectContaining({ text: "Открыть TG TOP" })]),
       expect.arrayContaining([expect.objectContaining({ url: "https://t.me/o_a_th" })]),
     ]));
+  });
+
+  it("does not automatically inspect or hide a listing from bot messages", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    expect(source).not.toContain("inspectLocalContent");
+    expect(source).not.toContain("flagGroupForModeration");
+    expect(source).toContain('moderationStatus: "approved"');
   });
 });

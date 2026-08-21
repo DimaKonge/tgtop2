@@ -39,6 +39,7 @@ import {
   PinOff,
   Send,
   Settings2,
+  ShieldCheck,
   Star,
   Sun,
   Trash2,
@@ -55,7 +56,7 @@ import { toast } from "sonner";
 import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
-type Page = "top" | "catalog" | "giveaways" | "mine" | "details" | "owner" | "profile";
+type Page = "top" | "catalog" | "giveaways" | "mine" | "details" | "owner" | "profile" | "admin";
 type Audience = "all" | "small" | "medium" | "large";
 type MyGroupsViewMode = "list" | "grid";
 type Language = "ru" | "en";
@@ -1111,8 +1112,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     | undefined;
   const moderationAccessQuery = trpc.tgTop.getModerationAccess.useQuery(undefined, { enabled: isAuthenticated });
   const moderationAccess = moderationAccessQuery.data as { role: "user" | "moderator" | "admin"; canModerate: boolean; canManageModerators: boolean } | undefined;
-  const moderationQueueQuery = trpc.tgTop.getModerationQueue.useQuery(undefined, { enabled: Boolean(moderationAccess?.canModerate) });
-  const moderationQueue = (moderationQueueQuery.data ?? []) as Array<{ id: number; title: string; username: string | null; moderationStatus: "review" | "blocked"; moderationReason: string | null; category: "Каналы" | "Чаты"; country: string }>;
+  const activeModerationListingsQuery = trpc.tgTop.getActiveModerationListings.useQuery(undefined, {
+    enabled: Boolean(moderationAccess?.canModerate),
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
+  });
+  const activeModerationListings = (activeModerationListingsQuery.data ?? []) as Array<{
+    id: number;
+    title: string;
+    username: string | null;
+    inviteLink: string | null;
+    category: "Каналы" | "Чаты";
+    country: string;
+    subcategory: string;
+    membersCount: number;
+    listedAt: Date | null;
+    createdAt: Date;
+  }>;
   const moderatorsQuery = trpc.tgTop.getModerators.useQuery(undefined, { enabled: Boolean(moderationAccess?.canManageModerators) });
   const moderators = (moderatorsQuery.data ?? []) as Array<{ openId: string; name: string | null; telegramUsername: string | null; role: "admin" | "moderator" }>;
   const [moderationReasonDraft, setModerationReasonDraft] = useState("");
@@ -1168,9 +1184,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const moderateGroup = trpc.tgTop.moderateGroup.useMutation({
     onSuccess: () => {
-      toast.success("Решение модерации сохранено");
+      toast.success("Лот снят с ТОПа. Владельцу отправлена причина.");
       setModerationReasonDraft("");
-      void utils.tgTop.getModerationQueue.invalidate();
+      void utils.tgTop.getActiveModerationListings.invalidate();
       void utils.tgTop.getGroups.invalidate();
       void utils.tgTop.getSlots.invalidate();
       void utils.tgTop.myGroups.invalidate();
@@ -3035,6 +3051,84 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           </section>
         )}
 
+        {page === "admin" && moderationAccess?.canModerate && (
+          <section className="space-y-4">
+            <div className="flex items-start justify-between gap-3 px-1">
+              <span>
+                <h1 className="text-sm font-semibold text-slate-200">Админ-панель</h1>
+                <p className="mt-1 text-[11px] leading-4 text-slate-500">Ручное управление активными размещениями TG TOP.</p>
+              </span>
+              <span className="rounded-md border border-[#3390ec]/30 bg-[#3390ec]/10 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">{moderationAccess.role === "admin" ? "Администратор" : "Модератор"}</span>
+            </div>
+
+            <section className="overflow-hidden rounded-2xl border border-[#3390ec]/25 bg-[#202b3a]">
+              <div className="border-b border-white/8 px-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <span>
+                    <h2 className="text-sm font-semibold text-slate-100">Активные лоты</h2>
+                    <p className="mt-1 text-xs leading-5 text-slate-400">Сначала показаны новые размещения. Список обновляется автоматически.</p>
+                  </span>
+                  <span className="rounded-md border border-[#3390ec]/25 bg-[#3390ec]/10 px-2 py-1 text-[10px] font-semibold text-[#b8d7ff]">{activeModerationListings.length}</span>
+                </div>
+                <Input
+                  value={moderationReasonDraft}
+                  onChange={event => setModerationReasonDraft(event.target.value)}
+                  maxLength={255}
+                  placeholder="Причина снятия с ТОПа — обязательна"
+                  className="mt-3 h-10 border-white/10 bg-[#17212b] text-xs text-slate-100 placeholder:text-slate-600 focus-visible:border-[#3390ec]/60"
+                />
+              </div>
+              {activeModerationListings.length ? (
+                <div className="divide-y divide-white/8">
+                  {activeModerationListings.map(group => {
+                    const groupUrl = group.username ? `https://t.me/${group.username}` : group.inviteLink;
+                    return (
+                      <article key={group.id} className="flex items-center gap-3 px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => groupUrl && openTelegramInNewBrowserTab(groupUrl)}
+                          disabled={!groupUrl}
+                          className="min-w-0 flex-1 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <b className="block truncate text-sm text-slate-100">{group.title}</b>
+                          <small className="mt-1 block truncate text-[10px] text-slate-400">{group.username ? `@${group.username}` : "Приватный"} · {group.category} · {getCountryLabel(group.country, language)} · {n(group.membersCount, language)} участников</small>
+                          <small className="mt-1 block text-[10px] text-[#84b8ef]">{groupUrl ? "Открыть сообщество в Telegram" : "Ссылка на сообщество недоступна"}</small>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Снять ${group.title} с ТОПа`}
+                          title="Снять с ТОПа"
+                          onClick={() => moderateGroup.mutate({ groupId: group.id, action: "review", reason: moderationReasonDraft.trim() })}
+                          disabled={moderationReasonDraft.trim().length < 3 || moderateGroup.isPending}
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-400/35 bg-red-500/10 text-red-200 transition-colors hover:bg-red-500/20 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-35"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="px-4 py-8 text-center text-xs text-slate-500">Активных лотов сейчас нет.</p>
+              )}
+            </section>
+
+            {moderationAccess.canManageModerators && (
+              <section className="rounded-2xl border border-white/8 bg-[#202b3a] p-4">
+                <h2 className="text-sm font-semibold text-slate-100">Выбранные модераторы</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Модератор видит эту ячейку и может вручную снять лот с ТОПа.</p>
+                <div className="mt-3 flex gap-2">
+                  <Input value={moderatorUsernameDraft} onChange={event => setModeratorUsernameDraft(event.target.value)} placeholder="@username" className="h-10 min-w-0 flex-1 border-white/10 bg-[#17212b] text-xs text-slate-100 placeholder:text-slate-600" />
+                  <button onClick={() => moderatorUsernameDraft.trim().length >= 2 && setModeratorRole.mutate({ telegramUsername: moderatorUsernameDraft, role: "moderator" })} disabled={moderatorUsernameDraft.trim().length < 2 || setModeratorRole.isPending} className="rounded-xl border border-[#3390ec]/35 bg-[#3390ec]/10 px-3 text-[11px] font-medium text-[#b8d7ff] disabled:opacity-40">Добавить</button>
+                </div>
+                <div className="mt-3 space-y-1.5">
+                  {moderators.map(moderator => <div key={moderator.openId} className="flex items-center justify-between gap-3 rounded-xl bg-[#17212b] px-3 py-2.5"><span className="min-w-0"><b className="block truncate text-[11px] text-slate-200">{moderator.telegramUsername ? `@${moderator.telegramUsername}` : moderator.name ?? moderator.openId}</b><small className="text-[9px] text-slate-500">{moderator.role === "admin" ? "Главный администратор" : "Модератор"}</small></span>{moderator.role === "moderator" && moderator.telegramUsername && <button onClick={() => setModeratorRole.mutate({ telegramUsername: moderator.telegramUsername!, role: "user" })} className="text-[10px] text-red-200">Убрать</button>}</div>)}
+                </div>
+              </section>
+            )}
+          </section>
+        )}
+
         {page === "profile" && (
           <section className="space-y-4">
             <h1 className="px-1 text-sm font-semibold text-slate-300">{tx("Личный кабинет", "Account")}</h1>
@@ -3126,19 +3220,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </button>
               </div>
             </section>
-            {moderationAccess?.canModerate && (
-              <section className="overflow-hidden rounded-2xl border border-amber-400/20 bg-[#171819]">
-                <div className="border-b border-amber-400/15 px-4 py-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <span><h2 className="text-sm font-semibold text-amber-100">Модерация листингов</h2><p className="mt-1 text-xs leading-5 text-slate-500">Подозрительные площадки скрыты из ТОПа до решения. Оплата и история не удаляются.</p></span>
-                    <span className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1 text-[10px] font-medium text-amber-200">{moderationQueue.length}</span>
-                  </div>
-                  <input value={moderationReasonDraft} onChange={event => setModerationReasonDraft(event.target.value)} maxLength={255} placeholder="Причина решения обязательна" className="mt-3 h-9 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-amber-300/40" />
-                </div>
-                {moderationQueue.length ? <div className="divide-y divide-white/7">{moderationQueue.map(group => <div key={group.id} className="px-4 py-3"><div className="flex items-start justify-between gap-3"><span className="min-w-0"><b className="block truncate text-xs text-slate-100">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : "Приватный"} · {group.category} · {group.country}</small><small className="mt-1 block text-[10px] text-amber-200/75">{group.moderationReason ?? "Требуется ручная проверка"}</small></span><span className={`rounded-md px-2 py-1 text-[9px] font-semibold ${group.moderationStatus === "blocked" ? "bg-red-500/15 text-red-200" : "bg-amber-400/10 text-amber-200"}`}>{group.moderationStatus === "blocked" ? "Не допущен" : "Проверка"}</span></div><div className="mt-2 grid grid-cols-3 gap-2"><button onClick={() => moderationReasonDraft.trim().length >= 3 && moderateGroup.mutate({ groupId: group.id, action: "approve", reason: moderationReasonDraft.trim() })} disabled={moderationReasonDraft.trim().length < 3 || moderateGroup.isPending} className="rounded-md border border-emerald-400/25 bg-emerald-400/10 px-2 py-1.5 text-[10px] font-medium text-emerald-200 disabled:opacity-40">Одобрить</button><button onClick={() => moderationReasonDraft.trim().length >= 3 && moderateGroup.mutate({ groupId: group.id, action: "review", reason: moderationReasonDraft.trim() })} disabled={moderationReasonDraft.trim().length < 3 || moderateGroup.isPending} className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1.5 text-[10px] font-medium text-amber-100 disabled:opacity-40">Скрыть</button><button onClick={() => moderationReasonDraft.trim().length >= 3 && moderateGroup.mutate({ groupId: group.id, action: "block", reason: moderationReasonDraft.trim() })} disabled={moderationReasonDraft.trim().length < 3 || moderateGroup.isPending} className="rounded-md border border-red-400/25 bg-red-400/10 px-2 py-1.5 text-[10px] font-medium text-red-200 disabled:opacity-40">Не допустить</button></div></div>)}</div> : <p className="px-4 py-6 text-center text-xs text-slate-500">Очередь проверки пуста</p>}
-                {moderationAccess.canManageModerators && <div className="border-t border-white/7 px-4 py-4"><b className="block text-xs text-slate-200">Выбранные модераторы</b><div className="mt-2 flex gap-2"><input value={moderatorUsernameDraft} onChange={event => setModeratorUsernameDraft(event.target.value)} placeholder="@username" className="h-9 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-[#3f8cff]/40" /><button onClick={() => moderatorUsernameDraft.trim().length >= 2 && setModeratorRole.mutate({ telegramUsername: moderatorUsernameDraft, role: "moderator" })} disabled={moderatorUsernameDraft.trim().length < 2 || setModeratorRole.isPending} className="rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 text-[10px] font-medium text-[#b8d2ff] disabled:opacity-40">Добавить</button></div><div className="mt-3 space-y-1.5">{moderators.map(moderator => <div key={moderator.openId} className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-3 py-2"><span className="min-w-0"><b className="block truncate text-[11px] text-slate-200">{moderator.telegramUsername ? `@${moderator.telegramUsername}` : moderator.name ?? moderator.openId}</b><small className="text-[9px] text-slate-500">{moderator.role === "admin" ? "Главный администратор" : "Модератор"}</small></span>{moderator.role === "moderator" && moderator.telegramUsername && <button onClick={() => setModeratorRole.mutate({ telegramUsername: moderator.telegramUsername!, role: "user" })} className="text-[10px] text-red-200">Убрать</button>}</div>)}</div></div>}
-              </section>
-            )}
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
               <div className="flex items-start justify-between gap-3 border-b border-white/8 px-4 py-4">
                 <span>
@@ -3402,12 +3483,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/8 bg-[#0b0f14]/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-center px-2 py-1.5">
           {isAuthenticated ? (
-            <div className="grid w-full grid-cols-3">
+            <div className={`grid w-full ${moderationAccess?.canModerate ? "grid-cols-4" : "grid-cols-3"}`}>
               {(
                 [
                   { key: "top", label: "ТОП", icon: Trophy },
                   { key: "mine", label: "Рабочее пространство", icon: LayoutGrid },
                   { key: "profile", label: "Мой кабинет", icon: UserRound },
+                  ...(moderationAccess?.canModerate ? [{ key: "admin", label: "Админ", icon: ShieldCheck }] : []),
                 ] as const
               ).map(item => {
                 const Icon = item.icon;
@@ -3415,7 +3497,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <button
                     key={item.key}
                     onClick={() =>
-                      item.key === "mine" ? openMine() : setPage(item.key)
+                      item.key === "mine" ? openMine() : setPage(item.key as Page)
                     }
                     aria-label={item.label}
                     className={`grid h-[46px] min-w-0 place-items-center rounded-xl transition-colors ${page === item.key ? "bg-[#3f8cff]/10 text-[#72a8ff]" : "text-slate-500"}`}

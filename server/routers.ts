@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyRecordedRankingBid } from "./telegramNotifications";
+import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyCommunityRemovedFromTop, notifyRecordedRankingBid } from "./telegramNotifications";
 import { getTelegramGroupAdministrators, getTelegramUserAvatarUrl } from "./telegramBot";
 import { formatTonAmount } from "./tonFormatting";
 
@@ -226,6 +226,12 @@ export const appRouter = router({
       return await db.getModerationQueue();
     }),
 
+    getActiveModerationListings: protectedProcedure.query(async ({ ctx }) => {
+      const access = await db.getModerationAccess(ctx.user.openId);
+      if (!access.canModerate) throw new Error("Недостаточно прав для просмотра активных лотов");
+      return await db.getActiveModerationListings();
+    }),
+
     moderateGroup: protectedProcedure
       .input(z.object({
         groupId: z.number().int().positive(),
@@ -235,8 +241,11 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const access = await db.getModerationAccess(ctx.user.openId);
         if (!access.canModerate) throw new Error("Недостаточно прав для модерации лотов");
-        await db.moderateGroup(ctx.user.openId, input.groupId, input.action, input.reason);
-        return { success: true } as const;
+        const group = await db.moderateGroup(ctx.user.openId, input.groupId, input.action, input.reason);
+        const ownerNotified = input.action !== "approve"
+          ? await notifyCommunityRemovedFromTop({ openId: group.ownerOpenId, groupTitle: group.title, reason: input.reason })
+          : false;
+        return { success: true, ownerNotified } as const;
       }),
 
     getModerators: protectedProcedure.query(async ({ ctx }) => {
