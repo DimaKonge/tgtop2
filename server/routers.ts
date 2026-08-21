@@ -9,9 +9,10 @@ import { getTelegramGroupAdministrators, getTelegramUserAvatarUrl } from "./tele
 import { formatTonAmount } from "./tonFormatting";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
+const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
 const groupListingInput = z.object({
   salePriceTon: gramAmount.nullable().optional(),
-  country: z.enum(["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"]).optional(),
+  country: z.string().trim().min(2).max(64).optional(),
   city: z.string().trim().max(96).optional(),
   subcategory: z.string().min(2).max(64).optional(),
   anonymousListing: z.boolean().optional(),
@@ -219,6 +220,49 @@ export const appRouter = router({
     getModerationAccess: protectedProcedure.query(async ({ ctx }) => {
       return await db.getModerationAccess(ctx.user.openId);
     }),
+
+    getCatalogTaxonomy: publicProcedure.query(async () => {
+      return await db.getCatalogTaxonomy();
+    }),
+
+    addCatalogCountry: protectedProcedure
+      .input(z.object({ code: catalogCode.max(64), label: z.string().trim().min(2).max(96) }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.addCatalogCountry(ctx.user.openId, input);
+      }),
+
+    deleteCatalogCountry: protectedProcedure
+      .input(z.object({ countryCode: catalogCode.max(64) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteCatalogCountry(ctx.user.openId, input.countryCode);
+        return { success: true } as const;
+      }),
+
+    addCatalogCity: protectedProcedure
+      .input(z.object({ countryCode: catalogCode.max(64), code: catalogCode, label: z.string().trim().min(2).max(128) }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.addCatalogCity(ctx.user.openId, input);
+      }),
+
+    deleteCatalogCity: protectedProcedure
+      .input(z.object({ cityId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteCatalogCity(ctx.user.openId, input.cityId);
+        return { success: true } as const;
+      }),
+
+    addCatalogTopic: protectedProcedure
+      .input(z.object({ category: z.enum(["Каналы", "Чаты"]), code: catalogCode.max(64), label: z.string().trim().min(2).max(96) }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.addCatalogTopic(ctx.user.openId, input);
+      }),
+
+    deleteCatalogTopic: protectedProcedure
+      .input(z.object({ topicId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteCatalogTopic(ctx.user.openId, input.topicId);
+        return { success: true } as const;
+      }),
 
     getModerationQueue: protectedProcedure.query(async ({ ctx }) => {
       const access = await db.getModerationAccess(ctx.user.openId);

@@ -38,6 +38,7 @@ import {
   Pin,
   PinOff,
   Send,
+  Search,
   Settings2,
   ShieldCheck,
   Star,
@@ -141,8 +142,9 @@ function AudienceGrowthChart({ snapshots, language, embedded = false }: { snapsh
   );
 }
 type ListingType = "catalog" | "sale";
-type ListingCountry = "Global" | "UA" | "PL" | "DE" | "GB" | "US" | "RU" | "FR" | "ES" | "IT" | "NL" | "CZ" | "RO" | "TR" | "CA" | "AU" | "AE" | "KZ";
+type ListingCountry = string;
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
+type TopSection = "communities" | "nft" | "bots";
 const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const;
 const COUNTRY_LABELS: Record<string, { ru: string; en: string }> = {
   Global: { ru: "Весь мир", en: "Worldwide" },
@@ -862,12 +864,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [page, setPage] = useState<Page>("top");
   const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
   const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
+  const [topSection, setTopSection] = useState<TopSection>("communities");
   const [subcategory, setSubcategory] = useState("Все");
   const [country, setCountry] = useState("Все");
   const [city, setCity] = useState("Все");
   const [audience, setAudience] = useState<Audience>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [topSearchQuery, setTopSearchQuery] = useState("");
+  const [topSearchOpen, setTopSearchOpen] = useState(false);
   useEffect(() => {
     if (!isAuthenticated && page !== "top" && page !== "details" && page !== "owner") {
       setPage("top");
@@ -1045,7 +1049,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     return () => window.cancelAnimationFrame(frame);
   }, [groupsQuery.isFetched, onReady, slotsQuery.isFetched]);
   const nftsQuery = trpc.tgTop.getNfts.useQuery(undefined, {
-    enabled: globalDirection === "NFT",
+    enabled: topSection === "nft",
   });
   const nfts = (nftsQuery.data ?? []) as Nft[];
   const myNftsQuery = trpc.tgTop.myNfts.useQuery(undefined, {
@@ -1112,6 +1116,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     | undefined;
   const moderationAccessQuery = trpc.tgTop.getModerationAccess.useQuery(undefined, { enabled: isAuthenticated });
   const moderationAccess = moderationAccessQuery.data as { role: "user" | "moderator" | "admin"; canModerate: boolean; canManageModerators: boolean } | undefined;
+  const catalogTaxonomyQuery = trpc.tgTop.getCatalogTaxonomy.useQuery();
+  const catalogTaxonomy = catalogTaxonomyQuery.data as {
+    countries: Array<{ id: number; code: string; label: string; sortOrder: number }>;
+    cities: Array<{ id: number; countryCode: string; code: string; label: string; sortOrder: number }>;
+    topics: Array<{ id: number; category: "Каналы" | "Чаты"; code: string; label: string; sortOrder: number }>;
+  } | undefined;
   const activeModerationListingsQuery = trpc.tgTop.getActiveModerationListings.useQuery(undefined, {
     enabled: Boolean(moderationAccess?.canModerate),
     refetchInterval: 10_000,
@@ -1133,6 +1143,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const moderators = (moderatorsQuery.data ?? []) as Array<{ openId: string; name: string | null; telegramUsername: string | null; role: "admin" | "moderator" }>;
   const [moderationReasonDraft, setModerationReasonDraft] = useState("");
   const [moderatorUsernameDraft, setModeratorUsernameDraft] = useState("");
+  const [catalogCountryCodeDraft, setCatalogCountryCodeDraft] = useState("");
+  const [catalogCountryLabelDraft, setCatalogCountryLabelDraft] = useState("");
+  const [catalogCityCountryDraft, setCatalogCityCountryDraft] = useState("Global");
+  const [catalogCityCodeDraft, setCatalogCityCodeDraft] = useState("");
+  const [catalogCityLabelDraft, setCatalogCityLabelDraft] = useState("");
+  const [catalogTopicCategoryDraft, setCatalogTopicCategoryDraft] = useState<"Каналы" | "Чаты">("Каналы");
+  const [catalogTopicCodeDraft, setCatalogTopicCodeDraft] = useState("");
+  const [catalogTopicLabelDraft, setCatalogTopicLabelDraft] = useState("");
   const dealsQuery = trpc.tgTop.myDeals.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -1199,6 +1217,57 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setModeratorUsernameDraft("");
       void utils.tgTop.getModerators.invalidate();
       void utils.tgTop.getModerationAccess.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const refreshCatalogTaxonomy = () => {
+    void utils.tgTop.getCatalogTaxonomy.invalidate();
+  };
+  const addCatalogCountry = trpc.tgTop.addCatalogCountry.useMutation({
+    onSuccess: () => {
+      toast.success("Страна добавлена");
+      setCatalogCountryCodeDraft("");
+      setCatalogCountryLabelDraft("");
+      refreshCatalogTaxonomy();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const deleteCatalogCountry = trpc.tgTop.deleteCatalogCountry.useMutation({
+    onSuccess: () => {
+      toast.success("Страна удалена");
+      refreshCatalogTaxonomy();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const addCatalogCity = trpc.tgTop.addCatalogCity.useMutation({
+    onSuccess: () => {
+      toast.success("Город добавлен");
+      setCatalogCityCodeDraft("");
+      setCatalogCityLabelDraft("");
+      refreshCatalogTaxonomy();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const deleteCatalogCity = trpc.tgTop.deleteCatalogCity.useMutation({
+    onSuccess: () => {
+      toast.success("Город удалён");
+      refreshCatalogTaxonomy();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const addCatalogTopic = trpc.tgTop.addCatalogTopic.useMutation({
+    onSuccess: () => {
+      toast.success("Рубрика добавлена");
+      setCatalogTopicCodeDraft("");
+      setCatalogTopicLabelDraft("");
+      refreshCatalogTaxonomy();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const deleteCatalogTopic = trpc.tgTop.deleteCatalogTopic.useMutation({
+    onSuccess: () => {
+      toast.success("Рубрика удалена");
+      refreshCatalogTaxonomy();
     },
     onError: error => toast.error(error.message),
   });
@@ -1594,15 +1663,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const [ru, en] = guidance[status]?.[role] ?? ["Статус сделки обновляется.", "The deal status is updating."];
     return tx(ru, en);
   };
-  const globalCount = globalDirection === "NFT" ? visibleNfts.length : visibleGroups.length;
-  const currentTopTitle = globalDirection === "NFT"
+  const globalCount = topSection === "nft" ? visibleNfts.length : visibleGroups.length;
+  const currentTopTitle = topSection === "bots"
+    ? tx("Боты", "Bots")
+    : topSection === "nft"
     ? "NFT"
-    : globalDirection === "Все"
+    : globalDirection === "Все" || globalDirection === "NFT"
       ? tx("Все сообщества", "All communities")
       : getCategoryLabel(globalDirection, language);
-  const currentTopCountry = globalDirection !== "NFT" ? (country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)) : null;
-  const currentTopCity = globalDirection !== "NFT" && city !== "Все" ? getCityLabel(country, city, language) : null;
-  const currentTopSubcategory = globalDirection !== "NFT" && subcategory !== "Все" ? getSubcategoryLabel(subcategory, language) : null;
+  const currentTopCountry = topSection === "communities" ? (country === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(country, language)) : null;
+  const currentTopCity = topSection === "communities" && city !== "Все" ? getCityLabel(country, city, language) : null;
+  const currentTopSubcategory = topSection === "communities" && subcategory !== "Все" ? getSubcategoryLabel(subcategory, language) : null;
   const topThemeOptions = Array.from(new Set(globalDirection === "Чаты"
     ? [...CATEGORY_SUBCATEGORIES["Чаты"]]
     : globalDirection === "Каналы"
@@ -1641,7 +1712,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   useEffect(() => {
     if (!detail || !ownsDetail || lotGroupId !== null) return;
     const group = detail.group;
-    setListingCountry(COUNTRY_OPTIONS.includes(group.country as ListingCountry) ? group.country as ListingCountry : "Global");
+    setListingCountry(group.country ?? "Global");
     setListingCity(group.city ?? "Все");
     setListingSubcategory(group.subcategory ?? "General");
     setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
@@ -1746,12 +1817,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const isMyGroupsSearchActive = normalizedMyGroupsSearch.length > 0;
   const visibleMyGroupsMembers = visibleMyGroups.reduce((sum, group) => sum + Math.max(0, group.membersCount || 0), 0);
   const myGroupsDragActiveGroup = myGroupsDragActiveId ? orderedMyGroups.find(group => group.id === myGroupsDragActiveId) : undefined;
+  const managedCountries = catalogTaxonomy?.countries?.length
+    ? catalogTaxonomy.countries
+    : COUNTRY_OPTIONS.map(code => ({ id: code, code, label: getCountryLabel(code, language), sortOrder: 0 }));
+  const managedCities = catalogTaxonomy?.cities?.length
+    ? catalogTaxonomy.cities
+    : Object.entries(CITY_OPTIONS).flatMap(([countryCode, cities]) => cities.map(city => ({ id: `${countryCode}:${city.value}`, countryCode, code: city.value, label: city[language], sortOrder: 0 })));
+  const managedTopics = catalogTaxonomy?.topics?.length
+    ? catalogTaxonomy.topics
+    : (Object.entries(CATEGORY_SUBCATEGORIES) as Array<["Каналы" | "Чаты", readonly string[]]>).flatMap(([category, topics]) => topics.map(code => ({ id: `${category}:${code}`, category, code, label: getSubcategoryLabel(code, language), sortOrder: 0 })));
+  const getManagedCountryLabel = (code: string) => managedCountries.find(country => country.code === code)?.label ?? getCountryLabel(code, language);
+  const getManagedCityLabel = (countryCode: string, code: string) => managedCities.find(city => city.countryCode === countryCode && city.code === code)?.label ?? getCityLabel(countryCode, code, language);
+  const getManagedTopicLabel = (category: "Каналы" | "Чаты", code: string) => managedTopics.find(topic => topic.category === category && topic.code === code)?.label ?? getSubcategoryLabel(code, language);
   const globalSubcategoryCategory = globalDirection === "Каналы" || globalDirection === "Чаты" ? globalDirection : null;
-  const globalSubcategoryOptions = globalSubcategoryCategory ? CATEGORY_SUBCATEGORIES[globalSubcategoryCategory] : [];
+  const globalSubcategoryOptions = globalSubcategoryCategory ? managedTopics.filter(topic => topic.category === globalSubcategoryCategory).map(topic => topic.code) : [];
   const listingCategory = selectedListingGroups.length && selectedListingGroups.every(group => group.category === selectedListingGroups[0]?.category)
     ? selectedListingGroups[0]?.category
     : null;
-  const listingSubcategoryOptions = listingCategory ? CATEGORY_SUBCATEGORIES[listingCategory] : [];
+  const listingSubcategoryOptions = listingCategory ? managedTopics.filter(topic => topic.category === listingCategory).map(topic => topic.code) : [];
   const monthlyEntryEligibleGroup = selectedListingGroups.length === 1 && selectedListingGroups[0]?.category === "Каналы" && !selectedListingGroups[0]?.username
     ? selectedListingGroups[0]
     : null;
@@ -1819,7 +1902,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   };
   const applyLotGroupSettings = (group: Group) => {
     setLotGroupId(group.id);
-    setListingCountry(COUNTRY_OPTIONS.includes(group.country as ListingCountry) ? group.country as ListingCountry : "Global");
+    setListingCountry(group.country ?? "Global");
     setListingCity(group.city ?? "Все");
     setDetailVisibility(group.showOwnerContact && !group.anonymousListing ? "public" : "anonymous");
     setSelectedManagerTelegramUserId(group.managerTelegramUserId ?? null);
@@ -1866,11 +1949,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const firstGroup = listingGroups[0];
     const selectedGroupsShareCategory = listingGroups.length > 0 && listingGroups.every(group => group.category === firstGroup?.category);
     setSelectedGroupIds(Array.from(new Set(groupIds)));
-    setListingCountry(
-      COUNTRY_OPTIONS.includes(firstGroup?.country as ListingCountry)
-        ? (firstGroup?.country as ListingCountry)
-        : "Global"
-    );
+    setListingCountry(firstGroup?.country ?? "Global");
     setListingCity(firstGroup?.city ?? "Все");
     setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "");
     setListingRankingBid("0.1");
@@ -2033,12 +2112,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     addBot(kind);
   };
   const selectGlobalDirection = (value: GlobalDirection) => {
+    setTopSection(value === "NFT" ? "nft" : "communities");
     setGlobalDirection(value);
     if (value !== "NFT") {
       setCategory(value);
     }
   };
+  const selectTopSection = (section: TopSection) => {
+    setTopSection(section);
+    if (section === "nft") {
+      setGlobalDirection("NFT");
+      return;
+    }
+    if (globalDirection === "NFT") {
+      setGlobalDirection("Все");
+      setCategory("Все");
+    }
+  };
   const resetTopFilters = () => {
+    setTopSection("communities");
     setGlobalDirection("Все");
     setCategory("Все");
     setSubcategory("Все");
@@ -2046,6 +2138,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setCity("Все");
     setAudience("all");
     setTopSearchQuery("");
+    setTopSearchOpen(false);
   };
   const submitPlacement = (group: Group) => {
     if (!targetSlot?.id)
@@ -2192,7 +2285,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <main className="mx-auto max-w-3xl px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
         {page === "top" && (
           <section className="space-y-2">
-            <div className="border-b border-white/8 pb-1.5">
+            <div className="border-b border-white/8 pb-2">
               <div className="flex min-w-0 items-center justify-between gap-2 px-0.5">
                 <span className="flex min-w-0 flex-1 items-baseline gap-1 overflow-hidden whitespace-nowrap">
                   <h1 className="shrink-0 text-[clamp(14px,4.7vw,18px)] font-semibold tracking-tight text-white">{currentTopTitle}</h1>
@@ -2202,60 +2295,37 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5">
-                  <button type="button" onClick={resetTopFilters} aria-label={tx("Сбросить все фильтры", "Reset all filters")} title={tx("Сбросить все фильтры", "Reset all filters")} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-rose-400/25 bg-rose-500/[0.07] text-rose-300 transition-colors hover:border-rose-400/50 hover:bg-rose-500/[0.14]">
-                    <X className="h-3.5 w-3.5" />
+                  <button type="button" onClick={() => setTopSearchOpen(current => !current)} aria-label={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Открыть поиск", "Open search")} title={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Поиск", "Search")} className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${topSearchOpen ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                    <Search className="h-3.5 w-3.5" />
                   </button>
-                {globalDirection !== "NFT" && (<>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button aria-label={tx("Фильтр географии", "Location filter")} title={city !== "Все" ? getCityLabel(country, city, language) : currentTopCountry ?? tx("Весь мир", "Worldwide")} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/10 bg-white/5 text-[#79a7ff] transition-colors hover:border-[#3f8cff]/45 hover:bg-[#3f8cff]/10">
-                        <Globe2 className="h-3.5 w-3.5" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-[min(320px,calc(100vw-24px))] rounded-xl border-white/10 bg-[#10161f] p-2.5 text-slate-100 shadow-2xl shadow-black/45">
-                      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tx("Страна", "Country")}</p>
-                      <div className="max-h-[264px] space-y-1 overflow-y-auto pr-1">
-                        {["Все", ...COUNTRY_OPTIONS.filter(item => item !== "Global")].map(item => <button key={item} type="button" onClick={() => { setCountry(item); setCity("Все"); }} className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-[11px] font-medium transition-colors ${country === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#b8d1ff]" : "border-white/8 text-slate-400 hover:border-white/15 hover:bg-white/[0.035] hover:text-slate-200"}`}><span>{item === "Все" ? tx("Весь мир", "Worldwide") : getCountryLabel(item, language)}</span>{country === item && <Check className="h-3.5 w-3.5 shrink-0 text-[#79a7ff]" />}</button>)}
-                      </div>
-                      {(CITY_OPTIONS[country] ?? []).length > 0 && <>
-                        <p className="mb-2 mt-3 px-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#637b9d]">{tx("Город", "City")}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          <button type="button" onClick={() => setCity("Все")} className={`rounded-md border px-2 py-1 text-[10px] ${city === "Все" ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{tx("Все города", "All cities")}</button>
-                          {CITY_OPTIONS[country].map(item => <button key={item.value} type="button" onClick={() => setCity(item.value)} className={`rounded-md border px-2 py-1 text-[10px] ${city === item.value ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#a6c8ff]" : "border-white/10 text-slate-400"}`}>{item[language]}</button>)}
-                        </div>
-                      </>}
-                    </PopoverContent>
-                  </Popover>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button aria-label={tx("Тематические рубрики", "Topic categories")} title={subcategory === "Все" ? tx("Рубрики", "Topics") : getSubcategoryLabel(subcategory, language)} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/10 bg-white/5 text-[#79a7ff] transition-colors hover:border-[#3f8cff]/45 hover:bg-[#3f8cff]/10">
-                        <Filter className="h-3.5 w-3.5" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-[min(280px,calc(100vw-24px))] rounded-xl border-white/10 bg-[#10161f] p-2.5 text-slate-100 shadow-2xl shadow-black/45">
-                      <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{tx("Рубрика", "Topic")}</p>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <button type="button" onClick={() => setSubcategory("Все")} className={`rounded-lg border px-2.5 py-2 text-left text-[10px] font-semibold transition-colors ${subcategory === "Все" ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#b8d1ff]" : "border-white/8 text-slate-400 hover:bg-white/[0.035]"}`}>{tx("Все", "All")}</button>
-                        {topThemeOptions.map(item => <button key={item} type="button" onClick={() => setSubcategory(item)} className={`rounded-lg border px-2.5 py-2 text-left text-[10px] font-semibold transition-colors ${subcategory === item ? "border-[#3f8cff]/50 bg-[#3f8cff]/16 text-[#b8d1ff]" : "border-white/8 text-slate-400 hover:bg-white/[0.035]"}`}>{getSubcategoryLabel(item, language)}</button>)}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </>)}
                 </span>
               </div>
             </div>
-            <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={globalDirection === "NFT" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={globalDirection === "NFT" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />
-            <div className="grid grid-cols-4 rounded-xl border border-white/8 bg-[#111720] p-0.5">
+            <div className="grid grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
+              {([
+                ["communities", tx("Сообщества", "Communities")],
+                ["nft", "NFT"],
+                ["bots", tx("Боты", "Bots")],
+              ] as const).map(([value, label]) => (
+                <button key={value} type="button" onClick={() => selectTopSection(value)} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${topSection === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+              ))}
+            </div>
+            {topSearchOpen && <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={topSection === "nft" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={topSection === "nft" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />}
+            {topSection === "communities" && <div className="grid grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
               {([
                 ["Все", tx("Все", "All")],
                 ["Каналы", tx("Каналы", "Channels")],
                 ["Чаты", tx("Чаты", "Chats")],
-                ["NFT", "NFT"],
               ] as const).map(([value, label]) => (
                 <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${globalDirection === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
-            </div>
-            {globalDirection === "NFT" ? (
+            </div>}
+            {topSection === "bots" ? (
+              <section className="rounded-2xl border border-dashed border-[#3390ec]/25 bg-[#202b3a] px-5 py-10 text-center">
+                <b className="block text-sm text-slate-200">Каталог ботов появится здесь</b>
+                <p className="mx-auto mt-2 max-w-[280px] text-xs leading-5 text-slate-500">Скоро можно будет находить и добавлять Telegram-ботов в отдельном разделе.</p>
+              </section>
+            ) : topSection === "nft" ? (
               <section className="space-y-2 pt-1">
                 <div className="flex items-baseline justify-between px-1">
                   <span>
@@ -2964,15 +3034,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       {detailReturnPage === "mine" && <div className="mt-2 grid grid-cols-2 gap-2">
                         <label className="rounded-xl border border-[#354966] bg-[#202b3a] p-2">
                           <small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Гео</small>
-                          <select value={listingCountry} onChange={event => { setListingCountry(event.target.value as ListingCountry); setListingCity("Все"); }} className="mt-0.5 w-full bg-transparent text-[11px] font-semibold text-slate-100 outline-none">
-                            {COUNTRY_OPTIONS.map(country => <option key={country} value={country} className="bg-[#202b3a]">{getCountryLabel(country, language)}</option>)}
+                          <select value={listingCountry} onChange={event => { setListingCountry(event.target.value); setListingCity("Все"); }} className="mt-0.5 w-full bg-transparent text-[11px] font-semibold text-slate-100 outline-none">
+                            {managedCountries.map(country => <option key={country.id} value={country.code} className="bg-[#202b3a]">{country.label}</option>)}
                           </select>
-                          <small className="mt-0.5 block text-[9px] text-slate-500">{listingCity === "Все" ? "Страна / регион" : getCityLabel(listingCountry, listingCity, language)}</small>
+                          <small className="mt-0.5 block text-[9px] text-slate-500">{listingCity === "Все" ? "Страна / регион" : getManagedCityLabel(listingCountry, listingCity)}</small>
                         </label>
                         <label className="rounded-xl border border-[#354966] bg-[#202b3a] p-2">
                           <small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Подкатегория</small>
                           <select value={listingSubcategory} onChange={event => setListingSubcategory(event.target.value)} className="mt-0.5 w-full bg-transparent text-[11px] font-semibold text-slate-100 outline-none">
-                            {(CATEGORY_SUBCATEGORIES[selectedLotGroup?.category ?? detail?.group.category ?? "Каналы"] ?? []).map(option => <option key={option} value={option} className="bg-[#202b3a]">{option}</option>)}
+                            {managedTopics.filter(topic => topic.category === (selectedLotGroup?.category ?? detail?.group.category ?? "Каналы")).map(topic => <option key={topic.id} value={topic.code} className="bg-[#202b3a]">{topic.label}</option>)}
                           </select>
                         </label>
                       </div>}
@@ -3111,6 +3181,50 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               ) : (
                 <p className="px-4 py-8 text-center text-xs text-slate-500">Активных лотов сейчас нет.</p>
               )}
+            </section>
+
+            <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#202b3a]">
+              <div className="border-b border-white/8 px-4 py-4">
+                <h2 className="text-sm font-semibold text-slate-100">География и рубрики</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Все пользователи с доступом к админ-панели могут менять эти списки. Удаление недоступно, пока значение используется в размещении.</p>
+              </div>
+
+              <details open className="border-b border-white/8 px-4 py-3">
+                <summary className="cursor-pointer text-xs font-semibold text-slate-200">Страны · {catalogTaxonomy?.countries.length ?? 0}</summary>
+                <div className="mt-3 grid grid-cols-[92px_minmax(0,1fr)_auto] gap-2">
+                  <Input value={catalogCountryCodeDraft} onChange={event => setCatalogCountryCodeDraft(event.target.value.toUpperCase())} placeholder="Код" className="h-9 border-white/10 bg-[#17212b] px-2 text-[11px] text-slate-100 placeholder:text-slate-600" />
+                  <Input value={catalogCountryLabelDraft} onChange={event => setCatalogCountryLabelDraft(event.target.value)} placeholder="Название страны" className="h-9 min-w-0 border-white/10 bg-[#17212b] px-2 text-[11px] text-slate-100 placeholder:text-slate-600" />
+                  <button type="button" onClick={() => addCatalogCountry.mutate({ code: catalogCountryCodeDraft, label: catalogCountryLabelDraft })} disabled={catalogCountryCodeDraft.trim().length < 2 || catalogCountryLabelDraft.trim().length < 2 || addCatalogCountry.isPending} className="rounded-lg border border-[#3390ec]/35 bg-[#3390ec]/10 px-2 text-[10px] font-semibold text-[#b8d7ff] disabled:opacity-40">Добавить</button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {(catalogTaxonomy?.countries ?? []).map(country => <span key={country.id} className="flex items-center gap-1 rounded-lg border border-white/8 bg-[#17212b] py-1 pl-2 pr-1 text-[10px] text-slate-300"><b>{country.label}</b><small className="text-slate-600">{country.code}</small>{country.code !== "Global" && <button type="button" onClick={() => deleteCatalogCountry.mutate({ countryCode: country.code })} disabled={deleteCatalogCountry.isPending} aria-label={`Удалить страну ${country.label}`} className="grid h-5 w-5 place-items-center rounded text-red-200 hover:bg-red-500/15"><X className="h-3 w-3" /></button>}</span>)}
+                </div>
+              </details>
+
+              <details className="border-b border-white/8 px-4 py-3">
+                <summary className="cursor-pointer text-xs font-semibold text-slate-200">Города · {catalogTaxonomy?.cities.length ?? 0}</summary>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Select value={catalogCityCountryDraft} onValueChange={setCatalogCityCountryDraft}>
+                    <SelectTrigger className="h-9 border-white/10 bg-[#17212b] text-[11px] text-slate-200"><SelectValue placeholder="Страна" /></SelectTrigger>
+                    <SelectContent className="border-white/10 bg-[#111720] text-slate-100">{(catalogTaxonomy?.countries ?? []).map(country => <SelectItem key={country.id} value={country.code} className="text-xs text-slate-200">{country.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Input value={catalogCityCodeDraft} onChange={event => setCatalogCityCodeDraft(event.target.value)} placeholder="Код города" className="h-9 border-white/10 bg-[#17212b] px-2 text-[11px] text-slate-100 placeholder:text-slate-600" />
+                  <Input value={catalogCityLabelDraft} onChange={event => setCatalogCityLabelDraft(event.target.value)} placeholder="Название города" className="col-span-2 h-9 border-white/10 bg-[#17212b] px-2 text-[11px] text-slate-100 placeholder:text-slate-600" />
+                </div>
+                <button type="button" onClick={() => addCatalogCity.mutate({ countryCode: catalogCityCountryDraft, code: catalogCityCodeDraft, label: catalogCityLabelDraft })} disabled={catalogCityCodeDraft.trim().length < 2 || catalogCityLabelDraft.trim().length < 2 || addCatalogCity.isPending} className="mt-2 w-full rounded-lg border border-[#3390ec]/35 bg-[#3390ec]/10 py-2 text-[10px] font-semibold text-[#b8d7ff] disabled:opacity-40">Добавить город</button>
+                <div className="mt-3 space-y-1.5">{(catalogTaxonomy?.cities ?? []).map(city => <div key={city.id} className="flex items-center justify-between gap-3 rounded-lg bg-[#17212b] px-2.5 py-2"><span className="min-w-0"><b className="block truncate text-[11px] text-slate-200">{city.label}</b><small className="text-[9px] text-slate-500">{city.countryCode} · {city.code}</small></span><button type="button" onClick={() => deleteCatalogCity.mutate({ cityId: city.id })} disabled={deleteCatalogCity.isPending} aria-label={`Удалить город ${city.label}`} className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-red-200 hover:bg-red-500/15"><X className="h-3.5 w-3.5" /></button></div>)}</div>
+              </details>
+
+              <details className="px-4 py-3">
+                <summary className="cursor-pointer text-xs font-semibold text-slate-200">Тематические рубрики · {catalogTaxonomy?.topics.length ?? 0}</summary>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Select value={catalogTopicCategoryDraft} onValueChange={value => setCatalogTopicCategoryDraft(value as "Каналы" | "Чаты")}><SelectTrigger className="h-9 border-white/10 bg-[#17212b] text-[11px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="border-white/10 bg-[#111720] text-slate-100"><SelectItem value="Каналы" className="text-xs text-slate-200">Каналы</SelectItem><SelectItem value="Чаты" className="text-xs text-slate-200">Чаты</SelectItem></SelectContent></Select>
+                  <Input value={catalogTopicCodeDraft} onChange={event => setCatalogTopicCodeDraft(event.target.value)} placeholder="Код рубрики" className="h-9 border-white/10 bg-[#17212b] px-2 text-[11px] text-slate-100 placeholder:text-slate-600" />
+                  <Input value={catalogTopicLabelDraft} onChange={event => setCatalogTopicLabelDraft(event.target.value)} placeholder="Название рубрики" className="col-span-2 h-9 border-white/10 bg-[#17212b] px-2 text-[11px] text-slate-100 placeholder:text-slate-600" />
+                </div>
+                <button type="button" onClick={() => addCatalogTopic.mutate({ category: catalogTopicCategoryDraft, code: catalogTopicCodeDraft, label: catalogTopicLabelDraft })} disabled={catalogTopicCodeDraft.trim().length < 2 || catalogTopicLabelDraft.trim().length < 2 || addCatalogTopic.isPending} className="mt-2 w-full rounded-lg border border-[#3390ec]/35 bg-[#3390ec]/10 py-2 text-[10px] font-semibold text-[#b8d7ff] disabled:opacity-40">Добавить рубрику</button>
+                <div className="mt-3 space-y-1.5">{(catalogTaxonomy?.topics ?? []).map(topic => <div key={topic.id} className="flex items-center justify-between gap-3 rounded-lg bg-[#17212b] px-2.5 py-2"><span className="min-w-0"><b className="block truncate text-[11px] text-slate-200">{topic.label}</b><small className="text-[9px] text-slate-500">{topic.category} · {topic.code}</small></span><button type="button" onClick={() => deleteCatalogTopic.mutate({ topicId: topic.id })} disabled={deleteCatalogTopic.isPending} aria-label={`Удалить рубрику ${topic.label}`} className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-red-200 hover:bg-red-500/15"><X className="h-3.5 w-3.5" /></button></div>)}</div>
+              </details>
             </section>
 
             {moderationAccess.canManageModerators && (
@@ -3713,17 +3827,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <div className="space-y-5 px-4 pb-4">
             <section>
               <p className="mb-2 text-xs text-slate-400">{tx("Страна / регион в каталоге", "Catalog country / region")}</p>
-              <Select value={listingCountry} onValueChange={value => { setListingCountry(value as ListingCountry); setListingCity("Все"); }}>
+              <Select value={listingCountry} onValueChange={value => { setListingCountry(value); setListingCity("Все"); }}>
                 <SelectTrigger className="h-11 w-full rounded-xl border-white/10 bg-[#0b0f14] text-sm text-slate-200">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
-                  {COUNTRY_OPTIONS.map(item => <SelectItem key={item} value={item} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{getCountryLabel(item, language)}</SelectItem>)}
+                  {managedCountries.map(item => <SelectItem key={item.id} value={item.code} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{item.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </section>
 
-            {(CITY_OPTIONS[listingCountry] ?? []).length > 0 && (
+            {managedCities.filter(city => city.countryCode === listingCountry).length > 0 && (
               <section>
                 <p className="mb-2 text-xs text-slate-400">{tx("Город", "City")}</p>
                 <Select value={listingCity} onValueChange={setListingCity}>
@@ -3732,7 +3846,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </SelectTrigger>
                   <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
                     <SelectItem value="Все" className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{tx("Не указан", "Not specified")}</SelectItem>
-                    {CITY_OPTIONS[listingCountry].map(item => <SelectItem key={item.value} value={item.value} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{item[language]}</SelectItem>)}
+                    {managedCities.filter(city => city.countryCode === listingCountry).map(item => <SelectItem key={item.id} value={item.code} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{item.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </section>
@@ -3749,7 +3863,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
-                    {listingSubcategoryOptions.map(item => <SelectItem key={item} value={item} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{getSubcategoryLabel(item, language)}</SelectItem>)}
+                    {listingSubcategoryOptions.map(item => <SelectItem key={item} value={item} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{listingCategory ? getManagedTopicLabel(listingCategory, item) : item}</SelectItem>)}
                   </SelectContent>
                 </Select>
               ) : null}

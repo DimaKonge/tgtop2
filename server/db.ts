@@ -1,12 +1,11 @@
 import { eq, and, or, asc, desc, gte, gt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, catalogCountries, catalogCities, catalogTopics, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
 import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
-import { isCatalogSubcategory } from "./catalogTaxonomy";
 import { assignRankingEntriesToSlots, getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
 import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
@@ -464,7 +463,10 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
 
   const group = groupId ? await getGroupById(groupId) : undefined;
   if (!groupId || !group) throw new Error("Группа недоступна для размещения");
-  if (options?.subcategory && !isCatalogSubcategory(group.category, options.subcategory)) throw new Error("Выберите подкатегорию, подходящую типу сообщества");
+  if (options?.subcategory) {
+    const [topic] = await db.select({ id: catalogTopics.id }).from(catalogTopics).where(and(eq(catalogTopics.category, group.category), eq(catalogTopics.code, options.subcategory))).limit(1);
+    if (!topic) throw new Error("Выберите подкатегорию из доступного списка");
+  }
   const requestedTarget = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
   if (!requestedTarget) throw new Error("Позиция рейтинга не найдена");
   const target = requestedTarget.category === "Все" && requestedTarget.subcategory === "Все"
@@ -916,6 +918,92 @@ export async function getModerationAccess(openId: string) {
   const [user] = await db.select({ role: users.role }).from(users).where(eq(users.openId, openId)).limit(1);
   const role = user?.role ?? "user";
   return { role, canModerate: role === "admin" || role === "moderator", canManageModerators: role === "admin" };
+}
+
+export async function getCatalogTaxonomy() {
+  const db = await getDb();
+  if (!db) return { countries: [], cities: [], topics: [] };
+  const [countries, cities, topics] = await Promise.all([
+    db.select().from(catalogCountries).orderBy(asc(catalogCountries.sortOrder), asc(catalogCountries.label)),
+    db.select().from(catalogCities).orderBy(asc(catalogCities.countryCode), asc(catalogCities.sortOrder), asc(catalogCities.label)),
+    db.select().from(catalogTopics).orderBy(asc(catalogTopics.category), asc(catalogTopics.sortOrder), asc(catalogTopics.label)),
+  ]);
+  return { countries, cities, topics };
+}
+
+async function requireCatalogAdmin(openId: string) {
+  const access = await getModerationAccess(openId);
+  if (!access.canModerate) throw new Error("Недостаточно прав для управления справочниками");
+}
+
+export async function addCatalogCountry(adminOpenId: string, input: { code: string; label: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const code = input.code.trim().toUpperCase();
+  const label = input.label.trim();
+  await db.insert(catalogCountries).values({ code, label, sortOrder: 10_000 });
+  return { code, label };
+}
+
+export async function deleteCatalogCountry(adminOpenId: string, countryCode: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const code = countryCode.trim();
+  if (code === "Global") throw new Error("Системную страну «Весь мир» нельзя удалить");
+  const [usedByGroup, configuredCity] = await Promise.all([
+    db.select({ id: groupsCatalog.id }).from(groupsCatalog).where(eq(groupsCatalog.country, code)).limit(1),
+    db.select({ id: catalogCities.id }).from(catalogCities).where(eq(catalogCities.countryCode, code)).limit(1),
+  ]);
+  if (usedByGroup[0]) throw new Error("Нельзя удалить страну: она используется в размещённом сообществе");
+  if (configuredCity[0]) throw new Error("Сначала удалите города этой страны");
+  await db.delete(catalogCountries).where(eq(catalogCountries.code, code));
+}
+
+export async function addCatalogCity(adminOpenId: string, input: { countryCode: string; code: string; label: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const countryCode = input.countryCode.trim();
+  const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, countryCode)).limit(1);
+  if (!country) throw new Error("Сначала добавьте страну для этого города");
+  const code = input.code.trim();
+  const label = input.label.trim();
+  await db.insert(catalogCities).values({ countryCode, code, label, sortOrder: 10_000 });
+  return { countryCode, code, label };
+}
+
+export async function deleteCatalogCity(adminOpenId: string, cityId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const [city] = await db.select().from(catalogCities).where(eq(catalogCities.id, cityId)).limit(1);
+  if (!city) throw new Error("Город не найден");
+  const [usedByGroup] = await db.select({ id: groupsCatalog.id }).from(groupsCatalog).where(and(eq(groupsCatalog.country, city.countryCode), eq(groupsCatalog.city, city.code))).limit(1);
+  if (usedByGroup) throw new Error("Нельзя удалить город: он используется в размещённом сообществе");
+  await db.delete(catalogCities).where(eq(catalogCities.id, cityId));
+}
+
+export async function addCatalogTopic(adminOpenId: string, input: { category: "Каналы" | "Чаты"; code: string; label: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const code = input.code.trim();
+  const label = input.label.trim();
+  await db.insert(catalogTopics).values({ category: input.category, code, label, sortOrder: 10_000 });
+  return { category: input.category, code, label };
+}
+
+export async function deleteCatalogTopic(adminOpenId: string, topicId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const [topic] = await db.select().from(catalogTopics).where(eq(catalogTopics.id, topicId)).limit(1);
+  if (!topic) throw new Error("Рубрика не найдена");
+  const [usedByGroup] = await db.select({ id: groupsCatalog.id }).from(groupsCatalog).where(and(eq(groupsCatalog.category, topic.category), eq(groupsCatalog.subcategory, topic.code))).limit(1);
+  if (usedByGroup) throw new Error("Нельзя удалить рубрику: она используется в размещённом сообществе");
+  await db.delete(catalogTopics).where(eq(catalogTopics.id, topicId));
 }
 
 export async function getModerators() {
@@ -1395,9 +1483,22 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
   const listingOptions = normalizeGroupListingOptions(listing);
   const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
   if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) throw new Error("Группа недоступна для размещения");
+  const effectiveCountry = listingOptions.country ?? groups[0]?.country;
+  if (listingOptions.country) {
+    const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, listingOptions.country)).limit(1);
+    if (!country) throw new Error("Выберите страну из доступного списка");
+  }
+  if (listingOptions.city) {
+    const [city] = await db.select({ id: catalogCities.id }).from(catalogCities).where(and(eq(catalogCities.countryCode, effectiveCountry), eq(catalogCities.code, listingOptions.city))).limit(1);
+    if (!city) throw new Error("Выберите город из доступного списка");
+  }
   if (listingOptions.subcategory) {
     const categories = Array.from(new Set(groups.map(group => group.category)));
-    if (categories.length !== 1 || !isCatalogSubcategory(categories[0], listingOptions.subcategory)) {
+    const category = categories.length === 1 ? categories[0] : undefined;
+    const [topic] = category
+      ? await db.select({ id: catalogTopics.id }).from(catalogTopics).where(and(eq(catalogTopics.category, category), eq(catalogTopics.code, listingOptions.subcategory))).limit(1)
+      : [];
+    if (!topic) {
       throw new Error("Подкатегория не соответствует выбранным группам");
     }
   }

@@ -42,6 +42,42 @@ export const telegramEventReceipts = mysqlTable("telegram_event_receipts", {
 
 export type TelegramEventReceipt = typeof telegramEventReceipts.$inferSelect;
 
+export const catalogCountries = mysqlTable("catalog_countries", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 64 }).notNull(),
+  label: varchar("label", { length: 96 }).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [uniqueIndex("catalog_countries_code_unique").on(table.code)]);
+
+export const catalogCities = mysqlTable("catalog_cities", {
+  id: int("id").autoincrement().primaryKey(),
+  countryCode: varchar("countryCode", { length: 64 }).notNull(),
+  code: varchar("code", { length: 96 }).notNull(),
+  label: varchar("label", { length: 128 }).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("catalog_cities_country_code_unique").on(table.countryCode, table.code),
+  index("catalog_cities_country_sort_idx").on(table.countryCode, table.sortOrder),
+]);
+
+export const catalogTopics = mysqlTable("catalog_topics", {
+  id: int("id").autoincrement().primaryKey(),
+  category: mysqlEnum("category", ["Каналы", "Чаты"]).notNull(),
+  code: varchar("code", { length: 64 }).notNull(),
+  label: varchar("label", { length: 96 }).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("catalog_topics_category_code_unique").on(table.category, table.code),
+  index("catalog_topics_category_sort_idx").on(table.category, table.sortOrder),
+]);
+
+export type CatalogCountry = typeof catalogCountries.$inferSelect;
+export type CatalogCity = typeof catalogCities.$inferSelect;
+export type CatalogTopic = typeof catalogTopics.$inferSelect;
+
 export const groupsCatalog = mysqlTable("groups_catalog", {
   id: int("id").autoincrement().primaryKey(),
   chatId: varchar("chatId", { length: 64 }).notNull().unique(),
