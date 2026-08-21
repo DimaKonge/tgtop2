@@ -2,3 +2,9 @@
 
 - 2026-08-21: `https://tgtop.xyz/manus-storage/otclend-animated-avatar_29e6295f.mp4` now returns a signed `307` redirect after the production storage configuration was completed.
 - 2026-08-21: Browser rendering of `https://tgtop.xyz` remained blank after the video-avatar deployment; this requires a separate client-runtime check before using the browser view as visual acceptance evidence.
+
+## Telegram integration notes
+
+The official Telegram Bot API documentation describes `ChatPhoto` download identifiers only for the 160×160 and 640×640 chat-photo renditions. The outgoing animated profile-photo input accepts MPEG-4, but the chat-profile response does not expose the source animation identifier. Therefore, TG TOP stores an owner-provided original MP4 for every community that should use an animated card avatar, while retaining Telegram’s static avatar as a fallback. Source: <https://core.telegram.org/bots/api>.
+
+The production Telegram Login route was verified to redirect to the official Telegram authorization page for `@TG_TOPBOT`, with a callback at `https://tgtop.xyz/api/auth/telegram/callback` and PKCE state cookies. Source: <https://oauth.telegram.org/auth>.
