@@ -317,7 +317,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('network: "-239"');
     expect(source).toContain('trpc.tgTop.verifyTonDeposit.useMutation');
     expect(source).toContain('Подтвердить в кошельке');
-    expect(source).toContain('Не отправляйте TON на этот адрес вручную без кода из этого окна');
+    expect(source).not.toContain('Не отправляйте TON на этот адрес вручную без кода из этого окна');
+    expect(source).toContain('Платёж вернулся в кошелёк. Средства не зачислены.');
     expect(source).not.toContain('{ value: "system"');
     expect(source).toContain('setFiltersOpen(true)');
     expect(source).toContain('side="bottom"');

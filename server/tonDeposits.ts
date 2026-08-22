@@ -23,13 +23,14 @@ export type TonApiTransaction = {
 };
 
 export type TonDepositMatch = { transactionHash: string; transactionLt: string; receivedNano: bigint };
+export type TonDepositRejection = { transactionHash: string; transactionLt: string; reason: string };
 
 export function normalizeTonAddress(value: string) {
   return Address.parse(value.trim()).toRawString();
 }
 
 export function toFriendlyTonAddress(value: string) {
-  return Address.parse(value.trim()).toString({ urlSafe: true, bounceable: true, testOnly: false });
+  return Address.parse(value.trim()).toString({ urlSafe: true, bounceable: false, testOnly: false });
 }
 
 export function parseTonToNano(value: string) {
@@ -105,6 +106,29 @@ export function findMatchingTonDepositTransaction(input: {
     } catch {
       continue;
     }
+  }
+  return null;
+}
+
+export function findRejectedTonDepositTransaction(input: {
+  transactions: TonApiTransaction[];
+  senderWalletAddress: string;
+  recipientWalletAddress: string;
+  reference: string;
+}): TonDepositRejection | null {
+  const sender = normalizeTonAddress(input.senderWalletAddress);
+  const recipient = normalizeTonAddress(input.recipientWalletAddress);
+  for (const transaction of input.transactions) {
+    const message = transaction.in_msg;
+    if (!message || !transaction.hash || transaction.lt === undefined || transaction.lt === null) continue;
+    if (!matchesAddress(message.source, sender) || !matchesAddress(message.destination, recipient)) continue;
+    if (decodeTonComment(message.raw_body) !== input.reference) continue;
+    if (transaction.success && !transaction.aborted && !message.bounced) continue;
+    return {
+      transactionHash: transaction.hash,
+      transactionLt: String(transaction.lt),
+      reason: "Платёж вернулся в кошелёк. Попробуйте снова после обновления формы.",
+    };
   }
   return null;
 }

@@ -14,7 +14,7 @@ import { canExposeOwnerProfile } from "./ownerVisibilityPolicy";
 import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
 import { getTelegramChatIdFromOpenId, verifyTelegramUserChatBoost } from "./telegramNotifications";
 import { getSearchIndexingError } from "./seoPolicy";
-import { buildTonDepositPayload, createTonDepositReference, findMatchingTonDepositTransaction, formatNanoTon, getRecentTonDepositTransactions, normalizeTonAddress, parseTonToNano, toFriendlyTonAddress, TON_DEPOSIT_TTL_MS } from "./tonDeposits";
+import { buildTonDepositPayload, createTonDepositReference, findMatchingTonDepositTransaction, findRejectedTonDepositTransaction, formatNanoTon, getRecentTonDepositTransactions, normalizeTonAddress, parseTonToNano, toFriendlyTonAddress, TON_DEPOSIT_TTL_MS } from "./tonDeposits";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -260,6 +260,21 @@ export async function verifyTonDeposit(input: { userOpenId: string; depositId: n
     reference: deposit.reference,
   });
   if (!match) {
+    const rejection = findRejectedTonDepositTransaction({
+      transactions,
+      senderWalletAddress: deposit.senderWalletAddress,
+      recipientWalletAddress: deposit.recipientWalletAddress,
+      reference: deposit.reference,
+    });
+    if (rejection) {
+      await db.update(tonDeposits).set({
+        status: "rejected",
+        transactionHash: rejection.transactionHash,
+        transactionLt: rejection.transactionLt,
+        failureReason: rejection.reason,
+      }).where(and(eq(tonDeposits.id, deposit.id), inArray(tonDeposits.status, ["created", "submitted"])));
+      return { status: "rejected" as const, newlyConfirmed: false, amountTon: "0" };
+    }
     await db.update(tonDeposits).set({ status: "submitted", submittedAt: deposit.submittedAt ?? new Date() }).where(and(eq(tonDeposits.id, deposit.id), eq(tonDeposits.status, "created")));
     return { status: "submitted" as const, newlyConfirmed: false, amountTon: "0" };
   }

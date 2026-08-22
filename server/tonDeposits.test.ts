@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { describe, expect, it } from "vitest";
-import { buildTonDepositPayload, decodeTonComment, findMatchingTonDepositTransaction, formatNanoTon, parseTonToNano, toFriendlyTonAddress } from "./tonDeposits";
+import { buildTonDepositPayload, decodeTonComment, findMatchingTonDepositTransaction, findRejectedTonDepositTransaction, formatNanoTon, parseTonToNano, toFriendlyTonAddress } from "./tonDeposits";
 
 const sender = "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ";
 const recipient = "UQCXLfr3vjs5XpeyvEKX8SIYn9HxngQQI-ZVdg88HKkMnnJH";
@@ -10,7 +10,7 @@ describe("TON deposit policy", () => {
   it("parses only precise positive TON amounts within deposit bounds", () => {
     expect(parseTonToNano("1.25")).toBe(BigInt("1250000000"));
     expect(formatNanoTon(BigInt("1250000000"))).toBe("1.25");
-    expect(toFriendlyTonAddress(recipient)).toMatch(/^[EU]Q[A-Za-z0-9_-]{46}$/);
+    expect(toFriendlyTonAddress(recipient)).toMatch(/^UQ[A-Za-z0-9_-]{46}$/);
     expect(() => parseTonToNano("0.001")).toThrow("Минимальное пополнение");
     expect(() => parseTonToNano("1.0000000001")).toThrow("точностью");
   });
@@ -53,5 +53,11 @@ describe("TON deposit policy", () => {
       reference,
       transactions: [{ hash: "d".repeat(64), lt: "9", success: true, in_msg: { source: { address: sender }, destination: { address: recipient }, value: "999999999", raw_body: rawBody } }],
     })).toBeNull();
+    expect(findRejectedTonDepositTransaction({
+      senderWalletAddress: sender,
+      recipientWalletAddress: recipient,
+      reference,
+      transactions: [{ hash: "e".repeat(64), lt: "10", success: false, aborted: true, in_msg: { source: { address: sender }, destination: { address: recipient }, value: "1000000000", raw_body: rawBody } }],
+    })).toMatchObject({ transactionHash: "e".repeat(64), transactionLt: "10" });
   });
 });
