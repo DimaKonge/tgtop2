@@ -2313,9 +2313,67 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5">
-                  {topSection === "communities" && <button type="button" onClick={() => setFiltersOpen(true)} aria-label={tx("Открыть фильтры сообществ", "Open community filters")} title={tx("Фильтры сообществ", "Community filters")} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/10 bg-white/5 text-slate-400 transition-colors hover:border-[#3390ec]/45 hover:text-[#79a7ff]">
-                    <Filter className="h-3.5 w-3.5" />
-                  </button>}
+                  {topSection === "communities" && (
+                    <>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" aria-label={tx("Гео фильтр", "Geo filter")} title={tx("Гео", "Geo")} className="flex h-7 items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 text-[10px] font-medium text-slate-300 transition-colors hover:border-[#3390ec]/45 hover:text-[#79a7ff]">
+                            <Globe2 className="h-3 w-3 text-[#79a7ff]" />
+                            <span className="max-w-[64px] truncate">{country === "Все" ? tx("Весь мир", "World") : getCountryLabel(country, language)}</span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-64 border-white/10 bg-[#111720] p-2 text-slate-100 shadow-xl">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between pb-1 border-b border-white/8">
+                              <b className="text-xs font-semibold">{tx("Выбрать регион", "Select Region")}</b>
+                              <button type="button" onClick={() => { setCountry("Все"); setCity("Все"); }} className="text-[10px] text-slate-400 hover:text-white">{tx("Сбросить", "Reset")}</button>
+                            </div>
+                            <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+                              <button type="button" onClick={() => { setCountry("Все"); setCity("Все"); }} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${country === "All" || country === "Все" ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
+                                <span>{tx("Весь мир", "Worldwide")}</span>
+                                {(country === "All" || country === "Все") && <Check className="h-3 w-3" />}
+                              </button>
+                              {managedCountries.map(item => (
+                                <button key={item.code} type="button" onClick={() => { setCountry(item.code); setCity("Все"); }} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${country === item.code ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
+                                  <span>{item.label}</span>
+                                  {country === item.code && <Check className="h-3 w-3" />}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" aria-label={tx("Рубрики и категории", "Categories & topics")} title={tx("Категории", "Categories")} className="flex h-7 items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 text-[10px] font-medium text-slate-300 transition-colors hover:border-[#3390ec]/45 hover:text-[#79a7ff]">
+                            <FolderPlus className="h-3 w-3 text-[#79a7ff]" />
+                            <span className="max-w-[72px] truncate">{subcategory === "Все" ? (globalDirection === "Все" ? tx("Рубрики", "Topics") : globalDirection) : getSubcategoryLabel(subcategory, language)}</span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-64 border-white/10 bg-[#111720] p-2 text-slate-100 shadow-xl">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between pb-1 border-b border-white/8">
+                              <b className="text-xs font-semibold">{tx("Выбрать рубрику", "Select Topic")}</b>
+                              <button type="button" onClick={() => setSubcategory("Все")} className="text-[10px] text-slate-400 hover:text-white">{tx("Сбросить", "Reset")}</button>
+                            </div>
+                            <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+                              <button type="button" onClick={() => setSubcategory("Все")} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${subcategory === "Все" ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
+                                <span>{tx("Все рубрики", "All topics")}</span>
+                                {subcategory === "Все" && <Check className="h-3 w-3" />}
+                              </button>
+                              {globalSubcategoryOptions.map(code => (
+                                <button key={code} type="button" onClick={() => setSubcategory(code)} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${subcategory === code ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
+                                  <span>{getSubcategoryLabel(code, language)}</span>
+                                  {subcategory === code && <Check className="h-3 w-3" />}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </>
+                  )}
                   <button type="button" onClick={() => setTopSearchOpen(current => !current)} aria-label={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Открыть поиск", "Open search")} title={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Поиск", "Search")} className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${topSearchOpen ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                     <Search className="h-3.5 w-3.5" />
                   </button>
