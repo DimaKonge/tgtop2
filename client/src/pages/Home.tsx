@@ -2405,7 +2405,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
+      <main className="mx-auto max-w-3xl px-3 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
         {page === "top" && (
           <section className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -3095,8 +3095,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         disabled={unlistGroups.isPending}
                         title={tx("Снять с листинга", "Remove from listing")}
                         aria-label={tx("Снять с листинга", "Remove from listing")}
-                        className="grid h-7 w-7 place-items-center rounded-lg border border-rose-300/20 bg-rose-300/[0.07] text-rose-200 transition-colors hover:bg-rose-300/[0.13] disabled:opacity-50"
-                      ><X className="h-4 w-4" /></button>}
+                        className="inline-flex h-7 items-center gap-1 rounded-lg border border-rose-300/20 bg-rose-300/[0.07] px-2 text-[9px] font-semibold text-rose-100 transition-colors hover:bg-rose-300/[0.13] disabled:opacity-50"
+                      ><X className="h-3.5 w-3.5" />{tx("Снять лот", "Remove lot")}</button>}
                     </span>
                   </div>
 
@@ -3181,6 +3181,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>}
                     </section>
                   )}
+                </div>
+                <div className="relative flex flex-col overflow-hidden rounded-[26px] border border-[#31435f] bg-[#17212b] shadow-[0_18px_42px_rgba(0,0,0,.18)]">
                   {detail && ownsDetail && (
                     <section className="hidden order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">
                       <button type="button" onClick={() => setInlineListingOpen(value => !value)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
