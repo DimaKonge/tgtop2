@@ -206,6 +206,10 @@ export const appRouter = router({
       return await db.getTonDeposits(ctx.user.openId);
     }),
 
+    getTonWithdrawalDefaultRecipient: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getTonWithdrawalDefaultRecipient(ctx.user.openId);
+    }),
+
     createTonDeposit: protectedProcedure
       .input(z.object({
         amountTon: z.string().trim().min(1).max(32),

@@ -199,6 +199,17 @@ export async function getTonDeposits(openId: string) {
   }).from(tonDeposits).where(eq(tonDeposits.userOpenId, openId)).orderBy(desc(tonDeposits.createdAt), desc(tonDeposits.id)).limit(20);
 }
 
+export async function getTonWithdrawalDefaultRecipient(openId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const row = (await db.select({ senderWalletAddress: tonDeposits.senderWalletAddress })
+    .from(tonDeposits)
+    .where(and(eq(tonDeposits.userOpenId, openId), eq(tonDeposits.status, "confirmed")))
+    .orderBy(desc(tonDeposits.confirmedAt), desc(tonDeposits.id))
+    .limit(1))[0];
+  return row ? { destinationWalletAddress: toFriendlyTonAddress(row.senderWalletAddress) } : null;
+}
+
 export async function createTonDeposit(input: { userOpenId: string; senderWalletAddress: string; amountTon: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
