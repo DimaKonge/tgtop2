@@ -1,6 +1,6 @@
 import { Address, beginCell, external, internal, SendMode, storeMessage } from "@ton/core";
 import { mnemonicToPrivateKey, mnemonicValidate } from "@ton/crypto";
-import { WalletContractV4 } from "@ton/ton";
+import { WalletContractV4 } from "@ton/ton/dist/wallets/v4/WalletContractV4.js";
 import { normalizeTonAddress } from "./tonDeposits";
 
 type TonApiAccount = { status?: string | null };

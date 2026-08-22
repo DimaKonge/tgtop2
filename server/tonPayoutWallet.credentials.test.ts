@@ -1,6 +1,6 @@
 import { mnemonicValidate } from "@ton/crypto";
 import { describe, expect, it } from "vitest";
-import { WalletContractV4 } from "@ton/ton";
+import { WalletContractV4 } from "@ton/ton/dist/wallets/v4/WalletContractV4.js";
 import { mnemonicToPrivateKey, mnemonicValidate } from "@ton/crypto";
 import { normalizeTonAddress } from "./tonDeposits";
 import { buildTonPayoutExternalBoc } from "./tonPayoutWallet";
