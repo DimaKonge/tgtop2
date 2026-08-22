@@ -19,16 +19,17 @@ const ordinary = {
 };
 
 describe("TON withdrawal policy", () => {
-  it("keeps every balance calculation in nanoTON and takes the network reserve from the gross amount", () => {
+  it("keeps the initial quote at the requested gross amount until network fee emulation", () => {
     const quote = quoteTonWithdrawal("1.11");
     expect(quote.grossAmountNano).toBe(BigInt("1110000000"));
-    expect(quote.feeReserveNano).toBe(TON_WITHDRAWAL_FEE_RESERVE_NANO);
-    expect(TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO).toBe(BigInt("2000000"));
-    expect(quote.netAmountNano).toBe(BigInt("1110000000") - TON_WITHDRAWAL_FEE_RESERVE_NANO);
+    expect(quote.feeReserveNano).toBe(BigInt(0));
+    expect(TON_WITHDRAWAL_FEE_RESERVE_NANO).toBe(BigInt(0));
+    expect(TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO).toBe(BigInt(0));
+    expect(quote.netAmountNano).toBe(BigInt("1110000000"));
   });
 
-  it("rejects gross amounts below 0.1 TON", () => {
-    expect(() => quoteTonWithdrawal("0.099999999")).toThrow("0.1 TON");
+  it("rejects gross amounts below 0.1 GRAM", () => {
+    expect(() => quoteTonWithdrawal("0.099999999")).toThrow("0.1 GRAM");
   });
 
   it("keeps risk reasons in the audit trail but queues automatic payouts", () => {

@@ -416,7 +416,7 @@ export async function createTonWithdrawal(input: { userOpenId: string; amountTon
       return;
     }
     const debit = await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} - ${grossTon}` }).where(and(eq(users.openId, input.userOpenId), gte(users.mainBalanceTon, grossTon)));
-    if (Number(debit[0]?.affectedRows ?? 0) !== 1) throw new Error("Недостаточно основного TON-баланса для вывода");
+    if (Number(debit[0]?.affectedRows ?? 0) !== 1) throw new Error("Недостаточно основного GRAM-баланса для вывода");
     const result = await tx.insert(tonWithdrawals).values({
       userOpenId: input.userOpenId,
       payoutWalletAddress,
@@ -442,21 +442,33 @@ export async function broadcastQueuedTonWithdrawal(withdrawalId: number) {
     if (!db) throw new Error("Database not available");
     const withdrawal = (await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, withdrawalId)).limit(1))[0];
     if (!withdrawal || withdrawal.status !== "queued") return { attempted: false as const, reason: "not_queued" as const };
-    const prepared = await buildTonPayoutExternalBoc({ destinationWalletAddress: withdrawal.destinationWalletAddress, amountNano: BigInt(withdrawal.netAmountNano), reference: withdrawal.reference });
+    const grossAmountNano = BigInt(withdrawal.grossAmountNano);
+    let prepared = await buildTonPayoutExternalBoc({ destinationWalletAddress: withdrawal.destinationWalletAddress, amountNano: grossAmountNano, reference: withdrawal.reference });
+    let estimatedFeeNano: bigint;
     try {
-      const estimatedFeeNano = await emulateTonPayoutFee(prepared.boc);
-      if (estimatedFeeNano + TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO > BigInt(withdrawal.feeReserveNano)) throw new Error("reserve_exceeded");
+      estimatedFeeNano = await emulateTonPayoutFee(prepared.boc);
+      if (estimatedFeeNano <= BigInt(0) || estimatedFeeNano >= grossAmountNano) throw new Error("fee_exceeds_amount");
+      const estimatedNetNano = grossAmountNano - estimatedFeeNano;
+      prepared = await buildTonPayoutExternalBoc({ destinationWalletAddress: withdrawal.destinationWalletAddress, amountNano: estimatedNetNano, reference: withdrawal.reference });
+      // Re-estimate the final message once; this keeps the user's fee tied to the actual message being sent.
+      estimatedFeeNano = await emulateTonPayoutFee(prepared.boc);
+      if (estimatedFeeNano <= BigInt(0) || estimatedFeeNano >= grossAmountNano) throw new Error("fee_exceeds_amount");
+      const finalNetNano = grossAmountNano - estimatedFeeNano;
+      if (finalNetNano !== estimatedNetNano) {
+        prepared = await buildTonPayoutExternalBoc({ destinationWalletAddress: withdrawal.destinationWalletAddress, amountNano: finalNetNano, reference: withdrawal.reference });
+      }
     } catch {
-      const grossTon = formatWithdrawalNanoTon(BigInt(withdrawal.grossAmountNano));
+      const grossTon = formatWithdrawalNanoTon(grossAmountNano);
       await db.transaction(async tx => {
-        const cancelled = await tx.update(tonWithdrawals).set({ status: "cancelled", riskReasons: `${withdrawal.riskReasons ? `${withdrawal.riskReasons},` : ""}fee_preflight`, failureReason: "Отмена: комиссия сети не подтвердилась" }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "queued")));
+        const cancelled = await tx.update(tonWithdrawals).set({ status: "cancelled", riskReasons: `${withdrawal.riskReasons ? `${withdrawal.riskReasons},` : ""}fee_preflight`, failureReason: "Отмена: комиссию сети нельзя безопасно рассчитать" }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "queued")));
         if (Number(cancelled[0]?.affectedRows ?? 0) === 1) {
           await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${grossTon}` }).where(eq(users.openId, withdrawal.userOpenId));
         }
       });
       return { attempted: false as const, reason: "fee_preflight_cancelled" as const };
     }
-    const marked = await db.update(tonWithdrawals).set({ status: "broadcast_pending", externalMessageHash: prepared.externalMessageHash, broadcastAt: new Date(), failureReason: null }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "queued")));
+    const netAmountNano = grossAmountNano - estimatedFeeNano;
+    const marked = await db.update(tonWithdrawals).set({ status: "broadcast_pending", feeReserveNano: estimatedFeeNano.toString(), netAmountNano: netAmountNano.toString(), externalMessageHash: prepared.externalMessageHash, broadcastAt: new Date(), failureReason: null }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "queued")));
     if (Number(marked[0]?.affectedRows ?? 0) !== 1) return { attempted: false as const, reason: "state_changed" as const };
     try {
       await broadcastTonPayoutBoc(prepared.boc);

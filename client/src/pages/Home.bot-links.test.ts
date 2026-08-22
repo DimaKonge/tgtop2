@@ -56,6 +56,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('detailRewardActive && <Star className="h-4 w-4 shrink-0 fill-[#ffd766] text-[#ffd766]"');
     expect(source).toContain('font-mono text-[10px] font-semibold tracking-[0.04em] text-slate-300');
     expect(source).toContain('const detailSalePriceUnits = parseGramInput(detailSalePrice);');
+    expect(source).not.toContain('Проверьте детали');
+    expect(source).not.toContain('submitTonWithdrawal');
+    expect(source).toContain('tonWithdrawalSubmitInFlight.current');
+    expect(source).toContain('createTonWithdrawalMutation.isPending');
     expect(source).toContain('const detailSaleEnabled = Boolean((ownsDetail ? isListingForSale : detail?.group.listingType === "sale") && (detailSalePriceUnits ?? 0) > 0);');
     expect(source).toContain('const detailCanBeBought = Boolean(!ownsDetail && detailSaleEnabled);');
     expect(source).toContain('const detailHasEnoughBalanceToBuy = Boolean(detailSalePriceUnits && bonusBalanceUnits >= detailSalePriceUnits);');

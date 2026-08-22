@@ -2,9 +2,9 @@ import { parseTonToNano } from "./tonDeposits";
 
 export const TON_NANO = BigInt("1000000000");
 export const TON_WITHDRAWAL_MINIMUM_NANO = BigInt("100000000");
-// Консервативный максимум для простой single-output V4R2-транзакции. Разница с фактической сетью возвращается на внутренний TON-баланс после сверки.
-export const TON_WITHDRAWAL_FEE_RESERVE_NANO = BigInt("50000000");
-export const TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO = BigInt("2000000");
+// Заполняется фактической комиссией после TonAPI-эмуляции непосредственно перед broadcast.
+export const TON_WITHDRAWAL_FEE_RESERVE_NANO = BigInt(0);
+export const TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO = BigInt(0);
 export const TON_WITHDRAWAL_USER_COOLDOWN_MS = 60_000;
 export const TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS = 5 * 60_000;
 export const TON_WITHDRAWAL_LARGE_NANO = BigInt(5) * TON_NANO;
@@ -53,13 +53,10 @@ export function formatNanoTon(value: bigint): string {
 export function quoteTonWithdrawal(amountTon: string): TonWithdrawalQuote {
   const grossAmountNano = parseTonToNano(amountTon);
   if (grossAmountNano < TON_WITHDRAWAL_MINIMUM_NANO) {
-    throw new Error("Минимальная сумма вывода — 0.1 TON");
+    throw new Error("Минимальная сумма вывода — 0.1 GRAM");
   }
-  const netAmountNano = grossAmountNano - TON_WITHDRAWAL_FEE_RESERVE_NANO;
-  if (netAmountNano <= BigInt(0)) {
-    throw new Error("Сумма после резерва комиссии должна быть больше нуля");
-  }
-  return { grossAmountNano, feeReserveNano: TON_WITHDRAWAL_FEE_RESERVE_NANO, netAmountNano };
+  // До сетевой эмуляции невозможно честно назвать комиссию. Сумма и фактическая комиссия уточняются в payout-очереди.
+  return { grossAmountNano, feeReserveNano: BigInt(0), netAmountNano: grossAmountNano };
 }
 
 export function classifyTonWithdrawalRisk(snapshot: TonWithdrawalRiskSnapshot, quote: TonWithdrawalQuote): TonWithdrawalRiskDecision {
