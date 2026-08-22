@@ -2306,13 +2306,20 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <div className="flex flex-wrap items-center gap-2">
               <div className="contents">
                 <div className="contents">
-                  <span className={`flex min-w-0 items-baseline gap-1 overflow-hidden whitespace-nowrap px-0.5 ${topSection === "communities" ? "order-4 basis-full border-b border-white/8 pb-2" : "order-3 flex-1"}`}>
-                  <h1 className="shrink-0 text-[clamp(14px,4.7vw,18px)] font-semibold tracking-tight text-white">{currentTopTitle}</h1>
-                  {currentTopCountry && <span className="min-w-0 shrink truncate text-[10px] font-medium text-slate-400">· {currentTopCountry}</span>}
-                  {currentTopSubcategory && <span className="min-w-0 shrink truncate text-[10px] font-medium text-[#7697c7]">· {currentTopSubcategory}</span>}
-                  {currentTopCity && <span className="max-w-[48px] shrink truncate text-[9px] font-medium text-[#7697c7]">· {currentTopCity}</span>}
-                  <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
-                </span>
+                  <div className={`flex min-w-0 items-center gap-1 px-0.5 ${topSection === "communities" ? "order-4 basis-full border-b border-white/8 pb-2" : "order-3 flex-1"}`}>
+                    <span className="flex min-w-0 flex-1 items-baseline gap-1 overflow-hidden whitespace-nowrap">
+                      <h1 className="shrink-0 text-[clamp(14px,4.7vw,18px)] font-semibold tracking-tight text-white">{currentTopTitle}</h1>
+                      {currentTopCountry && <span className="min-w-0 shrink truncate text-[10px] font-medium text-slate-400">· {currentTopCountry}</span>}
+                      {currentTopSubcategory && <span className="min-w-0 shrink truncate text-[10px] font-medium text-[#7697c7]">· {currentTopSubcategory}</span>}
+                      {currentTopCity && <span className="max-w-[48px] shrink truncate text-[9px] font-medium text-[#7697c7]">· {currentTopCity}</span>}
+                      <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
+                    </span>
+                    {topSection === "communities" && (country !== "Все" || city !== "Все" || subcategory !== "Все") && (
+                      <button type="button" onClick={() => { setCountry("Все"); setCity("Все"); setSubcategory("Все"); }} aria-label={tx("Сбросить географию и рубрику", "Reset location and topic")} title={tx("Сбросить географию и рубрику", "Reset location and topic")} className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-rose-400/25 bg-rose-500/10 text-rose-300 transition-colors hover:border-rose-300/45 hover:bg-rose-500/18 hover:text-rose-100 active:scale-[0.96]">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                   <span className="order-3 flex shrink-0 items-center gap-1.5">
                   {topSection === "communities" && (
                     <>
