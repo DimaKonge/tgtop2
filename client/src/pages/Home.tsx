@@ -953,6 +953,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [page, setPage] = useState<Page>("top");
   const [workspaceSection, setWorkspaceSection] = useState<WorkspaceSection>("communities");
   const [walletNftFilter, setWalletNftFilter] = useState<WalletNftFilter>("all");
+  const [tonDepositOpen, setTonDepositOpen] = useState(false);
+  const [tonDepositAmount, setTonDepositAmount] = useState("1");
+  const [activeTonDepositId, setActiveTonDepositId] = useState<number | null>(null);
   const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
   const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
   const [topSection, setTopSection] = useState<TopSection>("communities");
@@ -1200,6 +1203,22 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     refetchInterval: 8_000,
     refetchIntervalInBackground: false,
   });
+  const tonDepositsQuery = trpc.tgTop.getTonDeposits.useQuery(undefined, {
+    enabled: isAuthenticated && page === "profile",
+    refetchInterval: activeTonDepositId ? 10_000 : false,
+    refetchIntervalInBackground: false,
+  });
+  const tonDeposits = (tonDepositsQuery.data ?? []) as Array<{
+    id: number;
+    requestedAmountNano: string;
+    creditedAmountTon: string | null;
+    reference: string;
+    status: "created" | "submitted" | "confirmed" | "expired" | "rejected";
+    failureReason: string | null;
+    expiresAt: Date;
+    confirmedAt: Date | null;
+    createdAt: Date;
+  }>;
   const account = accountQuery.data as
     | {
         user?: { bonusBalance: number; mainBalanceTon: string | number; publicProfile?: boolean; role?: "user" | "moderator" | "admin" };
@@ -1315,6 +1334,45 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     },
     onError: error => toast.error(error.message),
   });
+  const createTonDepositMutation = trpc.tgTop.createTonDeposit.useMutation({
+    onError: error => toast.error(error.message),
+  });
+  const markTonDepositSubmittedMutation = trpc.tgTop.markTonDepositSubmitted.useMutation({
+    onError: error => toast.error(error.message),
+  });
+  const verifyTonDepositMutation = trpc.tgTop.verifyTonDeposit.useMutation({
+    onSuccess: result => {
+      void utils.tgTop.getTonDeposits.invalidate();
+      void utils.tgTop.getAccount.invalidate();
+      void utils.tgTop.getAccountActivity.invalidate();
+      if (result.newlyConfirmed) {
+        toast.success(`Зачислено ${result.amountTon} TON после проверки сети`);
+        setActiveTonDepositId(null);
+      }
+    },
+    onError: error => toast.error(error.message),
+  });
+  const startTonDeposit = async () => {
+    if (!walletConnectionRestored) return;
+    if (!walletAddress) {
+      tonConnectUi.openModal();
+      return;
+    }
+    const deposit = await createTonDepositMutation.mutateAsync({ amountTon: tonDepositAmount, senderWalletAddress: walletAddress });
+    setActiveTonDepositId(deposit.id);
+    try {
+      await tonConnectUi.sendTransaction({
+        validUntil: deposit.validUntil,
+        network: "-239",
+        messages: [{ address: deposit.recipientWalletAddress, amount: deposit.amountNano, payload: deposit.payload }],
+      });
+      await markTonDepositSubmittedMutation.mutateAsync({ depositId: deposit.id });
+      toast.success("Перевод отправлен. Проверяем поступление в сети TON.");
+      void verifyTonDepositMutation.mutateAsync({ depositId: deposit.id });
+    } catch (error) {
+      toast.error(error instanceof Error && error.message.includes("USER_REJECTS") ? "Подтверждение в кошельке отменено" : "Перевод не подтверждён. Средства не зачислены.");
+    }
+  };
   const moderateGroup = trpc.tgTop.moderateGroup.useMutation({
     onSuccess: () => {
       toast.success("Лот снят с ТОПа. Владельцу отправлена причина.");
@@ -3547,7 +3605,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="mt-3">
                 <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" />
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button type="button" disabled aria-label={tx("Пополнение пока недоступно", "Deposit is not available yet")} className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-left opacity-65"><b className="block text-[11px] text-slate-300">{tx("Пополнить", "Deposit")}</b><small className="mt-0.5 block text-[9px] text-slate-500">{tx("Скоро", "Coming soon")}</small></button>
+                  <Sheet open={tonDepositOpen} onOpenChange={setTonDepositOpen}>
+                    <button type="button" onClick={() => setTonDepositOpen(true)} aria-label={tx("Пополнить баланс TON", "Deposit TON balance")} className="rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2 text-left transition-colors hover:bg-[#3f8cff]/18"><b className="block text-[11px] text-[#c8ddff]">{tx("Пополнить", "Deposit")}</b><small className="mt-0.5 block text-[9px] text-[#8fb9ff]">TON</small></button>
+                    <SheetContent side="bottom" className="max-h-[84dvh] rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">
+                      <SheetHeader className="px-4 pb-3 text-left">
+                        <SheetTitle className="text-base text-slate-100">{tx("Пополнить баланс TON", "Deposit TON balance")}</SheetTitle>
+                        <p className="text-[11px] leading-4 text-slate-500">{tx("Сумму и перевод подтверждаете только вы в своём кошельке. Баланс обновится после проверки сети.", "Only you confirm the amount and transfer in your wallet. The balance updates after network verification.")}</p>
+                      </SheetHeader>
+                      <div className="space-y-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                        {!walletAddress ? <button type="button" onClick={() => tonConnectUi.openModal()} className="flex w-full items-center justify-center rounded-xl bg-[#3390ec] px-3 py-3 text-sm font-semibold text-white">{tx("Подключить TON-кошелёк", "Connect TON wallet")}</button> : <>
+                          <label className="block"><span className="mb-1 block text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">{tx("Сумма", "Amount")}</span><div className="relative"><Input value={tonDepositAmount} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d{0,9})?$/.test(value)) setTonDepositAmount(value); }} placeholder="1" className="h-12 border-white/10 bg-white/[0.045] pr-14 text-base font-semibold text-slate-100" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#8fb9ff]">TON</span></div><small className="mt-1 block text-[10px] text-slate-500">{tx("Минимум 0.01 TON", "Minimum 0.01 TON")}</small></label>
+                          <button type="button" disabled={!walletConnectionRestored || createTonDepositMutation.isPending || markTonDepositSubmittedMutation.isPending} onClick={() => void startTonDeposit()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3390ec] px-3 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] disabled:opacity-50"><WalletCards className="h-4 w-4" />{createTonDepositMutation.isPending ? tx("Готовим перевод…", "Preparing transfer…") : tx("Подтвердить в кошельке", "Confirm in wallet")}</button>
+                          <p className="rounded-xl border border-amber-200/15 bg-amber-300/[0.05] p-2.5 text-[10px] leading-4 text-amber-100/85">{tx("Не отправляйте TON на этот адрес вручную без кода из этого окна: такие переводы не будут автоматически зачислены.", "Do not send TON manually without the code from this screen: such transfers are not credited automatically.")}</p>
+                        </>}
+                        {tonDeposits.slice(0, 3).length > 0 && <section className="border-t border-white/8 pt-3"><div className="mb-2 flex items-center justify-between"><b className="text-[11px] text-slate-200">{tx("Последние пополнения", "Recent deposits")}</b><span className="text-[9px] text-slate-500">TON</span></div><div className="space-y-2">{tonDeposits.slice(0, 3).map(deposit => <div key={deposit.id} className="rounded-xl border border-white/8 bg-white/[0.025] p-2.5"><div className="flex items-center justify-between gap-2"><b className="text-[11px] text-slate-100">{deposit.creditedAmountTon ?? (Number(deposit.requestedAmountNano) / 1_000_000_000).toFixed(2)} TON</b><span className={deposit.status === "confirmed" ? "text-[10px] font-medium text-emerald-300" : deposit.status === "expired" || deposit.status === "rejected" ? "text-[10px] font-medium text-rose-300" : "text-[10px] font-medium text-amber-200"}>{deposit.status === "confirmed" ? tx("Зачислено", "Credited") : deposit.status === "submitted" ? tx("Проверяем", "Checking") : deposit.status === "created" ? tx("Ожидает подписи", "Awaiting signature") : tx("Не подтверждено", "Not confirmed")}</span></div><small className="mt-1 block font-mono text-[9px] text-slate-500">{deposit.reference}</small>{deposit.status !== "confirmed" && deposit.status !== "expired" && deposit.status !== "rejected" && <button type="button" disabled={verifyTonDepositMutation.isPending} onClick={() => { setActiveTonDepositId(deposit.id); verifyTonDepositMutation.mutate({ depositId: deposit.id }); }} className="mt-2 text-[10px] font-medium text-[#8fb9ff] disabled:opacity-50">{tx("Проверить сеть", "Check network")}</button>}</div>)}</div></section>}
+                      </div>
+                    </SheetContent>
+                  </Sheet>
                   <button type="button" disabled aria-label={tx("Вывод пока недоступен", "Withdrawal is not available yet")} className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-left opacity-65"><b className="block text-[11px] text-slate-300">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-slate-500">{tx("После проверки", "After verification")}</small></button>
                 </div>
               </div>

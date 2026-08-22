@@ -311,6 +311,13 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('connect-community');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');
     expect(source).toContain('<WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" />');
+    expect(source).toContain('trpc.tgTop.getTonDeposits.useQuery');
+    expect(source).toContain('trpc.tgTop.createTonDeposit.useMutation');
+    expect(source).toContain('tonConnectUi.sendTransaction({');
+    expect(source).toContain('network: "-239"');
+    expect(source).toContain('trpc.tgTop.verifyTonDeposit.useMutation');
+    expect(source).toContain('Подтвердить в кошельке');
+    expect(source).toContain('Не отправляйте TON на этот адрес вручную без кода из этого окна');
     expect(source).not.toContain('{ value: "system"');
     expect(source).toContain('setFiltersOpen(true)');
     expect(source).toContain('side="bottom"');

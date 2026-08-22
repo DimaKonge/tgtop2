@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, catalogCountries, catalogCities, catalogTopics, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, catalogCountries, catalogCities, catalogTopics, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -14,6 +14,7 @@ import { canExposeOwnerProfile } from "./ownerVisibilityPolicy";
 import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
 import { getTelegramChatIdFromOpenId, verifyTelegramUserChatBoost } from "./telegramNotifications";
 import { getSearchIndexingError } from "./seoPolicy";
+import { buildTonDepositPayload, createTonDepositReference, findMatchingTonDepositTransaction, formatNanoTon, getRecentTonDepositTransactions, normalizeTonAddress, parseTonToNano, toFriendlyTonAddress, TON_DEPOSIT_TTL_MS } from "./tonDeposits";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -171,6 +172,121 @@ export async function getAccountLedger(openId: string) {
     .orderBy(desc(creditTransactions.createdAt), desc(creditTransactions.id));
   const referral = user ? await getReferralOverview(openId) : undefined;
   return { user, transactions, referral };
+}
+
+function getTonDepositWalletAddress() {
+  const address = process.env.TON_DEPOSIT_WALLET_ADDRESS;
+  if (!address) throw new Error("Кошелёк для пополнений TON не настроен");
+  return normalizeTonAddress(address);
+}
+
+export async function getTonDeposits(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    id: tonDeposits.id,
+    requestedAmountNano: tonDeposits.requestedAmountNano,
+    creditedAmountTon: tonDeposits.creditedAmountTon,
+    reference: tonDeposits.reference,
+    status: tonDeposits.status,
+    failureReason: tonDeposits.failureReason,
+    expiresAt: tonDeposits.expiresAt,
+    submittedAt: tonDeposits.submittedAt,
+    confirmedAt: tonDeposits.confirmedAt,
+    createdAt: tonDeposits.createdAt,
+  }).from(tonDeposits).where(eq(tonDeposits.userOpenId, openId)).orderBy(desc(tonDeposits.createdAt), desc(tonDeposits.id)).limit(20);
+}
+
+export async function createTonDeposit(input: { userOpenId: string; senderWalletAddress: string; amountTon: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const requestedAmountNano = parseTonToNano(input.amountTon);
+  const senderWalletAddress = normalizeTonAddress(input.senderWalletAddress);
+  const recipientWalletAddress = getTonDepositWalletAddress();
+  const reference = createTonDepositReference();
+  const expiresAt = new Date(Date.now() + TON_DEPOSIT_TTL_MS);
+  const result = await db.insert(tonDeposits).values({
+    userOpenId: input.userOpenId,
+    senderWalletAddress,
+    recipientWalletAddress,
+    requestedAmountNano: requestedAmountNano.toString(),
+    reference,
+    expiresAt,
+  });
+  return {
+    id: Number(result[0].insertId),
+    recipientWalletAddress: toFriendlyTonAddress(recipientWalletAddress),
+    amountNano: requestedAmountNano.toString(),
+    amountTon: formatNanoTon(requestedAmountNano),
+    reference,
+    payload: buildTonDepositPayload(reference),
+    validUntil: Math.floor(expiresAt.getTime() / 1_000),
+  };
+}
+
+export async function markTonDepositSubmitted(input: { userOpenId: string; depositId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const deposit = (await db.select().from(tonDeposits).where(and(eq(tonDeposits.id, input.depositId), eq(tonDeposits.userOpenId, input.userOpenId))).limit(1))[0];
+  if (!deposit) throw new Error("Пополнение не найдено");
+  if (deposit.status === "confirmed") return { status: "confirmed" as const, newlyConfirmed: false, amountTon: deposit.creditedAmountTon ?? "0" };
+  if (deposit.status === "expired" || deposit.status === "rejected") throw new Error("Срок этого пополнения истёк. Создайте новое.");
+  if (deposit.expiresAt.getTime() <= Date.now()) {
+    await db.update(tonDeposits).set({ status: "expired", failureReason: "Срок подтверждения истёк" }).where(eq(tonDeposits.id, deposit.id));
+    throw new Error("Срок этого пополнения истёк. Создайте новое.");
+  }
+  await db.update(tonDeposits).set({ status: "submitted", submittedAt: new Date() }).where(and(eq(tonDeposits.id, deposit.id), eq(tonDeposits.status, "created")));
+  return { status: "submitted" as const, newlyConfirmed: false, amountTon: "0" };
+}
+
+export async function verifyTonDeposit(input: { userOpenId: string; depositId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const deposit = (await db.select().from(tonDeposits).where(and(eq(tonDeposits.id, input.depositId), eq(tonDeposits.userOpenId, input.userOpenId))).limit(1))[0];
+  if (!deposit) throw new Error("Пополнение не найдено");
+  if (deposit.status === "confirmed") return { status: "confirmed" as const, newlyConfirmed: false, amountTon: deposit.creditedAmountTon ?? "0" };
+  if (deposit.status === "expired" || deposit.status === "rejected") return { status: deposit.status, newlyConfirmed: false, amountTon: "0" };
+  if (deposit.expiresAt.getTime() <= Date.now()) {
+    await db.update(tonDeposits).set({ status: "expired", failureReason: "Срок подтверждения истёк" }).where(eq(tonDeposits.id, deposit.id));
+    return { status: "expired" as const, newlyConfirmed: false, amountTon: "0" };
+  }
+
+  const transactions = await getRecentTonDepositTransactions(deposit.recipientWalletAddress);
+  const match = findMatchingTonDepositTransaction({
+    transactions,
+    senderWalletAddress: deposit.senderWalletAddress,
+    recipientWalletAddress: deposit.recipientWalletAddress,
+    requestedAmountNano: BigInt(deposit.requestedAmountNano),
+    reference: deposit.reference,
+  });
+  if (!match) {
+    await db.update(tonDeposits).set({ status: "submitted", submittedAt: deposit.submittedAt ?? new Date() }).where(and(eq(tonDeposits.id, deposit.id), eq(tonDeposits.status, "created")));
+    return { status: "submitted" as const, newlyConfirmed: false, amountTon: "0" };
+  }
+
+  const creditedAmountTon = formatNanoTon(match.receivedNano);
+  try {
+    let newlyConfirmed = false;
+    await db.transaction(async tx => {
+      const duplicate = (await tx.select({ id: tonDeposits.id }).from(tonDeposits).where(eq(tonDeposits.transactionHash, match.transactionHash)).limit(1))[0];
+      if (duplicate && duplicate.id !== deposit.id) throw new Error("Эта TON-транзакция уже была зачислена");
+      const update = await tx.update(tonDeposits).set({
+        status: "confirmed",
+        transactionHash: match.transactionHash,
+        transactionLt: match.transactionLt,
+        creditedAmountTon,
+        confirmedAt: new Date(),
+        failureReason: null,
+      }).where(and(eq(tonDeposits.id, deposit.id), inArray(tonDeposits.status, ["created", "submitted"])));
+      if (Number(update[0]?.affectedRows ?? 0) !== 1) return;
+      await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${creditedAmountTon}` }).where(eq(users.openId, input.userOpenId));
+      newlyConfirmed = true;
+    });
+    return { status: "confirmed" as const, newlyConfirmed, amountTon: creditedAmountTon };
+  } catch (error) {
+    if (isDuplicateTelegramEventError(error)) throw new Error("Эта TON-транзакция уже была зачислена");
+    throw error;
+  }
 }
 
 export async function getAccountActivity(openId: string) {

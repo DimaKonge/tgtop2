@@ -183,6 +183,31 @@ export const creditTransactions = mysqlTable("credit_transactions", {
 
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 
+export const tonDeposits = mysqlTable("ton_deposits", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  senderWalletAddress: varchar("senderWalletAddress", { length: 96 }).notNull(),
+  recipientWalletAddress: varchar("recipientWalletAddress", { length: 96 }).notNull(),
+  requestedAmountNano: decimal("requestedAmountNano", { precision: 30, scale: 0 }).notNull(),
+  creditedAmountTon: decimal("creditedAmountTon", { precision: 20, scale: 9 }),
+  reference: varchar("reference", { length: 96 }).notNull(),
+  status: mysqlEnum("status", ["created", "submitted", "confirmed", "expired", "rejected"]).default("created").notNull(),
+  transactionHash: varchar("transactionHash", { length: 128 }),
+  transactionLt: varchar("transactionLt", { length: 64 }),
+  failureReason: varchar("failureReason", { length: 255 }),
+  expiresAt: timestamp("expiresAt").notNull(),
+  submittedAt: timestamp("submittedAt"),
+  confirmedAt: timestamp("confirmedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("ton_deposits_reference_unique").on(table.reference),
+  uniqueIndex("ton_deposits_transaction_hash_unique").on(table.transactionHash),
+  index("ton_deposits_user_status_created_idx").on(table.userOpenId, table.status, table.createdAt),
+  index("ton_deposits_recipient_created_idx").on(table.recipientWalletAddress, table.createdAt),
+]);
+
+export type TonDeposit = typeof tonDeposits.$inferSelect;
+
 export const rewardEvents = mysqlTable("reward_events", {
   id: int("id").autoincrement().primaryKey(),
   groupId: int("groupId").notNull(),

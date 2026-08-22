@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyCommunityRemovedFromTop, notifyRecordedRankingBid } from "./telegramNotifications";
+import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyCommunityRemovedFromTop, notifyRecordedRankingBid, notifyTonDepositCredited } from "./telegramNotifications";
 import { getTelegramChatGifts, getTelegramGroupAdministrators, getTelegramUserAvatarUrl } from "./telegramBot";
 import { formatTonAmount } from "./tonFormatting";
 import { getWalletNfts } from "./tonNft";
@@ -199,6 +199,33 @@ export const appRouter = router({
     getAccountActivity: protectedProcedure.query(async ({ ctx }) => {
       return await db.getAccountActivity(ctx.user.openId);
     }),
+
+    getTonDeposits: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getTonDeposits(ctx.user.openId);
+    }),
+
+    createTonDeposit: protectedProcedure
+      .input(z.object({
+        amountTon: z.string().trim().min(1).max(32),
+        senderWalletAddress: z.string().trim().regex(/^[EU]Q[A-Za-z0-9_-]{46}$/, "Подключите TON-кошелёк mainnet"),
+      }))
+      .mutation(async ({ ctx, input }) => await db.createTonDeposit({
+        userOpenId: ctx.user.openId,
+        amountTon: input.amountTon,
+        senderWalletAddress: input.senderWalletAddress,
+      })),
+
+    markTonDepositSubmitted: protectedProcedure
+      .input(z.object({ depositId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => await db.markTonDepositSubmitted({ userOpenId: ctx.user.openId, depositId: input.depositId })),
+
+    verifyTonDeposit: protectedProcedure
+      .input(z.object({ depositId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await db.verifyTonDeposit({ userOpenId: ctx.user.openId, depositId: input.depositId });
+        if (result.newlyConfirmed) void notifyTonDepositCredited({ openId: ctx.user.openId, amountTon: result.amountTon });
+        return result;
+      }),
 
     getGroupDetail: publicProcedure
       .input(z.object({ groupId: z.number() }))

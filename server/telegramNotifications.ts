@@ -48,6 +48,28 @@ export async function notifyRewardCredited(input: { telegramUserId: number; grou
   }
 }
 
+export async function notifyTonDepositCredited(input: { openId: string; amountTon: string }) {
+  const chatId = getTelegramChatIdFromOpenId(input.openId);
+  if (!chatId || !botToken) return false;
+  const text = [
+    "✅ TON зачислены на баланс TG TOP",
+    "",
+    `+${input.amountTon} TON`,
+    "Поступление подтверждено сетью TON и записано в журнале операций.",
+  ].join("\n");
+  try {
+    const response = await axios.post<{ ok: boolean }>(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId,
+      text,
+      reply_markup: { inline_keyboard: [[{ text: "Открыть баланс", web_app: { url: miniAppUrl } }]] },
+    }, { timeout: 15_000 });
+    return response.data.ok;
+  } catch (error) {
+    console.warn("[Telegram] Could not send TON-deposit confirmation:", error);
+    return false;
+  }
+}
+
 export async function notifyRecordedRankingBid(input: { openId: string; groupTitle: string; bidAmount: number; slotNumber: number }) {
   const chatId = getTelegramChatIdFromOpenId(input.openId);
   if (!chatId || !botToken) return false;
