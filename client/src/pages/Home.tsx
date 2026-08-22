@@ -2303,16 +2303,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <main className="mx-auto max-w-3xl px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
         {page === "top" && (
           <section className="space-y-2">
-            <div className="border-b border-white/8 pb-2">
-              <div className="flex min-w-0 items-center justify-between gap-2 px-0.5">
-                <span className="flex min-w-0 flex-1 items-baseline gap-1 overflow-hidden whitespace-nowrap">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="contents">
+                <div className="contents">
+                  <span className={`flex min-w-0 items-baseline gap-1 overflow-hidden whitespace-nowrap px-0.5 ${topSection === "communities" ? "order-4 basis-full border-b border-white/8 pb-2" : "order-3 flex-1"}`}>
                   <h1 className="shrink-0 text-[clamp(14px,4.7vw,18px)] font-semibold tracking-tight text-white">{currentTopTitle}</h1>
                   {currentTopCountry && <span className="min-w-0 shrink truncate text-[10px] font-medium text-slate-400">· {currentTopCountry}</span>}
                   {currentTopSubcategory && <span className="min-w-0 shrink truncate text-[10px] font-medium text-[#7697c7]">· {currentTopSubcategory}</span>}
                   {currentTopCity && <span className="max-w-[48px] shrink truncate text-[9px] font-medium text-[#7697c7]">· {currentTopCity}</span>}
                   <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
                 </span>
-                <span className="flex shrink-0 items-center gap-1.5">
+                  <span className="order-3 flex shrink-0 items-center gap-1.5">
                   {topSection === "communities" && (
                     <>
                       <Popover>
@@ -2375,10 +2376,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <button type="button" onClick={() => setTopSearchOpen(current => !current)} aria-label={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Открыть поиск", "Open search")} title={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Поиск", "Search")} className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${topSearchOpen ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                     <Search className="h-3.5 w-3.5" />
                   </button>
-                </span>
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
+              <div className="order-1 grid basis-full grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
               {([
                 ["communities", tx("Сообщества", "Communities")],
                 ["nft", "NFT"],
@@ -2387,16 +2388,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <button key={value} type="button" onClick={() => selectTopSection(value)} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${topSection === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
             </div>
-            {topSearchOpen && <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={topSection === "nft" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={topSection === "nft" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="h-9 border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />}
-            {topSection === "communities" && <div className="grid grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
+              {topSearchOpen && <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={topSection === "nft" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={topSection === "nft" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="order-5 h-9 basis-full border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />}
+              {topSection === "communities" && <div className="order-2 grid min-w-0 flex-1 grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
               {([
                 ["Все", tx("Все", "All")],
                 ["Каналы", tx("Каналы", "Channels")],
                 ["Чаты", tx("Чаты", "Chats")],
               ] as const).map(([value, label]) => (
-                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${globalDirection === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`h-7 rounded-md text-[9px] font-semibold transition-colors ${globalDirection === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
-            </div>}
+              </div>}
+            </div>
             {topSection === "bots" ? (
               <section className="space-y-2 pt-1">
                 <div aria-label="Рубрики ботов" className="flex gap-1.5 overflow-x-auto rounded-lg border border-white/8 bg-[#111720] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
