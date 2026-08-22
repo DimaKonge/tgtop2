@@ -27,7 +27,7 @@ describe("TON deposit policy", () => {
         hash: "a".repeat(64),
         lt: "123456",
         success: true,
-        aborted: false,
+        aborted: true,
         in_msg: { source: { address: sender }, destination: { address: recipient }, value: "1250000000", raw_body: rawBody },
       }],
     });

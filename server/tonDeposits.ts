@@ -95,7 +95,7 @@ export function findMatchingTonDepositTransaction(input: {
 
   for (const transaction of input.transactions) {
     const message = transaction.in_msg;
-    if (!transaction.success || transaction.aborted || !message || message.bounced) continue;
+    if (!transaction.success || !message || message.bounced) continue;
     if (!transaction.hash || transaction.lt === undefined || transaction.lt === null) continue;
     if (!matchesAddress(message.source, sender) || !matchesAddress(message.destination, recipient)) continue;
     if (decodeTonComment(message.raw_body) !== input.reference) continue;
@@ -123,7 +123,7 @@ export function findRejectedTonDepositTransaction(input: {
     if (!message || !transaction.hash || transaction.lt === undefined || transaction.lt === null) continue;
     if (!matchesAddress(message.source, sender) || !matchesAddress(message.destination, recipient)) continue;
     if (decodeTonComment(message.raw_body) !== input.reference) continue;
-    if (transaction.success && !transaction.aborted && !message.bounced) continue;
+    if (transaction.success && !message.bounced) continue;
     return {
       transactionHash: transaction.hash,
       transactionLt: String(transaction.lt),
