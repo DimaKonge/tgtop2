@@ -81,4 +81,11 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(source).not.toContain("flagGroupForModeration");
     expect(source).toContain('moderationStatus: "approved"');
   });
+
+  it("loads real channel gifts only through Telegram getChatGifts without any transfer action", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    expect(source).toContain('telegramCall<RawOwnedGifts>("getChatGifts"');
+    expect(source).toContain("exclude_unsaved: false");
+    expect(source).not.toContain('"transferGift"');
+  });
 });

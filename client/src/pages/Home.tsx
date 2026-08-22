@@ -980,6 +980,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
   const [nftMarketCategory, setNftMarketCategory] = useState<NftMarketCategory>("all");
   const [botCategory, setBotCategory] = useState("Все");
+  const [channelGiftsOpen, setChannelGiftsOpen] = useState(false);
   const [selectedNftId, setSelectedNftId] = useState<number | null>(null);
   const [recipientInput, setRecipientInput] = useState("");
   const [preparedNftTransfer, setPreparedNftTransfer] = useState<PreparedNftTransfer | null>(null);
@@ -1244,6 +1245,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     { groupId: selectedGroupId ?? 0 },
     { enabled: selectedGroupId !== null }
   );
+  const channelGiftsQuery = trpc.tgTop.getChannelGifts.useQuery(
+    { groupId: selectedGroupId ?? 0 },
+    { enabled: isAuthenticated && channelGiftsOpen && selectedGroupId !== null, retry: false }
+  );
+  const channelGifts = (channelGiftsQuery.data ?? []) as Array<{ id: string; title: string; emoji: string; unique: boolean }>;
   const groupAdministratorsQuery = trpc.tgTop.getGroupAdministrators.useQuery(
     { groupId: lotGroupId ?? selectedGroupId ?? 0 },
     { enabled: managerSheetOpen && (lotGroupId ?? selectedGroupId) !== null }
@@ -3001,9 +3007,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div className="flex gap-1 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
                     {([
                       ["all", tx("Все", "All")],
-                      ["gifts", tx("Гифты", "Gifts")],
+                      ["gifts", tx("Подарки", "Gifts")],
                       ["usernames", tx("Юзернеймы", "Usernames")],
-                      ["anonymous_numbers", tx("Анон-номера", "Anonymous")],
+                      ["anonymous_numbers", tx("Номера", "Numbers")],
                       ["domains", tx("Домены", "Domains")],
                       ["other", tx("Другие", "Other")],
                     ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setWalletNftFilter(value)} className={`h-7 shrink-0 rounded-full border px-2.5 text-[9px] font-medium ${walletNftFilter === value ? "border-[#3f8cff]/45 bg-[#3f8cff]/12 text-[#c8ddff]" : "border-white/10 bg-white/[0.025] text-slate-500"}`}>{label}</button>)}
@@ -3049,7 +3055,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <span className="rounded-lg border border-[#354966] bg-[#202b3a] px-2 py-1 text-[10px] font-bold tracking-[0.08em] text-[#c4d8f6]">#{selectedSlot?.slotNumber ?? 1}</span>
                       <b className="shrink-0 font-mono text-[10px] font-semibold tracking-[0.04em] text-slate-300">{selectedSlot ? formatPositionDuration(selectedSlot.updatedAt, positionClock) : "00:00:00"}</b>
                     </div>
-                    {detailRewardActive && <Star className="h-4 w-4 shrink-0 fill-[#ffd766] text-[#ffd766]" aria-label="Вознаграждение активно" />}
+                    <span className="flex items-center gap-1.5">
+                      {detailRewardActive && <Star className="h-4 w-4 shrink-0 fill-[#ffd766] text-[#ffd766]" aria-label="Вознаграждение активно" />}
+                      {ownsDetail && detail.group.status === "listed" && <button
+                        type="button"
+                        onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
+                        disabled={unlistGroups.isPending}
+                        title={tx("Снять с листинга", "Remove from listing")}
+                        aria-label={tx("Снять с листинга", "Remove from listing")}
+                        className="grid h-7 w-7 place-items-center rounded-lg border border-rose-300/20 bg-rose-300/[0.07] text-rose-200 transition-colors hover:bg-rose-300/[0.13] disabled:opacity-50"
+                      ><X className="h-4 w-4" /></button>}
+                      {ownsDetail && detail.group.status !== "listed" && <button
+                        type="button"
+                        onClick={() => setPendingGroupDeletion(detail.group)}
+                        disabled={deleteGroups.isPending}
+                        title={tx("Удалить группу", "Delete community")}
+                        aria-label={tx("Удалить группу", "Delete community")}
+                        className="grid h-7 w-7 place-items-center rounded-lg border border-red-500/20 bg-red-500/[0.06] text-red-300 transition-colors hover:bg-red-500/[0.11] disabled:opacity-50"
+                      ><Trash2 className="h-3.5 w-3.5" /></button>}
+                    </span>
                   </div>
 
                   <div className="mt-3 flex items-start gap-3">
@@ -3122,6 +3146,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <small className="mt-2 block text-[10px] text-violet-300">зафиксировано ботом</small>
                     </div>
                   </div>
+                  {ownsDetail && detail.group.category === "Каналы" && (
+                    <section className="mt-3 overflow-hidden rounded-xl border border-[#31435f] bg-[#202b3a]">
+                      <button type="button" onClick={() => setChannelGiftsOpen(value => !value)} className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-white/[0.035] active:scale-[0.99]">
+                        <span className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg border border-amber-200/20 bg-amber-300/[0.08] text-amber-100"><Gift className="h-4 w-4" /></span><span><b className="block text-xs text-slate-100">Подарки</b><small className="mt-0.5 block text-[10px] text-slate-500">Подарки, которыми владеет канал</small></span></span>
+                        <ChevronRight className={`h-4 w-4 text-slate-500 transition-transform ${channelGiftsOpen ? "rotate-90" : ""}`} />
+                      </button>
+                      {channelGiftsOpen && <div className="border-t border-white/8 p-2.5">
+                        {channelGiftsQuery.isPending ? <div className="grid grid-cols-2 gap-2">{Array.from({ length: 2 }).map((_, index) => <div key={index} className="h-14 animate-pulse rounded-lg bg-white/[0.04]" />)}</div> : channelGiftsQuery.isError ? <p className="rounded-lg bg-rose-500/[0.06] px-2.5 py-2 text-[10px] leading-4 text-rose-100/80">{channelGiftsQuery.error.message}</p> : channelGifts.length ? <div className="grid grid-cols-2 gap-2">{channelGifts.map(gift => <div key={gift.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-white/8 bg-[#17212b] p-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-amber-300/[0.09] text-base">{gift.emoji}</span><span className="min-w-0"><b className="block truncate text-[10px] text-slate-100">{gift.title}</b><small className="mt-0.5 block text-[9px] text-slate-500">{gift.unique ? "Уникальный" : "Подарок"}</small></span></div>)}</div> : <p className="px-1 py-2 text-[10px] leading-4 text-slate-500">Telegram не вернул подарки для этого канала.</p>}
+                      </div>}
+                    </section>
+                  )}
                   {detail && ownsDetail && (
                     <section className="hidden order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">
                       <button type="button" onClick={() => setInlineListingOpen(value => !value)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
@@ -3197,41 +3232,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                     </div>
                   )}
-                  {detail && (ownsDetail || (moderationAccess?.canModerate && detail.group.status === "listed")) && (
+                  {detail && !ownsDetail && moderationAccess?.canModerate && detail.group.status === "listed" && (
                     <div className="order-3 mt-3 flex items-center gap-1.5 rounded-xl border border-white/8 bg-[#111720] p-2">
-                      {ownsDetail && detail.group.status === "listed" ? (
-                        <button
-                          type="button"
-                          onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
-                          disabled={unlistGroups.isPending}
-                          className="flex-1 rounded-lg border border-rose-300/20 bg-rose-300/5 py-2 text-[11px] font-semibold text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50"
-                        >
-                          {tx("Снять с листинга", "Remove from listing")}
-                        </button>
-                      ) : ownsDetail ? (
-                        <div className="flex-1 text-[11px] text-slate-400 px-1">
-                          {tx("Группа не в листинге", "Unlisted")}
-                        </div>
-                      ) : (
-                        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                          <Input value={detailModerationReason} onChange={event => setDetailModerationReason(event.target.value)} placeholder="Причина снятия" className="h-8 min-w-0 flex-1 border-red-300/15 bg-red-500/[0.04] px-2 text-[10px] text-slate-100 placeholder:text-slate-600" />
-                          <button type="button" onClick={() => moderateGroup.mutate({ groupId: detail.group.id, action: "review", reason: detailModerationReason.trim() })} disabled={detailModerationReason.trim().length < 3 || moderateGroup.isPending} className="shrink-0 rounded-lg border border-rose-300/20 bg-rose-300/5 px-2.5 py-2 text-[10px] font-semibold text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50">{moderateGroup.isPending ? "Снимаем…" : "Снять"}</button>
-                        </div>
-                      )}
-                      {ownsDetail && <button
-                        type="button"
-                        onClick={() => {
-                          setPendingGroupDeletion(detail.group);
-                        }}
-                        disabled={deleteGroups.isPending}
-                        title={tx("Удалить группу", "Delete community")}
-                        aria-label={tx("Удалить группу", "Delete community")}
-                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-red-500/20 bg-red-500/5 text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>}
+                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <Input value={detailModerationReason} onChange={event => setDetailModerationReason(event.target.value)} placeholder="Причина снятия" className="h-8 min-w-0 flex-1 border-red-300/15 bg-red-500/[0.04] px-2 text-[10px] text-slate-100 placeholder:text-slate-600" />
+                        <button type="button" onClick={() => moderateGroup.mutate({ groupId: detail.group.id, action: "review", reason: detailModerationReason.trim() })} disabled={detailModerationReason.trim().length < 3 || moderateGroup.isPending} className="shrink-0 rounded-lg border border-rose-300/20 bg-rose-300/5 px-2.5 py-2 text-[10px] font-semibold text-rose-200 transition-colors hover:bg-rose-300/10 disabled:opacity-50">{moderateGroup.isPending ? "Снимаем…" : "Снять"}</button>
+                      </div>
                     </div>
                   )}
+                </div>
                   {placementSlot && (
                     <section className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3">
                       <h2 className="text-sm font-bold text-slate-100">{selectedSlot ? (ownsDetail ? "Обновить лот" : "Перебить лот") : "Вывести в ТОП"}</h2>
@@ -3278,8 +3287,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {placementSlot && (
                     <section aria-disabled={lotSettingsLocked} className={`mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3 ${lotSettingsLocked ? "opacity-35 grayscale" : ""}`}>
                       <div className="flex items-center justify-between">
-                        <span><h2 className="text-sm font-bold text-slate-100">{selectedSlot ? "Текущая цена за лот" : "Ставка для размещения"}</h2><small className="mt-0.5 block text-[10px] text-slate-500">Место #{placementSlot.slotNumber}</small></span>
-                        <b className="text-sm text-[#8fc4ff]">{formatTon(selectedSlot ? selectedSlot.bidAmount / 1000 : detailMinimumBid ?? 0.1)} GRAM</b>
+                        <span><h2 className="text-sm font-bold text-slate-100">{selectedSlot ? "Текущая ставка за лот" : "Ставка для размещения"}</h2><small className="mt-0.5 block text-[10px] text-slate-500">Место #{placementSlot.slotNumber}</small></span>
+                        <b className="text-sm text-[#63f5b1]">{formatTon(selectedSlot ? selectedSlot.bidAmount / 1000 : detailMinimumBid ?? 0.1)} GRAM</b>
                       </div>
                       <div className="mt-3 flex h-12 items-center rounded-xl border border-[#354966] bg-[#101a2d] p-1.5">
                         <button type="button" disabled={!selectedLotGroup} onClick={() => setDetailBidInput(formatTon(Math.max(detailMinimumBid ?? 0.1, detailRankingBidAmount - 0.1)))} aria-label="Уменьшить ставку" className="grid h-9 w-12 place-items-center rounded-lg text-slate-300 transition-colors hover:bg-white/[0.07] disabled:opacity-35"><Minus className="h-5 w-5" /></button>
@@ -3292,7 +3301,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <button type="button" onClick={() => { if (!selectedLotGroup) return setLotGroupPickerOpen(true); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const normalizedSalePrice = getSalePriceForSave(); if (normalizedSalePrice === undefined) return; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardBudgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0; const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Введите сумму в GRAM с точностью до 0.01"); placeBid.mutate({ slotId: placementSlot.id, groupId: selectedLotGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, country: listingCountry, city: listingCity === "Все" ? undefined : listingCity, subcategory: listingSubcategory, salePriceTon: normalizedSalePrice, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: selectedLotGroup.category === "Чаты" ? detailRewardPerSubscriptionUnits : 0 }); }} disabled={Boolean(selectedLotGroup && (!detailRankingPreviewSlotNumber || placeBid.isPending)) || (!ownsDetail && !isAuthenticated)} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{placeBid.isPending ? "Оплата…" : !selectedLotGroup ? "Выбрать свою группу" : !selectedSlot ? "Вывести в ТОП" : ownsDetail ? "Обновить ставку" : "Перебить ставку"}</span></button>
                     </section>
                   )}
-                </div>
                 <NftShowcase nfts={detail.ownerNfts} language={language} title={tx("NFT-витрина площадки", "Community NFT showcase")} />
               </>
             ) : (

@@ -114,6 +114,13 @@ export type TelegramGroupAdministrator = {
   avatarUrl: string | null;
 };
 
+export type TelegramChatGift = {
+  id: string;
+  title: string;
+  emoji: string;
+  unique: boolean;
+};
+
 type TelegramFile = { file_path?: string };
 type TelegramUserProfilePhotos = { photos: Array<Array<{ file_id: string }>> };
 
@@ -130,6 +137,33 @@ export async function getTelegramGroupAdministrators(chatId: string): Promise<Te
     ...administrator,
     avatarUrl: await getTelegramUserAvatarUrl(administrator.telegramUserId),
   })));
+}
+
+export async function getTelegramChatGifts(chatId: string): Promise<TelegramChatGift[]> {
+  type RawGift = {
+    owned_gift_id?: string;
+    type?: "regular" | "unique";
+    gift?: { id?: string; title?: string; name?: string; sticker?: { emoji?: string } };
+    unique_gift?: { name?: string; title?: string; number?: number; sticker?: { emoji?: string } };
+  };
+  type RawOwnedGifts = { gifts?: RawGift[] };
+
+  const result = await telegramCall<RawOwnedGifts>("getChatGifts", {
+    chat_id: chatId,
+    exclude_unsaved: false,
+    limit: 100,
+  });
+  return (result.gifts ?? []).map((gift, index) => {
+    const uniqueGift = gift.unique_gift;
+    const regularGift = gift.gift;
+    const title = uniqueGift?.name ?? uniqueGift?.title ?? regularGift?.title ?? regularGift?.name ?? `Подарок #${index + 1}`;
+    return {
+      id: gift.owned_gift_id ?? regularGift?.id ?? `${title}-${index}`,
+      title: uniqueGift?.number ? `${title} #${uniqueGift.number}` : title,
+      emoji: uniqueGift?.sticker?.emoji ?? regularGift?.sticker?.emoji ?? "🎁",
+      unique: gift.type === "unique" || Boolean(uniqueGift),
+    };
+  });
 }
 
 export async function getTelegramUserAvatarUrl(telegramUserId: string): Promise<string | null> {

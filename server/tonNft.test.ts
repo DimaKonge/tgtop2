@@ -4,6 +4,7 @@ import { classifyWalletNft, isTonWalletAddress, normalizeWalletNft } from "./ton
 describe("wallet NFT classification", () => {
   it("sorts Telegram Gifts, usernames, anonymous numbers and everything else separately", () => {
     expect(classifyWalletNft({ metadata: { name: "Plush Pepe Gift" } })).toBe("gifts");
+    expect(classifyWalletNft({ collection: { name: "Candy Canes" } })).toBe("gifts");
     expect(classifyWalletNft({ collection: { name: "Fragment Usernames" } })).toBe("usernames");
     expect(classifyWalletNft({ metadata: { name: "Anonymous Number +888" } })).toBe("anonymous_numbers");
     expect(classifyWalletNft({ metadata: { name: "tgtop.ton" } })).toBe("domains");

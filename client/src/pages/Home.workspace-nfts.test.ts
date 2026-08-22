@@ -20,12 +20,23 @@ describe("TG TOP workspace wallet NFT view", () => {
     expect(source).toContain('trpc.tgTop.getWalletNfts.useQuery');
     expect(source).toContain('walletAddress },');
     expect(source).toContain('workspaceSection === "nft"');
-    expect(source).toContain('["gifts", tx("Гифты", "Gifts")]');
+    expect(source).toContain('["gifts", tx("Подарки", "Gifts")]');
     expect(source).toContain('["usernames", tx("Юзернеймы", "Usernames")]');
-    expect(source).toContain('["anonymous_numbers", tx("Анон-номера", "Anonymous")]');
+    expect(source).toContain('["anonymous_numbers", tx("Номера", "Numbers")]');
     expect(source).toContain('["domains", tx("Домены", "Domains")]');
     expect(source).toContain('["other", tx("Другие", "Other")]');
     expect(source).toContain('Подпись, перевод и продажа не запрашиваются.');
     expect(source).toContain('<WalletNftCard key={item.address} item={item} language={language} />');
+  });
+
+  it("places the expandable real channel-gifts panel after audience statistics", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain('trpc.tgTop.getChannelGifts.useQuery');
+    expect(source).toContain('const [channelGiftsOpen, setChannelGiftsOpen] = useState(false)');
+    expect(source).toContain('Подарки, которыми владеет канал');
+    expect(source).toContain('Telegram не вернул подарки для этого канала.');
+    expect(source.indexOf('Приглашения')).toBeLessThan(source.indexOf('Подарки, которыми владеет канал'));
+    expect(source.indexOf('Подарки, которыми владеет канал')).toBeLessThan(source.indexOf('Обновить лот'));
   });
 });

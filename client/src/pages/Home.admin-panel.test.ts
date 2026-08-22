@@ -18,7 +18,7 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain("Дать доступ");
     expect(source).toContain("Забрать доступ");
     expect(source).toContain('setModeratorRole.mutate({ telegramUsername: moderatorUsernameDraft, role: "moderator" })');
-    expect(source).toContain('detail && (ownsDetail || (moderationAccess?.canModerate && detail.group.status === "listed"))');
+    expect(source).toContain('detail && !ownsDetail && moderationAccess?.canModerate && detail.group.status === "listed"');
     expect(source).toContain('value={detailModerationReason}');
     expect(source).toContain('moderateGroup.mutate({ groupId: detail.group.id, action: "review", reason: detailModerationReason.trim() })');
     expect(source).toContain('tx("Снять с листинга", "Remove from listing")');

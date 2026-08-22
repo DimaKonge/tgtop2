@@ -46,7 +46,7 @@ export function classifyWalletNft(item: TonApiNftItem): WalletNftCategory {
   if (/(anonymous\s*number|anon\s*number|аноним|анон\s*номер)/i.test(fingerprint)) return "anonymous_numbers";
   if (/(ton\s*dns|dns\.ton|\.ton\b|\bdomain\b|домен)/i.test(fingerprint)) return "domains";
   if (/(username|user\s*name|юзернейм|fragment)/i.test(fingerprint)) return "usernames";
-  if (/(telegram\s*gift|\bgift\b|подарок)/i.test(fingerprint)) return "gifts";
+  if (/(telegram\s*gift|\bgift\b|подарок|candy\s*canes?)/i.test(fingerprint)) return "gifts";
   return "other";
 }
 

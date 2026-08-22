@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyCommunityRemovedFromTop, notifyRecordedRankingBid } from "./telegramNotifications";
-import { getTelegramGroupAdministrators, getTelegramUserAvatarUrl } from "./telegramBot";
+import { getTelegramChatGifts, getTelegramGroupAdministrators, getTelegramUserAvatarUrl } from "./telegramBot";
 import { formatTonAmount } from "./tonFormatting";
 import { getWalletNfts } from "./tonNft";
 
@@ -204,6 +204,18 @@ export const appRouter = router({
       .input(z.object({ groupId: z.number() }))
       .query(async ({ ctx, input }) => {
         return await db.getGroupDetail(input.groupId, ctx.user?.openId);
+      }),
+
+    getChannelGifts: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.ownerOpenId !== ctx.user.openId) throw new Error("Подарки доступны владельцу подключённого канала");
+        try {
+          return await getTelegramChatGifts(group.chatId);
+        } catch {
+          throw new Error("Telegram пока не дал доступ к подаркам канала. Проверьте, что @TG_TOPBOT — администратор с правом публикации сообщений.");
+        }
       }),
 
     getPublicOwnerProfile: publicProcedure
