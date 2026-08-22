@@ -878,9 +878,11 @@ export async function getModerationQueue() {
 export async function getActiveModerationListings() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(groupsCatalog)
+  const rows = await db.select({ group: groupsCatalog, ownerName: users.name }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
     .where(eq(groupsCatalog.status, "listed"))
     .orderBy(desc(groupsCatalog.listedAt), desc(groupsCatalog.createdAt));
+  return rows.map(({ group, ownerName }) => ({ ...group, ownerName }));
 }
 
 export async function moderateGroup(actorOpenId: string, groupId: number, action: "review" | "block" | "approve", reason: string) {

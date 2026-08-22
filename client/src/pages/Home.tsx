@@ -1133,11 +1133,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const activeModerationListings = (activeModerationListingsQuery.data ?? []) as Array<{
     id: number;
+    chatId: string;
     title: string;
+    avatarFileId: string | null;
     username: string | null;
     inviteLink: string | null;
     category: "Каналы" | "Чаты";
     country: string;
+    ownerName: string | null;
     subcategory: string;
     membersCount: number;
     listedAt: Date | null;
@@ -2312,8 +2315,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div className={`flex min-w-0 items-center gap-1 px-0.5 ${topSection === "communities" ? "order-4 basis-full border-b border-white/8 pb-2" : "order-3 flex-1"}`}>
                     <span className="flex min-w-0 flex-1 items-baseline gap-1 overflow-hidden whitespace-nowrap">
                       <h1 className="shrink-0 text-[clamp(14px,4.7vw,18px)] font-semibold tracking-tight text-white">{currentTopTitle}</h1>
-                      {currentTopCountry && <span className="min-w-0 shrink truncate text-[10px] font-medium text-slate-400">· {currentTopCountry}</span>}
                       {currentTopSubcategory && <span className="min-w-0 shrink truncate text-[10px] font-medium text-[#7697c7]">· {currentTopSubcategory}</span>}
+                      {currentTopCountry && <span className="min-w-0 shrink truncate text-[10px] font-medium text-slate-400">· {currentTopCountry}</span>}
                       {currentTopCity && <span className="max-w-[48px] shrink truncate text-[9px] font-medium text-[#7697c7]">· {currentTopCity}</span>}
                       <span aria-live="polite" className="shrink-0 text-[11px] text-slate-500">{n(globalCount, language)}</span>
                     </span>
@@ -2334,9 +2337,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-64 border-white/10 bg-[#111720] p-2 text-slate-100 shadow-xl">
                           <div className="space-y-2">
-                            <div className="border-b border-white/8 pb-1">
-                              <b className="text-xs font-semibold">{tx("Выбрать регион", "Select Region")}</b>
-                            </div>
                             <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
                               <button type="button" onClick={() => { setCountry("Все"); setCity("Все"); }} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${country === "All" || country === "Все" ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
                                 <span>{tx("Весь мир", "Worldwide")}</span>
@@ -2361,9 +2361,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-64 border-white/10 bg-[#111720] p-2 text-slate-100 shadow-xl">
                           <div className="space-y-2">
-                            <div className="border-b border-white/8 pb-1">
-                              <b className="text-xs font-semibold">{tx("Выбрать рубрику", "Select Topic")}</b>
-                            </div>
                             <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
                               <button type="button" onClick={() => setSubcategory("Все")} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${subcategory === "Все" ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
                                 <span>{tx("Все рубрики", "All topics")}</span>
@@ -2393,7 +2390,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 ["nft", "NFT"],
                 ["bots", tx("Боты", "Bots")],
               ] as const).map(([value, label]) => (
-                <button key={value} type="button" onClick={() => selectTopSection(value)} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${topSection === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                <button key={value} type="button" onClick={() => selectTopSection(value)} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${topSection === value ? "bg-[#2b4158] text-[#d7e7f6]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
             </div>
               {topSearchOpen && <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={topSection === "nft" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={topSection === "nft" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="order-5 h-9 basis-full border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />}
@@ -2403,7 +2400,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 ["Каналы", tx("Каналы", "Channels")],
                 ["Чаты", tx("Чаты", "Chats")],
               ] as const).map(([value, label]) => (
-                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`h-7 rounded-md text-[9px] font-semibold transition-colors ${globalDirection === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`h-7 rounded-md text-[9px] font-semibold transition-colors ${globalDirection === value ? "bg-[#293d52] text-[#d1e2f2]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
               </div>}
             </div>
@@ -3246,16 +3243,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {activeModerationListings.map(group => {
                     const groupUrl = group.username ? `https://t.me/${group.username}` : group.inviteLink;
                     return (
-                      <article key={group.id} className="flex items-center gap-3 px-4 py-3">
+                      <article key={group.id} className="flex items-center gap-2 px-3 py-2">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-white/10 bg-[#17212b] text-[10px] font-semibold text-slate-300">
+                          {group.avatarFileId ? <img src={`/api/telegram-avatar/${encodeURIComponent(group.chatId)}`} alt="" className="h-full w-full object-cover" /> : group.title.slice(0, 1).toUpperCase()}
+                        </span>
                         <button
                           type="button"
                           onClick={() => groupUrl && openTelegramInNewBrowserTab(groupUrl)}
                           disabled={!groupUrl}
                           className="min-w-0 flex-1 text-left disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <b className="block truncate text-sm text-slate-100">{group.title}</b>
-                          <small className="mt-1 block truncate text-[10px] text-slate-400">{group.username ? `@${group.username}` : "Приватный"} · {group.category} · {getCountryLabel(group.country, language)} · {n(group.membersCount, language)} участников</small>
-                          <small className="mt-1 block text-[10px] text-[#84b8ef]">{groupUrl ? "Открыть сообщество в Telegram" : "Ссылка на сообщество недоступна"}</small>
+                          <b className="block truncate text-[12px] text-slate-100">{group.title}</b>
+                          <small className="block truncate text-[10px] text-slate-400">{group.ownerName ?? "Владелец"} · {n(group.membersCount, language)} участников</small>
                         </button>
                         <button
                           type="button"
@@ -3263,7 +3262,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           title="Снять с ТОПа"
                           onClick={() => { setModerationReasonDraft(""); setPendingModerationGroup({ id: group.id, title: group.title }); }}
                           disabled={moderateGroup.isPending}
-                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-400/35 bg-red-500/10 text-red-200 transition-colors hover:bg-red-500/20 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-35"
+                          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-red-400/35 bg-red-500/10 text-red-200 transition-colors hover:bg-red-500/20 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-35"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
