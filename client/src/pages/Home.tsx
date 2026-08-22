@@ -885,6 +885,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [detailBoardScope, setDetailBoardScope] = useState<{ category: "Все" | "Каналы" | "Чаты"; country: string; subcategory: string; city: string } | null>(null);
   const [detailBidInput, setDetailBidInput] = useState("");
   const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null);
+  const [pendingModerationGroup, setPendingModerationGroup] = useState<{ id: number; title: string } | null>(null);
   const [selectedOwnerOpenId, setSelectedOwnerOpenId] = useState<string | null>(null);
   const [targetSlot, setTargetSlot] = useState<Slot | null>(null);
   const [rankSlotLinkId, setRankSlotLinkId] = useState<number | null>(null);
@@ -3239,13 +3240,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </span>
                   <span className="rounded-md border border-[#3390ec]/25 bg-[#3390ec]/10 px-2 py-1 text-[10px] font-semibold text-[#b8d7ff]">{activeModerationListings.length}</span>
                 </div>
-                <Input
-                  value={moderationReasonDraft}
-                  onChange={event => setModerationReasonDraft(event.target.value)}
-                  maxLength={255}
-                  placeholder="Причина снятия с ТОПа — обязательна"
-                  className="mt-3 h-10 border-white/10 bg-[#17212b] text-xs text-slate-100 placeholder:text-slate-600 focus-visible:border-[#3390ec]/60"
-                />
               </div>
               {activeModerationListings.length ? (
                 <div className="divide-y divide-white/8">
@@ -3267,8 +3261,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           type="button"
                           aria-label={`Снять ${group.title} с ТОПа`}
                           title="Снять с ТОПа"
-                          onClick={() => moderateGroup.mutate({ groupId: group.id, action: "review", reason: moderationReasonDraft.trim() })}
-                          disabled={moderationReasonDraft.trim().length < 3 || moderateGroup.isPending}
+                          onClick={() => { setModerationReasonDraft(""); setPendingModerationGroup({ id: group.id, title: group.title }); }}
+                          disabled={moderateGroup.isPending}
                           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-400/35 bg-red-500/10 text-red-200 transition-colors hover:bg-red-500/20 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-35"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -3281,6 +3275,22 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <p className="px-4 py-8 text-center text-xs text-slate-500">Активных лотов сейчас нет.</p>
               )}
             </section>
+
+            <Sheet open={Boolean(pendingModerationGroup)} onOpenChange={open => !open && setPendingModerationGroup(null)}>
+              <SheetContent side="bottom" className="rounded-t-[26px] border-rose-300/15 bg-[#10161f] text-slate-100">
+                <SheetHeader className="px-4 pb-2">
+                  <SheetTitle className="text-slate-100">Снять лот с ТОПа?</SheetTitle>
+                  <p className="text-xs leading-5 text-slate-500">Причина будет отправлена владельцу «{pendingModerationGroup?.title}» в личном сообщении от бота TG TOP.</p>
+                </SheetHeader>
+                <div className="space-y-3 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
+                  <Input value={moderationReasonDraft} onChange={event => setModerationReasonDraft(event.target.value)} maxLength={255} placeholder="Укажите причину" className="h-11 border-rose-300/15 bg-rose-500/[0.04] text-sm text-slate-100 placeholder:text-slate-600" />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setPendingModerationGroup(null)} className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300">Отмена</button>
+                    <button type="button" onClick={() => pendingModerationGroup && moderateGroup.mutate({ groupId: pendingModerationGroup.id, action: "review", reason: moderationReasonDraft.trim() }, { onSuccess: () => setPendingModerationGroup(null) })} disabled={moderationReasonDraft.trim().length < 3 || moderateGroup.isPending} className="flex-1 rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{moderateGroup.isPending ? "Снимаем…" : "Снять"}</button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
 
             <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#202b3a]">
               <div className="border-b border-white/8 px-4 py-4">
