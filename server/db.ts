@@ -439,8 +439,14 @@ export async function broadcastQueuedTonWithdrawal(withdrawalId: number) {
       const estimatedFeeNano = await emulateTonPayoutFee(prepared.boc);
       if (estimatedFeeNano + TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO > BigInt(withdrawal.feeReserveNano)) throw new Error("reserve_exceeded");
     } catch {
-      await db.update(tonWithdrawals).set({ status: "manual_review", riskReasons: `${withdrawal.riskReasons ? `${withdrawal.riskReasons},` : ""}fee_preflight`, failureReason: "Автоматическая выплата остановлена: комиссия сети требует ручной проверки" }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "queued")));
-      return { attempted: false as const, reason: "fee_preflight_review" as const };
+      const grossTon = formatWithdrawalNanoTon(BigInt(withdrawal.grossAmountNano));
+      await db.transaction(async tx => {
+        const cancelled = await tx.update(tonWithdrawals).set({ status: "cancelled", riskReasons: `${withdrawal.riskReasons ? `${withdrawal.riskReasons},` : ""}fee_preflight`, failureReason: "Отмена: комиссия сети не подтвердилась" }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "queued")));
+        if (Number(cancelled[0]?.affectedRows ?? 0) === 1) {
+          await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${grossTon}` }).where(eq(users.openId, withdrawal.userOpenId));
+        }
+      });
+      return { attempted: false as const, reason: "fee_preflight_cancelled" as const };
     }
     const marked = await db.update(tonWithdrawals).set({ status: "broadcast_pending", externalMessageHash: prepared.externalMessageHash, broadcastAt: new Date(), failureReason: null }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "queued")));
     if (Number(marked[0]?.affectedRows ?? 0) !== 1) return { attempted: false as const, reason: "state_changed" as const };

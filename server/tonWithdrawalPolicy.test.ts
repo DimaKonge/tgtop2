@@ -31,15 +31,15 @@ describe("TON withdrawal policy", () => {
     expect(() => quoteTonWithdrawal("0.099999999")).toThrow("0.1 TON");
   });
 
-  it("routes a new destination and a third hourly request to manual review", () => {
+  it("keeps risk reasons in the audit trail but queues automatic payouts", () => {
     const quote = quoteTonWithdrawal("0.1");
-    expect(classifyTonWithdrawalRisk({ ...ordinary, hasPriorConfirmedDestination: false }, quote)).toMatchObject({ status: "manual_review", reasons: ["new_destination"] });
-    expect(classifyTonWithdrawalRisk({ ...ordinary, userRequestsLastHour: 2 }, quote)).toMatchObject({ status: "manual_review", reasons: ["user_hourly_limit"] });
+    expect(classifyTonWithdrawalRisk({ ...ordinary, hasPriorConfirmedDestination: false }, quote)).toMatchObject({ status: "queued", reasons: ["new_destination"] });
+    expect(classifyTonWithdrawalRisk({ ...ordinary, userRequestsLastHour: 2 }, quote)).toMatchObject({ status: "queued", reasons: ["user_hourly_limit"] });
   });
 
-  it("holds a large or daily-limit request for review", () => {
-    expect(classifyTonWithdrawalRisk(ordinary, quoteTonWithdrawal("5"))).toMatchObject({ status: "manual_review", reasons: ["large_amount"] });
-    expect(classifyTonWithdrawalRisk({ ...ordinary, userGrossTodayNano: BigInt(20) * TON_NANO }, quoteTonWithdrawal("0.1"))).toMatchObject({ status: "manual_review", reasons: ["daily_limit"] });
+  it("queues a large or daily-limit request while retaining its risk reason", () => {
+    expect(classifyTonWithdrawalRisk(ordinary, quoteTonWithdrawal("5"))).toMatchObject({ status: "queued", reasons: ["large_amount"] });
+    expect(classifyTonWithdrawalRisk({ ...ordinary, userGrossTodayNano: BigInt(20) * TON_NANO }, quoteTonWithdrawal("0.1"))).toMatchObject({ status: "queued", reasons: ["daily_limit"] });
   });
 
   it("uses the emergency pause as a hard stop", () => {
