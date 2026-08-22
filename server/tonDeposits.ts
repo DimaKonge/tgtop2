@@ -20,6 +20,8 @@ export type TonApiTransaction = {
   success?: boolean;
   aborted?: boolean;
   in_msg?: TonApiMessage;
+  out_msgs?: TonApiMessage[];
+  total_fees?: string | number | null;
 };
 
 export type TonDepositMatch = { transactionHash: string; transactionLt: string; receivedNano: bigint };

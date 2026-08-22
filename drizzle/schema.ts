@@ -208,6 +208,42 @@ export const tonDeposits = mysqlTable("ton_deposits", {
 
 export type TonDeposit = typeof tonDeposits.$inferSelect;
 
+export const tonWithdrawals = mysqlTable("ton_withdrawals", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  payoutWalletAddress: varchar("payoutWalletAddress", { length: 96 }).notNull(),
+  destinationWalletAddress: varchar("destinationWalletAddress", { length: 96 }).notNull(),
+  grossAmountNano: decimal("grossAmountNano", { precision: 30, scale: 0 }).notNull(),
+  feeReserveNano: decimal("feeReserveNano", { precision: 30, scale: 0 }).notNull(),
+  actualFeeNano: decimal("actualFeeNano", { precision: 30, scale: 0 }),
+  netAmountNano: decimal("netAmountNano", { precision: 30, scale: 0 }).notNull(),
+  idempotencyKey: varchar("idempotencyKey", { length: 96 }).notNull(),
+  reference: varchar("reference", { length: 96 }).notNull(),
+  status: mysqlEnum("status", ["queued", "manual_review", "broadcast_pending", "sent", "confirmed", "failed_refunded", "cancelled"]).notNull(),
+  riskReasons: varchar("riskReasons", { length: 512 }),
+  externalMessageHash: varchar("externalMessageHash", { length: 128 }),
+  transactionHash: varchar("transactionHash", { length: 128 }),
+  transactionLt: varchar("transactionLt", { length: 64 }),
+  broadcastAt: timestamp("broadcastAt"),
+  sentAt: timestamp("sentAt"),
+  confirmedAt: timestamp("confirmedAt"),
+  reviewedAt: timestamp("reviewedAt"),
+  reviewedByOpenId: varchar("reviewedByOpenId", { length: 64 }),
+  failureReason: varchar("failureReason", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("ton_withdrawals_user_idempotency_unique").on(table.userOpenId, table.idempotencyKey),
+  uniqueIndex("ton_withdrawals_reference_unique").on(table.reference),
+  uniqueIndex("ton_withdrawals_transaction_hash_unique").on(table.transactionHash),
+  uniqueIndex("ton_withdrawals_external_message_hash_unique").on(table.externalMessageHash),
+  index("ton_withdrawals_user_created_idx").on(table.userOpenId, table.createdAt),
+  index("ton_withdrawals_destination_created_idx").on(table.destinationWalletAddress, table.createdAt),
+  index("ton_withdrawals_status_created_idx").on(table.status, table.createdAt),
+]);
+
+export type TonWithdrawal = typeof tonWithdrawals.$inferSelect;
+
 export const rewardEvents = mysqlTable("reward_events", {
   id: int("id").autoincrement().primaryKey(),
   groupId: int("groupId").notNull(),

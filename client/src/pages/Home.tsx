@@ -956,6 +956,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [tonDepositOpen, setTonDepositOpen] = useState(false);
   const [tonDepositAmount, setTonDepositAmount] = useState("1");
   const [activeTonDepositId, setActiveTonDepositId] = useState<number | null>(null);
+  const [tonWithdrawalOpen, setTonWithdrawalOpen] = useState(false);
+  const [tonWithdrawalAmount, setTonWithdrawalAmount] = useState("0.1");
+  const [tonWithdrawalAddress, setTonWithdrawalAddress] = useState("");
+  const [tonWithdrawalFlow, setTonWithdrawalFlow] = useState<"form" | "confirm" | "processing" | "review" | "success">("form");
+  const [activeTonWithdrawalId, setActiveTonWithdrawalId] = useState<number | null>(null);
+  const [tonWithdrawalQuote, setTonWithdrawalQuote] = useState<{
+    grossAmountNano: string; feeReserveNano: string; netAmountNano: string;
+    grossAmountTon: string; feeReserveTon: string; netAmountTon: string; destinationWalletAddress: string;
+  } | null>(null);
   const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
   const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
   const [topSection, setTopSection] = useState<TopSection>("communities");
@@ -1208,6 +1217,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     refetchInterval: activeTonDepositId ? 10_000 : false,
     refetchIntervalInBackground: false,
   });
+  const tonWithdrawalsQuery = trpc.tgTop.getTonWithdrawals.useQuery(undefined, {
+    enabled: isAuthenticated && page === "profile",
+    refetchInterval: activeTonWithdrawalId ? 10_000 : false,
+    refetchIntervalInBackground: false,
+  });
   const tonDeposits = (tonDepositsQuery.data ?? []) as Array<{
     id: number;
     requestedAmountNano: string;
@@ -1218,6 +1232,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     expiresAt: Date;
     confirmedAt: Date | null;
     createdAt: Date;
+  }>;
+  const tonWithdrawals = (tonWithdrawalsQuery.data ?? []) as Array<{
+    id: number; grossAmountNano: string; feeReserveNano: string; actualFeeNano: string | null; netAmountNano: string;
+    destinationWalletAddress: string; reference: string; status: "queued" | "manual_review" | "broadcast_pending" | "sent" | "confirmed" | "failed_refunded" | "cancelled";
+    riskReasons: string | null; transactionHash: string | null; transactionLt: string | null; failureReason: string | null; createdAt: Date; confirmedAt: Date | null;
   }>;
   const account = accountQuery.data as
     | {
@@ -1252,6 +1271,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     refetchInterval: 10_000,
     refetchIntervalInBackground: false,
   });
+  const tonWithdrawalsForManualReviewQuery = trpc.tgTop.getTonWithdrawalsForManualReview.useQuery(undefined, {
+    enabled: Boolean(moderationAccess?.canModerate),
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
+  });
   const activeModerationListings = (activeModerationListingsQuery.data ?? []) as Array<{
     id: number;
     chatId: string;
@@ -1266,6 +1290,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     membersCount: number;
     listedAt: Date | null;
     createdAt: Date;
+  }>;
+  const tonWithdrawalsForManualReview = (tonWithdrawalsForManualReviewQuery.data ?? []) as Array<{
+    id: number; userOpenId: string; grossAmountNano: string; feeReserveNano: string; netAmountNano: string;
+    destinationWalletAddress: string; reference: string; riskLabels: string[]; createdAt: Date;
   }>;
   const moderatorsQuery = trpc.tgTop.getModerators.useQuery(undefined, { enabled: Boolean(moderationAccess?.canManageModerators) });
   const moderators = (moderatorsQuery.data ?? []) as Array<{ openId: string; name: string | null; telegramUsername: string | null; role: "admin" | "moderator" }>;
@@ -1356,6 +1384,29 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     },
     onError: error => toast.error(error.message),
   });
+  const quoteTonWithdrawalMutation = trpc.tgTop.quoteTonWithdrawal.useMutation({
+    onError: error => toast.error(error.message),
+  });
+  const createTonWithdrawalMutation = trpc.tgTop.createTonWithdrawal.useMutation({
+    onSuccess: () => {
+      void utils.tgTop.getTonWithdrawals.invalidate();
+      void utils.tgTop.getAccount.invalidate();
+      void utils.tgTop.getAccountActivity.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const reconcileTonWithdrawalMutation = trpc.tgTop.reconcileTonWithdrawal.useMutation({
+    onSuccess: result => {
+      void utils.tgTop.getTonWithdrawals.invalidate();
+      void utils.tgTop.getAccount.invalidate();
+      if (result.status === "confirmed") {
+        setTonWithdrawalFlow("success");
+        setActiveTonWithdrawalId(null);
+      }
+      if (result.status === "manual_review") setTonWithdrawalFlow("review");
+    },
+    onError: error => toast.error(error.message),
+  });
   const startTonDeposit = async () => {
     if (!walletConnectionRestored) return;
     if (!walletAddress) {
@@ -1377,6 +1428,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       toast.error(error instanceof Error && error.message.includes("USER_REJECTS") ? "Подтверждение в кошельке отменено" : "Перевод не подтверждён. Средства не зачислены.");
     }
   };
+  const prepareTonWithdrawal = async () => {
+    const quote = await quoteTonWithdrawalMutation.mutateAsync({ amountTon: tonWithdrawalAmount, destinationWalletAddress: tonWithdrawalAddress });
+    setTonWithdrawalQuote(quote);
+    setTonWithdrawalFlow("confirm");
+  };
+  const submitTonWithdrawal = async () => {
+    if (!tonWithdrawalQuote) return;
+    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID().replace(/-/g, "")
+      : `${Date.now()}${Math.random().toString(36).slice(2, 18)}`;
+    const withdrawal = await createTonWithdrawalMutation.mutateAsync({
+      amountTon: tonWithdrawalAmount,
+      destinationWalletAddress: tonWithdrawalQuote.destinationWalletAddress,
+      idempotencyKey,
+    });
+    setActiveTonWithdrawalId(withdrawal.id);
+    setTonWithdrawalFlow(withdrawal.status === "manual_review" ? "review" : withdrawal.status === "confirmed" ? "success" : "processing");
+  };
   const moderateGroup = trpc.tgTop.moderateGroup.useMutation({
     onSuccess: () => {
       toast.success("Лот снят с ТОПа. Владельцу отправлена причина.");
@@ -1386,6 +1455,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.getGroups.invalidate();
       void utils.tgTop.getSlots.invalidate();
       void utils.tgTop.myGroups.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const reviewTonWithdrawal = trpc.tgTop.reviewTonWithdrawal.useMutation({
+    onSuccess: result => {
+      void utils.tgTop.getTonWithdrawalsForManualReview.invalidate();
+      void utils.tgTop.getTonWithdrawals.invalidate();
+      void utils.tgTop.getAccount.invalidate();
+      toast.success(result.status === "cancelled" ? "Вывод отменён, TON возвращён на основной баланс" : "Вывод допущен к безопасной отправке");
     },
     onError: error => toast.error(error.message),
   });
@@ -1744,6 +1822,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const bonusBalanceUnits = account?.user?.bonusBalance ?? user?.bonusBalance ?? 0;
   const bonus = (bonusBalanceUnits / 100).toFixed(1);
   const mainTon = Number(account?.user?.mainBalanceTon ?? 0).toFixed(2);
+  const activeTonWithdrawal = activeTonWithdrawalId ? tonWithdrawals.find(item => item.id === activeTonWithdrawalId) ?? null : null;
   const totalBalanceLabel = `${(Number(mainTon) + bonusBalanceUnits / 100).toFixed(2)} GRAM`;
   const transactions = account?.transactions ?? [];
   const accountActivity = (accountActivityQuery.data ?? []) as Array<{
@@ -3496,6 +3575,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               )}
             </section>
 
+            <section className="overflow-hidden rounded-2xl border border-amber-300/20 bg-[#202b3a]">
+              <div className="border-b border-white/8 px-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <span><h2 className="text-sm font-semibold text-slate-100">Проверка выводов TON</h2><p className="mt-1 text-xs leading-5 text-slate-400">Подозрительные заявки не отправляются автоматически. Одобрение запускает предтрансляционную проверку комиссии.</p></span>
+                  <span className="rounded-md border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-[10px] font-semibold text-amber-100">{tonWithdrawalsForManualReview.length}</span>
+                </div>
+              </div>
+              {tonWithdrawalsForManualReview.length ? <div className="divide-y divide-white/8">{tonWithdrawalsForManualReview.map(withdrawal => <article key={withdrawal.id} className="px-4 py-3"><div className="flex items-start justify-between gap-3"><span className="min-w-0"><b className="block text-xs text-slate-100">{(Number(withdrawal.grossAmountNano) / 1_000_000_000).toFixed(3)} TON</b><small className="mt-1 block break-all font-mono text-[9px] text-slate-500">{withdrawal.destinationWalletAddress}</small><small className="mt-1 block text-[10px] text-amber-200/85">{withdrawal.riskLabels.join(" · ") || "требуется ручная проверка"}</small></span><div className="flex shrink-0 gap-1.5"><button type="button" onClick={() => reviewTonWithdrawal.mutate({ withdrawalId: withdrawal.id, action: "reject", reason: "Отклонено при ручной проверке" })} disabled={reviewTonWithdrawal.isPending} className="rounded-lg border border-rose-300/25 bg-rose-500/10 px-2.5 py-2 text-[10px] font-semibold text-rose-100 disabled:opacity-50">Вернуть</button><button type="button" onClick={() => reviewTonWithdrawal.mutate({ withdrawalId: withdrawal.id, action: "approve" })} disabled={reviewTonWithdrawal.isPending} className="rounded-lg border border-emerald-300/25 bg-emerald-500/10 px-2.5 py-2 text-[10px] font-semibold text-emerald-100 disabled:opacity-50">Допустить</button></div></div></article>)}</div> : <p className="px-4 py-8 text-center text-xs text-slate-500">Заявок на ручную проверку нет.</p>}
+            </section>
+
             <Sheet open={Boolean(pendingModerationGroup)} onOpenChange={open => !open && setPendingModerationGroup(null)}>
               <SheetContent side="bottom" className="rounded-t-[26px] border-rose-300/15 bg-[#10161f] text-slate-100">
                 <SheetHeader className="px-4 pb-2">
@@ -3625,7 +3714,40 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                     </SheetContent>
                   </Sheet>
-                  <button type="button" disabled aria-label={tx("Вывод пока недоступен", "Withdrawal is not available yet")} className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-left opacity-65"><b className="block text-[11px] text-slate-300">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-slate-500">{tx("После проверки", "After verification")}</small></button>
+                  <Sheet open={tonWithdrawalOpen} onOpenChange={open => {
+                    setTonWithdrawalOpen(open);
+                    if (open) {
+                      setTonWithdrawalAddress(current => current || walletAddress || "");
+                      setTonWithdrawalFlow("form");
+                      setTonWithdrawalQuote(null);
+                      setActiveTonWithdrawalId(null);
+                    }
+                  }}>
+                    <button type="button" onClick={() => setTonWithdrawalOpen(true)} aria-label={tx("Вывести TON", "Withdraw TON")} className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] px-3 py-2 text-left transition-colors hover:bg-emerald-400/[0.13]"><b className="block text-[11px] text-emerald-100">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-emerald-300/75">TON</small></button>
+                    <SheetContent side="bottom" className="max-h-[86dvh] overflow-y-auto rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">
+                      <SheetHeader className="px-4 pb-3 text-left">
+                        <SheetTitle className="text-base text-slate-100">{tx("Вывод TON", "Withdraw TON")}</SheetTitle>
+                        <p className="text-[11px] leading-4 text-slate-500">{tx("Доступен только основной TON-баланс. Бонусные GRAM не выводятся.", "Only your main TON balance is withdrawable. Bonus GRAM cannot be withdrawn.")}</p>
+                      </SheetHeader>
+                      <div className="space-y-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                        {tonWithdrawalFlow === "form" && <>
+                          <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2"><span className="text-[10px] uppercase tracking-[0.08em] text-slate-500">{tx("Доступно", "Available")}</span><b className="text-sm text-slate-100">{mainTon} TON</b></div>
+                          <label className="block"><span className="mb-1 block text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">{tx("Сумма вывода", "Withdrawal amount")}</span><div className="relative"><Input value={tonWithdrawalAmount} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d{0,9})?$/.test(value)) setTonWithdrawalAmount(value); }} className="h-12 border-white/10 bg-white/[0.045] pr-14 text-base font-semibold text-slate-100" placeholder="0.1" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-emerald-300">TON</span></div><small className="mt-1 block text-[10px] text-slate-500">{tx("Минимум 0.1 TON. Комиссия сети вычитается из этой суммы.", "Minimum 0.1 TON. Network fee is deducted from this amount.")}</small></label>
+                          <label className="block"><span className="mb-1 block text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">{tx("Адрес получателя", "Recipient address")}</span><Input value={tonWithdrawalAddress} onChange={event => setTonWithdrawalAddress(event.target.value.trim())} autoCapitalize="none" autoCorrect="off" spellCheck={false} className="h-12 border-white/10 bg-white/[0.045] font-mono text-xs text-slate-100" placeholder="UQ… или EQ…" /><small className="mt-1 block text-[10px] text-slate-500">{tx("Можно указать другой mainnet-адрес. Новый адрес проходит ручную проверку.", "You can enter another mainnet address. A new address is held for manual review.")}</small></label>
+                          <button type="button" disabled={quoteTonWithdrawalMutation.isPending || !tonWithdrawalAddress || !tonWithdrawalAmount} onClick={() => void prepareTonWithdrawal()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-3 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"><Send className="h-4 w-4" />{quoteTonWithdrawalMutation.isPending ? tx("Считаем комиссию…", "Calculating fee…") : tx("Продолжить", "Continue")}</button>
+                        </>}
+                        {tonWithdrawalFlow === "confirm" && tonWithdrawalQuote && <>
+                          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.055] p-4"><p className="text-[10px] uppercase tracking-[0.1em] text-emerald-300/80">{tx("Проверьте детали", "Review details")}</p><div className="mt-3 space-y-2 text-xs"><div className="flex justify-between gap-4"><span className="text-slate-500">{tx("Списать", "Gross")}</span><b>{tonWithdrawalQuote.grossAmountTon} TON</b></div><div className="flex justify-between gap-4"><span className="text-slate-500">{tx("Максимум комиссии сети", "Maximum network fee")}</span><b className="text-amber-200">− {tonWithdrawalQuote.feeReserveTon} TON</b></div><div className="flex justify-between gap-4 border-t border-white/10 pt-2"><span className="text-slate-300">{tx("Получит адрес", "Recipient receives")}</span><b className="text-emerald-300">{tonWithdrawalQuote.netAmountTon} TON</b></div></div></div>
+                          <div className="rounded-xl border border-white/8 bg-white/[0.025] p-3"><span className="block text-[10px] uppercase tracking-[0.08em] text-slate-500">{tx("Получатель", "Recipient")}</span><span className="mt-1 block break-all font-mono text-[11px] text-slate-200">{tonWithdrawalQuote.destinationWalletAddress}</span></div><p className="text-[10px] leading-4 text-slate-500">{tx("Резерв комиссии указан заранее. Неиспользованная разница возвращается на основной TON-баланс после сетевой сверки.", "The fee reserve is shown in advance. Any unused difference returns to your main TON balance after network reconciliation.")}</p>
+                          <div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setTonWithdrawalFlow("form")} className="rounded-xl border border-white/10 px-3 py-3 text-sm font-semibold text-slate-300">{tx("Назад", "Back")}</button><button type="button" disabled={createTonWithdrawalMutation.isPending} onClick={() => void submitTonWithdrawal()} className="rounded-xl bg-emerald-500 px-3 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50">{createTonWithdrawalMutation.isPending ? tx("Создаём…", "Creating…") : tx("Подтвердить", "Confirm")}</button></div>
+                        </>}
+                        {tonWithdrawalFlow === "review" && <div className="py-5 text-center"><span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-amber-300/25 bg-amber-300/[0.1]"><ShieldCheck className="h-7 w-7 text-amber-200" /></span><h3 className="mt-4 text-base font-semibold">{tx("На ручной проверке", "Under manual review")}</h3><p className="mx-auto mt-2 max-w-[290px] text-xs leading-5 text-slate-500">{tx("Средства зарезервированы. Выплата не отправлена, пока защита не завершит проверку нового адреса или лимита.", "Funds are reserved. The payout is not sent until protection completes the new-address or limit review.")}</p><button type="button" onClick={() => setTonWithdrawalOpen(false)} className="mt-5 rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-200">{tx("Готово", "Done")}</button></div>}
+                        {tonWithdrawalFlow === "processing" && <div className="py-5 text-center"><span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-sky-300/25 bg-sky-300/[0.1]"><Send className="h-6 w-6 text-sky-200" /></span><h3 className="mt-4 text-base font-semibold">{tx("Проверяем отправку", "Checking the payout")}</h3><p className="mx-auto mt-2 max-w-[290px] text-xs leading-5 text-slate-500">{tx("Не показываем успех, пока исходящая транзакция не найдена в сети TON.", "Success is not shown until the outgoing transaction is found on TON.")}</p>{activeTonWithdrawal?.failureReason && <p className="mt-3 text-[11px] text-amber-200">{activeTonWithdrawal.failureReason}</p>}<button type="button" disabled={!activeTonWithdrawalId || reconcileTonWithdrawalMutation.isPending} onClick={() => activeTonWithdrawalId && reconcileTonWithdrawalMutation.mutate({ withdrawalId: activeTonWithdrawalId })} className="mt-5 rounded-xl bg-[#3390ec] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{reconcileTonWithdrawalMutation.isPending ? tx("Проверяем…", "Checking…") : tx("Проверить сеть", "Check network")}</button></div>}
+                        {tonWithdrawalFlow === "success" && <div className="py-5 text-center"><span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-400 text-slate-950"><Check className="h-8 w-8" /></span><h3 className="mt-4 text-base font-semibold text-emerald-200">{tx("Средства успешно отправлены", "Funds sent successfully")}</h3><p className="mx-auto mt-2 max-w-[290px] text-xs leading-5 text-slate-500">{tx("Исходящая TON-транзакция подтверждена и записана в журнал операции.", "The outgoing TON transaction is confirmed and recorded in the operation journal.")}</p>{activeTonWithdrawal?.transactionHash && <p className="mt-3 break-all rounded-lg border border-white/8 bg-white/[0.03] p-2 font-mono text-[9px] text-slate-400">{activeTonWithdrawal.transactionHash}</p>}<button type="button" onClick={() => setTonWithdrawalOpen(false)} className="mt-5 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">{tx("Готово", "Done")}</button></div>}
+                        {tonWithdrawals.slice(0, 3).length > 0 && <section className="border-t border-white/8 pt-3"><div className="mb-2 flex items-center justify-between"><b className="text-[11px] text-slate-200">{tx("Последние выводы", "Recent withdrawals")}</b><span className="text-[9px] text-slate-500">TON</span></div><div className="space-y-2">{tonWithdrawals.slice(0, 3).map(withdrawal => <div key={withdrawal.id} className="rounded-xl border border-white/8 bg-white/[0.025] p-2.5"><div className="flex items-center justify-between gap-2"><b className="text-[11px] text-slate-100">{(Number(withdrawal.grossAmountNano) / 1_000_000_000).toFixed(2)} TON</b><span className={withdrawal.status === "confirmed" ? "text-[10px] font-medium text-emerald-300" : withdrawal.status === "manual_review" ? "text-[10px] font-medium text-amber-200" : withdrawal.status === "cancelled" ? "text-[10px] font-medium text-rose-300" : "text-[10px] font-medium text-sky-200"}>{withdrawal.status === "confirmed" ? tx("Отправлено", "Sent") : withdrawal.status === "manual_review" ? tx("Проверка", "Review") : withdrawal.status === "cancelled" ? tx("Отменено", "Cancelled") : tx("Проверяем", "Checking")}</span></div><small className="mt-1 block break-all font-mono text-[9px] text-slate-500">{withdrawal.destinationWalletAddress}</small>{withdrawal.transactionHash && <small className="mt-1 block break-all font-mono text-[9px] text-emerald-300/70">{withdrawal.transactionHash}</small>}</div>)}</div></section>}
+                      </div>
+                    </SheetContent>
+                  </Sheet>
                 </div>
               </div>
             </div>

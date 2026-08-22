@@ -9,6 +9,7 @@ import { getTelegramChatGifts, getTelegramGroupAdministrators, getTelegramUserAv
 import { formatTonAmount } from "./tonFormatting";
 import { getWalletNfts } from "./tonNft";
 import { getSafeTonDepositError } from "./tonDepositErrorPolicy";
+import { getSafeTonWithdrawalError } from "./tonWithdrawalErrorPolicy";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -244,6 +245,69 @@ export const appRouter = router({
         } catch (error) {
           console.error("[TonDeposit] Could not verify deposit:", error);
           throw new Error(getSafeTonDepositError(error));
+        }
+      }),
+
+    getTonWithdrawals: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getTonWithdrawals(ctx.user.openId);
+    }),
+
+    quoteTonWithdrawal: protectedProcedure
+      .input(z.object({ amountTon: z.string().trim().min(1).max(32), destinationWalletAddress: z.string().trim().min(32).max(96) }))
+      .mutation(async ({ input }) => {
+        try {
+          return await db.quoteTonWithdrawal(input);
+        } catch (error) {
+          throw new Error(getSafeTonWithdrawalError(error));
+        }
+      }),
+
+    createTonWithdrawal: protectedProcedure
+      .input(z.object({
+        amountTon: z.string().trim().min(1).max(32),
+        destinationWalletAddress: z.string().trim().min(32).max(96),
+        idempotencyKey: z.string().trim().regex(/^[A-Za-z0-9_-]{16,96}$/, "Некорректный ключ защиты операции"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const withdrawal = await db.createTonWithdrawal({ ...input, userOpenId: ctx.user.openId });
+          if (withdrawal.status === "queued") await db.broadcastQueuedTonWithdrawal(withdrawal.id);
+          return withdrawal;
+        } catch (error) {
+          console.error("[TonWithdrawal] Could not create withdrawal:", error);
+          throw new Error(getSafeTonWithdrawalError(error));
+        }
+      }),
+
+    reconcileTonWithdrawal: protectedProcedure
+      .input(z.object({ withdrawalId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await db.reconcileTonWithdrawal({ userOpenId: ctx.user.openId, withdrawalId: input.withdrawalId });
+        } catch (error) {
+          console.error("[TonWithdrawal] Could not reconcile withdrawal:", error);
+          throw new Error(getSafeTonWithdrawalError(error));
+        }
+      }),
+
+    getTonWithdrawalsForManualReview: protectedProcedure.query(async ({ ctx }) => {
+      const access = await db.getModerationAccess(ctx.user.openId);
+      if (!access.canModerate) throw new Error("Недостаточно прав для ручной проверки вывода");
+      return await db.getTonWithdrawalsForManualReview();
+    }),
+
+    reviewTonWithdrawal: protectedProcedure
+      .input(z.object({ withdrawalId: z.number().int().positive(), action: z.enum(["approve", "reject"]), reason: z.string().trim().max(255).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const access = await db.getModerationAccess(ctx.user.openId);
+        if (!access.canModerate) throw new Error("Недостаточно прав для ручной проверки вывода");
+        try {
+          const withdrawal = await db.reviewTonWithdrawal({ ...input, reviewerOpenId: ctx.user.openId });
+          if (input.action === "approve") await db.broadcastQueuedTonWithdrawal(withdrawal.id);
+          return withdrawal;
+        } catch (error) {
+          console.error("[TonWithdrawal] Could not review withdrawal:", error);
+          throw new Error(getSafeTonWithdrawalError(error));
         }
       }),
 
