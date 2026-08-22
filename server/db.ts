@@ -15,7 +15,7 @@ import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
 import { getTelegramChatIdFromOpenId, verifyTelegramUserChatBoost } from "./telegramNotifications";
 import { getSearchIndexingError } from "./seoPolicy";
 import { buildTonDepositPayload, createTonDepositReference, decodeTonComment, findMatchingTonDepositTransaction, findRejectedTonDepositTransaction, formatNanoTon, getRecentTonDepositTransactions, normalizeTonAddress, parseTonToNano, toFriendlyTonAddress, TON_DEPOSIT_TTL_MS } from "./tonDeposits";
-import { buildTonPayoutExternalBoc, broadcastTonPayoutBoc, emulateTonPayoutFee, getConfiguredTonPayoutWalletAddress } from "./tonPayoutWallet";
+import { buildTonPayoutExternalBoc, broadcastTonPayoutBoc, emulateTonPayoutFee, getConfiguredTonPayoutWalletAddress, TonPayoutRejectedError } from "./tonPayoutWallet";
 import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, getTonWithdrawalRiskLabel, quoteTonWithdrawal as getTonWithdrawalQuote, TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS, TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO } from "./tonWithdrawalPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
@@ -473,8 +473,18 @@ export async function broadcastQueuedTonWithdrawal(withdrawalId: number) {
     try {
       await broadcastTonPayoutBoc(prepared.boc);
       return { attempted: true as const, reason: "submitted" as const };
-    } catch {
-      // Timeout может означать уже принятую трансляцию; до сетевой сверки повтор не выполняется.
+    } catch (error) {
+      if (error instanceof TonPayoutRejectedError) {
+        const grossTon = formatWithdrawalNanoTon(grossAmountNano);
+        await db.transaction(async tx => {
+          const cancelled = await tx.update(tonWithdrawals).set({ status: "cancelled", actualFeeNano: "0", failureReason: "Сеть отклонила транзакцию; GRAM возвращён на основной баланс" }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "broadcast_pending"), sql`${tonWithdrawals.transactionHash} IS NULL`));
+          if (Number(cancelled[0]?.affectedRows ?? 0) === 1) {
+            await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${grossTon}` }).where(eq(users.openId, withdrawal.userOpenId));
+          }
+        });
+        return { attempted: false as const, reason: "broadcast_rejected_refunded" as const };
+      }
+      // Тайм-аут может означать уже принятую трансляцию; до сетевой сверки повтор не выполняется.
       await db.update(tonWithdrawals).set({ failureReason: "Трансляция проверяется в сети" }).where(eq(tonWithdrawals.id, withdrawal.id));
       return { attempted: true as const, reason: "broadcast_ambiguous" as const };
     }

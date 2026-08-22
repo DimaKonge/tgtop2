@@ -83,6 +83,13 @@ export async function buildTonPayoutExternalBoc(input: { destinationWalletAddres
   };
 }
 
+export class TonPayoutRejectedError extends Error {
+  constructor() {
+    super("TonAPI не принял сообщение выплаты");
+    this.name = "TonPayoutRejectedError";
+  }
+}
+
 export async function broadcastTonPayoutBoc(boc: string) {
   const response = await fetch("https://tonapi.io/v2/blockchain/message", {
     method: "POST",
@@ -90,7 +97,7 @@ export async function broadcastTonPayoutBoc(boc: string) {
     body: JSON.stringify({ boc }),
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) throw new Error("TonAPI не принял сообщение выплаты");
+  if (!response.ok) throw new TonPayoutRejectedError();
 }
 
 export async function emulateTonPayoutFee(boc: string) {
