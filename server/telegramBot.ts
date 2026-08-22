@@ -119,6 +119,8 @@ export type TelegramChatGift = {
   title: string;
   emoji: string;
   unique: boolean;
+  mediaUrl: string | null;
+  mediaKind: "video" | "tgs" | "image" | null;
 };
 
 type TelegramFile = { file_path?: string };
@@ -140,11 +142,12 @@ export async function getTelegramGroupAdministrators(chatId: string): Promise<Te
 }
 
 export async function getTelegramChatGifts(chatId: string): Promise<TelegramChatGift[]> {
+  type StickerMedia = { file_id?: string; is_video?: boolean; is_animated?: boolean; thumbnail?: { file_id?: string } };
   type RawGift = {
     owned_gift_id?: string;
     type?: "regular" | "unique";
-    gift?: { id?: string; title?: string; name?: string; sticker?: { emoji?: string } };
-    unique_gift?: { name?: string; title?: string; number?: number; sticker?: { emoji?: string } };
+    gift?: { id?: string; title?: string; name?: string; sticker?: StickerMedia & { emoji?: string } };
+    unique_gift?: { name?: string; title?: string; number?: number; sticker?: StickerMedia & { emoji?: string } };
   };
   type RawOwnedGifts = { gifts?: RawGift[] };
 
@@ -153,17 +156,37 @@ export async function getTelegramChatGifts(chatId: string): Promise<TelegramChat
     exclude_unsaved: false,
     limit: 100,
   });
-  return (result.gifts ?? []).map((gift, index) => {
+  const gifts = result.gifts ?? [];
+  return await Promise.all(gifts.map(async (gift, index) => {
     const uniqueGift = gift.unique_gift;
     const regularGift = gift.gift;
+    const sticker = uniqueGift?.sticker ?? regularGift?.sticker;
     const title = uniqueGift?.name ?? uniqueGift?.title ?? regularGift?.title ?? regularGift?.name ?? `Подарок #${index + 1}`;
+    const mediaKind = sticker?.is_video ? "video" : sticker?.is_animated ? "tgs" : sticker?.file_id ? "image" : null;
+    const sourceFileId = sticker?.file_id ?? sticker?.thumbnail?.file_id;
+    let mediaUrl: string | null = null;
+    if (sourceFileId) {
+      try {
+        const file = await telegramCall<TelegramFile>("getFile", { file_id: sourceFileId });
+        if (file.file_path) {
+          const media = await axios.get<ArrayBuffer>(`https://api.telegram.org/file/bot${botToken}/${file.file_path}`, { responseType: "arraybuffer", timeout: 20_000 });
+          const extension = file.file_path.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "bin";
+          const stored = await storagePut(`telegram/channel-gifts/${chatId}/${sourceFileId}.${extension}`, Buffer.from(media.data), media.headers["content-type"] ?? "application/octet-stream");
+          mediaUrl = stored.url;
+        }
+      } catch {
+        mediaUrl = null;
+      }
+    }
     return {
       id: gift.owned_gift_id ?? regularGift?.id ?? `${title}-${index}`,
       title: uniqueGift?.number ? `${title} #${uniqueGift.number}` : title,
       emoji: uniqueGift?.sticker?.emoji ?? regularGift?.sticker?.emoji ?? "🎁",
       unique: gift.type === "unique" || Boolean(uniqueGift),
+      mediaUrl,
+      mediaKind,
     };
-  });
+  }));
 }
 
 export async function getTelegramUserAvatarUrl(telegramUserId: string): Promise<string | null> {

@@ -430,7 +430,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Минимальная ставка:');
     expect(source).not.toContain('paymentMethod === "stars"');
     expect(source).toContain('const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null)');
-    expect(source).toContain('Удалить группу из платформы?');
+    expect(source).toContain('Снять группу с листинга?');
     expect(source).toContain('rounded-[22px] border border-[#31435f]');
     expect(source).toContain('className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3"');
     expect(source).toContain('function AudienceGrowthChart');

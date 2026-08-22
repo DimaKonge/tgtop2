@@ -60,6 +60,7 @@ import {
 import { toast } from "sonner";
 import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import lottie from "lottie-web";
 
 type Page = "top" | "catalog" | "giveaways" | "mine" | "details" | "owner" | "profile" | "admin";
 type Audience = "all" | "small" | "medium" | "large";
@@ -814,6 +815,37 @@ function WalletNftCard({ item, language }: { item: WalletNft; language: Language
   </article>;
 }
 
+type ChannelGiftMedia = { mediaUrl: string | null; mediaKind: "video" | "tgs" | "image" | null; emoji: string };
+
+function ChannelGiftMediaPreview({ gift }: { gift: ChannelGiftMedia }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (gift.mediaKind !== "tgs" || !gift.mediaUrl || !containerRef.current) return;
+    let cancelled = false;
+    let animation: ReturnType<typeof lottie.loadAnimation> | undefined;
+    void (async () => {
+      try {
+        const response = await fetch(gift.mediaUrl!);
+        if (!response.ok || typeof DecompressionStream === "undefined") throw new Error("Unsupported TGS animation");
+        const compressed = await response.arrayBuffer();
+        const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"));
+        const animationData = await new Response(stream).json();
+        if (!cancelled && containerRef.current) animation = lottie.loadAnimation({ container: containerRef.current, renderer: "svg", loop: true, autoplay: true, animationData });
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    })();
+    return () => { cancelled = true; animation?.destroy(); };
+  }, [gift.mediaKind, gift.mediaUrl]);
+
+  if (gift.mediaKind === "video" && gift.mediaUrl && !failed) return <video src={gift.mediaUrl} autoPlay muted loop playsInline onError={() => setFailed(true)} className="h-full w-full object-contain" />;
+  if (gift.mediaKind === "image" && gift.mediaUrl && !failed) return <img src={gift.mediaUrl} alt="" onError={() => setFailed(true)} className="h-full w-full object-contain" />;
+  if (gift.mediaKind === "tgs" && gift.mediaUrl && !failed) return <div ref={containerRef} className="h-full w-full" />;
+  return <span className="grid h-full w-full place-items-center text-3xl">{gift.emoji}</span>;
+}
+
 function GramBalanceChart({ transactions, currentBalance, language }: { transactions: Array<{ amount: number; createdAt: Date }>; currentBalance: number; language: Language }) {
   const points = useMemo(() => {
     const actualTransactions = transactions.slice(0, 24).reverse().map(item => ({ amount: item.amount / 100, createdAt: new Date(item.createdAt) }));
@@ -1249,7 +1281,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     { groupId: selectedGroupId ?? 0 },
     { enabled: isAuthenticated && channelGiftsOpen && selectedGroupId !== null, retry: false }
   );
-  const channelGifts = (channelGiftsQuery.data ?? []) as Array<{ id: string; title: string; emoji: string; unique: boolean }>;
+  const channelGifts = (channelGiftsQuery.data ?? []) as Array<{ id: string; title: string; emoji: string; unique: boolean; mediaUrl: string | null; mediaKind: "video" | "tgs" | "image" | null }>;
   const groupAdministratorsQuery = trpc.tgTop.getGroupAdministrators.useQuery(
     { groupId: lotGroupId ?? selectedGroupId ?? 0 },
     { enabled: managerSheetOpen && (lotGroupId ?? selectedGroupId) !== null }
@@ -3059,20 +3091,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       {detailRewardActive && <Star className="h-4 w-4 shrink-0 fill-[#ffd766] text-[#ffd766]" aria-label="Вознаграждение активно" />}
                       {ownsDetail && detail.group.status === "listed" && <button
                         type="button"
-                        onClick={() => unlistGroups.mutate({ groupIds: [detail.group.id] }, { onSuccess: () => setPage("mine") })}
+                        onClick={() => setPendingGroupDeletion(detail.group)}
                         disabled={unlistGroups.isPending}
                         title={tx("Снять с листинга", "Remove from listing")}
                         aria-label={tx("Снять с листинга", "Remove from listing")}
                         className="grid h-7 w-7 place-items-center rounded-lg border border-rose-300/20 bg-rose-300/[0.07] text-rose-200 transition-colors hover:bg-rose-300/[0.13] disabled:opacity-50"
                       ><X className="h-4 w-4" /></button>}
-                      {ownsDetail && detail.group.status !== "listed" && <button
-                        type="button"
-                        onClick={() => setPendingGroupDeletion(detail.group)}
-                        disabled={deleteGroups.isPending}
-                        title={tx("Удалить группу", "Delete community")}
-                        aria-label={tx("Удалить группу", "Delete community")}
-                        className="grid h-7 w-7 place-items-center rounded-lg border border-red-500/20 bg-red-500/[0.06] text-red-300 transition-colors hover:bg-red-500/[0.11] disabled:opacity-50"
-                      ><Trash2 className="h-3.5 w-3.5" /></button>}
                     </span>
                   </div>
 
@@ -3153,7 +3177,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <ChevronRight className={`h-4 w-4 text-slate-500 transition-transform ${channelGiftsOpen ? "rotate-90" : ""}`} />
                       </button>
                       {channelGiftsOpen && <div className="border-t border-white/8 p-2.5">
-                        {channelGiftsQuery.isPending ? <div className="grid grid-cols-2 gap-2">{Array.from({ length: 2 }).map((_, index) => <div key={index} className="h-14 animate-pulse rounded-lg bg-white/[0.04]" />)}</div> : channelGiftsQuery.isError ? <p className="rounded-lg bg-rose-500/[0.06] px-2.5 py-2 text-[10px] leading-4 text-rose-100/80">{channelGiftsQuery.error.message}</p> : channelGifts.length ? <div className="grid grid-cols-2 gap-2">{channelGifts.map(gift => <div key={gift.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-white/8 bg-[#17212b] p-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-amber-300/[0.09] text-base">{gift.emoji}</span><span className="min-w-0"><b className="block truncate text-[10px] text-slate-100">{gift.title}</b><small className="mt-0.5 block text-[9px] text-slate-500">{gift.unique ? "Уникальный" : "Подарок"}</small></span></div>)}</div> : <p className="px-1 py-2 text-[10px] leading-4 text-slate-500">Telegram не вернул подарки для этого канала.</p>}
+                        {channelGiftsQuery.isPending ? <div className="grid grid-cols-3 gap-2">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="aspect-square animate-pulse rounded-xl bg-white/[0.04]" />)}</div> : channelGiftsQuery.isError ? <p className="rounded-lg bg-rose-500/[0.06] px-2.5 py-2 text-[10px] leading-4 text-rose-100/80">{channelGiftsQuery.error.message}</p> : channelGifts.length ? <div className="grid grid-cols-3 gap-2">{channelGifts.map(gift => <div key={gift.id} className="min-w-0 rounded-xl border border-white/8 bg-[#17212b] p-1.5"><div className="aspect-square overflow-hidden rounded-lg bg-[radial-gradient(circle_at_50%_35%,rgba(255,206,84,.16),transparent_55%),#111925]"><ChannelGiftMediaPreview gift={gift} /></div><b className="mt-1 block truncate text-center text-[8px] text-slate-100">{gift.title}</b><small className="mt-0.5 block truncate text-center text-[7px] text-slate-500">{gift.unique ? "Уникальный" : "Подарок"}</small></div>)}</div> : <p className="px-1 py-2 text-[10px] leading-4 text-slate-500">Telegram не вернул подарки для этого канала.</p>}
                       </div>}
                     </section>
                   )}
@@ -3240,7 +3264,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                     </div>
                   )}
-                </div>
                   {placementSlot && (
                     <section className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3">
                       <h2 className="text-sm font-bold text-slate-100">{selectedSlot ? (ownsDetail ? "Обновить лот" : "Перебить лот") : "Вывести в ТОП"}</h2>
@@ -3301,6 +3324,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <button type="button" onClick={() => { if (!selectedLotGroup) return setLotGroupPickerOpen(true); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const normalizedSalePrice = getSalePriceForSave(); if (normalizedSalePrice === undefined) return; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardBudgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0; const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Введите сумму в GRAM с точностью до 0.01"); placeBid.mutate({ slotId: placementSlot.id, groupId: selectedLotGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, country: listingCountry, city: listingCity === "Все" ? undefined : listingCity, subcategory: listingSubcategory, salePriceTon: normalizedSalePrice, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: selectedLotGroup.category === "Чаты" ? detailRewardPerSubscriptionUnits : 0 }); }} disabled={Boolean(selectedLotGroup && (!detailRankingPreviewSlotNumber || placeBid.isPending)) || (!ownsDetail && !isAuthenticated)} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{placeBid.isPending ? "Оплата…" : !selectedLotGroup ? "Выбрать свою группу" : !selectedSlot ? "Вывести в ТОП" : ownsDetail ? "Обновить ставку" : "Перебить ставку"}</span></button>
                     </section>
                   )}
+                </div>
                 <NftShowcase nfts={detail.ownerNfts} language={language} title={tx("NFT-витрина площадки", "Community NFT showcase")} />
               </>
             ) : (
@@ -3886,12 +3910,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <Sheet open={Boolean(pendingGroupDeletion)} onOpenChange={open => !open && setPendingGroupDeletion(null)}>
         <SheetContent side="bottom" className="rounded-t-[26px] border-rose-300/15 bg-[#10161f] text-slate-100">
           <SheetHeader className="px-4 pb-2">
-            <SheetTitle className="text-slate-100">{tx("Удалить группу из платформы?", "Remove community from platform?")}</SheetTitle>
-            <p className="text-xs leading-5 text-slate-500">{pendingGroupDeletion?.title}. {tx("Группа исчезнет из кабинета, каталога и рейтинга.", "The community will be removed from your workspace, catalog, and ranking.")}</p>
+            <SheetTitle className="text-slate-100">{tx("Снять группу с листинга?", "Remove community from listing?")}</SheetTitle>
+            <p className="text-xs leading-5 text-slate-500">{pendingGroupDeletion?.title}. {tx("Оплата за лот после этого не возвращается. Группа останется в вашем рабочем пространстве.", "The lot payment is not refunded. The community stays in your workspace.")}</p>
           </SheetHeader>
           <div className="flex gap-2 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
             <button type="button" onClick={() => setPendingGroupDeletion(null)} className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/[0.05]">{tx("Отмена", "Cancel")}</button>
-            <button type="button" onClick={() => { if (!pendingGroupDeletion) return; deleteGroups.mutate({ groupIds: [pendingGroupDeletion.id] }, { onSuccess: () => { setPendingGroupDeletion(null); setPage("mine"); } }); }} disabled={deleteGroups.isPending} className="flex-1 rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-400 disabled:opacity-50">{deleteGroups.isPending ? tx("Удаляем…", "Removing…") : tx("Удалить", "Remove")}</button>
+            <button type="button" onClick={() => { if (!pendingGroupDeletion) return; unlistGroups.mutate({ groupIds: [pendingGroupDeletion.id] }, { onSuccess: () => { setPendingGroupDeletion(null); setPage("mine"); } }); }} disabled={unlistGroups.isPending} className="flex-1 rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-400 disabled:opacity-50">{unlistGroups.isPending ? tx("Снимаем…", "Removing…") : tx("Снять с листинга", "Remove from listing")}</button>
           </div>
         </SheetContent>
       </Sheet>
