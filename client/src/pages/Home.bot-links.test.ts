@@ -60,6 +60,9 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('submitTonWithdrawal');
     expect(source).toContain('tonWithdrawalSubmitInFlight.current');
     expect(source).toContain('createTonWithdrawalMutation.isPending');
+    expect(source).toContain('onError: () => undefined');
+    expect(source).toContain('const canWithdrawMinimum = mainBalanceTonValue >= 0.1;');
+    expect(source).toContain('disabled={!canWithdrawMinimum}');
     expect(source).toContain('const detailSaleEnabled = Boolean((ownsDetail ? isListingForSale : detail?.group.listingType === "sale") && (detailSalePriceUnits ?? 0) > 0);');
     expect(source).toContain('const detailCanBeBought = Boolean(!ownsDetail && detailSaleEnabled);');
     expect(source).toContain('const detailHasEnoughBalanceToBuy = Boolean(detailSalePriceUnits && bonusBalanceUnits >= detailSalePriceUnits);');
