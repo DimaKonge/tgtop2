@@ -6,6 +6,7 @@ export type WalletNftItem = {
   name: string;
   description: string | null;
   imageUrl: string | null;
+  imageUrls: string[];
   collectionName: string | null;
   collectionAddress: string | null;
   category: WalletNftCategory;
@@ -14,7 +15,7 @@ export type WalletNftItem = {
 type TonApiNftItem = {
   address?: string;
   index?: number;
-  metadata?: { name?: string; description?: string; image?: string };
+  metadata?: { name?: string; description?: string; image?: string; image_url?: string; animation_url?: string };
   collection?: { name?: string; address?: string };
   previews?: Array<{ url?: string }>;
 };
@@ -24,8 +25,13 @@ const TON_WALLET_ADDRESS_PATTERN = /^(?:[EU]Q[A-Za-z0-9_-]{46}|0:[a-fA-F0-9]{64}
 
 function getSafeImageUrl(value: unknown) {
   if (typeof value !== "string") return null;
+  const source = value.trim();
+  if (/^ipfs:\/\//i.test(source)) {
+    const contentPath = source.replace(/^ipfs:\/\/(?:ipfs\/)?/i, "").replace(/^\/+/, "");
+    return contentPath ? `https://ipfs.io/ipfs/${contentPath}` : null;
+  }
   try {
-    const url = new URL(value);
+    const url = new URL(source);
     return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
   } catch {
     return null;
@@ -53,14 +59,20 @@ export function classifyWalletNft(item: TonApiNftItem): WalletNftCategory {
 export function normalizeWalletNft(item: TonApiNftItem): WalletNftItem | null {
   if (!item.address || typeof item.address !== "string") return null;
   const name = item.metadata?.name?.trim() || item.collection?.name?.trim() || `NFT #${item.index ?? "—"}`;
-  const previewUrl = item.previews?.map(preview => getSafeImageUrl(preview.url)).find(Boolean) ?? null;
+  const imageUrls = Array.from(new Set([
+    ...(item.previews ?? []).map(preview => getSafeImageUrl(preview.url)),
+    getSafeImageUrl(item.metadata?.image),
+    getSafeImageUrl(item.metadata?.image_url),
+    getSafeImageUrl(item.metadata?.animation_url),
+  ].filter((url): url is string => Boolean(url))));
 
   return {
     address: item.address,
     index: Number.isSafeInteger(item.index) ? item.index! : 0,
     name,
     description: item.metadata?.description?.trim() || null,
-    imageUrl: getSafeImageUrl(item.metadata?.image) ?? previewUrl,
+    imageUrl: imageUrls[0] ?? null,
+    imageUrls,
     collectionName: item.collection?.name?.trim() || null,
     collectionAddress: item.collection?.address?.trim() || null,
     category: classifyWalletNft(item),

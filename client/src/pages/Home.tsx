@@ -296,6 +296,7 @@ type WalletNft = {
   name: string;
   description: string | null;
   imageUrl: string | null;
+  imageUrls: string[];
   collectionName: string | null;
   collectionAddress: string | null;
   category: Exclude<WalletNftFilter, "all">;
@@ -788,6 +789,7 @@ function WalletConnectControl({ language, balanceTon, variant = "compact" }: { l
 
 function WalletNftCard({ item, language }: { item: WalletNft; language: Language }) {
   const [imageFailed, setImageFailed] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
   const categoryLabel: Record<WalletNft["category"], string> = {
     gifts: language === "en" ? "Gift" : "Гифт",
     usernames: language === "en" ? "Username" : "Юзернейм",
@@ -803,10 +805,16 @@ function WalletNftCard({ item, language }: { item: WalletNft; language: Language
     other: "border-white/10 bg-white/[0.045] text-slate-300",
   };
   const shortAddress = item.address.length > 16 ? `${item.address.slice(0, 7)}…${item.address.slice(-5)}` : item.address;
+  const imageUrls = Array.from(new Set([...(item.imageUrls ?? []), item.imageUrl].filter((url): url is string => Boolean(url))));
+  const imageUrl = imageUrls[imageIndex] ?? null;
+  const tryNextImage = () => {
+    if (imageIndex + 1 < imageUrls.length) setImageIndex(index => index + 1);
+    else setImageFailed(true);
+  };
 
   return <article className="overflow-hidden rounded-xl border border-white/9 bg-[#111720] p-2.5 transition-colors hover:border-white/16 hover:bg-[#151d29]">
     <div className="relative aspect-square overflow-hidden rounded-lg border border-white/8 bg-[#1b2430]">
-      {item.imageUrl && !imageFailed ? <img src={item.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={() => setImageFailed(true)} /> : <span className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(84,143,255,.32),transparent_42%),#152131] text-lg font-semibold text-[#aacaff]">{item.name.slice(0, 1).toUpperCase()}</span>}
+      {imageUrl && !imageFailed ? <img src={imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={tryNextImage} /> : <span className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(84,143,255,.32),transparent_42%),#152131] text-lg font-semibold text-[#aacaff]">{item.name.slice(0, 1).toUpperCase()}</span>}
       <span className={`absolute left-1.5 top-1.5 rounded-md border px-1.5 py-1 text-[8px] font-semibold backdrop-blur-sm ${categoryClass[item.category]}`}>{categoryLabel[item.category]}</span>
     </div>
     <b className="mt-2 block truncate text-[11px] text-slate-100">{item.name}</b>
@@ -2405,7 +2413,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-3 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
+      <main className="mx-auto max-w-3xl px-2 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-2">
         {page === "top" && (
           <section className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -3089,14 +3097,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                     <span className="flex items-center gap-1.5">
                       {detailRewardActive && <Star className="h-4 w-4 shrink-0 fill-[#ffd766] text-[#ffd766]" aria-label="Вознаграждение активно" />}
-                      {ownsDetail && detail.group.status === "listed" && <button
-                        type="button"
-                        onClick={() => setPendingGroupDeletion(detail.group)}
-                        disabled={unlistGroups.isPending}
-                        title={tx("Снять с листинга", "Remove from listing")}
-                        aria-label={tx("Снять с листинга", "Remove from listing")}
-                        className="inline-flex h-7 items-center gap-1 rounded-lg border border-rose-300/20 bg-rose-300/[0.07] px-2 text-[9px] font-semibold text-rose-100 transition-colors hover:bg-rose-300/[0.13] disabled:opacity-50"
-                      ><X className="h-3.5 w-3.5" />{tx("Снять лот", "Remove lot")}</button>}
                     </span>
                   </div>
 
@@ -3182,7 +3182,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </section>
                   )}
                 </div>
-                <div className="relative flex flex-col overflow-hidden rounded-[26px] border border-[#31435f] bg-[#17212b] shadow-[0_18px_42px_rgba(0,0,0,.18)]">
+                <div className="relative flex flex-col">
                   {detail && ownsDetail && (
                     <section className="hidden order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">
                       <button type="button" onClick={() => setInlineListingOpen(value => !value)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
@@ -3268,7 +3268,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   )}
                   {placementSlot && (
                     <section className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3">
-                      <h2 className="text-sm font-bold text-slate-100">{selectedSlot ? (ownsDetail ? "Обновить лот" : "Перебить лот") : "Вывести в ТОП"}</h2>
+                      <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-sm font-bold text-slate-100">{selectedSlot ? (ownsDetail ? "Обновить лот" : "Перебить лот") : "Вывести в ТОП"}</h2>
+                        {(ownsDetail || moderationAccess?.canModerate) && detail.group.status === "listed" && <button
+                          type="button"
+                          onClick={() => {
+                            if (ownsDetail) setPendingGroupDeletion(detail.group);
+                            else setPendingModerationGroup({ id: detail.group.id, title: detail.group.title });
+                          }}
+                          disabled={ownsDetail && unlistGroups.isPending}
+                          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-rose-300/25 bg-rose-300/[0.07] px-2 text-[9px] font-semibold text-rose-100 transition-colors hover:bg-rose-300/[0.13] disabled:opacity-50"
+                        ><X className="h-3.5 w-3.5" />{tx("Снять лот", "Remove lot")}</button>}
+                      </div>
                       <p className="mt-1 text-[10px] text-slate-500">{selectedSlot ? (ownsDetail ? "Настройте размещение перед оплатой." : "Выберите свою группу и настройте размещение.") : "Настройте свою группу перед первым размещением."}</p>
 
                       <button type="button" onClick={() => setLotGroupPickerOpen(true)} className="mt-2 flex w-full items-center gap-2.5 rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">

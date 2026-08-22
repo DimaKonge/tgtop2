@@ -18,7 +18,8 @@ describe("wallet NFT classification", () => {
       metadata: { name: "Gift", image: "ipfs://not-rendered" },
       previews: [{ url: "https://cdn.example/gift.png" }],
       collection: { name: "Telegram Gifts", address: "0:collection" },
-    })).toMatchObject({ name: "Gift", imageUrl: "https://cdn.example/gift.png", category: "gifts" });
+    })).toMatchObject({ name: "Gift", imageUrl: "https://cdn.example/gift.png", imageUrls: ["https://cdn.example/gift.png", "https://ipfs.io/ipfs/not-rendered"], category: "gifts" });
+    expect(normalizeWalletNft({ address: "0:gift", metadata: { name: "IPFS Gift", image: "ipfs://ipfs/QmGift/image.webp" } })?.imageUrl).toBe("https://ipfs.io/ipfs/QmGift/image.webp");
     expect(normalizeWalletNft({ metadata: { name: "Missing address" } })).toBeNull();
   });
 
