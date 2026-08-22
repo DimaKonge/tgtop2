@@ -7,6 +7,7 @@ import * as db from "./db";
 import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyCommunityRemovedFromTop, notifyRecordedRankingBid } from "./telegramNotifications";
 import { getTelegramGroupAdministrators, getTelegramUserAvatarUrl } from "./telegramBot";
 import { formatTonAmount } from "./tonFormatting";
+import { getWalletNfts } from "./tonNft";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -409,6 +410,10 @@ export const appRouter = router({
     myNfts: protectedProcedure.query(async ({ ctx }) => {
       return await db.getNftUsernames(ctx.user.openId);
     }),
+
+    getWalletNfts: protectedProcedure
+      .input(z.object({ walletAddress: z.string().trim().min(20).max(96) }))
+      .query(async ({ input }) => await getWalletNfts(input.walletAddress)),
 
     myNftTransfers: protectedProcedure.query(async ({ ctx }) => {
       return await db.getNftTransferHistory(ctx.user.openId);

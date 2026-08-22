@@ -24,16 +24,20 @@ import { useTheme, type Appearance } from "@/contexts/ThemeContext";
 import {
   ArrowLeft,
   BarChart3,
+  Bot,
   Check,
   ChevronRight,
   Filter,
   FolderPlus,
+  Gift,
   Globe2,
   GripVertical,
+  Hash,
   LayoutGrid,
   List,
   Minus,
   Moon,
+  PackageOpen,
   Plus,
   Pin,
   PinOff,
@@ -61,6 +65,8 @@ type Page = "top" | "catalog" | "giveaways" | "mine" | "details" | "owner" | "pr
 type Audience = "all" | "small" | "medium" | "large";
 type MyGroupsViewMode = "list" | "grid";
 type Language = "ru" | "en";
+type WorkspaceSection = "communities" | "bots" | "nft";
+type WalletNftFilter = "all" | "gifts" | "usernames" | "anonymous_numbers" | "domains" | "other";
 const getRussianLanguage = (): Language => "ru";
 const n = (value: number, language: Language = "ru") =>
   new Intl.NumberFormat(language === "en" ? "en-US" : "ru-RU").format(value);
@@ -283,6 +289,16 @@ type Nft = {
   showcaseGroupId?: number | null;
 };
 type ShowcaseNft = Pick<Nft, "id" | "username" | "price" | "rentalPricePerDay" | "assetClass" | "listingType">;
+type WalletNft = {
+  address: string;
+  index: number;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  collectionName: string | null;
+  collectionAddress: string | null;
+  category: Exclude<WalletNftFilter, "all">;
+};
 type PreparedNftTransfer = {
   transfer: {
     id: number;
@@ -769,6 +785,35 @@ function WalletConnectControl({ language, balanceTon, variant = "compact" }: { l
   return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? <><span>{label}</span>{address && <span className="rounded-md bg-[#0b0f14]/70 px-1.5 py-0.5 text-[10px] text-white">{balanceTon} TON</span>}</> : language === "en" ? "Loading…" : "Загрузка…"}</button>;
 }
 
+function WalletNftCard({ item, language }: { item: WalletNft; language: Language }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const categoryLabel: Record<WalletNft["category"], string> = {
+    gifts: language === "en" ? "Gift" : "Гифт",
+    usernames: language === "en" ? "Username" : "Юзернейм",
+    anonymous_numbers: language === "en" ? "Anonymous number" : "Анон-номер",
+    domains: language === "en" ? "Domain" : "Домен",
+    other: language === "en" ? "Other NFT" : "Другой NFT",
+  };
+  const categoryClass: Record<WalletNft["category"], string> = {
+    gifts: "border-amber-200/20 bg-amber-300/[0.08] text-amber-100",
+    usernames: "border-[#82b6ff]/25 bg-[#3f8cff]/10 text-[#c8ddff]",
+    anonymous_numbers: "border-violet-200/20 bg-violet-400/[0.09] text-violet-100",
+    domains: "border-emerald-200/20 bg-emerald-400/[0.09] text-emerald-100",
+    other: "border-white/10 bg-white/[0.045] text-slate-300",
+  };
+  const shortAddress = item.address.length > 16 ? `${item.address.slice(0, 7)}…${item.address.slice(-5)}` : item.address;
+
+  return <article className="overflow-hidden rounded-xl border border-white/9 bg-[#111720] p-2.5 transition-colors hover:border-white/16 hover:bg-[#151d29]">
+    <div className="relative aspect-square overflow-hidden rounded-lg border border-white/8 bg-[#1b2430]">
+      {item.imageUrl && !imageFailed ? <img src={item.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={() => setImageFailed(true)} /> : <span className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(84,143,255,.32),transparent_42%),#152131] text-lg font-semibold text-[#aacaff]">{item.name.slice(0, 1).toUpperCase()}</span>}
+      <span className={`absolute left-1.5 top-1.5 rounded-md border px-1.5 py-1 text-[8px] font-semibold backdrop-blur-sm ${categoryClass[item.category]}`}>{categoryLabel[item.category]}</span>
+    </div>
+    <b className="mt-2 block truncate text-[11px] text-slate-100">{item.name}</b>
+    <small className="mt-0.5 block truncate text-[9px] text-slate-500">{item.collectionName ?? categoryLabel[item.category]}</small>
+    <small className="mt-1 block truncate font-mono text-[8px] text-slate-600">{shortAddress}</small>
+  </article>;
+}
+
 function GramBalanceChart({ transactions, currentBalance, language }: { transactions: Array<{ amount: number; createdAt: Date }>; currentBalance: number; language: Language }) {
   const points = useMemo(() => {
     const actualTransactions = transactions.slice(0, 24).reverse().map(item => ({ amount: item.amount / 100, createdAt: new Date(item.createdAt) }));
@@ -861,8 +906,13 @@ function SettingsSheet({
 export default function Home({ onReady }: { onReady?: () => void }) {
   const { user, isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
+  const [tonConnectUi] = useTonConnectUI();
+  const walletAddress = useTonAddress();
+  const walletConnectionRestored = useIsConnectionRestored();
   const hasSignaledReady = useRef(false);
   const [page, setPage] = useState<Page>("top");
+  const [workspaceSection, setWorkspaceSection] = useState<WorkspaceSection>("communities");
+  const [walletNftFilter, setWalletNftFilter] = useState<WalletNftFilter>("all");
   const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
   const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
   const [topSection, setTopSection] = useState<TopSection>("communities");
@@ -1060,6 +1110,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     enabled: isAuthenticated,
   });
   const myNfts = (myNftsQuery.data ?? []) as Nft[];
+  const walletNftsQuery = trpc.tgTop.getWalletNfts.useQuery(
+    { walletAddress },
+    {
+      enabled: isAuthenticated && page === "mine" && workspaceSection === "nft" && walletConnectionRestored && Boolean(walletAddress),
+      staleTime: 45_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    }
+  );
+  const walletNfts = (walletNftsQuery.data?.items ?? []) as WalletNft[];
+  const visibleWalletNfts = useMemo(() => walletNftFilter === "all" ? walletNfts : walletNfts.filter(item => item.category === walletNftFilter), [walletNftFilter, walletNfts]);
   const nftRecipientQuery = trpc.tgTop.resolveNftTransferRecipient.useQuery(
     { recipientInput },
     { enabled: false, retry: false }
@@ -2679,6 +2740,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </p>
               </div>
             </div>
+            <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/8 bg-black/15 p-0.5">
+              {([
+                ["communities", tx("Сообщества", "Communities"), Users],
+                ["bots", tx("Боты", "Bots"), Bot],
+                ["nft", "NFT", Gift],
+              ] as const).map(([value, label, Icon]) => {
+                const active = workspaceSection === value;
+                return <button key={value} type="button" onClick={() => { setWorkspaceSection(value); if (value !== "communities") exitMyGroupsSelection(); }} className={`flex h-8 min-w-0 items-center justify-center gap-1 rounded-lg px-1 text-[10px] font-medium transition-colors ${active ? "bg-[#3f8cff]/14 text-[#c8ddff]" : "text-slate-500 hover:text-slate-200"}`}><Icon className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{label}</span></button>;
+              })}
+            </div>
+            {workspaceSection === "communities" && <>
             {targetSlot && (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-2.5">
                 <span>
@@ -2898,6 +2970,48 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
               )}
             </div>
+            )}
+            </>}
+            {workspaceSection === "bots" && (
+              <section className="space-y-3">
+                <article className="rounded-2xl border border-[#3f8cff]/20 bg-[#3f8cff]/[0.055] p-3.5">
+                  <div className="flex items-start gap-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#72a8ff]/25 bg-[#3f8cff]/10 text-[#a6c8ff]"><Bot className="h-5 w-5" /></span>
+                    <span className="min-w-0 flex-1"><b className="block text-sm text-slate-100">@TG_TOPBOT</b><small className="mt-1 block text-[11px] leading-4 text-slate-400">{tx("Подключайте бота администратором канала или чата: он подтверждает площадку, собирает статистику и помогает с листингом.", "Add the bot as a channel or chat administrator: it verifies the community, collects statistics and helps with listing.")}</small></span>
+                  </div>
+                  <button type="button" onClick={() => setWorkspaceSection("communities")} className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#72a8ff]/30 bg-[#3f8cff]/10 px-2.5 text-[10px] font-semibold text-[#c8ddff]"><Plus className="h-3.5 w-3.5" />{tx("Добавить сообщество", "Add community")}</button>
+                </article>
+              </section>
+            )}
+            {workspaceSection === "nft" && (
+              <section className="space-y-3">
+                <div className="rounded-2xl border border-white/9 bg-[#111720] p-3">
+                  <div className="flex items-start justify-between gap-3"><span><b className="block text-sm text-slate-100">{tx("NFT кошелька", "Wallet NFTs")}</b><small className="mt-1 block text-[10px] leading-4 text-slate-500">{tx("Показываем только активы, которые сеть TON связывает с подключённым адресом.", "Only assets associated by the TON network with the connected address are shown.")}</small></span><PackageOpen className="h-4 w-4 shrink-0 text-[#8fb9ff]" /></div>
+                  <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" />
+                </div>
+                {!walletConnectionRestored ? (
+                  <div className="rounded-xl border border-white/8 bg-white/[0.025] p-5 text-center text-xs text-slate-500">{tx("Проверяем подключение кошелька…", "Checking wallet connection…")}</div>
+                ) : !walletAddress ? (
+                  <div className="rounded-xl border border-dashed border-[#3f8cff]/28 bg-[#3f8cff]/[0.035] p-6 text-center"><Gift className="mx-auto h-6 w-6 text-[#8fb9ff]" /><b className="mt-3 block text-sm text-slate-200">{tx("Подключите TON-кошелёк", "Connect a TON wallet")}</b><p className="mx-auto mt-1 max-w-xs text-[11px] leading-5 text-slate-500">{tx("После подключения покажем NFT этого адреса. Подпись, перевод и продажа не запрашиваются.", "After connection, we will show NFTs of this address. No signature, transfer or sale is requested.")}</p><button type="button" onClick={() => tonConnectUi.openModal()} className="mt-3 rounded-lg bg-[#1688f5] px-3 py-2 text-[11px] font-semibold text-white">{tx("Подключить кошелёк", "Connect wallet")}</button></div>
+                ) : walletNftsQuery.isPending ? (
+                  <div className="grid grid-cols-2 gap-2">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="aspect-[.8] animate-pulse rounded-xl border border-white/7 bg-white/[0.035]" />)}</div>
+                ) : walletNftsQuery.isError ? (
+                  <div className="rounded-xl border border-rose-300/15 bg-rose-500/[0.06] p-4 text-center"><b className="block text-xs text-rose-100">{tx("NFT пока не загрузились", "NFTs could not be loaded")}</b><p className="mt-1 text-[11px] leading-5 text-rose-100/60">{walletNftsQuery.error.message}</p><button type="button" onClick={() => void walletNftsQuery.refetch()} className="mt-2 text-[11px] font-semibold text-rose-100 underline underline-offset-4">{tx("Повторить", "Retry")}</button></div>
+                ) : <>
+                  <div className="flex gap-1 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
+                    {([
+                      ["all", tx("Все", "All")],
+                      ["gifts", tx("Гифты", "Gifts")],
+                      ["usernames", tx("Юзернеймы", "Usernames")],
+                      ["anonymous_numbers", tx("Анон-номера", "Anonymous")],
+                      ["domains", tx("Домены", "Domains")],
+                      ["other", tx("Другие", "Other")],
+                    ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setWalletNftFilter(value)} className={`h-7 shrink-0 rounded-full border px-2.5 text-[9px] font-medium ${walletNftFilter === value ? "border-[#3f8cff]/45 bg-[#3f8cff]/12 text-[#c8ddff]" : "border-white/10 bg-white/[0.025] text-slate-500"}`}>{label}</button>)}
+                  </div>
+                  <div className="flex items-center justify-between px-0.5 text-[10px] text-slate-500"><span>{visibleWalletNfts.length} {tx("NFT", "NFTs")}</span><span className="font-mono">{walletAddress.slice(0, 5)}…{walletAddress.slice(-4)}</span></div>
+                  {visibleWalletNfts.length ? <div className="grid grid-cols-2 gap-2">{visibleWalletNfts.map(item => <WalletNftCard key={item.address} item={item} language={language} />)}</div> : <div className="rounded-xl border border-dashed border-white/12 p-6 text-center"><Hash className="mx-auto h-5 w-5 text-slate-600" /><b className="mt-2 block text-xs text-slate-300">{walletNfts.length ? tx("В этой категории пока нет NFT", "No NFTs in this category") : tx("NFT в кошельке не найдено", "No NFTs found in this wallet")}</b><small className="mt-1 block text-[10px] leading-4 text-slate-500">{walletNfts.length ? tx("Выберите другую категорию.", "Choose a different category.") : tx("Сеть TON не вернула NFT для подключённого адреса.", "The TON network returned no NFTs for the connected address.")}</small></div>}
+                </>}
+              </section>
             )}
           </section>
         )}
