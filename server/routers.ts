@@ -8,6 +8,7 @@ import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteL
 import { getTelegramChatGifts, getTelegramGroupAdministrators, getTelegramUserAvatarUrl } from "./telegramBot";
 import { formatTonAmount } from "./tonFormatting";
 import { getWalletNfts } from "./tonNft";
+import { getSafeTonDepositError } from "./tonDepositErrorPolicy";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -209,22 +210,41 @@ export const appRouter = router({
         amountTon: z.string().trim().min(1).max(32),
         senderWalletAddress: z.string().trim().regex(/^[EU]Q[A-Za-z0-9_-]{46}$/, "Подключите TON-кошелёк mainnet"),
       }))
-      .mutation(async ({ ctx, input }) => await db.createTonDeposit({
-        userOpenId: ctx.user.openId,
-        amountTon: input.amountTon,
-        senderWalletAddress: input.senderWalletAddress,
-      })),
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await db.createTonDeposit({
+            userOpenId: ctx.user.openId,
+            amountTon: input.amountTon,
+            senderWalletAddress: input.senderWalletAddress,
+          });
+        } catch (error) {
+          console.error("[TonDeposit] Could not create deposit:", error);
+          throw new Error(getSafeTonDepositError(error));
+        }
+      }),
 
     markTonDepositSubmitted: protectedProcedure
       .input(z.object({ depositId: z.number().int().positive() }))
-      .mutation(async ({ ctx, input }) => await db.markTonDepositSubmitted({ userOpenId: ctx.user.openId, depositId: input.depositId })),
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await db.markTonDepositSubmitted({ userOpenId: ctx.user.openId, depositId: input.depositId });
+        } catch (error) {
+          console.error("[TonDeposit] Could not mark deposit submitted:", error);
+          throw new Error(getSafeTonDepositError(error));
+        }
+      }),
 
     verifyTonDeposit: protectedProcedure
       .input(z.object({ depositId: z.number().int().positive() }))
       .mutation(async ({ ctx, input }) => {
-        const result = await db.verifyTonDeposit({ userOpenId: ctx.user.openId, depositId: input.depositId });
-        if (result.newlyConfirmed) void notifyTonDepositCredited({ openId: ctx.user.openId, amountTon: result.amountTon });
-        return result;
+        try {
+          const result = await db.verifyTonDeposit({ userOpenId: ctx.user.openId, depositId: input.depositId });
+          if (result.newlyConfirmed) void notifyTonDepositCredited({ openId: ctx.user.openId, amountTon: result.amountTon });
+          return result;
+        } catch (error) {
+          console.error("[TonDeposit] Could not verify deposit:", error);
+          throw new Error(getSafeTonDepositError(error));
+        }
       }),
 
     getGroupDetail: publicProcedure

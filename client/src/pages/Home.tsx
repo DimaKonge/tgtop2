@@ -1335,7 +1335,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     onError: error => toast.error(error.message),
   });
   const createTonDepositMutation = trpc.tgTop.createTonDeposit.useMutation({
-    onError: error => toast.error(error.message),
+    onError: error => toast.error(error.message.includes("Failed query") ? "Не удалось подготовить пополнение. Попробуйте ещё раз через минуту." : error.message),
   });
   const markTonDepositSubmittedMutation = trpc.tgTop.markTonDepositSubmitted.useMutation({
     onError: error => toast.error(error.message),
