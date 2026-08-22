@@ -2317,9 +2317,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button type="button" aria-label={tx("Гео фильтр", "Geo filter")} title={tx("Гео", "Geo")} className="flex h-7 items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 text-[10px] font-medium text-slate-300 transition-colors hover:border-[#3390ec]/45 hover:text-[#79a7ff]">
-                            <Globe2 className="h-3 w-3 text-[#79a7ff]" />
-                            <span className="max-w-[64px] truncate">{country === "Все" ? tx("Весь мир", "World") : getCountryLabel(country, language)}</span>
+                          <button type="button" aria-label={tx("Гео фильтр", "Geo filter")} title={tx("Гео", "Geo")} className={`grid h-7 w-7 place-items-center rounded-md border transition-colors ${country !== "Все" ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                            <Globe2 className="h-3.5 w-3.5" />
                           </button>
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-64 border-white/10 bg-[#111720] p-2 text-slate-100 shadow-xl">
@@ -2346,9 +2345,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button type="button" aria-label={tx("Рубрики и категории", "Categories & topics")} title={tx("Категории", "Categories")} className="flex h-7 items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 text-[10px] font-medium text-slate-300 transition-colors hover:border-[#3390ec]/45 hover:text-[#79a7ff]">
-                            <FolderPlus className="h-3 w-3 text-[#79a7ff]" />
-                            <span className="max-w-[72px] truncate">{subcategory === "Все" ? (globalDirection === "Все" ? tx("Рубрики", "Topics") : globalDirection) : getSubcategoryLabel(subcategory, language)}</span>
+                          <button type="button" aria-label={tx("Рубрики и категории", "Categories & topics")} title={tx("Категории", "Categories")} className={`grid h-7 w-7 place-items-center rounded-md border transition-colors ${subcategory !== "Все" ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                            <Filter className="h-3.5 w-3.5" />
                           </button>
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-64 border-white/10 bg-[#111720] p-2 text-slate-100 shadow-xl">

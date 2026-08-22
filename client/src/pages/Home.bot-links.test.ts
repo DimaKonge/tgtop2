@@ -200,8 +200,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const [topSearchOpen, setTopSearchOpen] = useState(false);');
     expect(source).toContain('onClick={() => setTopSearchOpen(current => !current)}');
     expect(source).toContain('{topSearchOpen && <Input value={topSearchQuery}');
-    expect(source).toContain('topSection === "communities" && <button type="button" onClick={() => setFiltersOpen(true)}');
-    expect(source).toContain('aria-label={tx("Открыть фильтры сообществ", "Open community filters")}');
+    expect(source).toContain('topSection === "communities" && (');
+    expect(source).toContain('aria-label={tx("Гео фильтр", "Geo filter")}');
+    expect(source).toContain('aria-label={tx("Рубрики и категории", "Categories & topics")}');
+    expect(source).toContain('grid h-7 w-7 place-items-center rounded-md border transition-colors');
     expect(source).toContain('const getTargetSlotAddress = (slot: Slot) => {');
     expect(source).toContain('Выберите группу для места #${targetSlot.slotNumber}');
     expect(source).toContain('else if (targetSlot) openStarsPayment(group);');
