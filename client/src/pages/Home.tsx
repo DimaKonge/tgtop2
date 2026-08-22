@@ -1744,7 +1744,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const bonusBalanceUnits = account?.user?.bonusBalance ?? user?.bonusBalance ?? 0;
   const bonus = (bonusBalanceUnits / 100).toFixed(1);
   const mainTon = Number(account?.user?.mainBalanceTon ?? 0).toFixed(2);
-  const totalBalanceLabel = `${formatGram(bonusBalanceUnits)} GRAM`;
+  const totalBalanceLabel = `${(Number(mainTon) + bonusBalanceUnits / 100).toFixed(2)} GRAM`;
   const transactions = account?.transactions ?? [];
   const accountActivity = (accountActivityQuery.data ?? []) as Array<{
     id: string;

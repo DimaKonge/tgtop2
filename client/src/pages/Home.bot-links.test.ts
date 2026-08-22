@@ -194,7 +194,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('label: "Мой кабинет"');
     expect(source).toContain('aria-label={item.label}');
     expect(source).toContain('<span className="sr-only">{item.label}</span>');
-    expect(source).toContain('const totalBalanceLabel = `${formatGram(bonusBalanceUnits)} GRAM`;');
+    expect(source).toContain('const totalBalanceLabel = `${(Number(mainTon) + bonusBalanceUnits / 100).toFixed(2)} GRAM`;');
     expect(source).not.toContain('>Общий баланс</small>');
     expect(source).toContain('bg-[#14263b]/35');
     expect(source).toContain('const [topSearchOpen, setTopSearchOpen] = useState(false);');
