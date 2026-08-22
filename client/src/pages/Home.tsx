@@ -3744,9 +3744,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     setTonWithdrawalOpen(open);
                     if (open) {
                       setTonWithdrawalAddress(current => current || tonWithdrawalDefaultRecipient || walletAddress || "");
-                      setTonWithdrawalFlow("form");
-                      setTonWithdrawalQuote(null);
-                      setActiveTonWithdrawalId(null);
+                      const pending = tonWithdrawals.find(item => item.status === "broadcast_pending" || item.status === "sent");
+                      if (pending) {
+                        setActiveTonWithdrawalId(pending.id);
+                        setTonWithdrawalFlow("processing");
+                      } else {
+                        setTonWithdrawalFlow("form");
+                        setTonWithdrawalQuote(null);
+                        setActiveTonWithdrawalId(null);
+                      }
                     }
                   }}>
                     <button type="button" onClick={() => setTonWithdrawalOpen(true)} aria-label={tx("Вывести GRAM", "Withdraw GRAM")} className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] px-3 py-2 text-left transition-colors hover:bg-emerald-400/[0.13]"><b className="block text-[11px] text-emerald-100">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-emerald-300/75">GRAM</small></button>
