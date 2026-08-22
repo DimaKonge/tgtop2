@@ -49,7 +49,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('0.100 TON');
     expect(source).not.toContain('{language === "en" ? "Catalog" : "Каталог"}');
     expect(source).toContain('tx("Снять с листинга", "Remove from listing")');
-    expect(source).toContain('{formatTon(deal.price)} TON');
+    expect(source).toContain('{formatTon(deal.price)} GRAM');
     expect(source).toContain('grid grid-cols-3 gap-1.5');
     expect(source).not.toContain('ЛОТ · #{selectedSlot?.slotNumber ?? 1}');
     expect(source).toContain('>#{selectedSlot?.slotNumber ?? 1}</span>');
@@ -117,7 +117,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('useTonConnectUI');
     expect(source).toContain('tonConnectUi.openModal()');
     expect(source).toContain('language === "en" ? "Connected" : "Подключён"');
-    expect(source).toContain('balanceTon} TON');
+    expect(source).toContain('balanceTon} GRAM');
     expect(source).toContain('createStarsRankingPayment');
     expect(source).toContain('Оплатить GRAM');
     expect(source).toContain('шаг 0.1 GRAM');

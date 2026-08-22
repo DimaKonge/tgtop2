@@ -352,6 +352,14 @@ function toTonWithdrawalView(row: typeof tonWithdrawals.$inferSelect) {
 export async function getTonWithdrawals(openId: string) {
   const db = await getDb();
   if (!db) return [];
+  const pending = await db.select({ id: tonWithdrawals.id }).from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, openId), inArray(tonWithdrawals.status, ["broadcast_pending", "sent"]))).limit(3);
+  for (const withdrawal of pending) {
+    try {
+      await reconcileTonWithdrawal({ userOpenId: openId, withdrawalId: withdrawal.id });
+    } catch {
+      // Временная ошибка сети не должна ломать историю; следующая загрузка повторит только сверку.
+    }
+  }
   const rows = await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.userOpenId, openId)).orderBy(desc(tonWithdrawals.createdAt), desc(tonWithdrawals.id)).limit(20);
   return rows.map(toTonWithdrawalView);
 }
