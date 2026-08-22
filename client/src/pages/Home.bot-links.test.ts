@@ -210,6 +210,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('country !== "Все" || city !== "Все" || subcategory !== "Все"');
     expect(source).toContain('aria-label={tx("Сбросить географию и рубрику", "Reset location and topic")}');
     expect(source).toContain('setCountry("Все"); setCity("Все"); setSubcategory("Все");');
+    expect(source).toContain('managedCountries.filter(item => item.code !== "Global")');
+    expect(source).toContain('Markets: { ru: "Маркеты", en: "Markets" }');
     expect(source).toContain('const getTargetSlotAddress = (slot: Slot) => {');
     expect(source).toContain('Выберите группу для места #${targetSlot.slotNumber}');
     expect(source).toContain('else if (targetSlot) openStarsPayment(group);');

@@ -187,12 +187,12 @@ const CITY_OPTIONS: Record<string, Array<{ value: string; ru: string; en: string
   KZ: [{ value: "Almaty", ru: "Алматы", en: "Almaty" }, { value: "Astana", ru: "Астана", en: "Astana" }],
 };
 const CATEGORY_SUBCATEGORIES = {
-  "Каналы": ["General", "News", "Crypto", "Technology", "Business", "Education", "Entertainment", "Games", "Memes"],
-  "Чаты": ["General", "Community", "Dating", "City", "Support", "Work", "Hobbies", "Learning", "Games"],
+  "Каналы": ["General", "News", "Crypto", "Technology", "Business", "Education", "Entertainment", "Games", "Memes", "Dating", "Markets"],
+  "Чаты": ["General", "Community", "Dating", "City", "Support", "Work", "Hobbies", "Learning", "Games", "Markets"],
 } as const;
 const SUBCATEGORY_LABELS: Record<string, { ru: string; en: string }> = {
   News: { ru: "Новости", en: "News" }, Crypto: { ru: "Крипто", en: "Crypto" }, Technology: { ru: "Технологии", en: "Technology" }, Business: { ru: "Бизнес", en: "Business" }, Education: { ru: "Образование", en: "Education" }, Entertainment: { ru: "Развлечения", en: "Entertainment" }, Games: { ru: "Игры", en: "Games" }, Memes: { ru: "Мемы", en: "Memes" },
-  Community: { ru: "Сообщества", en: "Community" }, Dating: { ru: "Знакомства", en: "Dating" }, City: { ru: "Город", en: "City" }, Support: { ru: "Поддержка", en: "Support" }, Work: { ru: "Работа", en: "Work" }, Hobbies: { ru: "Хобби", en: "Hobbies" }, Learning: { ru: "Обучение", en: "Learning" }, General: { ru: "Общее", en: "General" },
+  Community: { ru: "Сообщества", en: "Community" }, Dating: { ru: "Знакомства", en: "Dating" }, Markets: { ru: "Маркеты", en: "Markets" }, City: { ru: "Город", en: "City" }, Support: { ru: "Поддержка", en: "Support" }, Work: { ru: "Работа", en: "Work" }, Hobbies: { ru: "Хобби", en: "Hobbies" }, Learning: { ru: "Обучение", en: "Learning" }, General: { ru: "Общее", en: "General" },
 };
 type Group = {
   id: number;
@@ -1837,7 +1837,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const getManagedTopicLabel = (category: "Каналы" | "Чаты" | "Боты", code: string) => managedTopics.find(topic => topic.category === category && topic.code === code)?.label ?? getSubcategoryLabel(code, language);
   const botTopicOptions = managedTopics.filter(topic => topic.category === "Боты");
   const globalSubcategoryCategory = globalDirection === "Каналы" || globalDirection === "Чаты" ? globalDirection : null;
-  const globalSubcategoryOptions = globalSubcategoryCategory ? managedTopics.filter(topic => topic.category === globalSubcategoryCategory).map(topic => topic.code) : [];
+  const globalSubcategoryOptions = Array.from(new Set(managedTopics
+    .filter(topic => topic.category !== "Боты" && (!globalSubcategoryCategory || topic.category === globalSubcategoryCategory) && topic.code !== "General")
+    .map(topic => topic.code)));
   const listingCategory = selectedListingGroups.length && selectedListingGroups.every(group => group.category === selectedListingGroups[0]?.category)
     ? selectedListingGroups[0]?.category
     : null;
@@ -2331,16 +2333,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-64 border-white/10 bg-[#111720] p-2 text-slate-100 shadow-xl">
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between pb-1 border-b border-white/8">
+                            <div className="border-b border-white/8 pb-1">
                               <b className="text-xs font-semibold">{tx("Выбрать регион", "Select Region")}</b>
-                              <button type="button" onClick={() => { setCountry("Все"); setCity("Все"); }} className="text-[10px] text-slate-400 hover:text-white">{tx("Сбросить", "Reset")}</button>
                             </div>
                             <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
                               <button type="button" onClick={() => { setCountry("Все"); setCity("Все"); }} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${country === "All" || country === "Все" ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
                                 <span>{tx("Весь мир", "Worldwide")}</span>
                                 {(country === "All" || country === "Все") && <Check className="h-3 w-3" />}
                               </button>
-                              {managedCountries.map(item => (
+                              {managedCountries.filter(item => item.code !== "Global").map(item => (
                                 <button key={item.code} type="button" onClick={() => { setCountry(item.code); setCity("Все"); }} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${country === item.code ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
                                   <span>{item.label}</span>
                                   {country === item.code && <Check className="h-3 w-3" />}
@@ -2359,9 +2360,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-64 border-white/10 bg-[#111720] p-2 text-slate-100 shadow-xl">
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between pb-1 border-b border-white/8">
+                            <div className="border-b border-white/8 pb-1">
                               <b className="text-xs font-semibold">{tx("Выбрать рубрику", "Select Topic")}</b>
-                              <button type="button" onClick={() => setSubcategory("Все")} className="text-[10px] text-slate-400 hover:text-white">{tx("Сбросить", "Reset")}</button>
                             </div>
                             <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
                               <button type="button" onClick={() => setSubcategory("Все")} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${subcategory === "Все" ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
@@ -3444,7 +3444,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               {ownerLeaderboard.length ? (
                 <div className="divide-y divide-white/7">
                   {ownerLeaderboard.map(entry => {
-                    const ownerLabel = entry.owner.telegramUsername ? `@${entry.owner.telegramUsername}` : (entry.owner.name ?? tx("Владелец TG TOP", "TG TOP owner"));
+                    const ownerLabel = entry.owner.name ?? tx("Владелец TG TOP", "TG TOP owner");
                     return <button key={entry.owner.openId} onClick={() => openOwner(entry.owner.openId)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.025]">
                       <span className="w-5 text-center text-xs font-semibold text-[#72a8ff]">{entry.rank}</span>
                       <span className="grid h-8 w-8 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-[10px] font-semibold">
