@@ -162,8 +162,13 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('getMinimumRankingBidGram');
     expect(source).toContain('<Slider value={[bidAmount]}');
     expect(source).not.toContain('Record a TON bid without payment');
-    expect(source).toContain('Добавить свою группу в список');
     expect(source).toContain('Добавить свою группу');
+    expect(source).toContain('const automaticPlacementSlot = firstAvailableRankingSlot');
+    expect(source).toContain('onClick={() => openMine(automaticPlacementSlot ?? undefined)}');
+    expect(source).toContain('const [listingCountrySheetOpen, setListingCountrySheetOpen] = useState(false);');
+    expect(source).toContain('const [listingSubcategorySheetOpen, setListingSubcategorySheetOpen] = useState(false);');
+    expect(source).toContain('<Sheet open={listingCountrySheetOpen} onOpenChange={setListingCountrySheetOpen}>');
+    expect(source).toContain('<Sheet open={listingSubcategorySheetOpen} onOpenChange={setListingSubcategorySheetOpen}>');
     expect(source).not.toContain('Добавьте первую группу через личную папку.</small>');
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('getPublicOwnerProfile.useQuery');
@@ -295,7 +300,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined');
     expect(source).toContain('h-[68px] border-white/8 bg-[#111720] px-3 py-2');
     expect(source).toContain('group relative flex h-[78px] w-full items-center justify-between gap-3 overflow-hidden rounded-xl');
-    expect(source).toContain('flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-dashed');
+    expect(source).toContain('flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed');
     expect(source).toContain('className="relative overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2 h-[64px]"');
     expect(source).toContain('absolute right-3 top-1/2 z-10 grid h-5 w-5 -translate-y-1/2');
     expect(source).toContain('relative h-6 w-11 shrink-0 rounded-full border transition-colors');
@@ -385,7 +390,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
     expect(source).toContain('const placementSlot = selectedSlot ?? (ownsDetail ? detailSlots.find(slot => !slot.group) : undefined);');
     expect(source).toContain('Вывести в ТОП');
-    expect(source).toContain('<select value={listingCountry}');
+    expect(source).not.toContain('<select value={listingCountry}');
+    expect(source).toContain('setListingCountrySheetOpen(true)');
+    expect(source).toContain('setListingSubcategorySheetOpen(true)');
     expect(source).toContain('Подкатегория');
     expect(source).toContain('detailReturnPage === "mine" && <div className="mt-2 grid grid-cols-2 gap-2">');
     expect(source).toContain('setListingSubcategory(group.subcategory ?? "General");');

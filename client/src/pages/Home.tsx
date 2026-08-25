@@ -1086,6 +1086,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [listingOpen, setListingOpen] = useState(false);
   const [inlineListingOpen, setInlineListingOpen] = useState(false);
   const [managerSheetOpen, setManagerSheetOpen] = useState(false);
+  const [listingCountrySheetOpen, setListingCountrySheetOpen] = useState(false);
+  const [listingSubcategorySheetOpen, setListingSubcategorySheetOpen] = useState(false);
   const [selectedManagerTelegramUserId, setSelectedManagerTelegramUserId] = useState<string | null>(null);
   const [listingCountry, setListingCountry] = useState<ListingCountry>("Global");
   const [listingCity, setListingCity] = useState("Все");
@@ -1947,6 +1949,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     .sort((left, right) => left.slotNumber - right.slotNumber);
   const rankedGroups = [...board, ...rankingContinuation].flatMap(slot => slot.group ? [slot.group] : []);
   const rankedGroupIds = new Set(rankedGroups.map(group => group.id));
+  const firstAvailableRankingSlot = slots
+    .filter(slot => !slot.group && matchesAudience(slot.group))
+    .sort((left, right) => left.slotNumber - right.slotNumber)[0] ?? null;
+  const automaticPlacementSlot = firstAvailableRankingSlot ?? [...slots]
+    .filter(slot => Boolean(slot.group) && matchesAudience(slot.group))
+    .sort((left, right) => {
+      const bidDifference = getMinimumRankingBidGram(left) - getMinimumRankingBidGram(right);
+      return bidDifference || left.slotNumber - right.slotNumber;
+    })[0] ?? null;
   const generalList = visibleGroups.filter(group => !rankedGroupIds.has(group.id));
   const searchCandidates = topSearchQuery.trim() ? [...rankedGroups, ...generalList] : generalList;
   const searchedGeneralList = searchCandidates.filter(group => {
@@ -3024,6 +3035,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </div>
                 ))}
               </div>
+              <button
+                type="button"
+                onClick={() => openMine(automaticPlacementSlot ?? undefined)}
+                className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#3f8cff]/35 bg-[#3f8cff]/[0.045] px-3 text-[11px] font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.1] active:scale-[0.985]"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {tx("Добавить свою группу", "Add your community")}
+              </button>
               </div>}
             </div>
             <section className="pt-2">
@@ -3080,16 +3099,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   );
                 })}
-                {searchedGeneralList.length > 0 && (
-                  <button
-                    onClick={() => openMine()}
-                    className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#3f8cff]/6 px-4 text-sm font-medium text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12"
-                  >
-                    <Plus className="h-4 w-4" />
-                    {tx("Добавить свою группу в список", "Add your community to the list")}
-                  </button>
-                )}
-                {searchedGeneralList.length === 0 && (
+                {topSearchQuery.trim() && searchedGeneralList.length === 0 && (
                   <button
                     onClick={() => openMine()}
                     className="flex h-[68px] w-full items-center gap-3 rounded-2xl border border-dashed border-[#3f8cff]/35 bg-[#111720] px-3 py-2 text-left transition-colors hover:bg-[#151d28]"
@@ -3758,19 +3768,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       )}
 
                       {selectedLotGroup && detailReturnPage === "mine" && <div className="mt-2 grid grid-cols-2 gap-2">
-                        <label className="rounded-xl border border-[#354966] bg-[#202b3a] p-2">
-                          <small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Гео</small>
-                          <select value={listingCountry} onChange={event => { setListingCountry(event.target.value); setListingCity("Все"); }} className="mt-0.5 w-full bg-transparent text-[11px] font-semibold text-slate-100 outline-none">
-                            {managedCountries.map(country => <option key={country.id} value={country.code} className="bg-[#202b3a]">{country.label}</option>)}
-                          </select>
-                          <small className="mt-0.5 block text-[9px] text-slate-500">{listingCity === "Все" ? "Страна / регион" : getManagedCityLabel(listingCountry, listingCity)}</small>
-                        </label>
-                        <label className="rounded-xl border border-[#354966] bg-[#202b3a] p-2">
-                          <small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Подкатегория</small>
-                          <select value={listingSubcategory} onChange={event => setListingSubcategory(event.target.value)} className="mt-0.5 w-full bg-transparent text-[11px] font-semibold text-slate-100 outline-none">
-                            {managedTopics.filter(topic => topic.category === (selectedLotGroup?.category ?? detail?.group.category ?? "Каналы")).map(topic => <option key={topic.id} value={topic.code} className="bg-[#202b3a]">{topic.label}</option>)}
-                          </select>
-                        </label>
+                        <button type="button" onClick={() => setListingCountrySheetOpen(true)} className="flex min-h-[58px] items-center justify-between gap-2 rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">
+                          <span className="min-w-0"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Гео</small><b className="mt-1 block truncate text-[11px] text-slate-100">{managedCountries.find(country => country.code === listingCountry)?.label ?? "Весь мир"}</b></span>
+                          <ChevronRight className="h-4 w-4 shrink-0 rotate-90 text-[#8fc4ff]" />
+                        </button>
+                        <button type="button" onClick={() => setListingSubcategorySheetOpen(true)} className="flex min-h-[58px] items-center justify-between gap-2 rounded-xl border border-[#354966] bg-[#202b3a] p-2 text-left transition-colors hover:bg-[#253247] active:scale-[0.99]">
+                          <span className="min-w-0"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Подкатегория</small><b className="mt-1 block truncate text-[11px] text-slate-100">{getManagedTopicLabel(selectedLotGroup.category, listingSubcategory)}</b></span>
+                          <ChevronRight className="h-4 w-4 shrink-0 rotate-90 text-[#8fc4ff]" />
+                        </button>
                       </div>}
 
                       {selectedLotGroup && <div className="mt-2 grid grid-cols-2 gap-2">
@@ -4504,6 +4509,42 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <button type="button" onClick={() => startBotAdminSetup("group")} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-[10px] font-semibold text-slate-200 transition-colors hover:bg-[#253247] active:scale-[0.98]"><Plus className="h-3.5 w-3.5 text-[#8fc4ff]" />Добавить чат</button>
               </div>
             </div>}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={listingCountrySheetOpen} onOpenChange={setListingCountrySheetOpen}>
+        <SheetContent side="bottom" className="!bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[62dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4 pb-2">
+            <SheetTitle className="text-slate-100">География размещения</SheetTitle>
+            <p className="text-[11px] leading-4 text-slate-500">Выберите страну или оставьте размещение доступным по всему миру.</p>
+          </SheetHeader>
+          <div className="space-y-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1">
+            {managedCountries.map(country => {
+              const selected = country.code === listingCountry;
+              return <button key={country.id} type="button" onClick={() => { setListingCountry(country.code); setListingCity("Все"); setListingCountrySheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${selected ? "border-[#3f8cff]/60 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+                <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{country.label}</b></span>
+                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+              </button>;
+            })}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={listingSubcategorySheetOpen} onOpenChange={setListingSubcategorySheetOpen}>
+        <SheetContent side="bottom" className="!bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[62dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4 pb-2">
+            <SheetTitle className="text-slate-100">Подкатегория</SheetTitle>
+            <p className="text-[11px] leading-4 text-slate-500">Рубрика задаёт, в каком разделе рейтинга будет показано сообщество.</p>
+          </SheetHeader>
+          <div className="space-y-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1">
+            {managedTopics.filter(topic => topic.category === (selectedLotGroup?.category ?? "Каналы")).map(topic => {
+              const selected = topic.code === listingSubcategory;
+              return <button key={topic.id} type="button" onClick={() => { setListingSubcategory(topic.code); setListingSubcategorySheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${selected ? "border-[#3f8cff]/60 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+                <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{topic.label}</b></span>
+                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+              </button>;
+            })}
           </div>
         </SheetContent>
       </Sheet>
