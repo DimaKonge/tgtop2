@@ -728,7 +728,7 @@ function Metric({
   );
 }
 
-function NftCard({ nft, language }: { nft: Nft; language: Language }) {
+function NftCard({ nft, language, onRent }: { nft: Nft; language: Language; onRent?: (nft: Nft) => void }) {
   const copy = language === "en"
     ? { sale: "Sale", rent: "Rent", both: "Sale + rent", available: "Available", rented: "Rented", sold: "Sold", owner: "Owner", perDay: "GRAM / day", days: "days", onchain: "On-chain", offchain: "Off-chain" }
     : { sale: "Продажа", rent: "Аренда", both: "Продажа + аренда", available: "Доступен", rented: "В аренде", sold: "Продан", owner: "Владелец", perDay: "GRAM / день", days: "дней", onchain: "On-chain", offchain: "Off-chain" };
@@ -761,7 +761,14 @@ function NftCard({ nft, language }: { nft: Nft; language: Language }) {
           </div>
         )}
       </div>
-      <span className="mt-3 inline-flex rounded-md bg-white/5 px-2 py-1 text-[10px] text-slate-400">{listingLabel}</span>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <span className="inline-flex rounded-md bg-white/5 px-2 py-1 text-[10px] text-slate-400">{listingLabel}</span>
+        {(nft.listingType === "rent" || nft.listingType === "both") && nft.status === "available" && onRent && (
+          <button type="button" onClick={() => onRent(nft)} className="rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 py-1.5 text-[10px] font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/18 active:scale-[0.98]">
+            {language === "en" ? "Request rental" : "Запросить аренду"}
+          </button>
+        )}
+      </div>
     </article>
   );
 }
@@ -1074,6 +1081,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [rewardPerInvite, setRewardPerInvite] = useState("");
   const [rewardPerManualAdd, setRewardPerManualAdd] = useState("");
   const [nftTransferOpen, setNftTransferOpen] = useState(false);
+  const [nftRentalDraft, setNftRentalDraft] = useState<Nft | null>(null);
   const [nftTransferStep, setNftTransferStep] = useState<"select" | "review" | "prepared">("select");
   const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
   const [nftMarketCategory, setNftMarketCategory] = useState<NftMarketCategory>("all");
@@ -1839,6 +1847,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.myNftTransfers.invalidate();
     },
     onError: error => toast.error(language === "en" ? "Could not prepare the NFT transfer. Please check the recipient and try again." : error.message),
+  });
+  const createNftRentalDeal = trpc.tgTop.createNftRentalDeal.useMutation({
+    onSuccess: result => {
+      setNftRentalDraft(null);
+      toast.success(tx(`Заявка на аренду @${result.nft.username} создана. Назначение через Telegram/Fragment ещё нужно подтвердить.`, `Rental request for @${result.nft.username} created. Telegram/Fragment assignment still requires confirmation.`));
+      void utils.tgTop.myDeals.invalidate();
+    },
+    onError: error => toast.error(error.message),
   });
   const completeOffchainNftTransferMutation = trpc.tgTop.completeOffchainNftTransfer.useMutation({
     onSuccess: () => {
@@ -2892,7 +2908,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {nftsQuery.isLoading ? (
                   <div className="rounded-2xl border border-white/8 bg-[#111720] p-6 text-center text-sm text-slate-500">{ui.loading}</div>
                 ) : visibleNfts.length ? (
-                  <div className="space-y-2">{visibleNfts.map(nft => <NftCard key={nft.id} nft={nft} language={language} />)}</div>
+                  <div className="space-y-2">{visibleNfts.map(nft => <NftCard key={nft.id} nft={nft} language={language} onRent={nft => {
+                    const entered = window.prompt(language === "en" ? `Rental days (${nft.minRentalDays}-${nft.maxRentalDays})` : `Срок аренды в днях (${nft.minRentalDays}–${nft.maxRentalDays})`, String(nft.minRentalDays));
+                    if (entered === null) return;
+                    const rentalDays = Number(entered.trim());
+                    if (!Number.isInteger(rentalDays) || rentalDays < nft.minRentalDays || rentalDays > nft.maxRentalDays) {
+                      toast.error(language === "en" ? "Enter a valid rental period." : "Укажите корректный срок аренды.");
+                      return;
+                    }
+                    const confirmed = window.confirm(language === "en"
+                      ? `Create a rental request for @${nft.username} for ${rentalDays} days? No payment or Telegram assignment will happen automatically.`
+                      : `Создать заявку на аренду @${nft.username} на ${rentalDays} дней? Оплата и назначение в Telegram автоматически не выполняются.`);
+                    if (confirmed) createNftRentalDeal.mutate({ nftId: nft.id, rentalDays });
+                  }} />)}</div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-white/12 bg-[#111720] p-7 text-center">
                     <p className="text-sm font-medium text-slate-300">{tx("В этой категории NFT пока нет", "No NFTs in this category yet")}</p>

@@ -17,6 +17,7 @@ import { getSearchIndexingError } from "./seoPolicy";
 import { buildTonDepositPayload, createTonDepositReference, decodeTonComment, findMatchingTonDepositTransaction, findRejectedTonDepositTransaction, formatNanoTon, getRecentTonDepositTransactions, normalizeTonAddress, parseTonToNano, toFriendlyTonAddress, TON_DEPOSIT_TTL_MS } from "./tonDeposits";
 import { buildTonPayoutExternalBoc, broadcastTonPayoutBoc, emulateTonPayoutFee, getConfiguredTonPayoutWalletAddress, getTonPayoutTransactionByMessageHash, TonPayoutRejectedError } from "./tonPayoutWallet";
 import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, getTonWithdrawalRiskLabel, quoteTonWithdrawal as getTonWithdrawalQuote, TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS, TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO } from "./tonWithdrawalPolicy";
+import { canCancelNftRental, canConfirmNftRental, rentalTotalUnits, validateRentalDays, NFT_RENTAL_MAX_DAYS as POLICY_NFT_RENTAL_MAX_DAYS } from "./nftRentalPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -2638,4 +2639,74 @@ export async function confirmProtectedGroupTransfer(dealId: number, buyerOpenId:
     eq(deals.status, "active")
   ));
   return { settlementLocked: true, alreadyConfirmed: false };
+}
+
+const NFT_RENTAL_WINDOW_MS = 24 * 60 * 60 * 1000;
+const NFT_RENTAL_MAX_DAYS = POLICY_NFT_RENTAL_MAX_DAYS;
+
+function nftRentalReference() {
+  return `nft_rent_${Date.now()}_${randomBytes(6).toString("hex")}`;
+}
+
+/** Creates an idempotent rental intent. It never debits a balance and never assigns a Telegram username. */
+export async function createNftRentalDeal(nftId: number, buyerOpenId: string, rentalDays: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (!Number.isInteger(rentalDays) || rentalDays < 1 || rentalDays > NFT_RENTAL_MAX_DAYS) throw new Error("Укажите корректный срок аренды");
+  const [nft] = await db.select().from(nftUsernames).where(eq(nftUsernames.id, nftId)).limit(1);
+  if (!nft || nft.status !== "available" || (nft.listingType !== "rent" && nft.listingType !== "both")) throw new Error("Collectible-юзернейм недоступен для аренды");
+  if (nft.ownerOpenId === buyerOpenId) throw new Error("Нельзя арендовать собственный юзернейм");
+  if (!validateRentalDays(rentalDays, nft.minRentalDays, nft.maxRentalDays)) throw new Error(`Срок аренды должен быть от ${nft.minRentalDays} до ${nft.maxRentalDays} дней`);
+  const [existing] = await db.select().from(deals).where(and(eq(deals.nftId, nftId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.dealType, "nft_rent"), eq(deals.status, "open"))).limit(1);
+  if (existing) return { deal: existing, nft, requiresExternalAssignment: true };
+  await db.insert(deals).values({ nftId, buyerOpenId, sellerOpenId: nft.ownerOpenId, price: String(rentalTotalUnits(nft.rentalAmountPerDay, rentalDays)), dealType: "nft_rent", rentalDays, status: "open", fundingReference: nftRentalReference() });
+  const [deal] = await db.select().from(deals).where(and(eq(deals.nftId, nftId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.dealType, "nft_rent"), eq(deals.status, "open"))).orderBy(desc(deals.id)).limit(1);
+  return { deal, nft, requiresExternalAssignment: true };
+}
+
+/** Internal-only: call after independent payment/escrow verification. */
+export async function markNftRentalFunded(dealId: number, fundingReference: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (!fundingReference.trim()) throw new Error("Нужна ссылка подтверждённого escrow-платежа");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.dealType, "nft_rent"))).limit(1);
+  if (!deal) throw new Error("Аренда не найдена");
+  if (deal.status === "escrow_funded" || deal.status === "active") return deal;
+  if (deal.status !== "open") throw new Error("Эту аренду нельзя профинансировать");
+  const fundedAt = new Date();
+  await db.update(deals).set({ status: "escrow_funded", fundingReference: fundingReference.trim(), fundedAt, expiresAt: new Date(fundedAt.getTime() + NFT_RENTAL_WINDOW_MS) }).where(and(eq(deals.id, dealId), eq(deals.status, "open")));
+  const [updated] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+  return updated;
+}
+
+/** Internal-only: records an externally verified Telegram/Fragment assignment. */
+export async function observeNftRentalAssignment(dealId: number, evidence: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.dealType, "nft_rent"))).limit(1);
+  if (!deal || deal.status !== "escrow_funded") throw new Error("Сначала нужен подтверждённый escrow-платёж");
+  if (!evidence.trim()) throw new Error("Нужна подтверждённая ссылка назначения Telegram/Fragment");
+  if (deal.expiresAt && deal.expiresAt.getTime() < Date.now()) throw new Error("Окно назначения аренды истекло");
+  await db.update(deals).set({ status: "active", transferObservedAt: new Date(), transferEvidence: evidence.trim().slice(0, 512) }).where(and(eq(deals.id, dealId), eq(deals.status, "escrow_funded")));
+  const [updated] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+  return updated;
+}
+
+export async function confirmNftRental(dealId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.dealType, "nft_rent"))).limit(1);
+  if (!deal || !canConfirmNftRental(deal.status, Boolean(deal.transferObservedAt))) throw new Error("Подтверждение аренды пока недоступно");
+  if (deal.buyerConfirmedAt) return { settlementLocked: true, alreadyConfirmed: true };
+  await db.update(deals).set({ buyerConfirmedAt: new Date() }).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.status, "active")));
+  return { settlementLocked: true, alreadyConfirmed: false };
+}
+
+export async function cancelNftRental(dealId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.dealType, "nft_rent"))).limit(1);
+  if (!deal || !canCancelNftRental(deal.status)) throw new Error("Эту аренду уже нельзя отменить");
+  await db.update(deals).set({ status: "cancelled", cancelledAt: new Date() }).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.status, deal.status)));
+  return { requiresEscrowRefund: deal.status === "escrow_funded", noAssetTransfer: true };
 }

@@ -618,6 +618,15 @@ export const appRouter = router({
         await db.rentNft(input.nftId, ctx.user.openId, input.rentalDays);
         return { success: true };
       }),
+    createNftRentalDeal: protectedProcedure
+      .input(z.object({ nftId: z.number().int().positive(), rentalDays: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => db.createNftRentalDeal(input.nftId, ctx.user.openId, input.rentalDays)),
+    cancelNftRental: protectedProcedure
+      .input(z.object({ dealId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => db.cancelNftRental(input.dealId, ctx.user.openId)),
+    confirmNftRental: protectedProcedure
+      .input(z.object({ dealId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => db.confirmNftRental(input.dealId, ctx.user.openId)),
 
     createProtectedGroupDeal: protectedProcedure
       .input(z.object({ groupId: z.number() }))
