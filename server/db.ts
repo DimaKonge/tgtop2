@@ -15,7 +15,7 @@ import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
 import { getTelegramChatIdFromOpenId, verifyTelegramUserChatBoost } from "./telegramNotifications";
 import { getSearchIndexingError } from "./seoPolicy";
 import { buildTonDepositPayload, createTonDepositReference, decodeTonComment, findMatchingTonDepositTransaction, findRejectedTonDepositTransaction, formatNanoTon, getRecentTonDepositTransactions, normalizeTonAddress, parseTonToNano, toFriendlyTonAddress, TON_DEPOSIT_TTL_MS } from "./tonDeposits";
-import { buildTonPayoutExternalBoc, broadcastTonPayoutBoc, emulateTonPayoutFee, getConfiguredTonPayoutWalletAddress, TonPayoutRejectedError } from "./tonPayoutWallet";
+import { buildTonPayoutExternalBoc, broadcastTonPayoutBoc, emulateTonPayoutFee, getConfiguredTonPayoutWalletAddress, getTonPayoutTransactionByMessageHash, TonPayoutRejectedError } from "./tonPayoutWallet";
 import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, getTonWithdrawalRiskLabel, quoteTonWithdrawal as getTonWithdrawalQuote, TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS, TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO } from "./tonWithdrawalPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
@@ -387,6 +387,8 @@ export async function createTonWithdrawal(input: { userOpenId: string; amountTon
   if (destinationWalletAddress === payoutWalletAddress) throw new Error("Адрес получателя не может совпадать с горячим кошельком выплат");
   const existing = (await db.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), eq(tonWithdrawals.idempotencyKey, input.idempotencyKey))).limit(1))[0];
   if (existing) return toTonWithdrawalView(existing);
+  const active = (await db.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), inArray(tonWithdrawals.status, ["queued", "manual_review", "broadcast_pending", "sent"]))).orderBy(desc(tonWithdrawals.createdAt), desc(tonWithdrawals.id)).limit(1))[0];
+  if (active) return toTonWithdrawalView(active);
 
   const now = new Date();
   const [priorDestination, userHour, addressRecent, userDay, globalMinute] = await Promise.all([
@@ -413,6 +415,11 @@ export async function createTonWithdrawal(input: { userOpenId: string; amountTon
     const duplicate = (await tx.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), eq(tonWithdrawals.idempotencyKey, input.idempotencyKey))).limit(1))[0];
     if (duplicate) {
       created = duplicate;
+      return;
+    }
+    const activeInTransaction = (await tx.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), inArray(tonWithdrawals.status, ["queued", "manual_review", "broadcast_pending", "sent"]))).orderBy(desc(tonWithdrawals.createdAt), desc(tonWithdrawals.id)).limit(1))[0];
+    if (activeInTransaction) {
+      created = activeInTransaction;
       return;
     }
     const debit = await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} - ${grossTon}` }).where(and(eq(users.openId, input.userOpenId), gte(users.mainBalanceTon, grossTon)));
@@ -498,7 +505,11 @@ export async function reconcileTonWithdrawal(input: { userOpenId: string; withdr
   if (!withdrawal) throw new Error("Заявка на вывод не найдена");
   if (withdrawal.status !== "broadcast_pending" && withdrawal.status !== "sent") return toTonWithdrawalView(withdrawal);
   const transactions = await getRecentTonDepositTransactions(withdrawal.payoutWalletAddress);
-  const matched = transactions.find(transaction => transaction.success && transaction.hash && transaction.lt !== null && transaction.lt !== undefined && (transaction.out_msgs ?? []).some(message => {
+  const trackedTransaction = withdrawal.externalMessageHash
+    ? await getTonPayoutTransactionByMessageHash(withdrawal.externalMessageHash)
+    : null;
+  const candidates = trackedTransaction ? [trackedTransaction, ...transactions] : transactions;
+  const matched = candidates.find(transaction => transaction.success && transaction.hash && transaction.lt !== null && transaction.lt !== undefined && (transaction.out_msgs ?? []).some(message => {
     try {
       return normalizeTonAddress(message?.destination?.address ?? "") === withdrawal.destinationWalletAddress && BigInt(message?.value ?? "0") === BigInt(withdrawal.netAmountNano) && decodeTonComment(message?.raw_body) === withdrawal.reference;
     } catch {

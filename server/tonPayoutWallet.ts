@@ -1,10 +1,31 @@
-import { Address, beginCell, external, internal, SendMode, storeMessage } from "@ton/core";
+import { Address, beginCell, Cell, external, internal, SendMode, storeMessage } from "@ton/core";
 import { mnemonicToPrivateKey, mnemonicValidate } from "@ton/crypto";
 import { WalletContractV4 } from "@ton/ton/dist/wallets/v4/WalletContractV4.js";
 import { normalizeTonAddress } from "./tonDeposits";
 
 type TonApiAccount = { status?: string | null };
 type TonApiSeqno = { decoded?: { seqno?: number | string }; stack?: Array<unknown> };
+export type TonPayoutTrackedTransaction = {
+  hash?: string | null;
+  lt?: string | number | null;
+  success?: boolean | null;
+  total_fees?: string | number | null;
+  out_msgs?: Array<{ destination?: { address?: string | null } | null; value?: string | number | null; raw_body?: string | null }> | null;
+};
+
+function getNormalizedExternalMessageHash(destination: Address, body: Cell) {
+  return beginCell()
+    .storeUint(2, 2)
+    .storeUint(0, 2)
+    .storeAddress(destination)
+    .storeUint(0, 4)
+    .storeBit(false)
+    .storeBit(true)
+    .storeRef(body)
+    .endCell()
+    .hash()
+    .toString("hex");
+}
 
 function getTonApiHeaders() {
   const key = process.env.TONAPI_API_KEY?.trim();
@@ -77,7 +98,7 @@ export async function buildTonPayoutExternalBoc(input: { destinationWalletAddres
   const root = beginCell().store(storeMessage(message)).endCell();
   return {
     boc: root.toBoc().toString("base64"),
-    externalMessageHash: root.hash().toString("hex"),
+    externalMessageHash: getNormalizedExternalMessageHash(wallet.address, body),
     payoutWalletAddress,
     seqno: state.seqno,
   };
@@ -98,6 +119,17 @@ export async function broadcastTonPayoutBoc(boc: string) {
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new TonPayoutRejectedError();
+}
+
+export async function getTonPayoutTransactionByMessageHash(messageHash: string): Promise<TonPayoutTrackedTransaction | null> {
+  if (!/^[a-f0-9]{64}$/i.test(messageHash)) return null;
+  const response = await fetch(`https://tonapi.io/v2/blockchain/messages/${messageHash}/transaction`, {
+    headers: getTonApiHeaders(),
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Не удалось проверить статус сообщения выплаты");
+  return await response.json() as TonPayoutTrackedTransaction;
 }
 
 export async function emulateTonPayoutFee(boc: string) {
