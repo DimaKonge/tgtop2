@@ -38,6 +38,10 @@ describe("TG TOP workspace wallet NFT view", () => {
     expect(source).toContain('void tonConnectUi.disconnect().catch(() => undefined)');
     expect(source).toContain('window.localStorage.removeItem(ownerKey)');
     expect(source).toContain('ownerOpenId={user?.openId}');
+    expect(source).toContain('Аренда collectible-юзернейма');
+    expect(source).toContain('Эскроу подтверждено');
+    expect(source).toContain('Оплата и назначение имени не выполняются автоматически.');
+    expect(source).toContain('Автоматического назначения имени не было.');
   });
 
   it("places the expandable real channel-gifts panel after audience statistics", () => {

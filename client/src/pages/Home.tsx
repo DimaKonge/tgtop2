@@ -2043,7 +2043,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       action: () => void copyReferralLink(),
     },
   ];
-  const dealStatusLabel = (status: typeof deals[number]["status"]) => {
+  const dealStatusLabel = (status: typeof deals[number]["status"], dealType: typeof deals[number]["dealType"] = "group_buy") => {
     const labels = {
       open: tx("Ожидает оплаты", "Awaiting payment"),
       escrow_funded: tx("Средства в эскроу", "Funds in escrow"),
@@ -2053,14 +2053,39 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       cancelled: tx("Отменена", "Cancelled"),
       disputed: tx("На разборе", "Under review"),
     } as const;
+    if (dealType === "nft_rent") {
+      const rentalLabels = {
+        open: tx("Заявка создана", "Request created"),
+        escrow_funded: tx("Эскроу подтверждено", "Escrow funded"),
+        active: tx("Назначение подтверждено", "Assignment observed"),
+        completed: tx("Аренда завершена", "Rental completed"),
+        expired: tx("Срок истёк", "Rental expired"),
+        cancelled: tx("Заявка отменена", "Request cancelled"),
+        disputed: tx("На разборе", "Under review"),
+      } as const;
+      return rentalLabels[status];
+    }
     return labels[status];
   };
   const getDaysRemaining = (expiresAt: Date | null) => {
     if (!expiresAt) return null;
     return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000));
   };
-  const getProtectedDealGuidance = (status: string, isBuyer: boolean, buyerConfirmed = false) => {
+  const getProtectedDealGuidance = (status: string, isBuyer: boolean, buyerConfirmed = false, dealType: typeof deals[number]["dealType"] = "group_buy") => {
     const role = isBuyer ? "buyer" : "seller";
+    if (dealType === "nft_rent") {
+      const rentalGuidance: Record<string, Record<"buyer" | "seller", [string, string]>> = {
+        open: { buyer: ["Заявка создана. Оплата и назначение имени не выполняются автоматически.", "Request created. Payment and username assignment are not automatic."], seller: ["Заявка получена. Не передавайте имя до подтверждённого эскроу и официального Telegram/Fragment-действия.", "Request received. Do not assign the username before verified escrow and an official Telegram/Fragment action."] },
+        escrow_funded: { buyer: ["Эскроу подтверждено. Дождитесь фиксации назначения в Telegram/Fragment; скрытой передачи нет.", "Escrow is verified. Wait for assignment to be observed in Telegram/Fragment; no hidden transfer occurs."], seller: ["Эскроу подтверждено. Назначение имени ещё не зафиксировано — подтвердите его только после проверки Telegram/Fragment.", "Escrow is verified. Username assignment is not observed yet — confirm only after checking Telegram/Fragment."] },
+        active: { buyer: buyerConfirmed ? ["Назначение зафиксировано и ваше подтверждение записано.", "Assignment is observed and your confirmation is recorded."] : ["Назначение зафиксировано. Проверьте имя в Telegram/Fragment и подтвердите аренду.", "Assignment is observed. Verify the username in Telegram/Fragment and confirm the rental."], seller: ["Назначение зафиксировано. Финальный расчёт остаётся защищённым до подтверждения аренды.", "Assignment is observed. Final settlement remains protected until rental confirmation."] },
+        completed: { buyer: ["Защищённая аренда завершена.", "Protected rental is complete."], seller: ["Защищённая аренда завершена.", "Protected rental is complete."] },
+        expired: { buyer: ["Срок заявки истёк. Автоматического назначения имени не было.", "The request expired. No automatic username assignment occurred."], seller: ["Срок заявки истёк. Проверьте возврат эскроу по защищённому сценарию.", "The request expired. Verify the escrow refund through the protected flow."] },
+        cancelled: { buyer: ["Заявка отменена без автоматической передачи имени.", "Request cancelled without automatic username transfer."], seller: ["Заявка отменена без автоматической передачи имени.", "Request cancelled without automatic username transfer."] },
+        disputed: { buyer: ["Аренда находится на разборе.", "Rental is under review."], seller: ["Аренда находится на разборе.", "Rental is under review."] },
+      };
+      const [ru, en] = rentalGuidance[status]?.[role] ?? ["Статус аренды обновляется.", "Rental status is updating."];
+      return tx(ru, en);
+    }
     const guidance: Record<string, Record<"buyer" | "seller", [string, string]>> = {
       open: {
         buyer: ["Офер создан. Оплата станет доступна только после запуска проверенного эскроу.", "Offer created. Payment will become available only after verified escrow launches."],
@@ -4255,7 +4280,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     const canCancel = isBuyer && (deal.status === "open" || deal.status === "escrow_funded");
                     const canConfirmTransfer = isBuyer && deal.status === "active" && !deal.buyerConfirmedAt;
                     const remainingDays = getDaysRemaining(deal.expiresAt);
-                    const title = deal.groupUsername ? `@${deal.groupUsername}` : (deal.groupTitle ?? tx("Группа TG TOP", "TG TOP community"));
+                    const title = deal.dealType === "nft_rent" ? tx("Аренда collectible-юзернейма", "Collectible username rental") : deal.groupUsername ? `@${deal.groupUsername}` : (deal.groupTitle ?? tx("Группа TG TOP", "TG TOP community"));
                     return (
                       <div key={deal.id} className="px-4 py-3.5">
                         <div className="flex items-start justify-between gap-3">
@@ -4269,7 +4294,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         </div>
                         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                           <span className="rounded-md bg-white/5 px-2 py-1 text-[10px] text-slate-300">
-                            {dealStatusLabel(deal.status)}
+                            {dealStatusLabel(deal.status, deal.dealType)}
                           </span>
                           {remainingDays !== null && deal.status === "escrow_funded" && (
                             <small className="text-[10px] text-slate-500">
@@ -4296,7 +4321,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           )}
                         </div>
                         <p className="mt-2 text-[11px] leading-4 text-slate-500">
-                          {getProtectedDealGuidance(deal.status, isBuyer, Boolean(deal.buyerConfirmedAt))}
+                          {getProtectedDealGuidance(deal.status, isBuyer, Boolean(deal.buyerConfirmedAt), deal.dealType)}
                         </p>
                       </div>
                     );
