@@ -168,6 +168,8 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('getPublicOwnerProfile.useQuery');
     expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink\n    ?? detail?.group.inviteLink');
+    expect(source).toContain('const groupUrl = group?.inviteLink ?? (group?.username ? `https://t.me/${group.username}` : null);');
+    expect(source).toContain('const groupUrl = group.inviteLink ?? (group.username ? `https://t.me/${group.username}` : null);');
     expect(source).toContain('const openRewardAwareEntry = () => {');
     expect(source).toContain('onClick={openRewardAwareEntry}');
     expect(source).toContain('disabled={!detailEntryUrl}');
@@ -452,6 +454,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const [detailStatsPeriod, setDetailStatsPeriod] = useState<DetailStatsPeriod>("day")');
     expect(source).toContain('aria-label="Период статистики"');
     expect(source).toContain("['day', 'День'], ['month', 'Месяц'], ['all', 'Всё время']");
+    expect(source).toContain('{detail && <section className="mt-3 rounded-xl border border-[#31435f] bg-[#202b3a] p-3">');
+    expect(source).toContain('{detail && <div className="mt-3 grid grid-cols-2 gap-2">');
     expect(source).toContain('Пригласили');
     expect(source).not.toContain('по ссылкам бота');
     expect(source).toContain("{n(group.membersCount, language)} {language === \"en\" ? \"members\" : \"участников\"} · +{n(group.joinedCount, language)}");

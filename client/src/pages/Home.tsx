@@ -596,7 +596,7 @@ function GroupCard({
     : "flex h-full items-center gap-3";
   const avatarSrc = group ? getTelegramAvatarSrc(group) : null;
   const animatedAvatarSrc = group?.animatedAvatarUrl ?? null;
-  const groupUrl = group?.username ? `https://t.me/${group.username}` : (group?.inviteLink || null);
+  const groupUrl = group?.inviteLink ?? (group?.username ? `https://t.me/${group.username}` : null);
   return (
     <div
       role="button"
@@ -3505,7 +3505,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </button>}
                   </div>
 
-                  {ownsDetail && <section className="mt-3 rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
+                  {detail && <section className="mt-3 rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="text-base font-bold text-white">Динамика аудитории</h2>
                       <span className="text-xs font-semibold text-[#75adff]">{n(detail.group.membersCount)} {detailMembersLabel}</span>
@@ -3518,7 +3518,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   </section>}
 
-                  {ownsDetail && <div className="mt-3 grid grid-cols-2 gap-2">
+                  {detail && <div className="mt-3 grid grid-cols-2 gap-2">
                     <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
                       <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-400/10 text-emerald-300"><TrendingUp className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Вступления</small><b className="mt-0.5 block text-2xl leading-none text-white">{detailJoinedForPeriod === null ? '—' : n(detailJoinedForPeriod)}</b></span></div>
                       <small className="mt-2 block text-[10px] text-emerald-300">зафиксировано ботом</small>
@@ -3785,7 +3785,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               {activeModerationListings.length ? (
                 <div className="divide-y divide-white/8">
                   {activeModerationListings.map(group => {
-                    const groupUrl = group.username ? `https://t.me/${group.username}` : group.inviteLink;
+                    const groupUrl = group.inviteLink ?? (group.username ? `https://t.me/${group.username}` : null);
                     return (
                       <article key={group.id} className="flex items-center gap-2 px-3 py-2">
                         <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-white/10 bg-[#17212b] text-[10px] font-semibold text-slate-300">
