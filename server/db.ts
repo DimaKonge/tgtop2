@@ -846,7 +846,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
 
   const group = groupId ? await getGroupById(groupId) : undefined;
   if (!groupId || !group) throw new Error("Группа недоступна для размещения");
-  if (options?.subcategory) {
+  if (options?.subcategory && options.subcategory !== "General") {
     const [topic] = await db.select({ id: catalogTopics.id }).from(catalogTopics).where(and(eq(catalogTopics.category, group.category), eq(catalogTopics.code, options.subcategory))).limit(1);
     if (!topic) throw new Error("Выберите подкатегорию из доступного списка");
   }
@@ -1888,7 +1888,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
     const [city] = await db.select({ id: catalogCities.id }).from(catalogCities).where(and(eq(catalogCities.countryCode, effectiveCountry), eq(catalogCities.code, listingOptions.city))).limit(1);
     if (!city) throw new Error("Выберите город из доступного списка");
   }
-  if (listingOptions.subcategory) {
+  if (listingOptions.subcategory && listingOptions.subcategory !== "General") {
     const categories = Array.from(new Set(groups.map(group => group.category)));
     const category = categories.length === 1 ? categories[0] : undefined;
     const [topic] = category
