@@ -460,7 +460,8 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('по ссылкам бота');
     expect(source).toContain("{n(group.membersCount, language)} {language === \"en\" ? \"members\" : \"участников\"} · +{n(group.joinedCount, language)}");
     expect(source).toContain('tx("Гифты", "Gifts")');
-    expect(source).toContain('detail?.group.monthlyEntryInviteLink\n    ?? detail?.group.inviteLink\n    ?? (detail?.group.username ? `https://t.me/${detail.group.username}` : null)');
+    expect(source).toContain('detail?.group.monthlyEntryInviteLink\n    ?? detail?.group.inviteLink\n    ?? null');
+    expect(source).not.toContain('(detail?.group.username ? `https://t.me/${detail.group.username}` : null)');
     expect(source).toContain('tx("Анонимные номера", "Anonymous numbers")');
     expect(source).toContain('tx("Другие NFT", "Other NFTs")');
     expect(source).toContain('setNftMarketCategory(value)');

@@ -2242,7 +2242,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : outbidMinimum;
   const detailEntryUrl = detail?.group.monthlyEntryInviteLink
     ?? detail?.group.inviteLink
-    ?? (detail?.group.username ? `https://t.me/${detail.group.username}` : null);
+    ?? null;
   const detailHasPaidEntry = Boolean(detail?.group.monthlyEntryInviteLink && detail.group.monthlyEntryStars);
   const detailOwner = detail?.owner ?? null;
   const detailSnapshots = [...(detail?.snapshots ?? [])].sort((left, right) => new Date(left.recordedAt).getTime() - new Date(right.recordedAt).getTime());
