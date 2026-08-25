@@ -3040,7 +3040,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 onClick={() => openMine(automaticPlacementSlot ?? undefined)}
                 aria-label={tx("Добавить свою группу", "Add your community")}
                 title={tx("Добавить свою группу", "Add your community")}
-                className="mx-auto grid h-8 w-8 place-items-center rounded-lg border border-dashed border-[#3f8cff]/45 bg-[#3f8cff]/[0.055] text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.13] active:scale-[0.92]"
+                className="grid h-8 w-full place-items-center rounded-lg border border-dashed border-[#3f8cff]/45 bg-[#3f8cff]/[0.055] text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.13] active:scale-[0.985]"
               >
                 <Plus className="h-4 w-4" />
               </button>

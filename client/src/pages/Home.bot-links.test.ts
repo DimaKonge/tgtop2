@@ -166,7 +166,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const automaticPlacementSlot = firstAvailableRankingSlot');
     expect(source).toContain('onClick={() => openMine(automaticPlacementSlot ?? undefined)}');
     expect(source).toContain('aria-label={tx("Добавить свою группу", "Add your community")}');
-    expect(source).toContain('className="mx-auto grid h-8 w-8 place-items-center');
+    expect(source).toContain('className="grid h-8 w-full place-items-center');
     expect(source).not.toContain('className="flex h-10 w-full items-center justify-center gap-1.5');
     expect(source).toContain('const compactRankedSlots = useMemo(');
     expect(source).toContain('const rankingContinuation = compactRankedSlots.slice(7);');
@@ -309,7 +309,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined');
     expect(source).toContain('h-[68px] border-white/8 bg-[#111720] px-3 py-2');
     expect(source).toContain('group relative flex h-[78px] w-full items-center justify-between gap-3 overflow-hidden rounded-xl');
-    expect(source).toContain('mx-auto grid h-8 w-8 place-items-center rounded-lg border border-dashed');
+    expect(source).toContain('grid h-8 w-full place-items-center rounded-lg border border-dashed');
     expect(source).toContain('className="relative overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2 h-[64px]"');
     expect(source).toContain('absolute right-3 top-1/2 z-10 grid h-5 w-5 -translate-y-1/2');
     expect(source).toContain('relative h-6 w-11 shrink-0 rounded-full border transition-colors');
