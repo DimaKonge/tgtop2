@@ -21,6 +21,7 @@ describe("wallet NFT classification", () => {
       collection: { name: "Telegram Gifts", address: "0:collection" },
     })).toMatchObject({ name: "Gift", imageUrl: "https://ipfs.io/ipfs/not-rendered", imageUrls: ["https://ipfs.io/ipfs/not-rendered", "https://cdn.example/gift.png"], mediaKind: "image", category: "gifts" });
     expect(normalizeWalletNft({ address: "0:video", metadata: { name: "Animated Gift", animation_url: "https://cdn.example/gift.webm" } })).toMatchObject({ imageUrl: "https://cdn.example/gift.webm", mediaKind: "video" });
+    expect(normalizeWalletNft({ address: "0:preview", metadata: { name: "Preview Gift" }, previews: [{ url: "https://cdn.example/small.png", resolution: "100x100" }, { url: "https://cdn.example/large.png", resolution: "800x800" }] })?.imageUrl).toBe("https://cdn.example/large.png");
     expect(normalizeWalletNft({ address: "0:gift", metadata: { name: "IPFS Gift", image: "ipfs://ipfs/QmGift/image.webp" } })?.imageUrl).toBe("https://ipfs.io/ipfs/QmGift/image.webp");
     expect(normalizeWalletNft({ metadata: { name: "Missing address" } })).toBeNull();
   });

@@ -64,11 +64,20 @@ export function normalizeWalletNft(item: TonApiNftItem): WalletNftItem | null {
   if (!item.address || typeof item.address !== "string") return null;
   const name = item.metadata?.name?.trim() || item.collection?.name?.trim() || `NFT #${item.index ?? "—"}`;
   const animationUrl = getSafeImageUrl(item.metadata?.animation_url);
+  const previewUrls = [...(item.previews ?? [])]
+    .sort((left, right) => {
+      const area = (value?: string) => {
+        const match = value?.match(/(\d+)x(\d+)/i);
+        return match ? Number(match[1]) * Number(match[2]) : 0;
+      };
+      return area(right.resolution) - area(left.resolution);
+    })
+    .map(preview => getSafeImageUrl(preview.url));
   const imageUrls = Array.from(new Set([
     animationUrl,
     getSafeImageUrl(item.metadata?.image),
     getSafeImageUrl(item.metadata?.image_url),
-    ...(item.previews ?? []).map(preview => getSafeImageUrl(preview.url)),
+    ...previewUrls,
   ].filter((url): url is string => Boolean(url))));
   const mediaKind = animationUrl && /\.(?:mp4|webm|mov)(?:$|[?#])/i.test(animationUrl) ? "video" : imageUrls.length ? "image" : null;
 
