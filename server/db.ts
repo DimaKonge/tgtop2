@@ -850,9 +850,10 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
     const [topic] = await db.select({ id: catalogTopics.id }).from(catalogTopics).where(and(eq(catalogTopics.category, group.category), eq(catalogTopics.code, options.subcategory))).limit(1);
     if (!topic) throw new Error("Выберите подкатегорию из доступного списка");
   }
-  const effectiveCountry = options?.country ?? group.country;
-  if (options?.country) {
-    const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, options.country)).limit(1);
+  const selectedCountry = options?.country === "Global" ? undefined : options?.country;
+  const effectiveCountry = selectedCountry ?? group.country;
+  if (selectedCountry) {
+    const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, selectedCountry)).limit(1);
     if (!country) throw new Error("Выберите страну из доступного списка");
   }
   if (options?.city) {
@@ -1879,9 +1880,10 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
   const listingOptions = normalizeGroupListingOptions(listing);
   const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
   if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) throw new Error("Группа недоступна для размещения");
-  const effectiveCountry = listingOptions.country ?? groups[0]?.country;
-  if (listingOptions.country) {
-    const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, listingOptions.country)).limit(1);
+  const selectedCountry = listingOptions.country === "Global" ? undefined : listingOptions.country;
+  const effectiveCountry = selectedCountry ?? groups[0]?.country;
+  if (selectedCountry) {
+    const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, selectedCountry)).limit(1);
     if (!country) throw new Error("Выберите страну из доступного списка");
   }
   if (listingOptions.city) {

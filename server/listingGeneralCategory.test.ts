@@ -9,4 +9,10 @@ describe("listing with base General category", () => {
     expect(source).toContain('listingOptions.subcategory && listingOptions.subcategory !== "General"');
     expect(source.indexOf('options?.subcategory && options.subcategory !== "General"')).toBeLessThan(source.indexOf('const requestedTarget ='));
   });
+
+  it("treats Global as the worldwide default instead of a catalog country", () => {
+    expect(source).toContain('const selectedCountry = options?.country === "Global" ? undefined : options?.country;');
+    expect(source).toContain('const selectedCountry = listingOptions.country === "Global" ? undefined : listingOptions.country;');
+    expect(source).not.toContain('eq(catalogCountries.code, options.country)');
+  });
 });

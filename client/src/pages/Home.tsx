@@ -89,6 +89,11 @@ const parseGramInput = (value: string): number | undefined => {
   const units = Math.round(Number(normalized) * 100);
   return Number.isSafeInteger(units) ? units : undefined;
 };
+const normalizeRankingBid = (value: number): number | undefined => {
+  if (!Number.isFinite(value)) return undefined;
+  const rounded = Math.round((value + Number.EPSILON) * 10) / 10;
+  return Math.abs(value - rounded) <= 1e-8 ? rounded : undefined;
+};
 
 type AudienceSnapshot = {
   membersCount: number;
@@ -1990,8 +1995,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     ? ownsDetail ? getRankingFloorGram(placementSlot.slotNumber) : detailOutbidMinimum ?? getRankingFloorGram(placementSlot.slotNumber)
     : null;
   const rawDetailRankingBid = Number(detailBidInput);
-  const detailRankingBidAmount = detailMinimumBid !== null && Number.isFinite(rawDetailRankingBid)
-    ? Math.min(MAX_RANKING_BID_GRAM, Math.max(detailMinimumBid, Math.round(rawDetailRankingBid * 10) / 10))
+  const normalizedDetailRankingBid = normalizeRankingBid(rawDetailRankingBid);
+  const detailRankingBidAmount = detailMinimumBid !== null && normalizedDetailRankingBid !== undefined
+    ? Math.min(MAX_RANKING_BID_GRAM, Math.max(detailMinimumBid, normalizedDetailRankingBid))
     : detailMinimumBid ?? 0.1;
   const detailPriceBelowCurrent = Boolean(ownsDetail && selectedSlot && detailRankingBidAmount < selectedSlot.bidAmount / 1000);
   useEffect(() => {
@@ -2292,7 +2298,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const rewardGroup = selectedListingGroups[0];
     const isChatRewardCampaign = rewardGroup?.category === "Чаты";
     if (canConfigureRewards && rewardCampaignEnabled && [budgetUnits, joinRewardUnits].some(value => value === undefined)) {
-      return toast.error(tx("Введите сумму в GRAM с точностью до 0.01", "Enter a GRAM amount with up to two decimals."));
+      return toast.error(tx("Укажите бюджет и награду за подписчика", "Enter the campaign budget and subscriber reward."));
     }
     listWithCredits.mutate({
       groupIds: selectedGroupIds,
@@ -2333,7 +2339,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const budgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;
     const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;
     if (rewardCampaignEnabled && [budgetUnits, joinRewardUnits].some(value => value === undefined)) {
-      return toast.error(tx("Введите сумму в GRAM с точностью до 0.01", "Enter a GRAM amount with up to two decimals."));
+      return toast.error(tx("Укажите бюджет и награду за подписчика", "Enter the campaign budget and subscriber reward."));
     }
     listWithCredits.mutate({
       groupIds: [group.id],
@@ -2447,16 +2453,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       return toast.error(
         tx("Эта позиция будет доступна после создания рейтинговой доски.", "This placement will be available after the ranking board is created.")
       );
-    const value = Number(amount);
+    const value = normalizeRankingBid(Number(amount));
     const minimum = getMinimumRankingBidGram(targetSlot);
-    if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10)
+    if (value === undefined || value < minimum)
       return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`));
     const normalizedSalePrice = getSalePriceForSave();
     if (normalizedSalePrice === undefined) return;
     const budgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;
     const joinRewardUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;
     if (rewardCampaignEnabled && [budgetUnits, joinRewardUnits].some(item => item === undefined)) {
-      return toast.error(tx("Введите сумму в GRAM с точностью до 0.01", "Enter a GRAM amount with up to two decimals."));
+      return toast.error(tx("Укажите бюджет и награду за подписчика", "Enter the campaign budget and subscriber reward."));
     }
     const isChat = group.category === "Чаты";
     placeBid.mutate({
@@ -2477,9 +2483,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   };
   const openStarsPayment = (group: Group) => {
     if (!targetSlot?.id) return toast.error(tx("Эта позиция пока недоступна.", "This placement is not available yet."));
-    const value = Number(amount);
+    const value = normalizeRankingBid(Number(amount));
     const minimum = getMinimumRankingBidGram(targetSlot);
-    if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) {
+    if (value === undefined || value < minimum) {
       return toast.error(tx(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`, `Minimum bid: ${formatTon(minimum)} GRAM in 0.1 steps`));
     }
     setAmount(formatTon(minimum));

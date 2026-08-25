@@ -60,6 +60,9 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('submitTonWithdrawal');
     expect(source).toContain('tonWithdrawalSubmitInFlight.current');
     expect(source).toContain('createTonWithdrawalMutation.isPending');
+    expect(source).toContain('const normalizeRankingBid = (value: number): number | undefined => {');
+    expect(source).toContain('const value = normalizeRankingBid(Number(amount));');
+    expect(source).toContain('Укажите бюджет и награду за подписчика');
     expect(source).toContain('onError: () => undefined');
     expect(source).toContain('const canWithdrawMinimum = mainBalanceTonValue >= 0.1;');
     expect(source).toContain('disabled={!canWithdrawMinimum}');
