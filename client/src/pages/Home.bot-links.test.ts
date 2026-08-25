@@ -168,6 +168,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('aria-label={tx("Добавить свою группу", "Add your community")}');
     expect(source).toContain('className="mx-auto grid h-8 w-8 place-items-center');
     expect(source).not.toContain('className="flex h-10 w-full items-center justify-center gap-1.5');
+    expect(source).toContain('const compactRankedSlots = useMemo(');
+    expect(source).toContain('const rankingContinuation = compactRankedSlots.slice(7);');
+    expect(source).toContain('const occupiedSlot = compactRankedSlots[index];');
+    expect(source).toContain('const vacantSlots = slots.filter(slot => !slot.isOccupied)');
+    expect(source).toContain('isOccupied: vacantSlot ? false : true');
+    expect(source).toContain('openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)');
     expect(source).toContain('const [listingCountrySheetOpen, setListingCountrySheetOpen] = useState(false);');
     expect(source).toContain('const [listingSubcategorySheetOpen, setListingSubcategorySheetOpen] = useState(false);');
     expect(source).toContain('<Sheet open={listingCountrySheetOpen} onOpenChange={setListingCountrySheetOpen}>');
@@ -414,7 +420,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const totalPlacementCost = rewardBudgetGram === null ? null : bidAmount + rewardBudgetGram;');
     expect(source).toContain('void mineQuery.refetch();');
     expect(source).toContain('const currentGroup = mine.find(item => item.id === group.id) ?? group;');
-    expect(source).toContain('const rankingContinuation = slots');
+    expect(source).toContain('const rankingContinuation = compactRankedSlots.slice(7);');
     expect(source).toContain('rankingContinuation.map((slot, index) => (');
     expect(source).not.toContain('>#{slot.slotNumber}</span>');
     expect(source).not.toContain('className="pl-8"');
@@ -525,7 +531,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const [detailBidInput, setDetailBidInput] = useState("")');
     expect(source).toContain('const activeRankingBoardScope = {');
     expect(source).toContain('? openGroup(leadSlot.group.id, activeRankingBoardScope)');
-    expect(source).toContain('slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)');
+    expect(source).toContain('slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)');
     expect(source).toContain('Input value={detailBidInput}');
     expect(source).toContain('onBlur={() => setDetailBidInput(formatTon(detailRankingBidAmount))}');
     expect(source).toContain('onValueChange={([value]) => setDetailBidInput(formatTon(value))}');

@@ -295,6 +295,7 @@ type Slot = {
   country?: string;
   subcategory?: string;
   updatedAt?: Date;
+  isOccupied?: boolean;
   group: Group | null;
 };
 type Nft = {
@@ -1926,31 +1927,30 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     },
     [nfts, nftAssetFilter, nftMarketCategory, nftDealCategory, topSearchQuery]
   );
-  const board = useMemo(
-    () =>
-      Array.from({ length: 7 }, (_, index) => {
-        const slot = slots.find(item => item.slotNumber === index + 1);
-        return slot && matchesAudience(slot.group)
-          ? slot
-          : {
-              id: slot?.id ?? 0,
-              slotNumber: index + 1,
-              bidAmount: 0,
-              group: null,
-            };
-      }),
+  const compactRankedSlots = useMemo(
+    () => slots.filter(slot => slot.group && matchesAudience(slot.group)),
     [slots, audience]
   );
-  const occupiedIds = new Set(
-    board.map(slot => slot.group?.id).filter((id): id is number => Boolean(id))
-  );
-  const rankingContinuation = slots
-    .filter(slot => slot.slotNumber > 7 && slot.group && matchesAudience(slot.group))
-    .sort((left, right) => left.slotNumber - right.slotNumber);
+  const board = useMemo(() => {
+    const vacantSlots = slots.filter(slot => !slot.isOccupied).sort((left, right) => left.slotNumber - right.slotNumber);
+    return Array.from({ length: 7 }, (_, index) => {
+      const occupiedSlot = compactRankedSlots[index];
+      if (occupiedSlot) return { ...occupiedSlot, slotNumber: index + 1 };
+      const vacantSlot = vacantSlots[index - compactRankedSlots.length];
+      return {
+        id: vacantSlot?.id ?? -(index + 1),
+        slotNumber: index + 1,
+        bidAmount: 0,
+        isOccupied: vacantSlot ? false : true,
+        group: null,
+      };
+    });
+  }, [compactRankedSlots, slots]);
+  const rankingContinuation = compactRankedSlots.slice(7);
   const rankedGroups = [...board, ...rankingContinuation].flatMap(slot => slot.group ? [slot.group] : []);
   const rankedGroupIds = new Set(rankedGroups.map(group => group.id));
   const firstAvailableRankingSlot = slots
-    .filter(slot => !slot.group && matchesAudience(slot.group))
+    .filter(slot => !slot.isOccupied && matchesAudience(slot.group))
     .sort((left, right) => left.slotNumber - right.slotNumber)[0] ?? null;
   const automaticPlacementSlot = firstAvailableRankingSlot ?? [...slots]
     .filter(slot => Boolean(slot.group) && matchesAudience(slot.group))
@@ -3001,7 +3001,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   onClick={() =>
                     leadSlot.group
                       ? openGroup(leadSlot.group.id, activeRankingBoardScope)
-                      : openMine(leadSlot)
+                      : openMine(leadSlot.isOccupied ? automaticPlacementSlot ?? undefined : leadSlot)
                   }
                 />
               </div>
@@ -3014,7 +3014,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       language={language}
                       bidAmount={slot.bidAmount}
                       onClick={() =>
-                        slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)
+                        slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)
                       }
                     />
                   </div>
@@ -3029,7 +3029,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       language={language}
                       bidAmount={slot.bidAmount}
                       onClick={() =>
-                        slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)
+                        slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)
                       }
                     />
                   </div>
@@ -3055,7 +3055,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       variant="list"
                       language={language}
                       bidAmount={slot.bidAmount}
-                      onClick={() => slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)}
+                      onClick={() => slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)}
                     />
                   </div>
                 ))}

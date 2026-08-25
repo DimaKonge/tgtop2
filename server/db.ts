@@ -906,7 +906,7 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     )).orderBy(asc(auctionSlots.slotNumber));
   }
   const groupIds = slots.map(slot => slot.groupId).filter((id): id is number => id !== null);
-  if (groupIds.length === 0) return slots.map(slot => ({ ...slot, group: null }));
+  if (groupIds.length === 0) return slots.map(slot => ({ ...slot, isOccupied: false, group: null }));
   const groupConditions = [inArray(groupsCatalog.id, groupIds)];
   if (requestedCategory !== "Все") groupConditions.push(eq(groupsCatalog.category, requestedCategory));
   if (country && country !== "Все" && country !== "Global") groupConditions.push(eq(groupsCatalog.country, country));
@@ -937,10 +937,11 @@ export async function getAuctionSlots(category?: string, country?: string, subca
   ];
   }));
   return slots.map(slot => {
+    const isOccupied = slot.groupId !== null;
     const group = slot.groupId ? groupMap.get(slot.groupId) ?? null : null;
     return group
-      ? { ...slot, group }
-      : { ...slot, bidAmount: 0, currentBid: "0 GRAM", leaderUsername: "-", leaderUserId: null, groupId: null, title: "Свободное место", subtitle: "Ждет листинга", group: null };
+      ? { ...slot, isOccupied: true, group }
+      : { ...slot, bidAmount: 0, currentBid: "0 GRAM", leaderUsername: "-", leaderUserId: null, groupId: null, title: "Свободное место", subtitle: "Ждет листинга", isOccupied, group: null };
   });
 }
 
