@@ -1862,7 +1862,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   );
   const board = useMemo(
     () =>
-      Array.from({ length: 10 }, (_, index) => {
+      Array.from({ length: 7 }, (_, index) => {
         const slot = slots.find(item => item.slotNumber === index + 1);
         return slot && matchesAudience(slot.group)
           ? slot
@@ -1878,8 +1878,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const occupiedIds = new Set(
     board.map(slot => slot.group?.id).filter((id): id is number => Boolean(id))
   );
-  const generalList = visibleGroups.filter(group => !occupiedIds.has(group.id));
-  const rankedGroups = board.flatMap(slot => slot.group ? [slot.group] : []);
+  const rankingContinuation = slots
+    .filter(slot => slot.slotNumber > 7 && slot.group && matchesAudience(slot.group))
+    .sort((left, right) => left.slotNumber - right.slotNumber);
+  const rankedGroups = [...board, ...rankingContinuation].flatMap(slot => slot.group ? [slot.group] : []);
+  const rankedGroupIds = new Set(rankedGroups.map(group => group.id));
+  const generalList = visibleGroups.filter(group => !rankedGroupIds.has(group.id));
   const searchCandidates = topSearchQuery.trim() ? [...rankedGroups, ...generalList] : generalList;
   const searchedGeneralList = searchCandidates.filter(group => {
     const query = topSearchQuery.trim().toLowerCase();
@@ -1889,7 +1893,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const leadSlot = board[0];
   const secondTier = board.slice(1, 3);
   const thirdTier = board.slice(3, 7);
-  const fourthTier = board.slice(7, 10);
   const rankingSnapshotKey = board.map(slot => `${slot.slotNumber}:${slot.group?.id ?? 0}:${slot.bidAmount}`).join("|");
   const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}:${rankingSnapshotKey}`;
   const bonusBalanceUnits = account?.user?.bonusBalance ?? user?.bonusBalance ?? 0;
@@ -2871,25 +2874,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </div>
                 ))}
               </div>
-              <div className="grid w-full grid-cols-4 gap-2">
-                {fourthTier.map((slot, index) => (
-                  <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-compact" style={{ animationDelay: `${321 + index * 34}ms` }}>
-                    <GroupCard
-                      group={slot.group}
-                      variant="compact"
-                      language={language}
-                      bidAmount={slot.bidAmount}
-                      onClick={() =>
-                        slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
               </div>}
             </div>
             <section className="pt-2">
               <div className="space-y-2">
+                {!topSearchQuery.trim() && rankingContinuation.map((slot, index) => (
+                  <div key={`ranking-continuation-${slot.id}`} className="relative w-full animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${index * 35}ms` }}>
+                    <span className="absolute left-2.5 top-1/2 z-10 -translate-y-1/2 rounded-md border border-[#3f8cff]/30 bg-[#17212b]/95 px-1.5 py-0.5 text-[10px] font-bold text-[#a6c8ff]">#{slot.slotNumber}</span>
+                    <div className="pl-8">
+                      <GroupCard
+                        group={slot.group}
+                        variant="list"
+                        language={language}
+                        bidAmount={slot.bidAmount}
+                        onClick={() => slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)}
+                      />
+                    </div>
+                  </div>
+                ))}
                 {searchedGeneralList.map((group, index) => {
                   const isSale = group.listingType === "sale" && group.salePriceTon;
                   return (

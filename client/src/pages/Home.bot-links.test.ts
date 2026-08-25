@@ -399,6 +399,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const totalPlacementCost = rewardBudgetGram === null ? null : bidAmount + rewardBudgetGram;');
     expect(source).toContain('void mineQuery.refetch();');
     expect(source).toContain('const currentGroup = mine.find(item => item.id === group.id) ?? group;');
+    expect(source).toContain('const rankingContinuation = slots');
+    expect(source).toContain('rankingContinuation.map((slot, index) => (');
+    expect(source).not.toContain('const fourthTier = board.slice(7, 10);');
     expect(source).toContain('setLotGroupId(group.id);');
     expect(source).toContain('setShowOwnerContact(true);');
     expect(source).toContain('overflow-y-auto rounded-t-[26px]');
