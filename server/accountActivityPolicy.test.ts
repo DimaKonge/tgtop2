@@ -9,6 +9,8 @@ describe("account activity policy", () => {
     expect(source).toContain("rankingBidIntents");
     expect(source).toContain("tonDeposits");
     expect(source).toContain("tonWithdrawals");
+    expect(source).toContain("transactionHash: tonWithdrawals.transactionHash");
+    expect(source).toContain('transactionHash: item.status === "confirmed" ? item.transactionHash : null');
     expect(source).toContain('title: "gram_deposit"');
     expect(source).toContain('title: "gram_withdrawal"');
     expect(source).toContain('title: "ranking_refund_pair"');

@@ -102,6 +102,17 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Все операции');
     expect(source).toContain('Пополнения, выводы, ставки, награды и возвраты');
     expect(source).toContain('item.type === "deposit" ? "↓" : item.type === "withdrawal" ? "↑"');
+    expect(source).toContain('openTonviewerTransaction');
+    expect(source).toContain('https://tonviewer.com/transaction/${transactionHash}');
+    expect(source).toContain('item.type === "withdrawal" && item.status === "confirmed"');
+    expect(source).toContain('Открыть в Tonviewer');
+    expect(source).toContain('const dateTime =');
+    expect(source).toContain('dateTime(item.createdAt, language)');
+    expect(source).not.toContain('label: "+10%"');
+    expect(source).not.toContain('label: "+30%"');
+    expect(source).not.toContain('label: "+50%"');
+    expect(source).toContain('Настройки размещения');
+    expect(source).toContain('Объявление, менеджер, продажа и вознаграждения');
     expect(source).toContain('Ставка не создана — средства возвращены');
     expect(source).toContain('Итог 0 GRAM');
     expect(source).toContain('rewardBudget: detailRewardBudgetUnits');

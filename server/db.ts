@@ -627,6 +627,7 @@ export async function getAccountActivity(openId: string) {
       id: tonWithdrawals.id,
       grossAmountNano: tonWithdrawals.grossAmountNano,
       status: tonWithdrawals.status,
+      transactionHash: tonWithdrawals.transactionHash,
       createdAt: tonWithdrawals.createdAt,
       broadcastAt: tonWithdrawals.broadcastAt,
       sentAt: tonWithdrawals.sentAt,
@@ -732,6 +733,7 @@ export async function getAccountActivity(openId: string) {
       amount: Number(item.grossAmountNano) / 1_000_000_000,
       currency: "GRAM" as const,
       direction: item.status === "confirmed" ? "out" as const : "neutral" as const,
+      transactionHash: item.status === "confirmed" ? item.transactionHash : null,
     })),
   ].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime()).slice(0, 100);
 }
