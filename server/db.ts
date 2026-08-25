@@ -840,6 +840,26 @@ export type RankingLotOptions = {
   rewardPerManualAdd?: number;
 };
 
+function getRankingRewardBudgetAdjustment(group: typeof groupsCatalog.$inferSelect, options?: RankingLotOptions) {
+  const includesRewardCampaign = [options?.rewardActive, options?.rewardBudget, options?.rewardPerSubscription, options?.rewardPerManualAdd]
+    .some(value => value !== undefined);
+  if (!includesRewardCampaign) return { reservedRewardBudget: 0, releasedRewardBudget: 0 };
+  const config = {
+    category: group.category,
+    rewardActive: options?.rewardActive ?? group.rewardActive,
+    rewardBudget: options?.rewardActive === false ? 0 : (options?.rewardBudget ?? group.rewardBudget),
+    rewardPerSubscription: options?.rewardPerSubscription ?? group.rewardPerSubscription,
+    rewardPerInvite: group.rewardPerInvite,
+    rewardPerManualAdd: options?.rewardPerManualAdd ?? group.rewardPerManualAdd,
+  };
+  const validationError = validateRewardCampaignConfig(config);
+  if (validationError) throw new Error(validationError);
+  return {
+    reservedRewardBudget: Math.max(0, config.rewardBudget - group.rewardBudget),
+    releasedRewardBudget: Math.max(0, group.rewardBudget - config.rewardBudget),
+  };
+}
+
 export async function placeBid(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, options?: RankingLotOptions) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -983,21 +1003,27 @@ export async function payRankingBidWithGramCredit(slotId: number, bidAmount: num
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const spendUnits = Math.round((bidAmount / 1000) * 100);
+  const group = groupId ? await getGroupById(groupId) : undefined;
+  if (!group || group.ownerOpenId !== leaderUserId) throw new Error("Выберите свою группу из личной папки");
+  const { reservedRewardBudget, releasedRewardBudget } = getRankingRewardBudgetAdjustment(group, options);
+  const totalDebit = spendUnits + reservedRewardBudget - releasedRewardBudget;
 
   await db.transaction(async tx => {
-    const result = await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${spendUnits}` }).where(and(eq(users.openId, leaderUserId), gte(users.bonusBalance, spendUnits)));
+    const result = await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${spendUnits + reservedRewardBudget} + ${releasedRewardBudget}` }).where(and(eq(users.openId, leaderUserId), gte(users.bonusBalance, Math.max(0, totalDebit))));
     if (Number(result[0]?.affectedRows ?? 0) !== 1) {
-      throw new Error(`Недостаточно GRAM на балансе. Нужно ${formatTonAmount(spendUnits / 100)} GRAM`);
+      throw new Error(`Недостаточно GRAM на балансе. Нужно ${formatTonAmount(Math.max(0, totalDebit) / 100)} GRAM`);
     }
     await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -spendUnits, kind: "ranking_spend" });
+    if (reservedRewardBudget) await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -reservedRewardBudget, kind: "reward_campaign_reserve" });
+    if (releasedRewardBudget) await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: releasedRewardBudget, kind: "reward_campaign_release" });
   });
 
   try {
     return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId, options);
   } catch (error) {
     await db.transaction(async tx => {
-      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${spendUnits}` }).where(eq(users.openId, leaderUserId));
-      await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: spendUnits, kind: "ranking_refund" });
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${totalDebit}` }).where(eq(users.openId, leaderUserId));
+      await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: totalDebit, kind: "ranking_refund" });
     });
     throw error;
   }

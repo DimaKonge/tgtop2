@@ -267,6 +267,12 @@ type Group = {
     avatarUrl: string | null;
   };
 };
+const hasConfiguredRewardCampaign = (group: Group) => {
+  const rewardPerAction = group.category === "Чаты"
+    ? Number(group.rewardPerManualAdd ?? group.reward?.manualAddAmount ?? 0)
+    : Number(group.rewardPerSubscription ?? group.reward?.subscriptionAmount ?? 0);
+  return Boolean(group.rewardActive && Number(group.rewardBudget ?? 0) > 0 && rewardPerAction > 0);
+};
 type Slot = {
   id: number;
   slotNumber: number;
@@ -1999,6 +2005,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const detailRankingBidAmount = detailMinimumBid !== null && normalizedDetailRankingBid !== undefined
     ? Math.min(MAX_RANKING_BID_GRAM, Math.max(detailMinimumBid, normalizedDetailRankingBid))
     : detailMinimumBid ?? 0.1;
+  const detailRewardBudgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;
   const detailPriceBelowCurrent = Boolean(ownsDetail && selectedSlot && detailRankingBidAmount < selectedSlot.bidAmount / 1000);
   useEffect(() => {
     if (!placementSlot) return setDetailBidInput("");
@@ -2019,7 +2026,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setManagerPublic(group.managerPublic !== false);
     setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true);
     setSearchIndexable(Boolean(group.searchIndexable));
-    setRewardCampaignEnabled(Boolean(group.rewardActive));
+    setRewardCampaignEnabled(hasConfiguredRewardCampaign(group));
     setRewardBudget(group.rewardBudget ? formatGram(group.rewardBudget) : "");
     const joinReward = group.category === "Чаты" ? group.rewardPerManualAdd : group.rewardPerSubscription;
     setRewardPerSubscription(joinReward ? formatGram(joinReward) : "");
@@ -2056,6 +2063,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       )
     : [];
   const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? (ownsDetail ? detail?.group ?? null : null);
+  const existingRewardBudgetUnits = selectedLotGroup && hasConfiguredRewardCampaign(selectedLotGroup)
+    ? Number(selectedLotGroup.rewardBudget ?? 0)
+    : 0;
+  const detailRewardBudgetDeltaUnits = detailRewardBudgetUnits === undefined
+    ? 0
+    : detailRewardBudgetUnits - existingRewardBudgetUnits;
+  const detailTotalRankingCost = detailRankingBidAmount + detailRewardBudgetDeltaUnits / 100;
   const lotSettingsLocked = !selectedLotGroup;
   const detailRankingPreviewSlotNumber = selectedLotGroup
     ? getSimulatedRankingSlotNumber(detailTopPreviewSlots, selectedLotGroup.id, detailRankingBidAmount, selectedLotGroup.category)
@@ -2219,7 +2233,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingSubcategory(group.subcategory ?? "General");
     setIsListingForSale(group.listingType === "sale" && Boolean(group.salePriceTon));
     setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
-    setRewardCampaignEnabled(Boolean(group.rewardActive));
+    setRewardCampaignEnabled(hasConfiguredRewardCampaign(group));
     setRewardBudget(group.rewardBudget ? formatGram(group.rewardBudget) : "");
     const joinReward = group.category === "Чаты" ? group.rewardPerManualAdd : group.rewardPerSubscription;
     setRewardPerSubscription(joinReward ? formatGram(joinReward) : "");
@@ -2269,7 +2283,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
     setMonthlyEntryStars(firstGroup?.monthlyEntryStars ? String(firstGroup.monthlyEntryStars) : "");
     setMonthlyEntryLinkName(firstGroup?.monthlyEntryLinkName ?? "");
-    setRewardCampaignEnabled(Boolean(firstGroup?.rewardActive));
+    setRewardCampaignEnabled(firstGroup ? hasConfiguredRewardCampaign(firstGroup) : false);
     setRewardBudget(firstGroup?.rewardBudget ? formatGram(firstGroup.rewardBudget) : "");
     const initialJoinReward = firstGroup?.category === "Чаты" ? firstGroup?.rewardPerManualAdd : firstGroup?.rewardPerSubscription;
     setRewardPerSubscription(initialJoinReward ? formatGram(initialJoinReward) : "");
@@ -2498,7 +2512,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true);
     setIsListingForSale(group.listingType === "sale" && Boolean(group.salePriceTon));
     setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
-    setRewardCampaignEnabled(Boolean(group.rewardActive));
+    setRewardCampaignEnabled(hasConfiguredRewardCampaign(group));
     setRewardBudget(group.rewardBudget ? formatGram(group.rewardBudget) : "");
     const joinReward = group.category === "Чаты" ? group.rewardPerManualAdd : group.rewardPerSubscription;
     setRewardPerSubscription(joinReward ? formatGram(joinReward) : "");
@@ -3515,7 +3529,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <div className="mt-2 rounded-xl border border-[#31435f] bg-[#202b3a] px-3 pb-2 pt-1"><Slider disabled={!selectedLotGroup} value={[Math.min(MAX_RANKING_SLIDER_GRAM, detailRankingBidAmount)]} min={detailMinimumBid ?? 0.1} max={Math.max(detailMinimumBid ?? 0.1, MAX_RANKING_SLIDER_GRAM)} step={0.1} onValueChange={([value]) => setDetailBidInput(formatTon(value))} className="py-1.5 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-[#0f1825] [&_[data-slot=slider-range]]:!bg-[#3390ec] [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:!border-[#c8e1ff] [&_[data-slot=slider-thumb]]:!bg-[#3390ec]" /><div className="mt-1 flex justify-between text-[9px] font-medium text-slate-500"><span>от {formatTon(detailMinimumBid)} GRAM</span><span>шаг 0.1</span><span>до {formatTon(MAX_RANKING_SLIDER_GRAM)}</span></div></div>
                       {selectedLotGroup && detailRankingPreviewSlotNumber && <div className="mt-2 rounded-xl border border-[#3390ec]/45 bg-[#18314d] p-2.5 text-center"><small className="block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8fc4ff]">Ваша группа займёт</small><div className="mt-2 grid grid-cols-2 gap-2"><div className="rounded-lg bg-[#17212b] px-2 py-1.5"><small className="block text-[9px] text-slate-400">Общий ТОП</small><b className="text-lg leading-none text-white">#{detailRankingPreviewSlotNumber}</b></div><div className="rounded-lg bg-[#17212b] px-2 py-1.5"><small className="block text-[9px] text-slate-400">ТОП {selectedLotGroup.category === "Каналы" ? "каналов" : "чатов"}</small><b className="text-lg leading-none text-[#63f5b1]">#{detailTypeRankingPreviewPosition ?? "—"}</b></div></div></div>}
                       <p className={`mt-2 text-center text-[10px] ${detailWillDrop ? "font-medium text-rose-300" : "text-slate-500"}`}>{detailWillDrop ? `Ваша цена ниже текущей ставки. Лот переместится на место #${detailRankingPreviewSlotNumber}` : ownsDetail ? `Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM` : `Перебить можно от ${formatTon(detailMinimumBid)} GRAM`}</p>
-                      <button type="button" onClick={() => { if (!selectedLotGroup) return setLotGroupPickerOpen(true); const value = detailRankingBidAmount; const minimum = detailMinimumBid ?? 0.1; const normalizedSalePrice = getSalePriceForSave(); if (normalizedSalePrice === undefined) return; if (!Number.isFinite(value) || value < minimum || Math.round(value * 10) !== value * 10) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardBudgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0; const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Введите сумму в GRAM с точностью до 0.01"); placeBid.mutate({ slotId: placementSlot.id, groupId: selectedLotGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, country: listingCountry, city: listingCity === "Все" ? undefined : listingCity, subcategory: listingSubcategory, salePriceTon: normalizedSalePrice, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: selectedLotGroup.category === "Чаты" ? detailRewardPerSubscriptionUnits : 0 }); }} disabled={Boolean(selectedLotGroup && (!detailRankingPreviewSlotNumber || placeBid.isPending)) || (!ownsDetail && !isAuthenticated)} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{placeBid.isPending ? "Оплата…" : !selectedLotGroup ? "Выбрать свою группу" : !selectedSlot ? "Вывести в ТОП" : ownsDetail ? "Обновить ставку" : "Перебить ставку"}</span></button>
+                      {rewardCampaignEnabled && <div className="mt-2 rounded-xl border border-[#63f5b1]/30 bg-[#16342f] px-3 py-2"><div className="flex items-center justify-between gap-3"><span className="text-[10px] font-medium text-[#b6e8d1]">Итого к списанию</span><b className="text-sm text-[#63f5b1]">{detailRewardBudgetUnits === undefined ? "Укажите бюджет" : `${formatTon(detailTotalRankingCost)} GRAM`}</b></div>{detailRewardBudgetUnits !== undefined && <small className="mt-1 block text-[9px] text-[#8fcbb0]">Ставка {formatTon(detailRankingBidAmount)} + бюджет вознаграждений {detailRewardBudgetDeltaUnits >= 0 ? formatGram(detailRewardBudgetDeltaUnits) : `−${formatGram(Math.abs(detailRewardBudgetDeltaUnits))}`} GRAM</small>}</div>}
+                      <button type="button" onClick={() => { if (!selectedLotGroup) return setLotGroupPickerOpen(true); const value = normalizeRankingBid(detailRankingBidAmount); const minimum = detailMinimumBid ?? 0.1; const normalizedSalePrice = getSalePriceForSave(); if (normalizedSalePrice === undefined) return; if (value === undefined || value < minimum) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Укажите бюджет и награду за подписчика"); placeBid.mutate({ slotId: placementSlot.id, groupId: selectedLotGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, country: listingCountry === "Global" ? undefined : listingCountry, city: listingCity === "Все" ? undefined : listingCity, subcategory: listingSubcategory, salePriceTon: normalizedSalePrice, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: selectedLotGroup.category === "Чаты" ? detailRewardPerSubscriptionUnits : 0 }); }} disabled={Boolean(selectedLotGroup && (!detailRankingPreviewSlotNumber || placeBid.isPending)) || (!ownsDetail && !isAuthenticated)} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{placeBid.isPending ? "Оплата…" : !selectedLotGroup ? "Выбрать свою группу" : !selectedSlot ? "Вывести в ТОП" : ownsDetail ? "Обновить ставку" : "Перебить ставку"}</span></button>
                     </section>
                   )}
                 </div>

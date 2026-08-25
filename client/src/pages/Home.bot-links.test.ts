@@ -87,6 +87,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('За вступление получите <b className="font-extrabold text-[#63f5b1]">+{formatGram(detailEntryReward)} GRAM</b>');
     expect(source).toContain('const detailRewardBudgetUnits = rewardCampaignEnabled ? parseGramInput(rewardBudget) : 0;');
     expect(source).toContain('const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;');
+    expect(source).toContain('const hasConfiguredRewardCampaign = (group: Group) => {');
+    expect(source).toContain('setRewardCampaignEnabled(firstGroup ? hasConfiguredRewardCampaign(firstGroup) : false);');
+    expect(source).toContain('const detailTotalRankingCost = detailRankingBidAmount + detailRewardBudgetDeltaUnits / 100;');
+    expect(source).toContain('Итого к списанию');
+    expect(source).toContain('Ставка {formatTon(detailRankingBidAmount)} + бюджет вознаграждений');
     expect(source).toContain('rewardBudget: detailRewardBudgetUnits');
     expect(source).toContain('rewardPerSubscription: detailRewardPerSubscriptionUnits');
     expect(source).not.toContain('rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0');
