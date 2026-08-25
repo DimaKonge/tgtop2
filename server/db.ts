@@ -1777,10 +1777,10 @@ export async function getSearchIndexableGroups() {
   )).orderBy(desc(groupsCatalog.lastStatsAt));
 }
 
-export async function recordGroupSnapshot(groupId: number, membersCount: number, messagesCount: number, joinedCount: number) {
+export async function recordGroupSnapshot(groupId: number, membersCount: number, messagesCount: number, joinedCount: number, leavesCount = 0, invitedCount = 0) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(groupStatsSnapshots).values({ groupId, membersCount, messagesCount, joinedCount });
+  await db.insert(groupStatsSnapshots).values({ groupId, membersCount, messagesCount, joinedCount, leavesCount, invitedCount });
 }
 
 export async function recordGroupActivity(chatId: string, views = 0) {
@@ -1795,24 +1795,28 @@ export async function recordGroupActivity(chatId: string, views = 0) {
     lastPostAt: new Date(),
     lastStatsAt: new Date(),
   }).where(eq(groupsCatalog.id, group.id));
-  await recordGroupSnapshot(group.id, group.membersCount, nextMessages, group.joinedCount);
+  await recordGroupSnapshot(group.id, group.membersCount, nextMessages, group.joinedCount, group.leavesCount, group.invitedCount);
 }
 
-export async function recordGroupMembership(chatId: string, joined: boolean, left: boolean, viaInviteLink: boolean) {
+export function isTrackedChatInvitation(category: "Каналы" | "Чаты", joined: boolean, viaInviteLink: boolean, addedByAnotherMember: boolean): boolean {
+  return category === "Чаты" && joined && (viaInviteLink || addedByAnotherMember);
+}
+
+export async function recordGroupMembership(chatId: string, joined: boolean, left: boolean, viaInviteLink: boolean, addedByAnotherMember = false) {
   const db = await getDb();
   if (!db) return;
   const group = await getGroupByChatId(chatId);
   if (!group) return;
   const nextJoined = group.joinedCount + (joined ? 1 : 0);
   const nextLeaves = group.leavesCount + (left ? 1 : 0);
-  const nextInvited = group.invitedCount + (joined && viaInviteLink ? 1 : 0);
+  const nextInvited = group.invitedCount + (isTrackedChatInvitation(group.category, joined, viaInviteLink, addedByAnotherMember) ? 1 : 0);
   await db.update(groupsCatalog).set({
     joinedCount: nextJoined,
     leavesCount: nextLeaves,
     invitedCount: nextInvited,
     lastStatsAt: new Date(),
   }).where(eq(groupsCatalog.id, group.id));
-  await recordGroupSnapshot(group.id, group.membersCount, group.messagesCount, nextJoined);
+  await recordGroupSnapshot(group.id, group.membersCount, group.messagesCount, nextJoined, nextLeaves, nextInvited);
 }
 
 export type TelegramRewardInput = {

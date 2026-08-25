@@ -365,7 +365,8 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     }
     const joins = !isActiveMember(membership.old_chat_member.status) && isActiveMember(membership.new_chat_member.status);
     const leaves = isActiveMember(membership.old_chat_member.status) && !isActiveMember(membership.new_chat_member.status);
-    if (joins || leaves) await recordGroupMembership(catalogChatId(membership.chat.id), joins, leaves, Boolean(membership.invite_link?.invite_link));
+    const addedByAnotherMember = joins && !membership.invite_link?.invite_link && !membership.from.is_bot && membership.from.id !== membership.new_chat_member.user.id;
+    if (joins || leaves) await recordGroupMembership(catalogChatId(membership.chat.id), joins, leaves, Boolean(membership.invite_link?.invite_link), addedByAnotherMember);
     if (joins) await awardMembershipReward(membership);
     return;
   }

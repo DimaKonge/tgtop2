@@ -67,6 +67,7 @@ type Page = "top" | "catalog" | "giveaways" | "mine" | "details" | "owner" | "pr
 type Audience = "all" | "small" | "medium" | "large";
 type MyGroupsViewMode = "list" | "grid";
 type Language = "ru" | "en";
+type DetailStatsPeriod = "day" | "month" | "all";
 type WorkspaceSection = "communities" | "bots" | "nft";
 type WalletNftFilter = "all" | "gifts" | "usernames" | "anonymous_numbers" | "domains" | "other";
 const getRussianLanguage = (): Language => "ru";
@@ -641,10 +642,10 @@ function GroupCard({
               {group.title}
             </b>
             <small
-              className={`mt-1 block max-w-full truncate text-xs text-slate-200/80 ${compact ? "hidden" : ""}`}
+              className={`mt-1 block max-w-full truncate text-slate-200/80 ${compact ? "text-[8px]" : "text-xs"}`}
             >
               {lead && <>{groupUrl ? <a href={groupUrl} onClick={event => { event.preventDefault(); event.stopPropagation(); openTelegramCommunityLink(groupUrl); }} className="no-underline hover:text-white">{getCommunityAccessLabel(group, language)}</a> : getCommunityAccessLabel(group, language)} ·{" "}</>}
-              {secondary ? getCommunityAccessLabel(group, language) : <>{n(group.membersCount, language)} {language === "en" ? "members" : "участников"}</>}
+              {n(group.membersCount, language)} {language === "en" ? "members" : "участников"} · +{n(group.joinedCount, language)}
             </small>
           </span>
         </>
@@ -997,6 +998,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const walletConnectionRestored = useIsConnectionRestored();
   const hasSignaledReady = useRef(false);
   const [page, setPage] = useState<Page>("top");
+  const [detailStatsPeriod, setDetailStatsPeriod] = useState<DetailStatsPeriod>("day");
   const [workspaceSection, setWorkspaceSection] = useState<WorkspaceSection>("communities");
   const [walletNftFilter, setWalletNftFilter] = useState<WalletNftFilter>("all");
   const [tonDepositOpen, setTonDepositOpen] = useState(false);
@@ -1628,6 +1630,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
            membersCount: number;
            messagesCount: number;
            joinedCount: number;
+           leavesCount: number;
+           invitedCount: number;
            recordedAt: Date;
          }>;
         owner?: Group["owner"];
@@ -2171,9 +2175,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const outbidBidAmount = Number.isFinite(rawOutbidBid)
     ? Math.min(MAX_RANKING_BID_GRAM, Math.max(outbidMinimum, Math.round(rawOutbidBid * 10) / 10))
     : outbidMinimum;
-  const detailEntryUrl = detail?.group.monthlyEntryInviteLink ?? (detail?.group.username
-    ? `https://t.me/${detail.group.username}`
-    : detail?.group.inviteLink ?? null);
+  const detailEntryUrl = detail?.group.monthlyEntryInviteLink
+    ?? detail?.group.inviteLink
+    ?? (detail?.group.username ? `https://t.me/${detail.group.username}` : null);
   const detailHasPaidEntry = Boolean(detail?.group.monthlyEntryInviteLink && detail.group.monthlyEntryStars);
   const detailOwner = detail?.owner ?? null;
   const detailSnapshots = [...(detail?.snapshots ?? [])].sort((left, right) => new Date(left.recordedAt).getTime() - new Date(right.recordedAt).getTime());
@@ -2184,9 +2188,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : null;
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const detailSnapshotBeforeToday = detailSnapshots.filter(snapshot => new Date(snapshot.recordedAt).getTime() < startOfToday.getTime()).at(-1);
-  const detailMessagesToday = latestDetailSnapshot && detailSnapshotBeforeToday
-    ? Math.max(0, latestDetailSnapshot.messagesCount - detailSnapshotBeforeToday.messagesCount)
+  const startOfThisMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1);
+  const detailPeriodStart = detailStatsPeriod === "day" ? startOfToday : detailStatsPeriod === "month" ? startOfThisMonth : null;
+  const detailSnapshotBeforePeriod = detailPeriodStart
+    ? detailSnapshots.filter(snapshot => new Date(snapshot.recordedAt).getTime() < detailPeriodStart.getTime()).at(-1)
+    : undefined;
+  const detailPeriodAvailable = detailStatsPeriod === "all" || Boolean(detailSnapshotBeforePeriod);
+  const getDetailPeriodMetric = (field: "messagesCount" | "joinedCount" | "leavesCount" | "invitedCount", currentValue: number) =>
+    detailPeriodAvailable ? Math.max(0, currentValue - (detailSnapshotBeforePeriod?.[field] ?? 0)) : null;
+  const detailMessagesForPeriod = detail
+    ? getDetailPeriodMetric("messagesCount", detail.group.messagesCount)
+    : null;
+  const detailJoinedForPeriod = detail
+    ? getDetailPeriodMetric("joinedCount", detail.group.joinedCount)
+    : null;
+  const detailLeavesForPeriod = detail
+    ? getDetailPeriodMetric("leavesCount", detail.group.leavesCount)
+    : null;
+  const detailInvitedForPeriod = detail
+    ? getDetailPeriodMetric("invitedCount", detail.group.invitedCount)
     : null;
   const detailMembersLabel = detail?.group.category === "Каналы" ? "подписчика" : "участника";
   const detailEntryReward = detail
@@ -3485,31 +3505,34 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </button>}
                   </div>
 
-                  {detailReturnPage === "mine" && <section className="mt-3 rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
+                  {ownsDetail && <section className="mt-3 rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="text-base font-bold text-white">Динамика аудитории</h2>
                       <span className="text-xs font-semibold text-[#75adff]">{n(detail.group.membersCount)} {detailMembersLabel}</span>
+                    </div>
+                    <div aria-label="Период статистики" className="mt-2 flex gap-1 rounded-lg border border-white/8 bg-[#151d29] p-0.5">
+                      {([['day', 'День'], ['month', 'Месяц'], ['all', 'Всё время']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setDetailStatsPeriod(value)} className={`h-7 flex-1 rounded-md text-[10px] font-semibold transition-colors ${detailStatsPeriod === value ? 'bg-[#3f8cff]/18 text-[#b9d4ff]' : 'text-slate-500'}`}>{label}</button>)}
                     </div>
                     <div className="mt-2">
                       <AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />
                     </div>
                   </section>}
 
-                  {detailReturnPage === "mine" && <div className="mt-3 grid grid-cols-2 gap-2">
+                  {ownsDetail && <div className="mt-3 grid grid-cols-2 gap-2">
                     <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
-                      <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-400/10 text-emerald-300"><TrendingUp className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Вступления</small><b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.joinedCount)}</b></span></div>
+                      <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-400/10 text-emerald-300"><TrendingUp className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Вступления</small><b className="mt-0.5 block text-2xl leading-none text-white">{detailJoinedForPeriod === null ? '—' : n(detailJoinedForPeriod)}</b></span></div>
                       <small className="mt-2 block text-[10px] text-emerald-300">зафиксировано ботом</small>
                     </div>
                     <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3">
-                      <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-rose-400/10 text-rose-300"><TrendingDown className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Отписались</small><b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.leavesCount)}</b></span></div>
+                      <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-rose-400/10 text-rose-300"><TrendingDown className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Отписались</small><b className="mt-0.5 block text-2xl leading-none text-white">{detailLeavesForPeriod === null ? '—' : n(detailLeavesForPeriod)}</b></span></div>
                       <small className="mt-2 block text-[10px] text-rose-300">зафиксировано ботом</small>
                     </div>
                     {detail.group.category === "Каналы" ? <>
-                      <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3"><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#3f8cff]/10 text-[#8fb9ff]"><Send className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Постов сегодня</small><b className="mt-0.5 block text-2xl leading-none text-white">{detailMessagesToday === null ? "—" : n(detailMessagesToday)}</b></span></div><small className="mt-2 block text-[10px] text-[#8fb9ff]">по наблюдениям бота</small></div>
+                      <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3"><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#3f8cff]/10 text-[#8fb9ff]"><Send className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">{detailStatsPeriod === 'day' ? 'Постов сегодня' : detailStatsPeriod === 'month' ? 'Постов за месяц' : 'Постов всего'}</small><b className="mt-0.5 block text-2xl leading-none text-white">{detailMessagesForPeriod === null ? "—" : n(detailMessagesForPeriod)}</b></span></div><small className="mt-2 block text-[10px] text-[#8fb9ff]">по наблюдениям бота</small></div>
                       <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3"><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-amber-300/10 text-amber-200"><BarChart3 className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Просмотры последнего поста</small><b className="mt-0.5 block text-2xl leading-none text-white">{detail.group.lastPostAt ? n(detail.group.lastPostViews) : "—"}</b></span></div><small className="mt-2 block text-[10px] text-amber-200">из Telegram</small></div>
                     </> : <>
-                      <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3"><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-violet-400/10 text-violet-300"><UserPlus className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Приглашения</small><b className="mt-0.5 block text-2xl leading-none text-white">{n(detail.group.invitedCount)}</b></span></div><small className="mt-2 block text-[10px] text-violet-300">по ссылкам бота</small></div>
-                      <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3"><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#3f8cff]/10 text-[#8fb9ff]"><MessageSquare className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Сообщений сегодня</small><b className="mt-0.5 block text-2xl leading-none text-white">{detailMessagesToday === null ? "—" : n(detailMessagesToday)}</b></span></div><small className="mt-2 block text-[10px] text-[#8fb9ff]">по наблюдениям бота</small></div>
+                      <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3"><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-violet-400/10 text-violet-300"><UserPlus className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">Пригласили</small><b className="mt-0.5 block text-2xl leading-none text-white">{detailInvitedForPeriod === null ? '—' : n(detailInvitedForPeriod)}</b></span></div><small className="mt-2 block text-[10px] text-violet-300">подтверждено ботом</small></div>
+                      <div className="rounded-xl border border-[#31435f] bg-[#202b3a] p-3"><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#3f8cff]/10 text-[#8fb9ff]"><MessageSquare className="h-4 w-4" /></span><span><small className="block text-[11px] text-slate-400">{detailStatsPeriod === 'day' ? 'Сообщений сегодня' : detailStatsPeriod === 'month' ? 'Сообщений за месяц' : 'Сообщений всего'}</small><b className="mt-0.5 block text-2xl leading-none text-white">{detailMessagesForPeriod === null ? "—" : n(detailMessagesForPeriod)}</b></span></div><small className="mt-2 block text-[10px] text-[#8fb9ff]">по наблюдениям бота</small></div>
                     </>}
                   </div>}
                   {detailReturnPage === "mine" && ownsDetail && rewardCampaignStats && (rewardCampaignStats.budgetReserved > 0 || rewardCampaignStats.confirmedParticipants > 0) && (

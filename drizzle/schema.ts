@@ -161,6 +161,8 @@ export const groupStatsSnapshots = mysqlTable("group_stats_snapshots", {
   membersCount: int("membersCount").default(0).notNull(),
   messagesCount: int("messagesCount").default(0).notNull(),
   joinedCount: int("joinedCount").default(0).notNull(),
+  leavesCount: int("leavesCount").default(0).notNull(),
+  invitedCount: int("invitedCount").default(0).notNull(),
   recordedAt: timestamp("recordedAt").defaultNow().notNull(),
 }, table => [
   index("group_stats_snapshots_group_recorded_idx").on(table.groupId, table.recordedAt),

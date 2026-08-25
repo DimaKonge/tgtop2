@@ -26,7 +26,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5');
     expect(source).toContain('sm:h-[46vh]');
     expect(source).toContain('h-[136px] border-white/10 bg-[#111720] p-3');
-    expect(source).toContain('{secondary ? getCommunityAccessLabel(group, language) : <>');
+    expect(source).toContain('{n(group.membersCount, language)} {language === "en" ? "members" : "участников"} · +{n(group.joinedCount, language)}');
     expect(source).toContain('h-[88px] border-white/8 bg-[#111720] p-2');
     expect(source).toContain('max-w-full truncate');
     expect(source).not.toContain('max-w-[132px]');
@@ -129,7 +129,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('detail.group.managerAvatarUrl');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
     expect(source).toContain('Динамика аудитории');
-    expect(source).toContain('Приглашения');
+    expect(source).toContain('Пригласили');
     expect(source).toContain('Перебить ставку');
     expect(source).not.toContain('{ value: "rent", title: tx("Аренда", "Rent")');
     expect(source).not.toContain('tx("Условия аренды", "Rental terms")');
@@ -167,7 +167,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('Добавьте первую группу через личную папку.</small>');
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('getPublicOwnerProfile.useQuery');
-    expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
+    expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink\n    ?? detail?.group.inviteLink');
     expect(source).toContain('const openRewardAwareEntry = () => {');
     expect(source).toContain('onClick={openRewardAwareEntry}');
     expect(source).toContain('disabled={!detailEntryUrl}');
@@ -430,7 +430,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Цена места в рейтинге');
     expect(source).toContain('Предпросмотр позиции');
     expect(source).toContain('Залистить');
-    expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink ??');
+    expect(source).toContain('const detailEntryUrl = detail?.group.monthlyEntryInviteLink\n    ?? detail?.group.inviteLink');
     expect(source).toContain('detailHasPaidEntry');
     expect(source).toContain('onClick={openRewardAwareEntry}');
     expect(source).toContain('tx("Сделать вход платным", "Make entry paid")');
@@ -448,7 +448,15 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Рассрочка", "Installments")');
     expect(source).toContain('tx("Залог", "Collateral")');
     expect(source).toContain('Никакие платежи или передачи здесь ещё не создаются.');
+    expect(source).toContain('type DetailStatsPeriod = "day" | "month" | "all"');
+    expect(source).toContain('const [detailStatsPeriod, setDetailStatsPeriod] = useState<DetailStatsPeriod>("day")');
+    expect(source).toContain('aria-label="Период статистики"');
+    expect(source).toContain("['day', 'День'], ['month', 'Месяц'], ['all', 'Всё время']");
+    expect(source).toContain('Пригласили');
+    expect(source).not.toContain('по ссылкам бота');
+    expect(source).toContain("{n(group.membersCount, language)} {language === \"en\" ? \"members\" : \"участников\"} · +{n(group.joinedCount, language)}");
     expect(source).toContain('tx("Гифты", "Gifts")');
+    expect(source).toContain('detail?.group.monthlyEntryInviteLink\n    ?? detail?.group.inviteLink\n    ?? (detail?.group.username ? `https://t.me/${detail.group.username}` : null)');
     expect(source).toContain('tx("Анонимные номера", "Anonymous numbers")');
     expect(source).toContain('tx("Другие NFT", "Other NFTs")');
     expect(source).toContain('setNftMarketCategory(value)');
@@ -478,7 +486,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Каталог групп", "Community catalog")');
     expect(source).toContain('tx("По этому фильтру площадок пока нет.", "No communities match this filter yet.")');
     expect(source).toContain('Динамика аудитории');
-    expect(source).toContain('Приглашения');
+    expect(source).toContain('Пригласили');
     expect(source).toContain('зафиксировано ботом');
     expect(source).toContain('grid grid-cols-3 gap-2');
     expect(source).toContain('tx("Загружаем статистику…", "Loading statistics…")');
@@ -579,7 +587,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('<TrendingDown className="h-2 w-2" />');
     expect(source).toContain('createProtectedGroupDeal');
     expect(source).toContain('Вступления');
-    expect(source).toContain('Приглашения');
+    expect(source).toContain('Пригласили');
     expect(source).toContain('Чтобы добавить свою группу, назначьте бота администратором вашей группы.');
     expect(source).toContain('После подключения группа появится здесь для выбора.');
   });
