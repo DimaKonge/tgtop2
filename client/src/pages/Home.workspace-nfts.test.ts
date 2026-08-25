@@ -47,6 +47,8 @@ describe("TG TOP workspace wallet NFT view", () => {
     expect(source).toContain('const [channelGiftsOpen, setChannelGiftsOpen] = useState(false)');
     expect(source).toContain('Подарки, которыми владеет канал');
     expect(source).toContain('Telegram не вернул подарки для этого канала.');
+    expect(source).toContain('Медиа недоступно');
+    expect(source).toContain('Подарки, которыми владеет канал · только просмотр');
     expect(source.indexOf('Приглашения')).toBeLessThan(source.indexOf('Подарки, которыми владеет канал'));
     expect(source.indexOf('Подарки, которыми владеет канал')).toBeLessThan(source.indexOf('Обновить лот'));
   });
