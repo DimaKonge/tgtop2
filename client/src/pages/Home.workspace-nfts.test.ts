@@ -29,6 +29,17 @@ describe("TG TOP workspace wallet NFT view", () => {
     expect(source).toContain('<WalletNftCard key={item.address} item={item} language={language} />');
   });
 
+  it("does not reuse an unowned TON Connect session across Telegram accounts", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain('const ownerKey = "tgtop:ton-wallet-owner"');
+    expect(source).toContain('const pendingOwnerKey = "tgtop:ton-wallet-pending-owner"');
+    expect(source).toContain('storedOwner !== user.openId && pendingOwner !== user.openId');
+    expect(source).toContain('void tonConnectUi.disconnect().catch(() => undefined)');
+    expect(source).toContain('window.localStorage.removeItem(ownerKey)');
+    expect(source).toContain('ownerOpenId={user?.openId}');
+  });
+
   it("places the expandable real channel-gifts panel after audience statistics", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 

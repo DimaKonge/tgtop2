@@ -808,11 +808,15 @@ function BrandMark() {
   );
 }
 
-function WalletConnectControl({ language, balanceTon, variant = "compact" }: { language: Language; balanceTon: string; variant?: "compact" | "profile" }) {
+function WalletConnectControl({ language, balanceTon, variant = "compact", ownerOpenId }: { language: Language; balanceTon: string; variant?: "compact" | "profile"; ownerOpenId?: string }) {
   const [tonConnectUi] = useTonConnectUI();
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const openWalletForOwner = () => {
+    if (ownerOpenId) window.localStorage.setItem("tgtop:ton-wallet-pending-owner", ownerOpenId);
+    tonConnectUi.openModal();
+  };
   const label = address
     ? language === "en" ? "Connected" : "Подключён"
     : language === "en"
@@ -821,6 +825,8 @@ function WalletConnectControl({ language, balanceTon, variant = "compact" }: { l
   const disconnectWallet = async () => {
     try {
       await tonConnectUi.disconnect();
+      window.localStorage.removeItem("tgtop:ton-wallet-owner");
+      window.localStorage.removeItem("tgtop:ton-wallet-pending-owner");
       toast.success(language === "en" ? "Wallet disconnected" : "Кошелёк отключён");
     } catch {
       toast.error(language === "en" ? "Could not disconnect wallet" : "Не удалось отключить кошелёк");
@@ -833,12 +839,12 @@ function WalletConnectControl({ language, balanceTon, variant = "compact" }: { l
     const walletLabel = address
       ? `${address.slice(0, 5)}…${address.slice(-4)}`
       : language === "en" ? "Connect wallet" : "Подключить кошелёк";
-    const trigger = <button disabled={!restored} onClick={() => address ? setWalletMenuOpen(true) : tonConnectUi.openModal()} className={`mt-3 flex min-h-11 w-full items-center justify-between rounded-xl border px-3.5 text-left transition-colors disabled:opacity-60 ${address ? "border-white/10 bg-white/[0.035] text-slate-200 hover:bg-white/[0.07]" : "border-[#3f8cff]/45 bg-[#3f8cff]/14 text-[#c8ddff] hover:bg-[#3f8cff]/22"}`}><span className="flex min-w-0 items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-current/20 bg-black/10"><WalletCards className="h-3.5 w-3.5" /></span><span className="min-w-0"><b className="block text-xs">{restored ? walletLabel : language === "en" ? "Loading wallet…" : "Загрузка кошелька…"}</b><small className="mt-0.5 block truncate text-[10px] text-slate-400">{address ? `${balanceTon} GRAM` : language === "en" ? "No transfer or signature is requested" : "Перевод и подпись не запрашиваются"}</small></span></span><ChevronRight className="h-4 w-4 shrink-0" /></button>;
+    const trigger = <button disabled={!restored} onClick={() => address ? setWalletMenuOpen(true) : openWalletForOwner()} className={`mt-3 flex min-h-11 w-full items-center justify-between rounded-xl border px-3.5 text-left transition-colors disabled:opacity-60 ${address ? "border-white/10 bg-white/[0.035] text-slate-200 hover:bg-white/[0.07]" : "border-[#3f8cff]/45 bg-[#3f8cff]/14 text-[#c8ddff] hover:bg-[#3f8cff]/22"}`}><span className="flex min-w-0 items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-current/20 bg-black/10"><WalletCards className="h-3.5 w-3.5" /></span><span className="min-w-0"><b className="block text-xs">{restored ? walletLabel : language === "en" ? "Loading wallet…" : "Загрузка кошелька…"}</b><small className="mt-0.5 block truncate text-[10px] text-slate-400">{address ? `${balanceTon} GRAM` : language === "en" ? "No transfer or signature is requested" : "Перевод и подпись не запрашиваются"}</small></span></span><ChevronRight className="h-4 w-4 shrink-0" /></button>;
     if (!address) return trigger;
     return <Popover open={walletMenuOpen} onOpenChange={setWalletMenuOpen}><PopoverTrigger asChild>{trigger}</PopoverTrigger><PopoverContent align="center" className="w-[min(22rem,calc(100vw-2rem))] border-white/10 bg-[#111720] p-3 text-slate-100 shadow-xl"><div className="space-y-3"><div><b className="block text-xs">{language === "en" ? "Personal wallet" : "Личный кошелёк"}</b><code className="mt-1 block break-all text-[10px] text-slate-400">{address}</code></div><button type="button" onClick={() => void disconnectWallet()} className="flex w-full items-center justify-center gap-2 rounded-lg border border-rose-300/25 bg-rose-500/[0.08] px-3 py-2 text-xs font-semibold text-rose-100 transition-colors hover:bg-rose-500/[0.14]"><X className="h-3.5 w-3.5" />{language === "en" ? "Disconnect wallet" : "Отключить кошелёк"}</button><small className="block text-center text-[9px] leading-4 text-slate-500">{language === "en" ? "Balances and operation history are not affected." : "Баланс и история операций не изменятся."}</small></div></PopoverContent></Popover>;
   }
 
-  return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? <><span>{label}</span>{address && <span className="rounded-md bg-[#0b0f14]/70 px-1.5 py-0.5 text-[10px] text-white">{balanceTon} GRAM</span>}</> : language === "en" ? "Loading…" : "Загрузка…"}</button>;
+  return <button disabled={!restored} onClick={openWalletForOwner} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? <><span>{label}</span>{address && <span className="rounded-md bg-[#0b0f14]/70 px-1.5 py-0.5 text-[10px] text-white">{balanceTon} GRAM</span>}</> : language === "en" ? "Loading…" : "Загрузка…"}</button>;
 }
 
 function WalletNftCard({ item, language }: { item: WalletNft; language: Language }) {
@@ -905,7 +911,7 @@ function ChannelGiftMediaPreview({ gift }: { gift: ChannelGiftMedia }) {
   if (gift.mediaKind === "video" && gift.mediaUrl && !failed) return <video src={gift.mediaUrl} autoPlay muted loop playsInline onError={() => setFailed(true)} className="h-full w-full object-contain" />;
   if (gift.mediaKind === "image" && gift.mediaUrl && !failed) return <img src={gift.mediaUrl} alt="" onError={() => setFailed(true)} className="h-full w-full object-contain" />;
   if (gift.mediaKind === "tgs" && gift.mediaUrl && !failed) return <div ref={containerRef} className="h-full w-full" />;
-  return <span className="grid h-full w-full place-items-center text-3xl">{gift.emoji}</span>;
+  return <span aria-label="Медиа подарка недоступно" className="grid h-full w-full place-items-center px-2 text-center text-[9px] font-medium uppercase tracking-[0.08em] text-slate-500">Медиа недоступно</span>;
 }
 
 function GramBalanceChart({ transactions, currentBalance, language }: { transactions: Array<{ amount: number; createdAt: Date }>; currentBalance: number; language: Language }) {
@@ -1033,6 +1039,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setPage("top");
     }
   }, [isAuthenticated, page]);
+  useEffect(() => {
+    if (!isAuthenticated || !user?.openId || !walletConnectionRestored) return;
+    const ownerKey = "tgtop:ton-wallet-owner";
+    const pendingOwnerKey = "tgtop:ton-wallet-pending-owner";
+    const storedOwner = window.localStorage.getItem(ownerKey);
+    const pendingOwner = window.localStorage.getItem(pendingOwnerKey);
+    if (walletAddress && storedOwner !== user.openId && pendingOwner !== user.openId) {
+      void tonConnectUi.disconnect().catch(() => undefined);
+      window.localStorage.removeItem(ownerKey);
+      window.localStorage.removeItem(pendingOwnerKey);
+      toast.error(getRussianLanguage() === "en" ? "The previous wallet session was disconnected for your safety." : "Предыдущая сессия кошелька отключена для безопасности.");
+      return;
+    }
+    if (walletAddress && (storedOwner === user.openId || pendingOwner === user.openId)) {
+      window.localStorage.setItem(ownerKey, user.openId);
+      window.localStorage.removeItem(pendingOwnerKey);
+    }
+  }, [isAuthenticated, tonConnectUi, user?.openId, walletAddress, walletConnectionRestored]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
   const language = getRussianLanguage();
@@ -3410,7 +3434,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <section className="space-y-3">
                 <div className="rounded-2xl border border-white/9 bg-[#111720] p-3">
                   <div className="flex items-start justify-between gap-3"><span><b className="block text-sm text-slate-100">{tx("NFT кошелька", "Wallet NFTs")}</b><small className="mt-1 block text-[10px] leading-4 text-slate-500">{tx("Показываем только активы, которые сеть GRAM связывает с подключённым адресом.", "Only assets associated by the GRAM network with the connected address are shown.")}</small></span><PackageOpen className="h-4 w-4 shrink-0 text-[#8fb9ff]" /></div>
-                  <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" />
+                  <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" ownerOpenId={user?.openId} />
                 </div>
                 {!walletConnectionRestored ? (
                   <div className="rounded-xl border border-white/8 bg-white/[0.025] p-5 text-center text-xs text-slate-500">{tx("Проверяем подключение кошелька…", "Checking wallet connection…")}</div>
@@ -3585,11 +3609,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   {detailReturnPage === "mine" && ownsDetail && detail.group.category === "Каналы" && (
                     <section className="mt-3 overflow-hidden rounded-xl border border-[#31435f] bg-[#202b3a]">
                       <button type="button" onClick={() => setChannelGiftsOpen(value => !value)} className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-white/[0.035] active:scale-[0.99]">
-                        <span className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg border border-amber-200/20 bg-amber-300/[0.08] text-amber-100"><Gift className="h-4 w-4" /></span><span><b className="block text-xs text-slate-100">Подарки</b><small className="mt-0.5 block text-[10px] text-slate-500">Подарки, которыми владеет канал</small></span></span>
+                        <span className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg border border-amber-200/20 bg-amber-300/[0.08] text-amber-100"><Gift className="h-4 w-4" /></span><span><b className="block text-xs text-slate-100">Подарки</b><small className="mt-0.5 block text-[10px] text-slate-500">Подарки, которыми владеет канал · только просмотр</small></span></span>
                         <ChevronRight className={`h-4 w-4 text-slate-500 transition-transform ${channelGiftsOpen ? "rotate-90" : ""}`} />
                       </button>
                       {channelGiftsOpen && <div className="border-t border-white/8 p-2.5">
-                        {channelGiftsQuery.isPending ? <div className="grid grid-cols-3 gap-2">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="aspect-square animate-pulse rounded-xl bg-white/[0.04]" />)}</div> : channelGiftsQuery.isError ? <p className="rounded-lg bg-rose-500/[0.06] px-2.5 py-2 text-[10px] leading-4 text-rose-100/80">{channelGiftsQuery.error.message}</p> : channelGifts.length ? <div className="grid grid-cols-3 gap-2">{channelGifts.map(gift => <div key={gift.id} className="min-w-0 rounded-xl border border-white/8 bg-[#17212b] p-1.5"><div className="aspect-square overflow-hidden rounded-lg bg-[radial-gradient(circle_at_50%_35%,rgba(255,206,84,.16),transparent_55%),#111925]"><ChannelGiftMediaPreview gift={gift} /></div><b className="mt-1 block truncate text-center text-[8px] text-slate-100">{gift.title}</b><small className="mt-0.5 block truncate text-center text-[7px] text-slate-500">{gift.unique ? "Уникальный" : "Подарок"}</small></div>)}</div> : <p className="px-1 py-2 text-[10px] leading-4 text-slate-500">Telegram не вернул подарки для этого канала.</p>}
+                        {channelGiftsQuery.isPending ? <div className="grid grid-cols-3 gap-2">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="aspect-square animate-pulse rounded-xl bg-white/[0.04]" />)}</div> : channelGiftsQuery.isError ? <p className="rounded-lg bg-rose-500/[0.06] px-2.5 py-2 text-[10px] leading-4 text-rose-100/80">{channelGiftsQuery.error.message}</p> : channelGifts.length ? <div className="grid grid-cols-3 gap-2">{channelGifts.map(gift => <div key={gift.id} className="min-w-0 rounded-xl border border-white/8 bg-[#17212b] p-1.5"><div className="aspect-square overflow-hidden rounded-lg bg-[radial-gradient(circle_at_50%_35%,rgba(255,206,84,.16),transparent_55%),#111925]"><ChannelGiftMediaPreview gift={gift} /></div><b className="mt-1 block truncate text-center text-[8px] text-slate-100">{gift.title}</b><small className="mt-0.5 block truncate text-center text-[7px] text-slate-500">{gift.unique ? "Уникальный" : "Подарок"} · только просмотр</small></div>)}</div> : <p className="px-1 py-2 text-[10px] leading-4 text-slate-500">Telegram не вернул подарки для этого канала.</p>}
                       </div>}
                     </section>
                   )}
