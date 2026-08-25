@@ -396,6 +396,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('setRankSlotLinkId(rankSlotId)');
     expect(source).toContain('const MAX_RANKING_BID_GRAM = 1_000');
     expect(source).toContain('const MAX_RANKING_SLIDER_GRAM = 100');
+    expect(source).toContain('const midpoint = Math.round(((minimum + maximum) / 2) * 10) / 10;');
+    expect(source).toContain('const totalPlacementCost = rewardBudgetGram === null ? null : bidAmount + rewardBudgetGram;');
+    expect(source).toContain('Итого к списанию');
+    expect(source).toContain('tx("Средняя", "Average")');
     expect(source).toContain('const listingSlotsQuery = trpc.tgTop.getSlots.useQuery');
     expect(source).toContain('subcategory: listingSubcategory || "Все"');
     expect(source).not.toContain('до 100 GRAM');
