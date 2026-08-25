@@ -21,6 +21,7 @@ describe("catalog directory administration", () => {
     expect(homeSource).toContain("Все пользователи с доступом к админ-панели могут менять эти списки.");
     expect(homeSource).toContain("const managedCountries = catalogTaxonomy?.countries?.length");
     expect(homeSource).toContain('category: "Каналы" | "Чаты" | "Боты"');
-    expect(homeSource).toContain('aria-label="Рубрики ботов"');
+    expect(homeSource).toContain('Рубрика ботов');
+    expect(homeSource).toContain('setBotCategorySheetOpen(true)');
   });
 });

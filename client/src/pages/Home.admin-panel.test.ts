@@ -9,8 +9,9 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain("getActiveModerationListings.useQuery");
     expect(source).toContain("refetchInterval: 10_000");
     expect(source).toContain('moderationAccess?.canModerate ? [{ key: "admin", label: "Админ", icon: ShieldCheck }]');
-    expect(source).toContain("Активные лоты");
-    expect(source).toContain("Сначала показаны новые размещения");
+    expect(source).toContain("Модерация");
+    expect(source).toContain("Залистенные сообщества");
+    expect(source).toContain("Полный список по времени листинга: свежие сверху.");
     expect(source).toContain("openTelegramInNewBrowserTab(groupUrl)");
     expect(source).toContain('action: "review", reason: moderationReasonDraft.trim()');
     expect(source).toContain("Владельцу отправлена причина");
@@ -24,7 +25,7 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain('tx("Снять с листинга", "Remove from listing")');
     expect(source).toContain('value="Боты"');
     expect(source).toContain('setCatalogTopicCategoryDraft(value as "Каналы" | "Чаты" | "Боты")');
-    expect(source).toContain('aria-label="Рубрики ботов"');
+    expect(source).toContain('Рубрика ботов');
     expect(source).toContain('botTopicOptions.map(topic =>');
     expect(source).toContain('setLotGroupId(starsPaymentGroup.id)');
     expect(source).toContain('getGroupAdministrators.useQuery');

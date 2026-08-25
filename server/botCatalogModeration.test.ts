@@ -34,4 +34,31 @@ describe("bot catalog moderation contract", () => {
     expect(homeSource).toContain("Заявки на ботов");
     expect(homeSource).toContain('SelectItem value="Боты"');
   });
+
+  it("keeps the complete bot directory, status filters, and deletion behind moderator access", () => {
+    const dbSource = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+    const routerSource = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
+    const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
+
+    expect(dbSource).toContain("export async function getAllBotListings()");
+    expect(dbSource).toContain("export async function deleteBotListing(actorOpenId: string, botListingId: number)");
+    expect(dbSource).toContain("await requireCatalogAdmin(actorOpenId)");
+    expect(routerSource).toContain("getAllBotListings: protectedProcedure");
+    expect(routerSource).toContain("deleteBotListing: protectedProcedure");
+    expect(routerSource).toContain("Недостаточно прав для удаления ботов");
+    expect(homeSource).toContain('botModerationFilter, setBotModerationFilter');
+    expect(homeSource).toContain('key: "pending", label: "Заявки"');
+    expect(homeSource).toContain('key: "approved", label: "Лист"');
+    expect(homeSource).toContain("window.confirm(`Удалить @${bot.username} из каталога?`)");
+    expect(homeSource).toContain("Модерация");
+    expect(homeSource).toContain("Залистенные сообщества");
+  });
+
+  it("offers the compact public bot submission sheet", () => {
+    const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
+    expect(homeSource).toContain("botListingSheetOpen, setBotListingSheetOpen");
+    expect(homeSource).toContain("setBotListingSheetOpen(true)");
+    expect(homeSource).toContain("submitBotListing.mutate({ telegramLink: botTelegramLinkDraft })");
+    expect(homeSource).toContain("Отправить на проверку");
+  });
 });

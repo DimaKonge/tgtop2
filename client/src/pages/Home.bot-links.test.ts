@@ -52,7 +52,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('{formatTon(deal.price)} GRAM');
     expect(source).toContain('grid grid-cols-3 gap-1.5');
     expect(source).not.toContain('ЛОТ · #{selectedSlot?.slotNumber ?? 1}');
-    expect(source).toContain('selectedSlot ? `#${selectedSlot.slotNumber}` : `Прогноз #${detailDisplayedSlotNumber}`');
+    expect(source).toContain('selectedSlot ? `#${detailDisplayedSlotNumber}` : `Прогноз #${detailDisplayedSlotNumber}`');
     expect(source).toContain('detailRewardActive && <Star className="h-4 w-4 shrink-0 fill-[#ffd766] text-[#ffd766]"');
     expect(source).toContain('font-mono text-[10px] font-semibold tracking-[0.04em] text-slate-300');
     expect(source).toContain('const detailSalePriceUnits = parseGramInput(detailSalePrice);');
@@ -428,7 +428,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('const fourthTier = board.slice(7, 10);');
     expect(source).toContain('Место не выбрано');
     expect(source).not.toContain('#{selectedSlot?.slotNumber ?? 1}');
-    expect(source).toContain('const detailDisplayedSlotNumber = selectedSlot?.slotNumber ?? detailRankingPreviewSlotNumber;');
+    expect(source).toContain('const detailDisplayedSlotNumber = detailBoardScope?.displayPosition ?? selectedSlot?.slotNumber ?? detailRankingPreviewSlotNumber;');
     expect(source).toContain('`Прогноз #${detailDisplayedSlotNumber}`');
     expect(source).toContain('if (!detailRewardActive) {');
     expect(source).toContain('createRewardInviteLink.mutate({ groupId: detail.group.id });');

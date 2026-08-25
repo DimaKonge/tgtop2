@@ -1479,6 +1479,30 @@ export async function getBotModerationQueue() {
   return rows.map(({ bot, ownerName, ownerTelegramUsername }) => ({ ...bot, ownerName, ownerTelegramUsername }));
 }
 
+export async function getAllBotListings() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({
+    bot: botListings,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+  }).from(botListings)
+    .leftJoin(users, eq(botListings.ownerOpenId, users.openId))
+    .orderBy(desc(botListings.createdAt));
+  return rows.map(({ bot, ownerName, ownerTelegramUsername }) => ({ ...bot, ownerName, ownerTelegramUsername }));
+}
+
+export async function deleteBotListing(actorOpenId: string, botListingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(actorOpenId);
+  const [bot] = await db.select({ id: botListings.id, username: botListings.username })
+    .from(botListings).where(eq(botListings.id, botListingId)).limit(1);
+  if (!bot) throw new Error("Бот не найден в каталоге");
+  await db.delete(botListings).where(eq(botListings.id, bot.id));
+  return bot;
+}
+
 export async function moderateBotListing(input: {
   reviewerOpenId: string;
   botListingId: number;

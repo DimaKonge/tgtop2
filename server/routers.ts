@@ -420,6 +420,20 @@ export const appRouter = router({
       return await db.getBotModerationQueue();
     }),
 
+    getAllBotListings: protectedProcedure.query(async ({ ctx }) => {
+      const access = await db.getModerationAccess(ctx.user.openId);
+      if (!access.canModerate) throw new Error("Недостаточно прав для просмотра каталога ботов");
+      return await db.getAllBotListings();
+    }),
+
+    deleteBotListing: protectedProcedure
+      .input(z.object({ botListingId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const access = await db.getModerationAccess(ctx.user.openId);
+        if (!access.canModerate) throw new Error("Недостаточно прав для удаления ботов");
+        return await db.deleteBotListing(ctx.user.openId, input.botListingId);
+      }),
+
     moderateBotListing: protectedProcedure
       .input(z.object({
         botListingId: z.number().int().positive(),
