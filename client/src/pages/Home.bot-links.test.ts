@@ -593,8 +593,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('createProtectedGroupDeal');
     expect(source).toContain('Вступления');
     expect(source).toContain('Пригласили');
-    expect(source).toContain('Чтобы добавить свою группу, назначьте бота администратором вашей группы.');
-    expect(source).toContain('После подключения группа появится здесь для выбора.');
+    expect(source).toContain('Текущая ставка за лот');
+    expect(source).toContain('grid h-11 w-11 shrink-0 place-items-center');
+    expect(source).toContain('const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? null;');
     expect(source).toContain('Добавить канал');
     expect(source).toContain('Добавить чат');
     expect(source).toContain('lotGroupCandidates.map(group =>');

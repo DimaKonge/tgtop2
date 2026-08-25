@@ -2217,7 +2217,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         && (placementSlot.subcategory === "Все" || placementSlot.subcategory === group.subcategory)
       )
     : [];
-  const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? (ownsDetail ? detail?.group ?? null : null);
+  const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? null;
   const existingRewardBudgetUnits = selectedLotGroup && hasConfiguredRewardCampaign(selectedLotGroup)
     ? Number(selectedLotGroup.rewardBudget ?? 0)
     : 0;
@@ -3741,12 +3741,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-rose-300/25 bg-rose-300/[0.07] px-2 text-[9px] font-semibold text-rose-100 transition-colors hover:bg-rose-300/[0.13] disabled:opacity-50"
                         ><X className="h-3.5 w-3.5" />{tx("Снять лот", "Remove lot")}</button>}
                       </div>
-                      <p className="mt-1 text-[10px] text-slate-500">{selectedSlot ? (ownsDetail ? "Настройте размещение перед оплатой." : "Выберите свою группу и настройте размещение.") : "Настройте свою группу перед первым размещением."}</p>
 
                       {!selectedLotGroup ? (
-                        <button type="button" onClick={() => setLotGroupPickerOpen(true)} aria-label="Добавить свою группу" className="mt-2 flex w-full items-center justify-center rounded-xl border border-dashed border-[#3f8cff]/45 bg-[#3f8cff]/[0.06] py-3 text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.12] active:scale-[0.99]">
-                          <Plus className="h-5 w-5" />
-                        </button>
+                        <div className="mt-2 flex items-center gap-2 rounded-xl border border-[#31435f] bg-[#101a2d] p-2">
+                          <span className="min-w-0 flex-1 px-1"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Текущая ставка за лот</small><b className="mt-0.5 block text-sm text-[#63f5b1]">{formatTon(selectedSlot ? selectedSlot.bidAmount / 1000 : detailMinimumBid ?? 0.1)} GRAM</b></span>
+                          <button type="button" onClick={() => { if (!isAuthenticated) { toast.message(tx("Войдите через Telegram, чтобы добавить свою группу", "Sign in with Telegram to add your community")); return; } setLotGroupPickerOpen(true); }} aria-label="Добавить свою группу" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-dashed border-[#3f8cff]/55 bg-[#3f8cff]/[0.09] text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.16] active:scale-[0.94]">
+                            <Plus className="h-5 w-5" />
+                          </button>
+                        </div>
                       ) : (
                         <button type="button" onClick={() => setLotGroupPickerOpen(true)} className="mt-2 flex w-full items-center gap-2 rounded-xl border border-[#3390ec]/55 bg-[#213750] p-2 text-left transition-colors hover:bg-[#274363]">
                           <Avatar group={selectedLotGroup} compact />
@@ -3788,7 +3790,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>}
                     </section>
                   )}
-                  {placementSlot && (
+                  {placementSlot && selectedLotGroup && (
                     <section aria-disabled={lotSettingsLocked} className={`mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3 ${lotSettingsLocked ? "opacity-35 grayscale" : ""}`}>
                       <div className="flex items-center justify-between">
                         <span><h2 className="text-sm font-bold text-slate-100">{selectedSlot ? "Текущая ставка за лот" : "Ставка для размещения"}</h2><small className="mt-0.5 block text-[10px] text-slate-500">Место #{placementSlot.slotNumber}</small></span>
