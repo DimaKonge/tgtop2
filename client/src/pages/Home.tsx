@@ -1862,7 +1862,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   );
   const board = useMemo(
     () =>
-      Array.from({ length: 7 }, (_, index) => {
+      Array.from({ length: 10 }, (_, index) => {
         const slot = slots.find(item => item.slotNumber === index + 1);
         return slot && matchesAudience(slot.group)
           ? slot
@@ -1889,6 +1889,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const leadSlot = board[0];
   const secondTier = board.slice(1, 3);
   const thirdTier = board.slice(3, 7);
+  const fourthTier = board.slice(7, 10);
   const rankingSnapshotKey = board.map(slot => `${slot.slotNumber}:${slot.group?.id ?? 0}:${slot.bidAmount}`).join("|");
   const rankingMotionKey = `${globalDirection}:${category}:${subcategory}:${country}:${city}:${rankingSnapshotKey}`;
   const bonusBalanceUnits = account?.user?.bonusBalance ?? user?.bonusBalance ?? 0;
@@ -2262,6 +2263,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       startTelegramLogin();
       return;
     }
+    void mineQuery.refetch();
     setStarsPaymentGroup(null);
     if (slot) {
       const nextBid = getMinimumRankingBidGram(slot);
@@ -2559,6 +2561,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   };
   const openStarsPayment = (group: Group) => {
     if (!targetSlot?.id) return toast.error(tx("Эта позиция пока недоступна.", "This placement is not available yet."));
+    const currentGroup = mine.find(item => item.id === group.id) ?? group;
     const value = normalizeRankingBid(Number(amount));
     const minimum = getMinimumRankingBidGram(targetSlot);
     if (value === undefined || value < minimum) {
@@ -2568,19 +2571,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingCountry(targetSlot.country && targetSlot.country !== "Все" ? targetSlot.country : "Global");
     setListingCity("Все");
     setListingSubcategory(targetSlot.subcategory && targetSlot.subcategory !== "Все" ? targetSlot.subcategory : "General");
-    setDetailVisibility(group.anonymousListing === false ? "public" : "anonymous");
-    setShowOwnerContact(Boolean(group.showOwnerContact));
-    setLotGroupId(group.id);
-    setSelectedManagerTelegramUserId(group.managerTelegramUserId ?? null);
-    setManagerPublic(group.managerPublic !== false);
-    setListingAnnouncementEnabled(group.listingAnnouncementEnabled ?? true);
-    setIsListingForSale(group.listingType === "sale" && Boolean(group.salePriceTon));
-    setSalePriceTon(group.salePriceTon ? formatTon(group.salePriceTon) : "");
-    setRewardCampaignEnabled(hasConfiguredRewardCampaign(group));
-    setRewardBudget(group.rewardBudget ? formatGram(group.rewardBudget) : "");
-    const joinReward = group.category === "Чаты" ? group.rewardPerManualAdd : group.rewardPerSubscription;
+    setDetailVisibility(currentGroup.anonymousListing === false ? "public" : "anonymous");
+    setShowOwnerContact(Boolean(currentGroup.showOwnerContact));
+    setLotGroupId(currentGroup.id);
+    setSelectedManagerTelegramUserId(currentGroup.managerTelegramUserId ?? null);
+    setManagerPublic(currentGroup.managerPublic !== false);
+    setListingAnnouncementEnabled(currentGroup.listingAnnouncementEnabled ?? true);
+    setIsListingForSale(currentGroup.listingType === "sale" && Boolean(currentGroup.salePriceTon));
+    setSalePriceTon(currentGroup.salePriceTon ? formatTon(currentGroup.salePriceTon) : "");
+    setRewardCampaignEnabled(hasConfiguredRewardCampaign(currentGroup));
+    setRewardBudget(currentGroup.rewardBudget ? formatGram(currentGroup.rewardBudget) : "");
+    const joinReward = currentGroup.category === "Чаты" ? currentGroup.rewardPerManualAdd : currentGroup.rewardPerSubscription;
     setRewardPerSubscription(joinReward ? formatGram(joinReward) : "");
-    setStarsPaymentGroup(group);
+    setStarsPaymentGroup(currentGroup);
   };
   const openNftTransfer = () => {
     setSelectedNftId(null);
@@ -2856,6 +2859,21 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="grid w-full grid-cols-4 gap-2">
                 {thirdTier.map((slot, index) => (
                   <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-compact" style={{ animationDelay: `${185 + index * 34}ms` }}>
+                    <GroupCard
+                      group={slot.group}
+                      variant="compact"
+                      language={language}
+                      bidAmount={slot.bidAmount}
+                      onClick={() =>
+                        slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="grid w-full grid-cols-4 gap-2">
+                {fourthTier.map((slot, index) => (
+                  <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-compact" style={{ animationDelay: `${321 + index * 34}ms` }}>
                     <GroupCard
                       group={slot.group}
                       variant="compact"

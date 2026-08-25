@@ -783,7 +783,7 @@ export async function attributeTelegramReferral(telegramUserId: number, referral
   return true;
 }
 
-const RANKING_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6, 7] as const;
+const RANKING_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 async function ensureAuctionBoard(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, category: "Все" | "Каналы" | "Чаты", subcategory: string, country: string) {
   await db.insert(auctionSlots).values(RANKING_SLOT_NUMBERS.map(slotNumber => ({
@@ -923,13 +923,11 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     },
   ];
   }));
-  const visibleEntries = slots.filter(slot => slot.groupId !== null && groupMap.has(slot.groupId));
-  const emptyTemplates = slots.filter(slot => !visibleEntries.some(entry => entry.id === slot.id));
-  return [...visibleEntries, ...emptyTemplates].slice(0, slots.length).map((slot, index) => {
+  return slots.map(slot => {
     const group = slot.groupId ? groupMap.get(slot.groupId) ?? null : null;
     return group
-      ? { ...slot, slotNumber: index + 1, group }
-      : { ...slot, slotNumber: index + 1, bidAmount: 0, currentBid: "0 GRAM", leaderUsername: "-", leaderUserId: null, groupId: null, title: "Свободное место", subtitle: "Ждет листинга", group: null };
+      ? { ...slot, group }
+      : { ...slot, bidAmount: 0, currentBid: "0 GRAM", leaderUsername: "-", leaderUserId: null, groupId: null, title: "Свободное место", subtitle: "Ждет листинга", group: null };
   });
 }
 

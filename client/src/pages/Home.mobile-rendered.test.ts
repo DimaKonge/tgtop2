@@ -22,9 +22,9 @@ describe("TG TOP Global rendered mobile featured board", () => {
     await browser?.close();
   });
 
-  it("keeps all seven featured positions readable above the mobile navigation", async () => {
+  it("renders ten featured positions with a compact continuation after the first seven", async () => {
     const slots = page.locator('[role="button"]').filter({ hasText: "Свободно" });
-    expect(await slots.count()).toBe(7);
+    expect(await slots.count()).toBe(10);
 
     const boxes = await slots.evaluateAll(elements =>
       elements.map(element => {
@@ -38,7 +38,8 @@ describe("TG TOP Global rendered mobile featured board", () => {
     expect(boxes[0].height).toBe(300);
     expect(boxes.slice(1, 3).every(box => box.width >= 175 && box.height === 136)).toBe(true);
     expect(boxes.slice(3).every(box => box.width > 80 && box.height === 88)).toBe(true);
-    expect(Math.max(...boxes.map(box => box.bottom))).toBeLessThanOrEqual(772);
+    expect(boxes.slice(7).every(box => box.width > 80 && box.height === 88)).toBe(true);
+    expect(Math.max(...boxes.map(box => box.bottom))).toBeGreaterThan(772);
   });
 
   it("keeps the Global controls within the 390px viewport without horizontal overflow", async () => {

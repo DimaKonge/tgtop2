@@ -8,7 +8,9 @@ describe("unified ranking board", () => {
     expect(source).toContain('const boardCategory = "Все";');
     expect(source).toContain('const requestedCategory = category === "Каналы" || category === "Чаты" ? category : "Все";');
     expect(source).toContain('if (requestedCategory !== "Все") groupConditions.push(eq(groupsCatalog.category, requestedCategory));');
-    expect(source).toContain('const visibleEntries = slots.filter(slot => slot.groupId !== null && groupMap.has(slot.groupId));');
+    expect(source).toContain('const RANKING_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;');
+    expect(source).toContain('return slots.map(slot => {');
+    expect(source).not.toContain('slotNumber: index + 1');
     expect(source).toContain('const rankingCategories = ["Все"] as const;');
   });
 });
