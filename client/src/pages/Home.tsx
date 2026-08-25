@@ -1478,6 +1478,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const timer = window.setInterval(reconcile, 4_000);
     return () => window.clearInterval(timer);
   }, [activeTonWithdrawalId, reconcileTonWithdrawalMutation, tonWithdrawals]);
+  useEffect(() => {
+    if (!activeTonWithdrawalId) return;
+    const active = tonWithdrawals.find(item => item.id === activeTonWithdrawalId);
+    if (!active || active.status !== "cancelled") return;
+    setActiveTonWithdrawalId(null);
+    setTonWithdrawalFlow("form");
+    setTonWithdrawalOpen(false);
+    toast.error("Вывод отменён до отправки. GRAM остались на основном балансе.");
+  }, [activeTonWithdrawalId, tonWithdrawals]);
   const startTonDeposit = async () => {
     if (!walletConnectionRestored) return;
     if (!walletAddress) {
@@ -1636,6 +1645,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     city: listingCity,
   }, { enabled: Boolean(detail), refetchInterval: 12_000, refetchIntervalInBackground: false });
   const detailTopPreviewSlots = (detailTopPreviewSlotsQuery.data ?? []) as Slot[];
+  const rewardCampaignStatsQuery = trpc.tgTop.getRewardCampaignStats.useQuery(
+    { groupId: detail?.group.id ?? 0 },
+    { enabled: Boolean(detail && detail.group.ownerOpenId === user?.openId), refetchInterval: 12_000, refetchIntervalInBackground: false },
+  );
+  const rewardCampaignStats = rewardCampaignStatsQuery.data;
 
   const listWithCredits = trpc.tgTop.listGroupsWithCredits.useMutation({
     onSuccess: () => {
@@ -1693,14 +1707,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     onError: error => toast.error(error.message),
   });
   const createRewardInviteLink = trpc.tgTop.createRewardInviteLink.useMutation({
-    onSuccess: async ({ inviteLink, existing }) => {
-      try {
-        await navigator.clipboard.writeText(inviteLink);
-        toast.success(tx(existing ? "Ваша ссылка уже готова и скопирована" : "Персональная ссылка создана и скопирована", existing ? "Your existing link is ready and copied" : "Your personal link was created and copied"));
-      } catch {
-        openTelegramCommunityLink(inviteLink);
-        toast.success(tx("Персональная ссылка создана", "Your personal link was created"));
-      }
+    onSuccess: ({ inviteLink, existing }) => {
+      openTelegramInNewBrowserTab(inviteLink);
+      toast.success(tx(existing ? "Открыта ваша персональная ссылка" : "Создана и открыта персональная ссылка", existing ? "Your personal link is open" : "Your personal link was created and opened"));
     },
     onError: error => toast.error(error.message),
   });
@@ -2140,6 +2149,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const detailRankingPreviewSlotNumber = selectedLotGroup
     ? getSimulatedRankingSlotNumber(detailTopPreviewSlots, selectedLotGroup.id, detailRankingBidAmount, selectedLotGroup.category)
     : null;
+  const detailDisplayedSlotNumber = selectedSlot?.slotNumber ?? detailRankingPreviewSlotNumber;
   const detailTypeRankingPreviewPosition = selectedLotGroup
     ? getSimulatedRankingTypePosition(detailTopPreviewSlots, selectedLotGroup.id, selectedLotGroup.category, detailRankingBidAmount)
     : null;
@@ -2167,6 +2177,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       : Number(detail.group.rewardPerSubscription ?? detail.group.reward?.subscriptionAmount ?? detail.group.rewardAmount ?? 0)
     : 0;
   const detailRewardActive = Boolean(detail?.group.rewardActive && detailEntryReward > 0);
+  const openRewardAwareEntry = () => {
+    if (!detailEntryUrl || !detail) return;
+    if (!detailRewardActive) {
+      openTelegramInNewBrowserTab(detailEntryUrl);
+      return;
+    }
+    if (!isAuthenticated) {
+      toast.message(tx("Войдите через Telegram, чтобы получить персональную ссылку", "Sign in with Telegram to receive a personal link"));
+      startTelegramLogin();
+      return;
+    }
+    createRewardInviteLink.mutate({ groupId: detail.group.id });
+  };
   const persistedDetailSalePrice = detail?.group.salePriceTon ? formatTon(detail.group.salePriceTon) : "";
   const detailSalePrice = ownsDetail ? salePriceTon : persistedDetailSalePrice;
   const detailSalePriceUnits = parseGramInput(detailSalePrice);
@@ -3371,8 +3394,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <div className="relative flex flex-col overflow-hidden rounded-[22px] border border-[#31435f] bg-[#17212b] p-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="rounded-lg border border-[#354966] bg-[#202b3a] px-2 py-1 text-[10px] font-bold tracking-[0.08em] text-[#c4d8f6]">#{selectedSlot?.slotNumber ?? 1}</span>
-                      <b className="shrink-0 font-mono text-[10px] font-semibold tracking-[0.04em] text-slate-300">{selectedSlot ? formatPositionDuration(selectedSlot.updatedAt, positionClock) : "00:00:00"}</b>
+                      {detailDisplayedSlotNumber ? (
+                        <>
+                          <span className="rounded-lg border border-[#354966] bg-[#202b3a] px-2 py-1 text-[10px] font-bold tracking-[0.08em] text-[#c4d8f6]">{selectedSlot ? `#${selectedSlot.slotNumber}` : `Прогноз #${detailDisplayedSlotNumber}`}</span>
+                          {selectedSlot && <b className="shrink-0 font-mono text-[10px] font-semibold tracking-[0.04em] text-slate-300">{formatPositionDuration(selectedSlot.updatedAt, positionClock)}</b>}
+                        </>
+                      ) : (
+                        <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-slate-400">Место не выбрано</span>
+                      )}
                     </div>
                     <span className="flex items-center gap-1.5">
                       {detailRewardActive && <Star className="h-4 w-4 shrink-0 fill-[#ffd766] text-[#ffd766]" aria-label="Вознаграждение активно" />}
@@ -3381,7 +3410,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
                   <div className="mt-3 flex items-start gap-3">
                     <div className="relative shrink-0">
-                      <button type="button" onClick={() => { if (detailEntryUrl) openTelegramInNewBrowserTab(detailEntryUrl); }} disabled={!detailEntryUrl} className="rounded-[22px] transition-transform active:scale-[0.98] disabled:cursor-default">
+                      <button type="button" onClick={openRewardAwareEntry} disabled={!detailEntryUrl} className="rounded-[22px] transition-transform active:scale-[0.98] disabled:cursor-default">
                         <Avatar group={detail.group} hero />
                       </button>
                       <span className={`absolute bottom-1 right-1 inline-flex items-center gap-0.5 whitespace-nowrap text-[8px] font-medium leading-none ${dailyGrowthPct !== null && dailyGrowthPct < 0 ? "text-rose-300/75" : "text-emerald-300/75"}`}>
@@ -3399,7 +3428,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div className="mt-3 flex items-stretch gap-1.5">
                     <button
                       type="button"
-                      onClick={() => { if (detailEntryUrl) openTelegramInNewBrowserTab(detailEntryUrl); }}
+                      onClick={openRewardAwareEntry}
                       disabled={!detailEntryUrl}
                       className="flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2 text-center text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
                     >
@@ -3449,6 +3478,25 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <small className="mt-2 block text-[10px] text-violet-300">зафиксировано ботом</small>
                     </div>
                   </div>
+                  {ownsDetail && rewardCampaignStats && (rewardCampaignStats.budgetReserved > 0 || rewardCampaignStats.confirmedParticipants > 0) && (
+                    <section className="mt-3 overflow-hidden rounded-xl border border-emerald-300/20 bg-emerald-400/[0.055] p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <span>
+                          <h2 className="text-sm font-bold text-emerald-50">Вознаграждения</h2>
+                          <small className="mt-0.5 block text-[10px] leading-4 text-emerald-100/60">Личные ссылки создаются только при включённой кампании.</small>
+                        </span>
+                        <span className={`rounded-lg px-2 py-1 text-[9px] font-semibold ${rewardCampaignStats.campaignActive ? "bg-emerald-300/15 text-emerald-200" : "bg-white/8 text-slate-300"}`}>{rewardCampaignStats.campaignActive ? "Кампания активна" : "Кампания завершена"}</span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <span className="rounded-lg border border-white/8 bg-black/10 p-2"><small className="block text-[9px] text-slate-400">Внесено</small><b className="mt-0.5 block text-xs text-white">{formatGram(rewardCampaignStats.budgetReserved)} GRAM</b></span>
+                        <span className="rounded-lg border border-white/8 bg-black/10 p-2"><small className="block text-[9px] text-slate-400">Выплачено</small><b className="mt-0.5 block text-xs text-emerald-200">{formatGram(rewardCampaignStats.paidOut)} GRAM</b></span>
+                        <span className="rounded-lg border border-white/8 bg-black/10 p-2"><small className="block text-[9px] text-slate-400">Остаток</small><b className="mt-0.5 block text-xs text-amber-100">{formatGram(rewardCampaignStats.refundableRemainder)} GRAM</b></span>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3 text-[10px]"><span className="text-slate-300">Подтверждённые участники: <b className="text-white">{rewardCampaignStats.confirmedParticipants}</b></span><span className="text-slate-400">Персональных ссылок: {rewardCampaignStats.personalLinks}</span></div>
+                      {rewardCampaignStats.participants.length > 0 && <div className="mt-2 space-y-1 border-t border-white/8 pt-2">{rewardCampaignStats.participants.slice(0, 5).map(participant => <div key={participant.id} className="flex items-center justify-between gap-3 text-[10px]"><span className="min-w-0 truncate text-slate-300">{participant.username ? `@${participant.username}` : participant.name}</span><b className="shrink-0 text-emerald-200">+{formatGram(participant.amount)} GRAM</b></div>)}</div>}
+                      <small className="mt-3 block text-[9px] leading-4 text-slate-400">При снятии лота ставка за место не возвращается. Возвращается только этот неиспользованный остаток бюджета.</small>
+                    </section>
+                  )}
                   {ownsDetail && detail.group.category === "Каналы" && (
                     <section className="mt-3 overflow-hidden rounded-xl border border-[#31435f] bg-[#202b3a]">
                       <button type="button" onClick={() => setChannelGiftsOpen(value => !value)} className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-white/[0.035] active:scale-[0.99]">
@@ -3853,9 +3901,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                     </SheetContent>
                   </Sheet>
-                  <Sheet open={tonWithdrawalOpen} onOpenChange={open => {
-                    setTonWithdrawalOpen(open);
-                    if (open) {
+                    <Sheet open={tonWithdrawalOpen} onOpenChange={open => {
+                      setTonWithdrawalOpen(open);
+                      if (!open) {
+                        setTonWithdrawalFlow("form");
+                        setActiveTonWithdrawalId(null);
+                        return;
+                      }
+                      if (open) {
                       setTonWithdrawalAddress(current => current || tonWithdrawalDefaultRecipient || walletAddress || "");
                       const pending = tonWithdrawals.find(item => item.status === "broadcast_pending" || item.status === "sent");
                       if (pending) {

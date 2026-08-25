@@ -140,8 +140,14 @@ export async function emulateTonPayoutFee(boc: string) {
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new Error("Не удалось безопасно оценить комиссию сети");
-  const payload = await response.json() as { transaction?: { total_fees?: string | number | null } };
-  const value = payload.transaction?.total_fees;
+  const payload = await response.json() as {
+    transaction?: { total_fees?: string | number | null };
+    trace?: { transaction?: { total_fees?: string | number | null } };
+    transactions?: Array<{ total_fees?: string | number | null }>;
+  };
+  const value = payload.transaction?.total_fees
+    ?? payload.trace?.transaction?.total_fees
+    ?? payload.transactions?.[0]?.total_fees;
   try {
     const fee = BigInt(value ?? "");
     if (fee < BigInt(0)) throw new Error("negative");

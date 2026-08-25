@@ -18,6 +18,12 @@ describe("withdrawal reliability guards", () => {
     expect(dbSource).toContain('getTonPayoutTransactionByMessageHash(withdrawal.externalMessageHash)');
   });
 
+  it("retries only the fee emulation before broadcasting and preserves the safe cancellation boundary", () => {
+    expect(dbSource).toContain("const emulateFeeWithRetry = async");
+    expect(dbSource).toContain("attempt < 3");
+    expect(dbSource.indexOf("const emulateFeeWithRetry = async")).toBeLessThan(dbSource.indexOf("await broadcastTonPayoutBoc(prepared.boc)"));
+  });
+
   it("returns a held balance exactly once when a finalized external message has no outgoing payout", () => {
     expect(dbSource).toContain("const confirmedWithoutOutgoingPayout = Boolean(");
     expect(dbSource).toContain("trackedTransaction.out_msgs.length === 0");

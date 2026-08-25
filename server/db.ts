@@ -451,14 +451,26 @@ export async function broadcastQueuedTonWithdrawal(withdrawalId: number) {
     if (!withdrawal || withdrawal.status !== "queued") return { attempted: false as const, reason: "not_queued" as const };
     const grossAmountNano = BigInt(withdrawal.grossAmountNano);
     let prepared = await buildTonPayoutExternalBoc({ destinationWalletAddress: withdrawal.destinationWalletAddress, amountNano: grossAmountNano, reference: withdrawal.reference });
+    const emulateFeeWithRetry = async (boc: string) => {
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          return await emulateTonPayoutFee(boc);
+        } catch (error) {
+          lastError = error;
+          if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+        }
+      }
+      throw lastError;
+    };
     let estimatedFeeNano: bigint;
     try {
-      estimatedFeeNano = await emulateTonPayoutFee(prepared.boc);
+      estimatedFeeNano = await emulateFeeWithRetry(prepared.boc);
       if (estimatedFeeNano <= BigInt(0) || estimatedFeeNano >= grossAmountNano) throw new Error("fee_exceeds_amount");
       const estimatedNetNano = grossAmountNano - estimatedFeeNano;
       prepared = await buildTonPayoutExternalBoc({ destinationWalletAddress: withdrawal.destinationWalletAddress, amountNano: estimatedNetNano, reference: withdrawal.reference });
       // Re-estimate the final message once; this keeps the user's fee tied to the actual message being sent.
-      estimatedFeeNano = await emulateTonPayoutFee(prepared.boc);
+      estimatedFeeNano = await emulateFeeWithRetry(prepared.boc);
       if (estimatedFeeNano <= BigInt(0) || estimatedFeeNano >= grossAmountNano) throw new Error("fee_exceeds_amount");
       const finalNetNano = grossAmountNano - estimatedFeeNano;
       if (finalNetNano !== estimatedNetNano) {
@@ -1891,7 +1903,12 @@ export async function getOrCreateRewardInviteLink(groupId: number, beneficiaryOp
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.id, groupId)).limit(1);
-  if (!group || group.status !== "listed" || group.category !== "Каналы" || !isRewardCampaignActive(group) || getRewardAmount(group, "invite_referral") < 1) {
+  const inviteRewardAmount = group?.category === "Чаты"
+    ? getRewardAmount(group, "manual_add")
+    : group
+      ? getRewardAmount(group, "invite_referral")
+      : 0;
+  if (!group || group.status !== "listed" || !isRewardCampaignActive(group) || inviteRewardAmount < 1) {
     throw new Error("Пригласительная кампания для канала недоступна");
   }
   const [existing] = await db.select().from(rewardInviteLinks).where(and(
@@ -1924,6 +1941,55 @@ export async function getRewardInviteBeneficiary(chatId: string, inviteLink: str
     eq(rewardInviteLinks.inviteLink, inviteLink)
   )).limit(1);
   return link ? { beneficiaryOpenId: link.beneficiaryOpenId, groupId: group.id } : undefined;
+}
+
+export async function getRewardCampaignStats(ownerOpenId: string, groupId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(and(
+    eq(groupsCatalog.id, groupId),
+    eq(groupsCatalog.ownerOpenId, ownerOpenId),
+  )).limit(1);
+  if (!group) throw new Error("Кампания недоступна");
+
+  const [ledgerRows, events, links] = await Promise.all([
+    db.select({ kind: creditTransactions.kind, amount: creditTransactions.amount })
+      .from(creditTransactions)
+      .where(and(eq(creditTransactions.groupId, groupId), eq(creditTransactions.userOpenId, ownerOpenId))),
+    db.select({
+      id: rewardEvents.id,
+      amount: rewardEvents.amount,
+      eventType: rewardEvents.eventType,
+      createdAt: rewardEvents.createdAt,
+      beneficiaryOpenId: rewardEvents.beneficiaryOpenId,
+      beneficiaryName: users.name,
+      beneficiaryUsername: users.telegramUsername,
+    }).from(rewardEvents)
+      .leftJoin(users, eq(users.openId, rewardEvents.beneficiaryOpenId))
+      .where(eq(rewardEvents.groupId, groupId))
+      .orderBy(desc(rewardEvents.createdAt)),
+    db.select({ id: rewardInviteLinks.id }).from(rewardInviteLinks).where(eq(rewardInviteLinks.groupId, groupId)),
+  ]);
+  const reservedUnits = Math.abs(ledgerRows.filter(row => row.kind === "reward_campaign_reserve").reduce((total, row) => total + row.amount, 0));
+  const releasedUnits = ledgerRows.filter(row => row.kind === "reward_campaign_release").reduce((total, row) => total + row.amount, 0);
+  const paidUnits = events.reduce((total, event) => total + event.amount, 0);
+  return {
+    campaignActive: isRewardCampaignActive(group),
+    budgetReserved: reservedUnits,
+    paidOut: paidUnits,
+    refundableRemainder: Math.max(0, group.rewardBudget),
+    previouslyReleased: releasedUnits,
+    personalLinks: links.length,
+    confirmedParticipants: events.length,
+    participants: events.slice(0, 30).map(event => ({
+      id: event.id,
+      amount: event.amount,
+      eventType: event.eventType,
+      createdAt: event.createdAt,
+      name: event.beneficiaryName ?? "Пользователь Telegram",
+      username: event.beneficiaryUsername,
+    })),
+  };
 }
 
 export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: number) {
@@ -2230,7 +2296,21 @@ export async function unlistGroups(ownerOpenId: string, groupIds: number[]) {
       listedAt: null,
       listingType: "catalog",
       salePriceTon: null,
+      rewardActive: false,
+      rewardBudget: 0,
     }).where(inArray(groupsCatalog.id, uniqueGroupIds));
+
+    for (const group of groups) {
+      const refundableRemainder = Math.max(0, group.rewardBudget);
+      if (!refundableRemainder) continue;
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${refundableRemainder}` }).where(eq(users.openId, ownerOpenId));
+      await tx.insert(creditTransactions).values({
+        userOpenId: ownerOpenId,
+        groupId: group.id,
+        amount: refundableRemainder,
+        kind: "reward_campaign_release",
+      });
+    }
 
     const board = await tx.select().from(auctionSlots).where(and(
       eq(auctionSlots.category, "Все"),

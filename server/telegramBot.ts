@@ -315,18 +315,32 @@ async function awardMembershipReward(membership: ChatMemberUpdate): Promise<void
     }
     return;
   }
-  if ((membership.chat.type === "group" || membership.chat.type === "supergroup") && !viaInviteLink && !membership.from.is_bot && membership.from.id !== member.id) {
-    const result = await awardTelegramReward({
-      chatId,
-      eventType: "manual_add",
-      beneficiaryTelegramId: membership.from.id,
-      memberTelegramId: member.id,
-      beneficiaryName: membership.from.username ?? membership.from.first_name ?? "Telegram user",
-      beneficiaryUsername: membership.from.username,
-      inviterTelegramId: membership.from.id,
-    });
-    if (result.awarded) {
-      console.info(`[Telegram] Awarded ${result.amount / 100} GRAM for manual chat addition in ${chatId}`);
+  if (membership.chat.type === "group" || membership.chat.type === "supergroup") {
+    const rewardLink = membership.invite_link?.invite_link
+      ? await getRewardInviteBeneficiary(chatId, membership.invite_link.invite_link)
+      : undefined;
+    const rewardLinkTelegramId = rewardLink?.beneficiaryOpenId.match(/^telegram:(\d+)$/)?.[1];
+    const result = rewardLinkTelegramId && Number(rewardLinkTelegramId) !== member.id
+      ? await awardTelegramReward({
+          chatId,
+          eventType: "manual_add",
+          beneficiaryTelegramId: Number(rewardLinkTelegramId),
+          memberTelegramId: member.id,
+          inviterTelegramId: Number(rewardLinkTelegramId),
+        })
+      : !viaInviteLink && !membership.from.is_bot && membership.from.id !== member.id
+        ? await awardTelegramReward({
+            chatId,
+            eventType: "manual_add",
+            beneficiaryTelegramId: membership.from.id,
+            memberTelegramId: member.id,
+            beneficiaryName: membership.from.username ?? membership.from.first_name ?? "Telegram user",
+            beneficiaryUsername: membership.from.username,
+            inviterTelegramId: membership.from.id,
+          })
+        : undefined;
+    if (result?.awarded) {
+      console.info(`[Telegram] Awarded ${result.amount / 100} GRAM for ${rewardLinkTelegramId ? "tracked group join" : "manual chat addition"} in ${chatId}`);
       await notifyRewardCredited({ telegramUserId: result.beneficiaryTelegramId, groupTitle: result.groupTitle, amount: result.amount });
     }
   }

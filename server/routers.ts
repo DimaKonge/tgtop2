@@ -509,6 +509,10 @@ export const appRouter = router({
         return { success: true, inviteLink: result.inviteLink, existing: result.existing };
       }),
 
+    getRewardCampaignStats: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => await db.getRewardCampaignStats(ctx.user.openId, input.groupId)),
+
     unlistGroups: protectedProcedure
       .input(z.object({ groupIds: z.array(z.number()).min(1).max(50) }))
       .mutation(async ({ ctx, input }) => {
