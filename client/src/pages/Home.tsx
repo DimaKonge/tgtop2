@@ -3046,7 +3046,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </button>
               </div>}
             </div>
-            <section className="pt-2">
+            <section>
               <div className="space-y-2">
                 {!topSearchQuery.trim() && rankingContinuation.map((slot, index) => (
                   <div key={`ranking-continuation-${slot.id}`} className="relative w-full animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${index * 35}ms` }}>

@@ -168,6 +168,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('aria-label={tx("Добавить свою группу", "Add your community")}');
     expect(source).toContain('className="grid h-8 w-full place-items-center');
     expect(source).not.toContain('className="flex h-10 w-full items-center justify-center gap-1.5');
+    expect(source).not.toContain('<section className="pt-2">');
     expect(source).toContain('const compactRankedSlots = useMemo(');
     expect(source).toContain('const rankingContinuation = compactRankedSlots.slice(7);');
     expect(source).toContain('const occupiedSlot = compactRankedSlots[index];');
