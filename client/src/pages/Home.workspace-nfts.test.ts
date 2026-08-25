@@ -47,6 +47,11 @@ describe("TG TOP workspace wallet NFT view", () => {
   it("places the expandable real channel-gifts panel after audience statistics", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 
+    expect(source).toContain('const rewardCampaignStatsQuery = trpc.tgTop.getRewardCampaignStats.useQuery');
+    expect(source).toContain('detailReturnPage === "mine" && ownsDetail && rewardCampaignStats');
+    expect(source).toContain('Внесено');
+    expect(source).toContain('Выплачено');
+    expect(source).toContain('Подтверждённые участники:');
     expect(source).toContain('trpc.tgTop.getChannelGifts.useQuery');
     expect(source).toContain('const [channelGiftsOpen, setChannelGiftsOpen] = useState(false)');
     expect(source).toContain('Подарки, которыми владеет канал');
