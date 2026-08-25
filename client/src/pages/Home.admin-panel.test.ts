@@ -26,5 +26,7 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain('setCatalogTopicCategoryDraft(value as "Каналы" | "Чаты" | "Боты")');
     expect(source).toContain('aria-label="Рубрики ботов"');
     expect(source).toContain('botTopicOptions.map(topic =>');
+    expect(source).toContain('setLotGroupId(starsPaymentGroup.id)');
+    expect(source).toContain('getGroupAdministrators.useQuery');
   });
 });
