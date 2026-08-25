@@ -508,6 +508,30 @@ export async function reconcileTonWithdrawal(input: { userOpenId: string; withdr
   const trackedTransaction = withdrawal.externalMessageHash
     ? await getTonPayoutTransactionByMessageHash(withdrawal.externalMessageHash)
     : null;
+  const confirmedWithoutOutgoingPayout = Boolean(
+    trackedTransaction?.success &&
+    Array.isArray(trackedTransaction.out_msgs) &&
+    trackedTransaction.out_msgs.length === 0,
+  );
+  if (confirmedWithoutOutgoingPayout) {
+    const grossTon = formatWithdrawalNanoTon(BigInt(withdrawal.grossAmountNano));
+    await db.transaction(async tx => {
+      const cancelled = await tx.update(tonWithdrawals).set({
+        status: "cancelled",
+        actualFeeNano: "0",
+        failureReason: "Отмена: сеть обработала внешнее сообщение без исходящей выплаты; GRAM возвращён на основной баланс",
+      }).where(and(
+        eq(tonWithdrawals.id, withdrawal.id),
+        inArray(tonWithdrawals.status, ["broadcast_pending", "sent"]),
+        sql`${tonWithdrawals.transactionHash} IS NULL`,
+      ));
+      if (Number(cancelled[0]?.affectedRows ?? 0) === 1) {
+        await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${grossTon}` }).where(eq(users.openId, withdrawal.userOpenId));
+      }
+    });
+    const final = (await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, withdrawal.id)).limit(1))[0];
+    return { ...toTonWithdrawalView(final!), newlyConfirmed: false };
+  }
   const candidates = trackedTransaction ? [trackedTransaction, ...transactions] : transactions;
   const matched = candidates.find(transaction => transaction.success && transaction.hash && transaction.lt !== null && transaction.lt !== undefined && (transaction.out_msgs ?? []).some(message => {
     try {
@@ -559,7 +583,7 @@ export async function getTonWithdrawalsForManualReview() {
 export async function getAccountActivity(openId: string) {
   const db = await getDb();
   if (!db) return [];
-  const [credits, starsPayments, bids, userDeals, transfers] = await Promise.all([
+  const [credits, starsPayments, bids, userDeals, transfers, deposits, withdrawals] = await Promise.all([
     db.select({
       id: creditTransactions.id,
       amount: creditTransactions.amount,
@@ -590,6 +614,24 @@ export async function getAccountActivity(openId: string) {
       .where(eq(rankingBidIntents.bidderOpenId, openId)),
     getUserDeals(openId),
     getNftTransferHistory(openId),
+    db.select({
+      id: tonDeposits.id,
+      requestedAmountNano: tonDeposits.requestedAmountNano,
+      creditedAmountTon: tonDeposits.creditedAmountTon,
+      status: tonDeposits.status,
+      createdAt: tonDeposits.createdAt,
+      submittedAt: tonDeposits.submittedAt,
+      confirmedAt: tonDeposits.confirmedAt,
+    }).from(tonDeposits).where(eq(tonDeposits.userOpenId, openId)),
+    db.select({
+      id: tonWithdrawals.id,
+      grossAmountNano: tonWithdrawals.grossAmountNano,
+      status: tonWithdrawals.status,
+      createdAt: tonWithdrawals.createdAt,
+      broadcastAt: tonWithdrawals.broadcastAt,
+      sentAt: tonWithdrawals.sentAt,
+      confirmedAt: tonWithdrawals.confirmedAt,
+    }).from(tonWithdrawals).where(eq(tonWithdrawals.userOpenId, openId)),
   ]);
   const namedGroup = (groupTitle: string | null, groupUsername: string | null) => groupUsername ? `@${groupUsername}` : (groupTitle ?? "TG TOP");
   return [
@@ -626,6 +668,28 @@ export async function getAccountActivity(openId: string) {
     ...bids.map(item => ({ id: `bid:${item.id}`, type: "bid" as const, status: item.status, createdAt: item.createdAt, title: "ranking_bid", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.bidAmount / 1000, currency: "GRAM", direction: "neutral" as const })),
     ...userDeals.map(item => ({ id: `deal:${item.id}`, type: "deal" as const, status: item.status, createdAt: item.createdAt, title: item.dealType, subject: namedGroup(item.groupTitle, item.groupUsername), amount: Number(item.price), currency: "TON", direction: item.buyerOpenId === openId ? "out" as const : "in" as const })),
     ...transfers.map(item => ({ id: `nft:${item.id}`, type: "nft_transfer" as const, status: item.status, createdAt: item.confirmedAt ?? item.createdAt, title: "nft_transfer", subject: item.username ? `@${item.username}` : "NFT", amount: null, currency: null, direction: item.senderOpenId === openId ? "out" as const : "in" as const })),
+    ...deposits.map(item => ({
+      id: `deposit:${item.id}`,
+      type: "deposit" as const,
+      status: item.status,
+      createdAt: item.confirmedAt ?? item.submittedAt ?? item.createdAt,
+      title: "gram_deposit",
+      subject: "GRAM wallet",
+      amount: item.creditedAmountTon === null ? Number(item.requestedAmountNano) / 1_000_000_000 : Number(item.creditedAmountTon),
+      currency: "GRAM" as const,
+      direction: item.status === "confirmed" ? "in" as const : "neutral" as const,
+    })),
+    ...withdrawals.map(item => ({
+      id: `withdrawal:${item.id}`,
+      type: "withdrawal" as const,
+      status: item.status,
+      createdAt: item.confirmedAt ?? item.sentAt ?? item.broadcastAt ?? item.createdAt,
+      title: "gram_withdrawal",
+      subject: "GRAM wallet",
+      amount: Number(item.grossAmountNano) / 1_000_000_000,
+      currency: "GRAM" as const,
+      direction: item.status === "confirmed" ? "out" as const : "neutral" as const,
+    })),
   ].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime()).slice(0, 100);
 }
 

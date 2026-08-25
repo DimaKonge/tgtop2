@@ -92,6 +92,16 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const detailTotalRankingCost = detailRankingBidAmount + detailRewardBudgetDeltaUnits / 100;');
     expect(source).toContain('Итого к списанию');
     expect(source).toContain('Ставка {formatTon(detailRankingBidAmount)} + бюджет вознаграждений');
+    expect(source).toContain('await tonConnectUi.disconnect();');
+    expect(source).toContain('Отключить кошелёк');
+    expect(source).toContain('Баланс и история операций не изменятся.');
+    expect(source).toContain('const withdrawalProcessingTitle = activeTonWithdrawal?.status === "sent"');
+    expect(source).toContain('Ожидаем сетевое подтверждение перевода.');
+    expect(source).toContain('const [financialHistoryOpen, setFinancialHistoryOpen] = useState(false);');
+    expect(source).toContain('onClick={() => setFinancialHistoryOpen(true)}');
+    expect(source).toContain('Все операции');
+    expect(source).toContain('Пополнения, выводы, ставки, награды и возвраты');
+    expect(source).toContain('item.type === "deposit" ? "↓" : item.type === "withdrawal" ? "↑"');
     expect(source).toContain('rewardBudget: detailRewardBudgetUnits');
     expect(source).toContain('rewardPerSubscription: detailRewardPerSubscriptionUnits');
     expect(source).not.toContain('rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0');

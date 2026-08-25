@@ -786,17 +786,30 @@ function WalletConnectControl({ language, balanceTon, variant = "compact" }: { l
   const [tonConnectUi] = useTonConnectUI();
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const label = address
     ? language === "en" ? "Connected" : "Подключён"
     : language === "en"
       ? "Connect wallet"
       : "Кошелёк";
+  const disconnectWallet = async () => {
+    try {
+      await tonConnectUi.disconnect();
+      toast.success(language === "en" ? "Wallet disconnected" : "Кошелёк отключён");
+    } catch {
+      toast.error(language === "en" ? "Could not disconnect wallet" : "Не удалось отключить кошелёк");
+    } finally {
+      setWalletMenuOpen(false);
+    }
+  };
 
   if (variant === "profile") {
     const walletLabel = address
       ? `${address.slice(0, 5)}…${address.slice(-4)}`
       : language === "en" ? "Connect wallet" : "Подключить кошелёк";
-    return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className={`mt-3 flex min-h-11 w-full items-center justify-between rounded-xl border px-3.5 text-left transition-colors disabled:opacity-60 ${address ? "border-white/10 bg-white/[0.035] text-slate-200 hover:bg-white/[0.07]" : "border-[#3f8cff]/45 bg-[#3f8cff]/14 text-[#c8ddff] hover:bg-[#3f8cff]/22"}`}><span className="flex min-w-0 items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-current/20 bg-black/10"><WalletCards className="h-3.5 w-3.5" /></span><span className="min-w-0"><b className="block text-xs">{restored ? walletLabel : language === "en" ? "Loading wallet…" : "Загрузка кошелька…"}</b><small className="mt-0.5 block truncate text-[10px] text-slate-400">{address ? `${balanceTon} GRAM` : language === "en" ? "No transfer or signature is requested" : "Перевод и подпись не запрашиваются"}</small></span></span><ChevronRight className="h-4 w-4 shrink-0" /></button>;
+    const trigger = <button disabled={!restored} onClick={() => address ? setWalletMenuOpen(true) : tonConnectUi.openModal()} className={`mt-3 flex min-h-11 w-full items-center justify-between rounded-xl border px-3.5 text-left transition-colors disabled:opacity-60 ${address ? "border-white/10 bg-white/[0.035] text-slate-200 hover:bg-white/[0.07]" : "border-[#3f8cff]/45 bg-[#3f8cff]/14 text-[#c8ddff] hover:bg-[#3f8cff]/22"}`}><span className="flex min-w-0 items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-current/20 bg-black/10"><WalletCards className="h-3.5 w-3.5" /></span><span className="min-w-0"><b className="block text-xs">{restored ? walletLabel : language === "en" ? "Loading wallet…" : "Загрузка кошелька…"}</b><small className="mt-0.5 block truncate text-[10px] text-slate-400">{address ? `${balanceTon} GRAM` : language === "en" ? "No transfer or signature is requested" : "Перевод и подпись не запрашиваются"}</small></span></span><ChevronRight className="h-4 w-4 shrink-0" /></button>;
+    if (!address) return trigger;
+    return <Popover open={walletMenuOpen} onOpenChange={setWalletMenuOpen}><PopoverTrigger asChild>{trigger}</PopoverTrigger><PopoverContent align="center" className="w-[min(22rem,calc(100vw-2rem))] border-white/10 bg-[#111720] p-3 text-slate-100 shadow-xl"><div className="space-y-3"><div><b className="block text-xs">{language === "en" ? "Personal wallet" : "Личный кошелёк"}</b><code className="mt-1 block break-all text-[10px] text-slate-400">{address}</code></div><button type="button" onClick={() => void disconnectWallet()} className="flex w-full items-center justify-center gap-2 rounded-lg border border-rose-300/25 bg-rose-500/[0.08] px-3 py-2 text-xs font-semibold text-rose-100 transition-colors hover:bg-rose-500/[0.14]"><X className="h-3.5 w-3.5" />{language === "en" ? "Disconnect wallet" : "Отключить кошелёк"}</button><small className="block text-center text-[9px] leading-4 text-slate-500">{language === "en" ? "Balances and operation history are not affected." : "Баланс и история операций не изменятся."}</small></div></PopoverContent></Popover>;
   }
 
   return <button disabled={!restored} onClick={() => tonConnectUi.openModal()} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? <><span>{label}</span>{address && <span className="rounded-md bg-[#0b0f14]/70 px-1.5 py-0.5 text-[10px] text-white">{balanceTon} GRAM</span>}</> : language === "en" ? "Loading…" : "Загрузка…"}</button>;
@@ -976,6 +989,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [tonWithdrawalAddress, setTonWithdrawalAddress] = useState("");
   const [tonWithdrawalFlow, setTonWithdrawalFlow] = useState<"form" | "processing">("form");
   const [activeTonWithdrawalId, setActiveTonWithdrawalId] = useState<number | null>(null);
+  const [financialHistoryOpen, setFinancialHistoryOpen] = useState(false);
   const tonWithdrawalSubmitInFlight = useRef(false);
   const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
   const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
@@ -1868,11 +1882,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const mainTon = mainBalanceTonValue.toFixed(2);
   const canWithdrawMinimum = mainBalanceTonValue >= 0.1;
   const activeTonWithdrawal = activeTonWithdrawalId ? tonWithdrawals.find(item => item.id === activeTonWithdrawalId) ?? null : null;
+  const withdrawalProcessingTitle = activeTonWithdrawal?.status === "sent"
+    ? tx("Средства отправлены", "Funds sent")
+    : tx("Отправляем средства", "Sending funds");
+  const withdrawalProcessingNote = activeTonWithdrawal?.status === "sent"
+    ? tx("Ожидаем сетевое подтверждение перевода.", "Waiting for network confirmation.")
+    : tx("Статус обновится автоматически.", "The status updates automatically.");
   const totalBalanceLabel = `${(Number(mainTon) + bonusBalanceUnits / 100).toFixed(2)} GRAM`;
   const transactions = account?.transactions ?? [];
   const accountActivity = (accountActivityQuery.data ?? []) as Array<{
     id: string;
-    type: "credit" | "stars" | "bid" | "deal" | "nft_transfer";
+    type: "credit" | "stars" | "bid" | "deal" | "nft_transfer" | "deposit" | "withdrawal";
     status: string;
     createdAt: Date;
     title: string;
@@ -1882,6 +1902,30 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     direction: "in" | "out" | "neutral";
   }>;
   const visibleAccountActivity = accountActivity.slice(0, visibleActivityCount);
+  const getFinancialActivityTitle = (item: typeof accountActivity[number]) => item.title === "gram_deposit" ? tx("Пополнение GRAM", "GRAM deposit")
+    : item.title === "gram_withdrawal" ? tx("Вывод GRAM", "GRAM withdrawal")
+    : item.title === "connection_bonus" ? tx("Бонус за подключение", "Connection bonus")
+    : item.title === "manual_bonus" ? tx("Бонус TG TOP", "TG TOP bonus")
+    : item.title === "reward_campaign_reserve" ? tx("Резерв кампании наград", "Reward campaign reserve")
+    : item.title === "reward_campaign_release" ? tx("Возврат бюджета кампании", "Reward campaign release")
+    : item.title === "reward_subscription" ? tx("Награда за подписку", "Subscription reward")
+    : item.title === "ranking_spend" ? tx("Оплата места в рейтинге", "Ranking payment")
+    : item.title === "ranking_refund" ? tx("Возврат оплаты за место", "Ranking refund")
+    : item.title === "ranking_stars" ? tx("Ставка через Telegram Stars", "Telegram Stars bid")
+    : item.title === "ranking_bid" ? tx("Зафиксированная ставка", "Recorded bid")
+    : item.title === "nft_transfer" ? tx("Передача NFT", "NFT transfer")
+    : tx("Операция TG TOP", "TG TOP operation");
+  const getFinancialActivityStatus = (status: string) => status === "confirmed" ? tx("Подтверждено", "Confirmed")
+    : status === "sent" ? tx("Отправлено", "Sent")
+    : status === "broadcast_pending" || status === "submitted" ? tx("В обработке", "Processing")
+    : status === "created" ? tx("Ожидает подтверждения", "Awaiting confirmation")
+    : status === "cancelled" ? tx("Отмена", "Cancelled")
+    : status === "failed_refunded" ? tx("Возвращено", "Refunded")
+    : status === "expired" ? tx("Истекло", "Expired")
+    : status === "rejected" ? tx("Отклонено", "Rejected")
+    : status === "paid" ? tx("Оплачено", "Paid")
+    : status === "recorded" ? tx("Зафиксировано", "Recorded")
+    : tx("Зафиксировано", "Recorded");
   const referral = account?.referral;
   const verifiedTasks = [
     {
@@ -3797,7 +3841,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           <button type="button" disabled={!canWithdrawMinimum || quoteTonWithdrawalMutation.isPending || createTonWithdrawalMutation.isPending || !tonWithdrawalAddress || !tonWithdrawalAmount} onClick={() => void prepareTonWithdrawal()} className="flex h-16 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 text-lg font-semibold text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"><Send className="h-5 w-5" />{quoteTonWithdrawalMutation.isPending || createTonWithdrawalMutation.isPending ? tx("Отправляем…", "Sending…") : tx("Вывести", "Withdraw")}</button>
                         </>}
 
-                        {tonWithdrawalFlow === "processing" && <div className="py-4 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-sky-300/25 bg-sky-300/[0.1]"><Send className="h-5 w-5 text-sky-200" /></span><h3 className="mt-3 text-base font-semibold">{tx("Отправляем средства", "Sending funds")}</h3><p className="mx-auto mt-1 max-w-[260px] text-xs leading-5 text-slate-500">{tx("Статус обновится автоматически.", "The status updates automatically.")}</p>{activeTonWithdrawal?.failureReason && <p className="mt-3 text-[11px] text-amber-200">{activeTonWithdrawal.failureReason}</p>}</div>}
+                        {tonWithdrawalFlow === "processing" && <div className="py-4 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-sky-300/25 bg-sky-300/[0.1]"><Send className="h-5 w-5 text-sky-200" /></span><h3 className="mt-3 text-base font-semibold">{withdrawalProcessingTitle}</h3><p className="mx-auto mt-1 max-w-[260px] text-xs leading-5 text-slate-500">{withdrawalProcessingNote}</p>{activeTonWithdrawal?.failureReason && <p className="mt-3 text-[11px] text-amber-200">{activeTonWithdrawal.failureReason}</p>}</div>}
                         {tonWithdrawals.slice(0, 3).length > 0 && <section className="border-t border-white/8 pt-3"><div className="mb-2 flex items-center justify-between"><b className="text-[11px] text-slate-200">{tx("История выводов", "Withdrawal history")}</b><span className="text-[9px] text-slate-500">GRAM</span></div><div className="space-y-2">{tonWithdrawals.slice(0, 3).map(withdrawal => <div key={withdrawal.id} className="rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5"><div className="flex items-center justify-between gap-2"><b className="text-sm text-slate-100">{formatFinancialGram(Number(withdrawal.grossAmountNano) / 1_000_000_000)} GRAM</b><span className={withdrawal.status === "confirmed" ? "text-[10px] font-medium text-emerald-300" : withdrawal.status === "cancelled" ? "text-[10px] font-medium text-rose-300" : "text-[10px] font-medium text-sky-200"}>{withdrawal.status === "confirmed" ? tx("Отправлено", "Sent") : withdrawal.status === "cancelled" ? tx("Отмена", "Cancelled") : tx("В обработке", "Processing")}</span></div></div>)}</div></section>}
                       </div>
                     </SheetContent>
@@ -3806,15 +3850,30 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>
             </div>
             <section className="rounded-2xl border border-white/8 bg-[#111720] p-4">
-              <div className="flex items-start justify-between gap-3">
-                <span>
-                  <h2 className="text-sm font-semibold">{tx("Баланс", "Balance")}</h2>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">{tx("Реальные начисления и списания внутреннего GRAM.", "Recorded internal GRAM credits and debits.")}</p>
-                </span>
-                <span className="rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">GRAM</span>
-              </div>
-              <GramBalanceChart transactions={transactions} currentBalance={Number(bonus)} language={language} />
+              <button type="button" onClick={() => setFinancialHistoryOpen(true)} className="block w-full text-left transition-opacity hover:opacity-90 active:opacity-75" aria-label={tx("Открыть полную статистику операций", "Open full transaction statistics")}>
+                <div className="flex items-start justify-between gap-3">
+                  <span>
+                    <h2 className="text-sm font-semibold">{tx("Баланс", "Balance")}</h2>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{tx("Нажмите, чтобы посмотреть все операции GRAM.", "Tap to view all GRAM activity.")}</p>
+                  </span>
+                  <span className="flex items-center gap-1 rounded-md border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">GRAM<ChevronRight className="h-3 w-3" /></span>
+                </div>
+                <GramBalanceChart transactions={transactions} currentBalance={Number(bonus)} language={language} />
+              </button>
             </section>
+            <Sheet open={financialHistoryOpen} onOpenChange={setFinancialHistoryOpen}>
+              <SheetContent side="bottom" className="max-h-[88dvh] overflow-y-auto rounded-t-[28px] border-white/10 bg-[#10161f] text-slate-100">
+                <SheetHeader className="px-5 pb-3 text-left"><SheetTitle className="text-xl font-semibold">{tx("Все операции", "All transactions")}</SheetTitle><p className="mt-1 text-xs leading-5 text-slate-500">{tx("Пополнения, выводы, ставки, награды и возвраты из журнала TG TOP.", "Deposits, withdrawals, bids, rewards, and refunds recorded by TG TOP.")}</p></SheetHeader>
+                <div className="divide-y divide-white/7 px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+                  {accountActivity.length ? accountActivity.map(item => {
+                    const absoluteAmount = item.amount === null ? null : Math.abs(item.amount);
+                    const amount = absoluteAmount === null || !item.currency ? null : `${item.direction === "in" ? "+" : item.direction === "out" ? "−" : ""}${item.currency === "Stars" ? n(absoluteAmount, language) : formatTon(absoluteAmount)} ${item.currency}`;
+                    const symbol = item.type === "deposit" ? "↓" : item.type === "withdrawal" ? "↑" : item.type === "stars" ? "★" : item.type === "nft_transfer" ? "NFT" : item.type === "deal" ? "D" : item.type === "bid" ? "B" : "G";
+                    return <div key={item.id} className="flex items-center justify-between gap-3 py-3.5"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border text-[11px] font-semibold ${item.direction === "in" ? "border-emerald-300/25 bg-emerald-400/[0.08] text-emerald-200" : item.direction === "out" ? "border-rose-300/25 bg-rose-500/[0.08] text-rose-100" : "border-[#3f8cff]/25 bg-[#3f8cff]/8 text-[#a6c8ff]"}`}>{symbol}</span><span className="min-w-0 flex-1"><b className="block truncate text-sm">{getFinancialActivityTitle(item)}</b><small className="mt-1 block truncate text-[11px] text-slate-500">{item.subject} · {date(item.createdAt, language)} · {getFinancialActivityStatus(item.status)}</small></span><span className="shrink-0 text-right">{amount && <b className={`block text-sm ${item.direction === "in" ? "text-emerald-200" : item.direction === "out" ? "text-rose-100" : "text-slate-200"}`}>{amount}</b>}</span></div>;
+                  }) : <p className="py-10 text-center text-sm text-slate-500">{tx("Операций пока нет.", "No activity yet.")}</p>}
+                </div>
+              </SheetContent>
+            </Sheet>
             {myNfts.length > 0 && (
               <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
                 <div className="border-b border-white/8 px-4 py-4">

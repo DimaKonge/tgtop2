@@ -17,4 +17,12 @@ describe("withdrawal reliability guards", () => {
     expect(payoutSource).toContain('/v2/blockchain/messages/${messageHash}/transaction');
     expect(dbSource).toContain('getTonPayoutTransactionByMessageHash(withdrawal.externalMessageHash)');
   });
+
+  it("returns a held balance exactly once when a finalized external message has no outgoing payout", () => {
+    expect(dbSource).toContain("const confirmedWithoutOutgoingPayout = Boolean(");
+    expect(dbSource).toContain("trackedTransaction.out_msgs.length === 0");
+    expect(dbSource).toContain('status: "cancelled"');
+    expect(dbSource).toContain("GRAM возвращён на основной баланс");
+    expect(dbSource).toContain('sql`${tonWithdrawals.transactionHash} IS NULL`');
+  });
 });
