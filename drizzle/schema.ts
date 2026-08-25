@@ -145,6 +145,27 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
 export type GroupCatalog = typeof groupsCatalog.$inferSelect;
 export type InsertGroupCatalog = typeof groupsCatalog.$inferInsert;
 
+export const botListings = mysqlTable("bot_listings", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerOpenId: varchar("ownerOpenId", { length: 64 }).notNull(),
+  username: varchar("username", { length: 128 }).notNull(),
+  telegramLink: varchar("telegramLink", { length: 512 }).notNull(),
+  category: varchar("category", { length: 64 }).default("General").notNull(),
+  moderationStatus: mysqlEnum("moderationStatus", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  moderationReason: varchar("moderationReason", { length: 255 }),
+  moderationReviewedBy: varchar("moderationReviewedBy", { length: 64 }),
+  moderationReviewedAt: timestamp("moderationReviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("bot_listings_username_unique").on(table.username),
+  index("bot_listings_status_category_created_idx").on(table.moderationStatus, table.category, table.createdAt),
+  index("bot_listings_owner_created_idx").on(table.ownerOpenId, table.createdAt),
+]);
+
+export type BotListing = typeof botListings.$inferSelect;
+export type InsertBotListing = typeof botListings.$inferInsert;
+
 export const moderationEvents = mysqlTable("moderation_events", {
   id: int("id").autoincrement().primaryKey(),
   groupId: int("groupId").notNull(),

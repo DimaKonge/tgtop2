@@ -344,6 +344,13 @@
       "when": 1787665766214,
       "tag": "0048_parched_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "5",
+      "when": 1787683868953,
+      "tag": "0049_naive_banshee",
+      "breakpoints": true
     }
   ]
 }

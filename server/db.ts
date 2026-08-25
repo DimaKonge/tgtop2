@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, catalogCountries, catalogCities, catalogTopics, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -18,6 +18,7 @@ import { buildTonDepositPayload, createTonDepositReference, decodeTonComment, fi
 import { buildTonPayoutExternalBoc, broadcastTonPayoutBoc, emulateTonPayoutFee, getConfiguredTonPayoutWalletAddress, getTonPayoutTransactionByMessageHash, TonPayoutRejectedError } from "./tonPayoutWallet";
 import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, getTonWithdrawalRiskLabel, quoteTonWithdrawal as getTonWithdrawalQuote, TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS, TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO } from "./tonWithdrawalPolicy";
 import { canCancelNftRental, canConfirmNftRental, rentalTotalUnits, validateRentalDays, NFT_RENTAL_MAX_DAYS as POLICY_NFT_RENTAL_MAX_DAYS } from "./nftRentalPolicy";
+import { normalizeTelegramBotLink } from "./botListingPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -1404,6 +1405,112 @@ export async function getModerationQueue() {
   return db.select().from(groupsCatalog)
     .where(inArray(groupsCatalog.moderationStatus, ["review", "blocked"]))
     .orderBy(desc(groupsCatalog.moderationReviewedAt));
+}
+
+export async function submitBotListing(ownerOpenId: string, rawTelegramLink: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const normalized = normalizeTelegramBotLink(rawTelegramLink);
+  const [existing] = await db.select().from(botListings).where(eq(botListings.username, normalized.username)).limit(1);
+
+  if (existing && existing.ownerOpenId !== ownerOpenId) {
+    throw new Error("Этот бот уже отправлен в каталог другим пользователем");
+  }
+
+  if (existing?.moderationStatus === "approved") {
+    throw new Error("Этот бот уже одобрен и опубликован в каталоге");
+  }
+
+  if (existing) {
+    await db.update(botListings).set({
+      telegramLink: normalized.telegramLink,
+      moderationStatus: "pending",
+      moderationReason: null,
+      moderationReviewedBy: null,
+      moderationReviewedAt: null,
+    }).where(eq(botListings.id, existing.id));
+    const [resubmitted] = await db.select().from(botListings).where(eq(botListings.id, existing.id)).limit(1);
+    return resubmitted!;
+  }
+
+  await db.insert(botListings).values({
+    ownerOpenId,
+    username: normalized.username,
+    telegramLink: normalized.telegramLink,
+    category: "General",
+    moderationStatus: "pending",
+  });
+  const [created] = await db.select().from(botListings).where(eq(botListings.username, normalized.username)).limit(1);
+  return created!;
+}
+
+export async function getApprovedBotListings(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(botListings.moderationStatus, "approved")];
+  if (category && category !== "Все") conditions.push(eq(botListings.category, category));
+  return await db.select({
+    id: botListings.id,
+    username: botListings.username,
+    telegramLink: botListings.telegramLink,
+    category: botListings.category,
+    createdAt: botListings.createdAt,
+    moderationReviewedAt: botListings.moderationReviewedAt,
+  }).from(botListings).where(and(...conditions)).orderBy(desc(botListings.moderationReviewedAt), desc(botListings.createdAt));
+}
+
+export async function getMyBotListings(ownerOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(botListings).where(eq(botListings.ownerOpenId, ownerOpenId)).orderBy(desc(botListings.createdAt));
+}
+
+export async function getBotModerationQueue() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({
+    bot: botListings,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+  }).from(botListings)
+    .leftJoin(users, eq(botListings.ownerOpenId, users.openId))
+    .where(eq(botListings.moderationStatus, "pending"))
+    .orderBy(asc(botListings.createdAt));
+  return rows.map(({ bot, ownerName, ownerTelegramUsername }) => ({ ...bot, ownerName, ownerTelegramUsername }));
+}
+
+export async function moderateBotListing(input: {
+  reviewerOpenId: string;
+  botListingId: number;
+  action: "approve" | "reject";
+  category?: string;
+  reason?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [bot] = await db.select().from(botListings).where(eq(botListings.id, input.botListingId)).limit(1);
+  if (!bot) throw new Error("Заявка на бота не найдена");
+  if (bot.moderationStatus !== "pending") throw new Error("Эта заявка уже обработана");
+
+  const approved = input.action === "approve";
+  const selectedCategory = approved && input.category?.trim() ? input.category.trim() : bot.category;
+  if (approved && selectedCategory !== "General") {
+    const [topic] = await db.select({ id: catalogTopics.id }).from(catalogTopics).where(and(
+      eq(catalogTopics.category, "Боты"),
+      eq(catalogTopics.code, selectedCategory)
+    )).limit(1);
+    if (!topic) throw new Error("Выберите существующую рубрику для бота");
+  }
+  await db.update(botListings).set({
+    moderationStatus: approved ? "approved" : "rejected",
+    category: selectedCategory,
+    moderationReason: approved ? null : input.reason?.trim() ?? null,
+    moderationReviewedBy: input.reviewerOpenId,
+    moderationReviewedAt: new Date(),
+  }).where(eq(botListings.id, bot.id));
+
+  const [reviewed] = await db.select().from(botListings).where(eq(botListings.id, bot.id)).limit(1);
+  return reviewed!;
 }
 
 export async function getActiveModerationListings() {

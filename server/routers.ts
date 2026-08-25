@@ -353,6 +353,22 @@ export const appRouter = router({
       return await db.getCatalogTaxonomy();
     }),
 
+    getApprovedBots: publicProcedure
+      .input(z.object({ category: z.string().trim().max(64).optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getApprovedBotListings(input?.category);
+      }),
+
+    myBotListings: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getMyBotListings(ctx.user.openId);
+    }),
+
+    submitBotListing: protectedProcedure
+      .input(z.object({ telegramLink: z.string().trim().min(3).max(512) }))
+      .mutation(async ({ ctx, input }) => {
+        return await db.submitBotListing(ctx.user.openId, input.telegramLink);
+      }),
+
     addCatalogCountry: protectedProcedure
       .input(z.object({ code: catalogCode.max(64), label: z.string().trim().min(2).max(96) }))
       .mutation(async ({ ctx, input }) => {
@@ -397,6 +413,28 @@ export const appRouter = router({
       if (!access.canModerate) throw new Error("Недостаточно прав для просмотра очереди модерации");
       return await db.getModerationQueue();
     }),
+
+    getBotModerationQueue: protectedProcedure.query(async ({ ctx }) => {
+      const access = await db.getModerationAccess(ctx.user.openId);
+      if (!access.canModerate) throw new Error("Недостаточно прав для просмотра заявок ботов");
+      return await db.getBotModerationQueue();
+    }),
+
+    moderateBotListing: protectedProcedure
+      .input(z.object({
+        botListingId: z.number().int().positive(),
+        action: z.enum(["approve", "reject"]),
+        category: z.string().trim().min(2).max(64).optional(),
+        reason: z.string().trim().max(255).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const access = await db.getModerationAccess(ctx.user.openId);
+        if (!access.canModerate) throw new Error("Недостаточно прав для модерации заявок ботов");
+        if (input.action === "reject" && (!input.reason || input.reason.length < 3)) {
+          throw new Error("Укажите причину отклонения заявки на бота");
+        }
+        return await db.moderateBotListing({ reviewerOpenId: ctx.user.openId, ...input });
+      }),
 
     getActiveModerationListings: protectedProcedure.query(async ({ ctx }) => {
       const access = await db.getModerationAccess(ctx.user.openId);

@@ -1357,6 +1357,29 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     cities: Array<{ id: number; countryCode: string; code: string; label: string; sortOrder: number }>;
     topics: Array<{ id: number; category: "Каналы" | "Чаты" | "Боты"; code: string; label: string; sortOrder: number }>;
   } | undefined;
+  const approvedBotsQuery = trpc.tgTop.getApprovedBots.useQuery(
+    { category: botCategory === "Все" ? undefined : botCategory },
+    { enabled: topSection === "bots" }
+  );
+  const approvedBots = (approvedBotsQuery.data ?? []) as Array<{
+    id: number; username: string; telegramLink: string; category: string; createdAt: Date; moderationReviewedAt: Date | null;
+  }>;
+  const myBotListingsQuery = trpc.tgTop.myBotListings.useQuery(undefined, {
+    enabled: isAuthenticated && page === "mine" && workspaceSection === "bots",
+  });
+  const myBotListings = (myBotListingsQuery.data ?? []) as Array<{
+    id: number; username: string; telegramLink: string; category: string;
+    moderationStatus: "pending" | "approved" | "rejected"; moderationReason: string | null; createdAt: Date;
+  }>;
+  const botModerationQueueQuery = trpc.tgTop.getBotModerationQueue.useQuery(undefined, {
+    enabled: Boolean(moderationAccess?.canModerate),
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
+  });
+  const botModerationQueue = (botModerationQueueQuery.data ?? []) as Array<{
+    id: number; username: string; telegramLink: string; category: string; createdAt: Date;
+    ownerName: string | null; ownerTelegramUsername: string | null;
+  }>;
   const activeModerationListingsQuery = trpc.tgTop.getActiveModerationListings.useQuery(undefined, {
     enabled: Boolean(moderationAccess?.canModerate),
     refetchInterval: 10_000,
@@ -1399,6 +1422,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [catalogTopicCategoryDraft, setCatalogTopicCategoryDraft] = useState<"Каналы" | "Чаты" | "Боты">("Каналы");
   const [catalogTopicCodeDraft, setCatalogTopicCodeDraft] = useState("");
   const [catalogTopicLabelDraft, setCatalogTopicLabelDraft] = useState("");
+  const [botTelegramLinkDraft, setBotTelegramLinkDraft] = useState("");
+  const [botModerationDrafts, setBotModerationDrafts] = useState<Record<number, { category: string; reason: string }>>({});
   const dealsQuery = trpc.tgTop.myDeals.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -1577,6 +1602,29 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.getGroups.invalidate();
       void utils.tgTop.getSlots.invalidate();
       void utils.tgTop.myGroups.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const submitBotListing = trpc.tgTop.submitBotListing.useMutation({
+    onSuccess: () => {
+      toast.success(tx("Заявка на бота отправлена на ручную проверку", "Bot submission sent for manual review"));
+      setBotTelegramLinkDraft("");
+      void utils.tgTop.myBotListings.invalidate();
+      void utils.tgTop.getBotModerationQueue.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const moderateBotListing = trpc.tgTop.moderateBotListing.useMutation({
+    onSuccess: result => {
+      toast.success(result.moderationStatus === "approved" ? "Бот одобрен и опубликован" : "Заявка на бота отклонена");
+      setBotModerationDrafts(current => {
+        const next = { ...current };
+        delete next[result.id];
+        return next;
+      });
+      void utils.tgTop.getBotModerationQueue.invalidate();
+      void utils.tgTop.getApprovedBots.invalidate();
+      void utils.tgTop.myBotListings.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -2919,10 +2967,22 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <button type="button" onClick={() => setBotCategory("Все")} className={`h-8 shrink-0 rounded-md px-3 text-[10px] font-semibold transition-colors ${botCategory === "Все" ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{tx("Все", "All")}</button>
                   {botTopicOptions.map(topic => <button key={topic.id} type="button" onClick={() => setBotCategory(topic.code)} className={`h-8 shrink-0 rounded-md px-3 text-[10px] font-semibold transition-colors ${botCategory === topic.code ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{topic.label}</button>)}
                 </div>
-                <section className="rounded-2xl border border-dashed border-[#3390ec]/25 bg-[#202b3a] px-5 py-10 text-center">
-                  <b className="block text-sm text-slate-200">{botCategory === "Все" ? "Каталог ботов появится здесь" : `Боты в рубрике «${botTopicOptions.find(topic => topic.code === botCategory)?.label ?? botCategory}» появятся здесь`}</b>
-                  <p className="mx-auto mt-2 max-w-[280px] text-xs leading-5 text-slate-500">Добавляйте и удаляйте рубрики ботов в админ-панели. География для ботов не используется.</p>
-                </section>
+                {approvedBotsQuery.isLoading ? (
+                  <div className="rounded-2xl border border-white/8 bg-[#111720] px-5 py-10 text-center text-xs text-slate-500">{tx("Загружаем каталог ботов…", "Loading bot catalog…")}</div>
+                ) : approvedBots.length ? (
+                  <div className="space-y-2">
+                    {approvedBots.map(bot => <article key={bot.id} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-[#111720] p-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#72a8ff]/25 bg-[#3f8cff]/10 text-[#a6c8ff]"><Bot className="h-5 w-5" /></span>
+                      <button type="button" onClick={() => openTelegramInNewBrowserTab(bot.telegramLink)} className="min-w-0 flex-1 text-left"><b className="block truncate text-sm text-slate-100">@{bot.username}</b><small className="mt-1 block text-[10px] text-slate-500">{bot.category === "General" ? tx("Без рубрики", "Uncategorized") : botTopicOptions.find(topic => topic.code === bot.category)?.label ?? bot.category}</small></button>
+                      <button type="button" onClick={() => openTelegramInNewBrowserTab(bot.telegramLink)} className="shrink-0 rounded-lg border border-[#72a8ff]/25 bg-[#3f8cff]/10 px-2.5 py-2 text-[10px] font-semibold text-[#c8ddff]">{tx("Открыть", "Open")}</button>
+                    </article>)}
+                  </div>
+                ) : (
+                  <section className="rounded-2xl border border-dashed border-[#3390ec]/25 bg-[#202b3a] px-5 py-10 text-center">
+                    <b className="block text-sm text-slate-200">{tx("Одобренных ботов пока нет", "No approved bots yet")}</b>
+                    <p className="mx-auto mt-2 max-w-[280px] text-xs leading-5 text-slate-500">{tx("Владельцы добавляют ссылку в рабочем пространстве, а модератор вручную проверяет заявку перед публикацией.", "Owners submit a link from their workspace, then a moderator manually reviews it before publication.")}</p>
+                  </section>
+                )}
               </section>
             ) : topSection === "nft" ? (
               <section className="space-y-2 pt-1">
@@ -3460,10 +3520,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <article className="rounded-2xl border border-[#3f8cff]/20 bg-[#3f8cff]/[0.055] p-3.5">
                   <div className="flex items-start gap-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#72a8ff]/25 bg-[#3f8cff]/10 text-[#a6c8ff]"><Bot className="h-5 w-5" /></span>
-                    <span className="min-w-0 flex-1"><b className="block text-sm text-slate-100">@TG_TOPBOT</b><small className="mt-1 block text-[11px] leading-4 text-slate-400">{tx("Подключайте бота администратором канала или чата: он подтверждает площадку, собирает статистику и помогает с листингом.", "Add the bot as a channel or chat administrator: it verifies the community, collects statistics and helps with listing.")}</small></span>
+                    <span className="min-w-0 flex-1"><b className="block text-sm text-slate-100">{tx("Залистить бота", "List a bot")}</b><small className="mt-1 block text-[11px] leading-4 text-slate-400">{tx("Вставьте публичную ссылку на бота. До ручной проверки модератором он не появится в каталоге.", "Paste a public bot link. It will not appear in the catalog until a moderator reviews it.")}</small></span>
                   </div>
-                  <button type="button" onClick={() => setWorkspaceSection("communities")} className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#72a8ff]/30 bg-[#3f8cff]/10 px-2.5 text-[10px] font-semibold text-[#c8ddff]"><Plus className="h-3.5 w-3.5" />{tx("Добавить сообщество", "Add community")}</button>
+                  <div className="mt-3 flex gap-2"><Input value={botTelegramLinkDraft} onChange={event => setBotTelegramLinkDraft(event.target.value)} placeholder="https://t.me/username" className="h-10 min-w-0 flex-1 border-white/10 bg-[#111720] px-3 text-xs text-slate-100 placeholder:text-slate-600" /><button type="button" onClick={() => submitBotListing.mutate({ telegramLink: botTelegramLinkDraft })} disabled={botTelegramLinkDraft.trim().length < 3 || submitBotListing.isPending} className="h-10 shrink-0 rounded-lg border border-[#72a8ff]/30 bg-[#3f8cff]/10 px-3 text-[10px] font-semibold text-[#c8ddff] disabled:opacity-45">{submitBotListing.isPending ? tx("Отправляем…", "Sending…") : tx("На проверку", "Submit")}</button></div>
                 </article>
+                {myBotListings.length ? <section className="space-y-2">{myBotListings.map(bot => {
+                  const status = bot.moderationStatus === "approved" ? tx("Одобрен", "Approved") : bot.moderationStatus === "rejected" ? tx("Отклонён", "Rejected") : tx("На проверке", "Pending review");
+                  const statusStyle = bot.moderationStatus === "approved" ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100" : bot.moderationStatus === "rejected" ? "border-rose-300/25 bg-rose-400/10 text-rose-100" : "border-amber-300/25 bg-amber-300/10 text-amber-100";
+                  return <article key={bot.id} className="rounded-xl border border-white/8 bg-[#111720] px-3 py-2.5"><div className="flex items-center gap-2"><Bot className="h-4 w-4 shrink-0 text-[#8fb9ff]" /><button type="button" onClick={() => openTelegramInNewBrowserTab(bot.telegramLink)} className="min-w-0 flex-1 text-left"><b className="block truncate text-xs text-slate-100">@{bot.username}</b><small className="mt-0.5 block text-[10px] text-slate-500">{bot.category === "General" ? tx("Рубрика назначается модератором", "Category assigned by moderator") : botTopicOptions.find(topic => topic.code === bot.category)?.label ?? bot.category}</small></button><span className={`shrink-0 rounded-md border px-2 py-1 text-[9px] font-semibold ${statusStyle}`}>{status}</span></div>{bot.moderationStatus === "rejected" && bot.moderationReason && <p className="mt-2 border-t border-white/7 pt-2 text-[10px] leading-4 text-rose-200/90">{tx("Причина: ", "Reason: ")}{bot.moderationReason}</p>}</article>;
+                })}</section> : <p className="px-1 text-center text-xs text-slate-500">{tx("Здесь появятся ваши заявки на ботов.", "Your bot submissions will appear here.")}</p>}
               </section>
             )}
             {workspaceSection === "nft" && (
@@ -3863,6 +3928,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </span>
               <span className="rounded-md border border-[#3390ec]/30 bg-[#3390ec]/10 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">{moderationAccess.role === "admin" ? "Администратор" : "Модератор"}</span>
             </div>
+
+            <section className="overflow-hidden rounded-2xl border border-violet-300/20 bg-[#202b3a]">
+              <div className="border-b border-white/8 px-4 py-4"><div className="flex items-start justify-between gap-3"><span><h2 className="text-sm font-semibold text-slate-100">Заявки на ботов</h2><p className="mt-1 text-xs leading-5 text-slate-400">Проверяйте публичную ссылку и выберите рубрику перед публикацией.</p></span><span className="rounded-md border border-violet-300/25 bg-violet-400/10 px-2 py-1 text-[10px] font-semibold text-violet-100">{botModerationQueue.length}</span></div></div>
+              {botModerationQueue.length ? <div className="divide-y divide-white/8">{botModerationQueue.map(bot => {
+                const draft = botModerationDrafts[bot.id] ?? { category: "General", reason: "" };
+                return <article key={bot.id} className="space-y-2 px-4 py-3"><div className="flex items-center gap-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-violet-300/20 bg-violet-400/10 text-violet-100"><Bot className="h-4 w-4" /></span><button type="button" onClick={() => openTelegramInNewBrowserTab(bot.telegramLink)} className="min-w-0 flex-1 text-left"><b className="block truncate text-xs text-slate-100">@{bot.username}</b><small className="block truncate text-[10px] text-slate-500">{bot.ownerName ?? bot.ownerTelegramUsername ?? "Владелец"}</small></button><button type="button" onClick={() => openTelegramInNewBrowserTab(bot.telegramLink)} className="rounded-lg border border-white/10 px-2 py-1.5 text-[9px] font-semibold text-slate-300">Открыть</button></div><div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2"><Select value={draft.category} onValueChange={category => setBotModerationDrafts(current => ({ ...current, [bot.id]: { ...draft, category } }))}><SelectTrigger className="h-9 border-white/10 bg-[#17212b] text-[10px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="border-white/10 bg-[#111720] text-slate-100"><SelectItem value="General" className="text-xs text-slate-200">Без рубрики</SelectItem>{botTopicOptions.map(topic => <SelectItem key={topic.id} value={topic.code} className="text-xs text-slate-200">{topic.label}</SelectItem>)}</SelectContent></Select><button type="button" onClick={() => moderateBotListing.mutate({ botListingId: bot.id, action: "approve", category: draft.category })} disabled={moderateBotListing.isPending} className="rounded-lg border border-emerald-300/25 bg-emerald-500/10 px-2.5 text-[10px] font-semibold text-emerald-100 disabled:opacity-45">Одобрить</button><button type="button" onClick={() => moderateBotListing.mutate({ botListingId: bot.id, action: "reject", reason: draft.reason })} disabled={draft.reason.trim().length < 3 || moderateBotListing.isPending} className="rounded-lg border border-rose-300/25 bg-rose-500/10 px-2.5 text-[10px] font-semibold text-rose-100 disabled:opacity-45">Отклонить</button></div><Input value={draft.reason} onChange={event => setBotModerationDrafts(current => ({ ...current, [bot.id]: { ...draft, reason: event.target.value } }))} maxLength={255} placeholder="Причина отклонения — обязательно только при отклонении" className="h-9 border-white/10 bg-[#17212b] px-2 text-[10px] text-slate-100 placeholder:text-slate-600" /></article>;
+              })}</div> : <p className="px-4 py-8 text-center text-xs text-slate-500">Заявок на ботов сейчас нет.</p>}
+            </section>
 
             <section className="overflow-hidden rounded-2xl border border-[#3390ec]/25 bg-[#202b3a]">
               <div className="border-b border-white/8 px-4 py-4">
