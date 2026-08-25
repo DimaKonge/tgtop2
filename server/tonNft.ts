@@ -7,6 +7,7 @@ export type WalletNftItem = {
   description: string | null;
   imageUrl: string | null;
   imageUrls: string[];
+  mediaKind: "video" | "image" | null;
   collectionName: string | null;
   collectionAddress: string | null;
   category: WalletNftCategory;
@@ -15,9 +16,10 @@ export type WalletNftItem = {
 type TonApiNftItem = {
   address?: string;
   index?: number;
-  metadata?: { name?: string; description?: string; image?: string; image_url?: string; animation_url?: string };
+  interfaces?: string[];
+  metadata?: { name?: string; description?: string; image?: string; image_url?: string; animation_url?: string; attributes?: Array<{ trait_type?: string; value?: string }> };
   collection?: { name?: string; address?: string };
-  previews?: Array<{ url?: string }>;
+  previews?: Array<{ url?: string; resolution?: string }>;
 };
 
 const TON_API_BASE_URL = "https://tonapi.io/v2";
@@ -47,6 +49,8 @@ export function classifyWalletNft(item: TonApiNftItem): WalletNftCategory {
     item.metadata?.name,
     item.metadata?.description,
     item.collection?.name,
+    ...(item.interfaces ?? []),
+    ...(item.metadata?.attributes ?? []).flatMap(attribute => [attribute.trait_type, attribute.value]),
   ].filter(Boolean).join(" ").toLocaleLowerCase();
 
   if (/(anonymous\s*number|anon\s*number|аноним|анон\s*номер)/i.test(fingerprint)) return "anonymous_numbers";
@@ -59,12 +63,14 @@ export function classifyWalletNft(item: TonApiNftItem): WalletNftCategory {
 export function normalizeWalletNft(item: TonApiNftItem): WalletNftItem | null {
   if (!item.address || typeof item.address !== "string") return null;
   const name = item.metadata?.name?.trim() || item.collection?.name?.trim() || `NFT #${item.index ?? "—"}`;
+  const animationUrl = getSafeImageUrl(item.metadata?.animation_url);
   const imageUrls = Array.from(new Set([
-    ...(item.previews ?? []).map(preview => getSafeImageUrl(preview.url)),
+    animationUrl,
     getSafeImageUrl(item.metadata?.image),
     getSafeImageUrl(item.metadata?.image_url),
-    getSafeImageUrl(item.metadata?.animation_url),
+    ...(item.previews ?? []).map(preview => getSafeImageUrl(preview.url)),
   ].filter((url): url is string => Boolean(url))));
+  const mediaKind = animationUrl && /\.(?:mp4|webm|mov)(?:$|[?#])/i.test(animationUrl) ? "video" : imageUrls.length ? "image" : null;
 
   return {
     address: item.address,
@@ -73,6 +79,7 @@ export function normalizeWalletNft(item: TonApiNftItem): WalletNftItem | null {
     description: item.metadata?.description?.trim() || null,
     imageUrl: imageUrls[0] ?? null,
     imageUrls,
+    mediaKind,
     collectionName: item.collection?.name?.trim() || null,
     collectionAddress: item.collection?.address?.trim() || null,
     category: classifyWalletNft(item),

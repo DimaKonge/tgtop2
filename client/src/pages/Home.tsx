@@ -319,6 +319,7 @@ type WalletNft = {
   description: string | null;
   imageUrl: string | null;
   imageUrls: string[];
+  mediaKind: "video" | "image" | null;
   collectionName: string | null;
   collectionAddress: string | null;
   category: Exclude<WalletNftFilter, "all">;
@@ -834,7 +835,7 @@ function WalletNftCard({ item, language }: { item: WalletNft; language: Language
   const [imageFailed, setImageFailed] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const categoryLabel: Record<WalletNft["category"], string> = {
-    gifts: language === "en" ? "Gift" : "Гифт",
+    gifts: language === "en" ? "Gifts" : "Гифты",
     usernames: language === "en" ? "Username" : "Юзернейм",
     anonymous_numbers: language === "en" ? "Anonymous number" : "Анон-номер",
     domains: language === "en" ? "Domain" : "Домен",
@@ -857,7 +858,7 @@ function WalletNftCard({ item, language }: { item: WalletNft; language: Language
 
   return <article className="overflow-hidden rounded-xl border border-white/9 bg-[#111720] p-2.5 transition-colors hover:border-white/16 hover:bg-[#151d29]">
     <div className="relative aspect-square overflow-hidden rounded-lg border border-white/8 bg-[#1b2430]">
-      {imageUrl && !imageFailed ? <img src={imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={tryNextImage} /> : <span className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(84,143,255,.32),transparent_42%),#152131] text-lg font-semibold text-[#aacaff]">{item.name.slice(0, 1).toUpperCase()}</span>}
+      {imageUrl && !imageFailed ? item.mediaKind === "video" && imageIndex === 0 ? <video src={imageUrl} autoPlay muted loop playsInline className="h-full w-full object-cover" onError={tryNextImage} /> : <img src={imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={tryNextImage} /> : <span className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(84,143,255,.32),transparent 42%),#152131] text-lg font-semibold text-[#aacaff]">{item.name.slice(0, 1).toUpperCase()}</span>}
       <span className={`absolute left-1.5 top-1.5 rounded-md border px-1.5 py-1 text-[8px] font-semibold backdrop-blur-sm ${categoryClass[item.category]}`}>{categoryLabel[item.category]}</span>
     </div>
     <b className="mt-2 block truncate text-[11px] text-slate-100">{item.name}</b>

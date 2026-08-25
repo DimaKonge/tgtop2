@@ -9,6 +9,7 @@ describe("wallet NFT classification", () => {
     expect(classifyWalletNft({ metadata: { name: "Anonymous Number +888" } })).toBe("anonymous_numbers");
     expect(classifyWalletNft({ metadata: { name: "tgtop.ton" } })).toBe("domains");
     expect(classifyWalletNft({ metadata: { name: "Cyber Cat" } })).toBe("other");
+    expect(classifyWalletNft({ interfaces: ["TelegramGift"], metadata: { name: "Crystal Ball" } })).toBe("gifts");
   });
 
   it("normalizes only complete wallet items and keeps public preview URLs", () => {
@@ -18,7 +19,8 @@ describe("wallet NFT classification", () => {
       metadata: { name: "Gift", image: "ipfs://not-rendered" },
       previews: [{ url: "https://cdn.example/gift.png" }],
       collection: { name: "Telegram Gifts", address: "0:collection" },
-    })).toMatchObject({ name: "Gift", imageUrl: "https://cdn.example/gift.png", imageUrls: ["https://cdn.example/gift.png", "https://ipfs.io/ipfs/not-rendered"], category: "gifts" });
+    })).toMatchObject({ name: "Gift", imageUrl: "https://ipfs.io/ipfs/not-rendered", imageUrls: ["https://ipfs.io/ipfs/not-rendered", "https://cdn.example/gift.png"], mediaKind: "image", category: "gifts" });
+    expect(normalizeWalletNft({ address: "0:video", metadata: { name: "Animated Gift", animation_url: "https://cdn.example/gift.webm" } })).toMatchObject({ imageUrl: "https://cdn.example/gift.webm", mediaKind: "video" });
     expect(normalizeWalletNft({ address: "0:gift", metadata: { name: "IPFS Gift", image: "ipfs://ipfs/QmGift/image.webp" } })?.imageUrl).toBe("https://ipfs.io/ipfs/QmGift/image.webp");
     expect(normalizeWalletNft({ metadata: { name: "Missing address" } })).toBeNull();
   });
