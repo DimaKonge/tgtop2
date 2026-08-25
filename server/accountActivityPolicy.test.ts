@@ -11,6 +11,8 @@ describe("account activity policy", () => {
     expect(source).toContain("tonWithdrawals");
     expect(source).toContain('title: "gram_deposit"');
     expect(source).toContain('title: "gram_withdrawal"');
+    expect(source).toContain('title: "ranking_refund_pair"');
+    expect(source).toContain('status: "refunded"');
     expect(source).toContain("getUserDeals(openId)");
     expect(source).toContain("getNftTransferHistory(openId)");
     expect(source).toContain('currency: "Stars"');

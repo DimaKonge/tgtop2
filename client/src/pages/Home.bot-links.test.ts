@@ -102,6 +102,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Все операции');
     expect(source).toContain('Пополнения, выводы, ставки, награды и возвраты');
     expect(source).toContain('item.type === "deposit" ? "↓" : item.type === "withdrawal" ? "↑"');
+    expect(source).toContain('Ставка не создана — средства возвращены');
+    expect(source).toContain('Итог 0 GRAM');
     expect(source).toContain('rewardBudget: detailRewardBudgetUnits');
     expect(source).toContain('rewardPerSubscription: detailRewardPerSubscriptionUnits');
     expect(source).not.toContain('rewardBudget: rewardCampaignEnabled ? Number(rewardBudget) || 0');

@@ -634,36 +634,79 @@ export async function getAccountActivity(openId: string) {
     }).from(tonWithdrawals).where(eq(tonWithdrawals.userOpenId, openId)),
   ]);
   const namedGroup = (groupTitle: string | null, groupUsername: string | null) => groupUsername ? `@${groupUsername}` : (groupTitle ?? "TG TOP");
+  const normalizedCredits = credits.map(item => ({
+    sourceId: item.id,
+    id: `credit:${item.id}`,
+    type: "credit" as const,
+    status: item.kind,
+    createdAt: item.createdAt,
+    title: item.kind === "group_connection_bonus"
+      ? "connection_bonus"
+      : item.kind === "manual_bonus"
+        ? "manual_bonus"
+        : item.kind === "reward_campaign_reserve"
+          ? "reward_campaign_reserve"
+          : item.kind === "reward_campaign_release"
+            ? "reward_campaign_release"
+            : item.kind === "reward_subscription"
+              ? "reward_subscription"
+              : item.kind === "reward_invite_referral"
+                ? "reward_invite_referral"
+                  : item.kind === "reward_manual_add"
+                  ? "reward_manual_add"
+                  : item.kind === "ranking_spend"
+                    ? "ranking_spend"
+                    : item.kind === "ranking_refund"
+                      ? "ranking_refund"
+                      : "catalog_listing",
+    subject: namedGroup(item.groupTitle, item.groupUsername),
+    amount: item.amount / 100,
+    currency: "GRAM" as const,
+    direction: item.amount >= 0 ? "in" as const : "out" as const,
+  }));
+  const pairedRankingSpendRefunds = new Map<number, typeof normalizedCredits[number]>();
+  const consumedRankingRefunds = new Set<number>();
+  for (const refund of normalizedCredits.filter(item => item.title === "ranking_refund")) {
+    const spend = normalizedCredits
+      .filter(item => item.title === "ranking_spend" && !pairedRankingSpendRefunds.has(item.sourceId) && item.subject === refund.subject && Math.abs(item.amount) === Math.abs(refund.amount) && item.createdAt <= refund.createdAt)
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0];
+    if (!spend) continue;
+    pairedRankingSpendRefunds.set(spend.sourceId, refund);
+    consumedRankingRefunds.add(refund.sourceId);
+  }
+  const creditActivity: Array<{
+    id: string;
+    type: "credit";
+    status: string;
+    createdAt: Date;
+    title: string;
+    subject: string;
+    amount: number;
+    currency: "GRAM";
+    direction: "in" | "out" | "neutral";
+  }> = [];
+  for (const item of normalizedCredits) {
+    const refund = pairedRankingSpendRefunds.get(item.sourceId);
+    if (refund) {
+      creditActivity.push({
+        id: `ranking-refund-pair:${item.sourceId}:${refund.sourceId}`,
+        type: "credit",
+        status: "refunded",
+        createdAt: refund.createdAt,
+        title: "ranking_refund_pair",
+        subject: item.subject,
+        amount: 0,
+        currency: "GRAM",
+        direction: "neutral",
+      });
+      continue;
+    }
+    if (consumedRankingRefunds.has(item.sourceId)) continue;
+    const { sourceId: _sourceId, ...activity } = item;
+    creditActivity.push(activity);
+  }
   return [
-    ...credits.map(item => ({
-      id: `credit:${item.id}`,
-      type: "credit" as const,
-      status: item.kind,
-      createdAt: item.createdAt,
-      title: item.kind === "group_connection_bonus"
-        ? "connection_bonus"
-        : item.kind === "manual_bonus"
-          ? "manual_bonus"
-          : item.kind === "reward_campaign_reserve"
-            ? "reward_campaign_reserve"
-            : item.kind === "reward_campaign_release"
-              ? "reward_campaign_release"
-              : item.kind === "reward_subscription"
-                ? "reward_subscription"
-                : item.kind === "reward_invite_referral"
-                  ? "reward_invite_referral"
-                    : item.kind === "reward_manual_add"
-                    ? "reward_manual_add"
-                    : item.kind === "ranking_spend"
-                      ? "ranking_spend"
-                      : item.kind === "ranking_refund"
-                        ? "ranking_refund"
-                        : "catalog_listing",
-      subject: namedGroup(item.groupTitle, item.groupUsername),
-      amount: item.amount / 100,
-      currency: "GRAM",
-      direction: item.amount >= 0 ? "in" as const : "out" as const,
-    })),
+    ...creditActivity,
     ...starsPayments.map(item => ({ id: `stars:${item.id}`, type: "stars" as const, status: item.status, createdAt: item.paidAt ?? item.createdAt, title: "ranking_stars", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.starsAmount, currency: "Stars", direction: "out" as const })),
     ...bids.map(item => ({ id: `bid:${item.id}`, type: "bid" as const, status: item.status, createdAt: item.createdAt, title: "ranking_bid", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.bidAmount / 1000, currency: "GRAM", direction: "neutral" as const })),
     ...userDeals.map(item => ({ id: `deal:${item.id}`, type: "deal" as const, status: item.status, createdAt: item.createdAt, title: item.dealType, subject: namedGroup(item.groupTitle, item.groupUsername), amount: Number(item.price), currency: "TON", direction: item.buyerOpenId === openId ? "out" as const : "in" as const })),
