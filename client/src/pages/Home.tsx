@@ -3038,10 +3038,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <button
                 type="button"
                 onClick={() => openMine(automaticPlacementSlot ?? undefined)}
-                className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#3f8cff]/35 bg-[#3f8cff]/[0.045] px-3 text-[11px] font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.1] active:scale-[0.985]"
+                aria-label={tx("Добавить свою группу", "Add your community")}
+                title={tx("Добавить свою группу", "Add your community")}
+                className="mx-auto grid h-8 w-8 place-items-center rounded-lg border border-dashed border-[#3f8cff]/45 bg-[#3f8cff]/[0.055] text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.13] active:scale-[0.92]"
               >
-                <Plus className="h-3.5 w-3.5" />
-                {tx("Добавить свою группу", "Add your community")}
+                <Plus className="h-4 w-4" />
               </button>
               </div>}
             </div>
