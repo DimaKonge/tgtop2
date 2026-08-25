@@ -2903,16 +2903,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="space-y-2">
                 {!topSearchQuery.trim() && rankingContinuation.map((slot, index) => (
                   <div key={`ranking-continuation-${slot.id}`} className="relative w-full animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${index * 35}ms` }}>
-                    <span className="absolute left-2.5 top-1/2 z-10 -translate-y-1/2 rounded-md border border-[#3f8cff]/30 bg-[#17212b]/95 px-1.5 py-0.5 text-[10px] font-bold text-[#a6c8ff]">#{slot.slotNumber}</span>
-                    <div className="pl-8">
-                      <GroupCard
-                        group={slot.group}
-                        variant="list"
-                        language={language}
-                        bidAmount={slot.bidAmount}
-                        onClick={() => slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)}
-                      />
-                    </div>
+                    <GroupCard
+                      group={slot.group}
+                      variant="list"
+                      language={language}
+                      bidAmount={slot.bidAmount}
+                      onClick={() => slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot)}
+                    />
                   </div>
                 ))}
                 {searchedGeneralList.map((group, index) => {

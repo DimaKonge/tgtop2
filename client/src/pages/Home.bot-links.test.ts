@@ -404,6 +404,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const currentGroup = mine.find(item => item.id === group.id) ?? group;');
     expect(source).toContain('const rankingContinuation = slots');
     expect(source).toContain('rankingContinuation.map((slot, index) => (');
+    expect(source).not.toContain('>#{slot.slotNumber}</span>');
+    expect(source).not.toContain('className="pl-8"');
     expect(source).not.toContain('const fourthTier = board.slice(7, 10);');
     expect(source).toContain('Место не выбрано');
     expect(source).not.toContain('#{selectedSlot?.slotNumber ?? 1}');
