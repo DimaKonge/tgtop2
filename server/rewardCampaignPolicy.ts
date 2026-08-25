@@ -30,6 +30,17 @@ export function isRewardCampaignActive(config: RewardCampaignConfig): boolean {
   });
 }
 
+/**
+ * A channel visitor needs a personal invite link both for a subscription reward
+ * and for a referral reward. A self-join through that link remains a
+ * subscription event; another person's join remains a referral event.
+ */
+export function canCreateRewardPersonalInviteLink(config: RewardCampaignConfig): boolean {
+  if (!isRewardCampaignActive(config)) return false;
+  if (config.category === "Чаты") return getRewardAmount(config, "manual_add") > 0;
+  return getRewardAmount(config, "subscription") > 0 || getRewardAmount(config, "invite_referral") > 0;
+}
+
 export function validateRewardCampaignConfig(config: RewardCampaignConfig): string | undefined {
   const numericValues = [config.rewardBudget, config.rewardPerSubscription, config.rewardPerInvite, config.rewardPerManualAdd];
   if (!numericValues.every(Number.isInteger) || numericValues.some(value => value < 0)) return "Значения кампании должны быть целым количеством сотых GRAM";

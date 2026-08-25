@@ -442,6 +442,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('topSection === "nft" ? tx("Поиск NFT", "Search NFT")');
     expect(source).toContain('type NftMarketCategory = "all" | "gifts" | "usernames" | "anonymous_numbers" | "other"');
     expect(source).toContain('aria-label="Рубрики NFT"');
+    expect(source).toContain('type NftDealCategory = "all" | "sale" | "auction" | "installments" | "rent" | "collateral"');
+    expect(source).toContain('aria-label="Режимы сделок NFT"');
+    expect(source).toContain('tx("Аукцион", "Auction")');
+    expect(source).toContain('tx("Рассрочка", "Installments")');
+    expect(source).toContain('tx("Залог", "Collateral")');
+    expect(source).toContain('Никакие платежи или передачи здесь ещё не создаются.');
     expect(source).toContain('tx("Гифты", "Gifts")');
     expect(source).toContain('tx("Анонимные номера", "Anonymous numbers")');
     expect(source).toContain('tx("Другие NFT", "Other NFTs")');

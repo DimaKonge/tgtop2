@@ -170,6 +170,7 @@ type ListingCountry = string;
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
 type TopSection = "communities" | "nft" | "bots";
 type NftMarketCategory = "all" | "gifts" | "usernames" | "anonymous_numbers" | "other";
+type NftDealCategory = "all" | "sale" | "auction" | "installments" | "rent" | "collateral";
 const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const;
 const COUNTRY_LABELS: Record<string, { ru: string; en: string }> = {
   Global: { ru: "Весь мир", en: "Worldwide" },
@@ -1074,6 +1075,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [nftTransferStep, setNftTransferStep] = useState<"select" | "review" | "prepared">("select");
   const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
   const [nftMarketCategory, setNftMarketCategory] = useState<NftMarketCategory>("all");
+  const [nftDealCategory, setNftDealCategory] = useState<NftDealCategory>("all");
   const [botCategory, setBotCategory] = useState("Все");
   const [channelGiftsOpen, setChannelGiftsOpen] = useState(false);
   const [selectedNftId, setSelectedNftId] = useState<number | null>(null);
@@ -1864,12 +1866,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     () => {
       const byMarketCategory = nftMarketCategory === "all" || nftMarketCategory === "usernames" ? nfts : [];
       const byAssetClass = nftAssetFilter === "all" ? byMarketCategory : byMarketCategory.filter(nft => nft.assetClass === nftAssetFilter);
+      const byDealCategory = nftDealCategory === "all"
+        ? byAssetClass
+        : nftDealCategory === "sale"
+          ? byAssetClass.filter(nft => nft.listingType === "sale" || nft.listingType === "both")
+          : nftDealCategory === "rent"
+            ? byAssetClass.filter(nft => nft.listingType === "rent" || nft.listingType === "both")
+            : [];
       const query = topSearchQuery.trim().toLowerCase();
       return query
-        ? byAssetClass.filter(nft => `${nft.username} ${nft.ownerUsername}`.toLowerCase().includes(query))
-        : byAssetClass;
+        ? byDealCategory.filter(nft => `${nft.username} ${nft.ownerUsername}`.toLowerCase().includes(query))
+        : byDealCategory;
     },
-    [nfts, nftAssetFilter, nftMarketCategory, topSearchQuery]
+    [nfts, nftAssetFilter, nftMarketCategory, nftDealCategory, topSearchQuery]
   );
   const board = useMemo(
     () =>
@@ -2843,6 +2852,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <button key={value} type="button" onClick={() => setNftMarketCategory(value)} className={`h-8 shrink-0 rounded-md px-3 text-[10px] font-semibold transition-colors ${nftMarketCategory === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
                   ))}
                 </div>
+                <div aria-label="Режимы сделок NFT" className="flex gap-1.5 overflow-x-auto rounded-lg border border-white/8 bg-[#111720] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {([
+                    ["all", tx("Все сделки", "All deals")],
+                    ["sale", tx("Продажа", "Sale")],
+                    ["auction", tx("Аукцион", "Auction")],
+                    ["installments", tx("Рассрочка", "Installments")],
+                    ["rent", tx("Аренда", "Rent")],
+                    ["collateral", tx("Залог", "Collateral")],
+                  ] as const).map(([value, label]) => (
+                    <button key={value} type="button" onClick={() => setNftDealCategory(value)} className={`h-8 shrink-0 rounded-md px-3 text-[10px] font-semibold transition-colors ${nftDealCategory === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                  ))}
+                </div>
                 <ToggleGroup type="single" value={nftAssetFilter} onValueChange={value => value && setNftAssetFilter(value as typeof nftAssetFilter)} className="grid w-full grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
                   <ToggleGroupItem value="all" className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white">{tx("Все", "All")}</ToggleGroupItem>
                   <ToggleGroupItem value="onchain" className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white">On-chain</ToggleGroupItem>
@@ -2855,7 +2876,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 ) : (
                   <div className="rounded-2xl border border-dashed border-white/12 bg-[#111720] p-7 text-center">
                     <p className="text-sm font-medium text-slate-300">{tx("В этой категории NFT пока нет", "No NFTs in this category yet")}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">{nftMarketCategory === "usernames" ? tx("Юзернеймы появятся здесь после размещения владельцем.", "Usernames will appear here after owner listing.") : tx("Раздел появится после добавления первых активов.", "This category will appear after the first assets are added.")}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{nftDealCategory === "auction" || nftDealCategory === "installments" || nftDealCategory === "collateral" ? tx("Первые предложения появятся после безопасного листинга владельцами. Никакие платежи или передачи здесь ещё не создаются.", "Offers will appear after owners create secure listings. No payment or transfer is created here.") : nftMarketCategory === "usernames" ? tx("Юзернеймы появятся здесь после размещения владельцем.", "Usernames will appear here after owner listing.") : tx("Раздел появится после добавления первых активов.", "This category will appear after the first assets are added.")}</p>
                   </div>
                 )}
               </section>

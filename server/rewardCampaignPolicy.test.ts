@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getRewardAmount, isRewardCampaignActive, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
+import { canCreateRewardPersonalInviteLink, getRewardAmount, isRewardCampaignActive, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
 
 describe("reward campaign policy", () => {
   it("uses subscriber and referral rewards only for channels", () => {
@@ -14,6 +14,11 @@ describe("reward campaign policy", () => {
     expect(getRewardAmount(chat, "manual_add")).toBe(1);
     expect(getRewardAmount(chat, "subscription")).toBe(0);
     expect(isRewardCampaignActive(chat)).toBe(true);
+  });
+
+  it("allows a channel visitor to receive a personal link when only subscription reward is configured", () => {
+    const channel = { category: "Каналы" as const, rewardActive: true, rewardBudget: 100, rewardPerSubscription: 1, rewardPerInvite: 0, rewardPerManualAdd: 0 };
+    expect(canCreateRewardPersonalInviteLink(channel)).toBe(true);
   });
 
   it("does not show an active campaign if no configured reward fits the remaining budget", () => {

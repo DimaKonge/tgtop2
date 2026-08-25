@@ -9,7 +9,7 @@ import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramR
 import { assignRankingEntriesToSlots, getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
 import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
-import { DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
+import { canCreateRewardPersonalInviteLink, DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
 import { canExposeOwnerProfile } from "./ownerVisibilityPolicy";
 import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
 import { getTelegramChatIdFromOpenId, verifyTelegramUserChatBoost } from "./telegramNotifications";
@@ -1903,13 +1903,8 @@ export async function getOrCreateRewardInviteLink(groupId: number, beneficiaryOp
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.id, groupId)).limit(1);
-  const inviteRewardAmount = group?.category === "Чаты"
-    ? getRewardAmount(group, "manual_add")
-    : group
-      ? getRewardAmount(group, "invite_referral")
-      : 0;
-  if (!group || group.status !== "listed" || !isRewardCampaignActive(group) || inviteRewardAmount < 1) {
-    throw new Error("Пригласительная кампания для канала недоступна");
+  if (!group || group.status !== "listed" || !canCreateRewardPersonalInviteLink(group)) {
+    throw new Error("Кампания вознаграждений недоступна для персональной ссылки");
   }
   const [existing] = await db.select().from(rewardInviteLinks).where(and(
     eq(rewardInviteLinks.groupId, groupId),
