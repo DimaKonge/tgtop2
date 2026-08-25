@@ -3718,15 +3718,17 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
                       <p className="mt-1 text-[10px] text-slate-500">{selectedSlot ? (ownsDetail ? "Настройте размещение перед оплатой." : "Выберите свою группу и настройте размещение.") : "Настройте свою группу перед первым размещением."}</p>
 
-                      <div className="mt-2 space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <button type="button" onClick={() => startBotAdminSetup("channel")} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-[10px] font-semibold text-slate-200 transition-colors hover:bg-[#253247] active:scale-[0.98]"><Plus className="h-3.5 w-3.5 text-[#8fc4ff]" />Добавить канал</button>
-                          <button type="button" onClick={() => startBotAdminSetup("group")} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-[10px] font-semibold text-slate-200 transition-colors hover:bg-[#253247] active:scale-[0.98]"><Plus className="h-3.5 w-3.5 text-[#8fc4ff]" />Добавить чат</button>
-                        </div>
-                        {lotGroupCandidates.length ? <div className="space-y-1.5">
-                          {lotGroupCandidates.map(group => <button key={group.id} type="button" onClick={() => applyLotGroupSettings(group)} className={`flex w-full items-center gap-2 rounded-xl border p-2 text-left transition-colors ${selectedLotGroup?.id === group.id ? "border-[#3390ec]/70 bg-[#213750]" : "border-[#354966] bg-[#202b3a] hover:bg-[#253247]"}`}><Avatar group={group} compact /><span className="min-w-0 flex-1"><small className="block text-[9px] uppercase tracking-wide text-slate-500">Подключено</small><b className="block truncate text-xs text-slate-100">{group.title}</b><small className="block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : "Канал или чат подключён к TG TOP"}</small></span>{selectedLotGroup?.id === group.id && <Check className="h-4 w-4 shrink-0 text-[#63f5b1]" />}</button>)}
-                        </div> : <p className="rounded-xl border border-dashed border-white/10 px-3 py-2 text-center text-[10px] leading-4 text-slate-500">Добавьте канал или чат кнопкой выше.</p>}
-                      </div>
+                      {!selectedLotGroup ? (
+                        <button type="button" onClick={() => setLotGroupPickerOpen(true)} aria-label="Добавить свою группу" className="mt-2 flex w-full items-center justify-center rounded-xl border border-dashed border-[#3f8cff]/45 bg-[#3f8cff]/[0.06] py-3 text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.12] active:scale-[0.99]">
+                          <Plus className="h-5 w-5" />
+                        </button>
+                      ) : (
+                        <button type="button" onClick={() => setLotGroupPickerOpen(true)} className="mt-2 flex w-full items-center gap-2 rounded-xl border border-[#3390ec]/55 bg-[#213750] p-2 text-left transition-colors hover:bg-[#274363]">
+                          <Avatar group={selectedLotGroup} compact />
+                          <span className="min-w-0 flex-1"><small className="block text-[9px] uppercase tracking-wide text-[#8fc4ff]">Выбрана ваша группа</small><b className="block truncate text-xs text-slate-100">{selectedLotGroup.title}</b></span>
+                          <span className="text-[10px] font-semibold text-[#8fc4ff]">Изменить</span>
+                        </button>
+                      )}
 
                       {selectedLotGroup && detailReturnPage === "mine" && <div className="mt-2 grid grid-cols-2 gap-2">
                         <label className="rounded-xl border border-[#354966] bg-[#202b3a] p-2">
@@ -4468,7 +4470,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : "Подключена к TG TOP"}</small></span>
                 <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${selected ? "bg-[#3390ec] text-white" : "border border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
               </button>;
-            }) : <p className="rounded-xl border border-dashed border-white/12 px-3 py-5 text-center text-xs leading-5 text-slate-500">Чтобы выбрать группу, добавьте бота администратором вашей группы.</p>}
+            }) : <div className="space-y-2">
+              <p className="rounded-xl border border-dashed border-white/12 px-3 py-4 text-center text-xs leading-5 text-slate-500">Сначала добавьте бота администратором своей группы.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => startBotAdminSetup("channel")} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-[10px] font-semibold text-slate-200 transition-colors hover:bg-[#253247] active:scale-[0.98]"><Plus className="h-3.5 w-3.5 text-[#8fc4ff]" />Добавить канал</button>
+                <button type="button" onClick={() => startBotAdminSetup("group")} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-[#354966] bg-[#202b3a] px-2 text-[10px] font-semibold text-slate-200 transition-colors hover:bg-[#253247] active:scale-[0.98]"><Plus className="h-3.5 w-3.5 text-[#8fc4ff]" />Добавить чат</button>
+              </div>
+            </div>}
           </div>
         </SheetContent>
       </Sheet>
