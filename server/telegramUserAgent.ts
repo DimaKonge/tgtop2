@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { Api, TelegramClient } from "teleproto";
-import { StringSession } from "teleproto/sessions";
+import { StringSession } from "teleproto/sessions/index.js";
 import { getTelegramUserAgentSession, recordTelegramUserAgentAuditEvent, saveTelegramUserAgentSession } from "./db";
 
 const LOGIN_TTL_MS = 10 * 60_000;
