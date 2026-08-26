@@ -16,6 +16,10 @@ describe("Telegram user-agent safety boundary", () => {
     expect(() => __private__.normalizeCode("abcd")).toThrow();
   });
 
+  it("recognizes Teleproto RPC errorMessage so a valid code can advance to 2FA", () => {
+    expect(__private__.getErrorCode({ errorMessage: "SESSION_PASSWORD_NEEDED" })).toBe("SESSION_PASSWORD_NEEDED");
+  });
+
   it("uses encrypted stored state and contains no posting, chat-management or financial operations", () => {
     const source = readFileSync(new URL("./telegramUserAgent.ts", import.meta.url), "utf8");
     expect(source).toContain('createCipheriv("aes-256-gcm"');

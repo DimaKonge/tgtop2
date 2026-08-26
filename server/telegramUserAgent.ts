@@ -71,6 +71,9 @@ function normalizeCode(code: string) {
 }
 
 function getErrorCode(error: unknown) {
+  if (typeof error === "object" && error && "errorMessage" in error && typeof error.errorMessage === "string") {
+    return error.errorMessage;
+  }
   return error instanceof Error ? error.message : "Telegram authorization failed";
 }
 
@@ -183,4 +186,4 @@ export async function disconnectTelegramUserAgent(actorOpenId: string) {
   return { status: "disconnected" as const };
 }
 
-export const __private__ = { decrypt, encrypt, normalizePhone, normalizeCode, safeStatus };
+export const __private__ = { decrypt, encrypt, getErrorCode, normalizePhone, normalizeCode, safeStatus };
