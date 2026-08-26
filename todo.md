@@ -918,3 +918,7 @@
 - [x] Обновить critical и высокорисковые production-зависимости в отдельном проверяемом изменении без смешивания с продуктовыми функциями.
 - [x] Добавить базовый production-hardening: security headers, rate limit, health/readiness и явную политику ошибок БД для критичных операций.
 - [x] Добавить security headers, rate limit и database-backed health/readiness endpoint для production HTTP-контура.
+- [x] Разобрать оставшиеся high dependency advisory по достижимости в TG TOP и подготовить изолированный безопасный план обновления.
+- [ ] Провести отдельную Express 5 migration с contract/smoke-тестами OAuth, storage proxy, tRPC, media, public pages и SPA fallback вместо принудительной подмены path-to-regexp в Express 4.
+- [ ] Восстановить отдельный SSH-ключ безопасного релиза, проверить VPS-доступ и выпустить проверенные P0/P1 исправления staged-процедурой.
+- [x] Добавить в архитектурную документацию понятную владельцу карту: закрытые риски, оставшиеся риски, статус и очередность работ.

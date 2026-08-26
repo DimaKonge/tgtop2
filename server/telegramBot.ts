@@ -226,7 +226,8 @@ export async function getTelegramChatGifts(chatId: string): Promise<TelegramChat
         if (file.file_path) {
           const media = await axios.get<ArrayBuffer>(`https://api.telegram.org/file/bot${botToken}/${file.file_path}`, { responseType: "arraybuffer", timeout: 20_000 });
           const extension = file.file_path.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "bin";
-          const stored = await storagePut(`telegram/channel-gifts/${chatId}/${sourceFileId}.${extension}`, Buffer.from(media.data), media.headers["content-type"] ?? "application/octet-stream");
+          const mediaContentType = media.headers["content-type"];
+          const stored = await storagePut(`telegram/channel-gifts/${chatId}/${sourceFileId}.${extension}`, Buffer.from(media.data), typeof mediaContentType === "string" ? mediaContentType : "application/octet-stream");
           mediaUrl = stored.url;
         }
       } catch {
@@ -253,7 +254,8 @@ export async function getTelegramUserAvatarUrl(telegramUserId: string): Promise<
       const file = await telegramCallWithToken<TelegramFile>(token, "getFile", { file_id: fileId });
       if (!file.file_path) continue;
       const response = await axios.get<ArrayBuffer>(`https://api.telegram.org/file/bot${token}/${file.file_path}`, { responseType: "arraybuffer", timeout: 15_000 });
-      const stored = await storagePut(`telegram/managers/${telegramUserId}.jpg`, Buffer.from(response.data), response.headers["content-type"] ?? "image/jpeg");
+      const managerContentType = response.headers["content-type"];
+      const stored = await storagePut(`telegram/managers/${telegramUserId}.jpg`, Buffer.from(response.data), typeof managerContentType === "string" ? managerContentType : "image/jpeg");
       return stored.url;
     } catch {
       continue;

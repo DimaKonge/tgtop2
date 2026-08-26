@@ -76,3 +76,9 @@ Express entrypoint устанавливает только JSON / URL-encoded pa
 Безопасная граница операции должна быть одной MySQL transaction: (1) обеспечить существование canonical board; (2) взять write lock всех slot rows canonical board; (3) перечитать target после lock; (4) заново проверить minimum bid; (5) одновременно списать internal GRAM с условием достаточного баланса, записать immutable credit ledger и ranking intent; (6) пересчитать и сохранить slots; (7) сохранить настройки reward budget и вернуть outbid payload только после commit. Никакая строка `currentBid`, пришедшая от клиента, не должна быть источником истины — каноническая display value строится на сервере из integer milliGRAM.
 
 Для Stars внешний платёж по своей природе приходит раньше локальной активации. После успешного callback те же lock/recheck правила должны применяться к placement и смене intent в `paid`/`refund_required`; если лот уже изменился, не активировать ставку и отправить intent в контролируемый refund flow. Это изменение не запускает платежи, не меняет лимиты и не выполняет существующие pending operations.
+
+## 12. P1 dependency follow-up
+
+После изолированного обновления AWS SDK, tRPC, Axios, Drizzle ORM и NanoID production dependency audit изменился с **1 critical / 17 high** на **0 critical / 1 high / 2 moderate / 2 low**. Единственный high — транзитивный `path-to-regexp@0.1.12` внутри Express 4.21.2. Проверенные application routes не имеют уязвимого паттерна с тремя параметрами в одном segment; tRPC также ограничен 120 запросами в минуту на origin. Это снижает достижимость, но не отменяет advisory.
+
+Рекомендация: не подменять `path-to-regexp` принудительно в Express 4 lockfile. Вместо этого выполнить отдельную Express 5 migration с contract/smoke-тестами OAuth callback, storage proxy, `/api/trpc`, static SPA fallback, Telegram media и public community pages. Эта migration должна быть самостоятельным P2-релизом, не смешанным с платежами, wallet или UI.

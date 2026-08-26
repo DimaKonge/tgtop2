@@ -26,7 +26,8 @@ export function registerTelegramMediaRoutes(app: Express) {
           responseType: "arraybuffer", timeout: 20_000,
         });
         res.setHeader("Cache-Control", "public, max-age=3600");
-        res.setHeader("Content-Type", image.headers["content-type"] ?? "image/jpeg");
+        const imageContentType = image.headers["content-type"];
+        res.setHeader("Content-Type", typeof imageContentType === "string" ? imageContentType : "image/jpeg");
         return res.send(Buffer.from(image.data));
       } catch {
         // Telegram file identifiers are bot-specific, so try the parallel reserve bot next.
