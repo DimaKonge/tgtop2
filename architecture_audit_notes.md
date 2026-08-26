@@ -82,3 +82,7 @@ Express entrypoint устанавливает только JSON / URL-encoded pa
 После изолированного обновления AWS SDK, tRPC, Axios, Drizzle ORM и NanoID production dependency audit изменился с **1 critical / 17 high** на **0 critical / 1 high / 2 moderate / 2 low**. Единственный high — транзитивный `path-to-regexp@0.1.12` внутри Express 4.21.2. Проверенные application routes не имеют уязвимого паттерна с тремя параметрами в одном segment; tRPC также ограничен 120 запросами в минуту на origin. Это снижает достижимость, но не отменяет advisory.
 
 Рекомендация: не подменять `path-to-regexp` принудительно в Express 4 lockfile. Вместо этого выполнить отдельную Express 5 migration с contract/smoke-тестами OAuth callback, storage proxy, `/api/trpc`, static SPA fallback, Telegram media и public community pages. Эта migration должна быть самостоятельным P2-релизом, не смешанным с платежами, wallet или UI.
+
+## 13. Express 5 migration source
+
+Официальное руководство Express 5 подтверждает обязательные именованные wildcard-маршруты: `/{*splat}` для root-inclusive fallback и `/*key` для захвата пути. Для TG TOP это применяется к Vite fallback, production SPA fallback и `/manus-storage/*key`; обычные `*` больше не допускаются. Источники: https://expressjs.com/en/guide/migrating-5/ и https://expressjs.com/en/5x/guide/routing/.
