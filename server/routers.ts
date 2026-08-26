@@ -10,14 +10,15 @@ import { formatTonAmount } from "./tonFormatting";
 import { getWalletNfts } from "./tonNft";
 import { getSafeTonDepositError } from "./tonDepositErrorPolicy";
 import { getSafeTonWithdrawalError } from "./tonWithdrawalErrorPolicy";
-import { ENV } from "./_core/env";
 import * as telegramUserAgent from "./telegramUserAgent";
+import { requireTelegramUserAgentOwner } from "./telegramUserAgentAccess";
 import { deliverOperationsLog, formatFinanceLog, formatTopActivityLog } from "./telegramOperationsLogger";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
-const ownerOnly = (openId: string) => {
-  if (!ENV.ownerOpenId || openId !== ENV.ownerOpenId) throw new Error("Доступ к рабочему Telegram-аккаунту есть только у владельца TG TOP");
+const ownerOnly = async (openId: string) => {
+  const access = await db.getModerationAccess(openId);
+  requireTelegramUserAgentOwner(access);
 };
 const groupListingInput = z.object({
   salePriceTon: gramAmount.nullable().optional(),
@@ -52,23 +53,23 @@ export const appRouter = router({
 
   telegramUserAgent: router({
     status: protectedProcedure.query(async ({ ctx }) => {
-      ownerOnly(ctx.user.openId);
+      await ownerOnly(ctx.user.openId);
       return await telegramUserAgent.getTelegramUserAgentStatus();
     }),
     requestCode: protectedProcedure.input(z.object({ phone: z.string().trim().min(8).max(32) })).mutation(async ({ ctx, input }) => {
-      ownerOnly(ctx.user.openId);
+      await ownerOnly(ctx.user.openId);
       return await telegramUserAgent.beginTelegramUserAgentLogin(ctx.user.openId, input.phone);
     }),
     confirmCode: protectedProcedure.input(z.object({ code: z.string().trim().min(4).max(8) })).mutation(async ({ ctx, input }) => {
-      ownerOnly(ctx.user.openId);
+      await ownerOnly(ctx.user.openId);
       return await telegramUserAgent.confirmTelegramUserAgentCode(ctx.user.openId, input.code);
     }),
     confirmPassword: protectedProcedure.input(z.object({ password: z.string().min(1).max(256) })).mutation(async ({ ctx, input }) => {
-      ownerOnly(ctx.user.openId);
+      await ownerOnly(ctx.user.openId);
       return await telegramUserAgent.confirmTelegramUserAgentPassword(ctx.user.openId, input.password);
     }),
     disconnect: protectedProcedure.mutation(async ({ ctx }) => {
-      ownerOnly(ctx.user.openId);
+      await ownerOnly(ctx.user.openId);
       return await telegramUserAgent.disconnectTelegramUserAgent(ctx.user.openId);
     }),
   }),
