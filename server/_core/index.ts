@@ -2,8 +2,6 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
-import helmet from "helmet";
-import { rateLimit } from "express-rate-limit";
 import { sql } from "drizzle-orm";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -35,27 +33,45 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+function applySecurityHeaders(req: express.Request, res: express.Response, next: express.NextFunction) {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+  }
+  next();
+}
+
+function createInMemoryRateLimit(windowMs: number, limit: number) {
+  const requests = new Map<string, { count: number; resetAt: number }>();
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const now = Date.now();
+    const key = req.ip || req.socket.remoteAddress || "unknown";
+    const previous = requests.get(key);
+    const entry = !previous || previous.resetAt <= now
+      ? { count: 0, resetAt: now + windowMs }
+      : previous;
+    entry.count += 1;
+    requests.set(key, entry);
+    res.setHeader("RateLimit-Limit", String(limit));
+    res.setHeader("RateLimit-Remaining", String(Math.max(0, limit - entry.count)));
+    res.setHeader("RateLimit-Reset", String(Math.ceil(entry.resetAt / 1000)));
+    if (entry.count > limit) {
+      res.status(429).json({ error: "Слишком много запросов. Повторите через минуту." });
+      return;
+    }
+    next();
+  };
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-    crossOriginOpenerPolicy: false,
-    crossOriginResourcePolicy: false,
-    frameguard: false,
-    hsts: process.env.NODE_ENV === "production" ? { maxAge: 15_552_000, includeSubDomains: true } : false,
-    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  }));
-  const trpcRateLimit = rateLimit({
-    windowMs: 60_000,
-    limit: 120,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-    message: { error: "Слишком много запросов. Повторите через минуту." },
-  });
+  app.use(applySecurityHeaders);
+  const trpcRateLimit = createInMemoryRateLimit(60_000, 120);
   app.get("/healthz", async (_req, res) => {
     try {
       const db = await getDb();

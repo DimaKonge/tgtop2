@@ -6,9 +6,10 @@ describe("production HTTP hardening", () => {
 
   it("removes technology disclosure and protects tRPC from request floods", () => {
     expect(source).toContain('app.disable("x-powered-by")');
-    expect(source).toContain('const trpcRateLimit = rateLimit({');
-    expect(source).toContain('windowMs: 60_000');
-    expect(source).toContain('limit: 120');
+    expect(source).toContain('app.use(applySecurityHeaders)');
+    expect(source).toContain('const trpcRateLimit = createInMemoryRateLimit(60_000, 120)');
+    expect(source).toContain('res.setHeader("X-Content-Type-Options", "nosniff")');
+    expect(source).toContain('res.status(429).json({ error: "Слишком много запросов. Повторите через минуту." })');
     expect(source).toContain('"/api/trpc",');
   });
 
