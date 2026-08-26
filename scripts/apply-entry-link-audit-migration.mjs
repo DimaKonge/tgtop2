@@ -66,7 +66,20 @@ try {
       CONSTRAINT \`telegram_user_agent_sessions_scope_unique\` UNIQUE(\`scope\`)
     )`);
   }
-  console.log("entry_link_and_telegram_user_agent_migration=ok");
+
+  if (!(await hasTable("telegram_operation_log_destinations"))) {
+    await connection.query(`CREATE TABLE \`telegram_operation_log_destinations\` (
+      \`id\` int AUTO_INCREMENT NOT NULL,
+      \`kind\` enum('top_activity','finance') NOT NULL,
+      \`chatId\` varchar(64) NOT NULL,
+      \`chatTitle\` varchar(255),
+      \`configuredByOpenId\` varchar(64) NOT NULL,
+      \`updatedAt\` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT \`telegram_operation_log_destinations_id\` PRIMARY KEY(\`id\`),
+      CONSTRAINT \`telegram_operation_log_destinations_kind_unique\` UNIQUE(\`kind\`)
+    )`);
+  }
+  console.log("entry_link_telegram_user_agent_and_log_destinations_migration=ok");
 } finally {
   await connection.end();
 }

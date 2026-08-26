@@ -17,11 +17,14 @@ import {
   flagGroupForModeration,
   getRankedEntryLinkTargets,
   recordVerifiedPublicUsername,
+  saveTelegramOperationLogDestination,
   settleStarsRankingPayment,
   upsertTelegramGroup,
   upsertUser,
 } from "./db";
 import { notifyCommunityEntryLinkInvalidated, notifyCommunityEntryLinkRevalidated, notifyRankingOutbid } from "./telegramNotifications";
+import { ENV } from "./_core/env";
+import { deliverOperationsLog, formatTopActivityLog } from "./telegramOperationsLogger";
 
 type TelegramChat = {
   id: number;
@@ -74,6 +77,38 @@ function isActiveMember(status: string): boolean { return ["creator", "administr
 function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { return chat.type === "channel" ? "Каналы" : "Чаты"; }
 function catalogChatId(chatId: number): string { return String(chatId); }
 function publicGroupUrl(chat: TelegramChat): string | undefined { return chat.username ? `https://t.me/${chat.username}` : undefined; }
+
+export function parsePrivateLogDestinationCommand(text: string | undefined): "top_activity" | "finance" | null {
+  const normalized = text?.trim().toLowerCase() ?? "";
+  if (/^\/tgtop_log_top(?:@\w+)?$/.test(normalized)) return "top_activity";
+  if (/^\/tgtop_log_finance(?:@\w+)?$/.test(normalized)) return "finance";
+  return null;
+}
+
+async function configurePrivateLogDestination(message: NonNullable<TelegramUpdate["message"]>) {
+  const kind = parsePrivateLogDestinationCommand(message.text);
+  if (!kind) return false;
+  if (!message.from || !ENV.ownerOpenId || ENV.ownerOpenId !== `telegram:${message.from.id}`) {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Эту закрытую log-группу может подключить только владелец TG TOP." }).catch(() => {});
+    return true;
+  }
+  if (message.chat.type !== "group" && message.chat.type !== "supergroup") {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Подключите private-группу, а не личный чат." }).catch(() => {});
+    return true;
+  }
+  await saveTelegramOperationLogDestination({
+    kind,
+    chatId: catalogChatId(message.chat.id),
+    chatTitle: message.chat.title ?? null,
+    configuredByOpenId: ENV.ownerOpenId,
+  });
+  const label = kind === "top_activity" ? "TOP-активность" : "Финансы";
+  await telegramCall<boolean>("sendMessage", {
+    chat_id: message.chat.id,
+    text: `✅ Private log «${label}» подключён. Сюда будут приходить только подтверждённые события TG TOP. Никаких команд управления деньгами этот журнал не выполняет.`,
+  }).catch(() => {});
+  return true;
+}
 
 type RankedEntryLinkTarget = {
   id: number;
@@ -351,6 +386,14 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   }
   await sendOnboardingConfirmation(from.id, profile, awarded);
   await openMiniApp(chat.id, "TG TOP подключён. Сообщество добавлено в личную папку.");
+  if (savedGroup) {
+    void deliverOperationsLog("top_activity", formatTopActivityLog({
+      event: "bot_connected",
+      groupTitle: savedGroup.title,
+      groupId: savedGroup.id,
+      actor: { name: from.first_name, username: from.username },
+    }));
+  }
   console.info(`[Telegram] Cataloged ${catalogCategory(chat)} ${chat.id}`);
 }
 
@@ -441,6 +484,7 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     return;
   }
   if (update.my_chat_member) { await saveAdminChat(update); return; }
+  if (update.message && await configurePrivateLogDestination(update.message)) return;
   if (update.chat_member) {
     const membership = update.chat_member;
     if (!isChatOwner(membership.old_chat_member.status) && isChatOwner(membership.new_chat_member.status)) {

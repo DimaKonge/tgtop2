@@ -67,6 +67,17 @@ export const telegramUserAgentAuditEvents = mysqlTable("telegram_user_agent_audi
 
 export type TelegramUserAgentAuditEvent = typeof telegramUserAgentAuditEvents.$inferSelect;
 
+export const telegramOperationLogDestinations = mysqlTable("telegram_operation_log_destinations", {
+  id: int("id").autoincrement().primaryKey(),
+  kind: mysqlEnum("kind", ["top_activity", "finance"]).notNull(),
+  chatId: varchar("chatId", { length: 64 }).notNull(),
+  chatTitle: varchar("chatTitle", { length: 255 }),
+  configuredByOpenId: varchar("configuredByOpenId", { length: 64 }).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("telegram_operation_log_destinations_kind_unique").on(table.kind)]);
+
+export type TelegramOperationLogDestination = typeof telegramOperationLogDestinations.$inferSelect;
+
 export const catalogCountries = mysqlTable("catalog_countries", {
   id: int("id").autoincrement().primaryKey(),
   code: varchar("code", { length: 64 }).notNull(),

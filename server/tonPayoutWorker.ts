@@ -8,6 +8,7 @@ import {
   deferTonPayoutJob,
   enqueueTonPayoutJob,
   getDb,
+  getUserByOpenId,
   reconcileTonWithdrawal,
   releaseTonPayoutWalletLease,
   sendTonPayoutJobToManualReview,
@@ -15,6 +16,7 @@ import {
 import { formatNanoTon } from "./tonDeposits";
 import { buildTonPayoutExternalBoc, broadcastTonPayoutBoc, emulateTonPayoutFee, TonPayoutRejectedError } from "./tonPayoutWallet";
 import { getConfiguredTonPayoutWalletAddress } from "./tonPayoutConfig";
+import { deliverOperationsLog, formatFinanceLog } from "./telegramOperationsLogger";
 
 const RECONCILIATION_DELAY_MS = 30_000;
 const WORKER_DISABLED_DELAY_MS = 60_000;
@@ -125,6 +127,13 @@ async function processBroadcastJob(job: NonNullable<Awaited<ReturnType<typeof cl
     }
     try {
       await broadcastTonPayoutBoc(prepared.boc);
+      const user = await getUserByOpenId(withdrawal.userOpenId);
+      void deliverOperationsLog("finance", formatFinanceLog({
+        event: "withdrawal_sent",
+        amount: `${formatNanoTon(netAmountNano)} GRAM`,
+        actor: { name: user?.name, username: user?.telegramUsername },
+        reference: withdrawal.reference,
+      }));
     } catch (error) {
       if (error instanceof TonPayoutRejectedError) {
         await cancelRejectedBroadcast(withdrawal.id, withdrawal.userOpenId, grossAmountNano);
@@ -143,6 +152,19 @@ async function processBroadcastJob(job: NonNullable<Awaited<ReturnType<typeof cl
 
 async function processReconciliationJob(job: NonNullable<Awaited<ReturnType<typeof claimNextTonPayoutJob>>>) {
   const result = await reconcileTonWithdrawal({ withdrawalId: job.withdrawalId });
+  if (result.status === "confirmed" && result.newlyConfirmed) {
+    const db = await getDb();
+    const withdrawal = db ? (await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, job.withdrawalId)).limit(1))[0] : undefined;
+    if (withdrawal) {
+      const user = await getUserByOpenId(withdrawal.userOpenId);
+      void deliverOperationsLog("finance", formatFinanceLog({
+        event: "withdrawal_confirmed",
+        amount: `${formatNanoTon(BigInt(withdrawal.netAmountNano))} GRAM`,
+        actor: { name: user?.name, username: user?.telegramUsername },
+        reference: withdrawal.reference,
+      }));
+    }
+  }
   if (result.status === "confirmed" || result.status === "cancelled" || result.status === "failed_refunded") {
     await completeTonPayoutJob(job.id, job.leaseToken);
     return;

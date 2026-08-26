@@ -12,6 +12,7 @@ import { getSafeTonDepositError } from "./tonDepositErrorPolicy";
 import { getSafeTonWithdrawalError } from "./tonWithdrawalErrorPolicy";
 import { ENV } from "./_core/env";
 import * as telegramUserAgent from "./telegramUserAgent";
+import { deliverOperationsLog, formatFinanceLog, formatTopActivityLog } from "./telegramOperationsLogger";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -135,6 +136,12 @@ export const appRouter = router({
           bidAmount: intent.bidAmount,
           slotNumber: intent.slotNumber,
         });
+        void deliverOperationsLog("top_activity", formatTopActivityLog({
+          event: "listed_in_top",
+          groupTitle: intent.groupTitle,
+          groupId: input.groupId,
+          actor: { name: ctx.user.name, username: ctx.user.telegramUsername },
+        }));
         return { success: true, rankingIntentId: intent.id, paymentStatus: "paid_gram" as const };
       }),
 
@@ -272,7 +279,15 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         try {
           const result = await db.verifyTonDeposit({ userOpenId: ctx.user.openId, depositId: input.depositId });
-          if (result.newlyConfirmed) void notifyTonDepositCredited({ openId: ctx.user.openId, amountTon: result.amountTon });
+          if (result.newlyConfirmed) {
+            void notifyTonDepositCredited({ openId: ctx.user.openId, amountTon: result.amountTon });
+            void deliverOperationsLog("finance", formatFinanceLog({
+              event: "deposit_confirmed",
+              amount: `${result.amountTon} GRAM`,
+              actor: { name: ctx.user.name, username: ctx.user.telegramUsername },
+              reference: `deposit-${input.depositId}`,
+            }));
+          }
           return result;
         } catch (error) {
           console.error("[TonDeposit] Could not verify deposit:", error);
@@ -302,7 +317,16 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         try {
-          return await db.createTonWithdrawal({ ...input, userOpenId: ctx.user.openId });
+          const result = await db.createTonWithdrawal({ ...input, userOpenId: ctx.user.openId });
+          if (result.newlyCreated) {
+            void deliverOperationsLog("finance", formatFinanceLog({
+              event: "withdrawal_requested",
+              amount: `${input.amountTon} GRAM`,
+              actor: { name: ctx.user.name, username: ctx.user.telegramUsername },
+              reference: result.reference,
+            }));
+          }
+          return result;
         } catch (error) {
           console.error("[TonWithdrawal] Could not create withdrawal:", error);
           throw new Error(getSafeTonWithdrawalError(error));

@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOperationLogDestinations, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -136,6 +136,30 @@ export async function recordTelegramUserAgentAuditEvent(input: { action: string;
     action: input.action.slice(0, 64),
     actorOpenId: input.actorOpenId,
     details: input.details?.slice(0, 255) ?? null,
+  });
+}
+
+export async function getTelegramOperationLogDestination(kind: "top_activity" | "finance") {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [destination] = await db.select().from(telegramOperationLogDestinations).where(eq(telegramOperationLogDestinations.kind, kind)).limit(1);
+  return destination;
+}
+
+export async function saveTelegramOperationLogDestination(input: {
+  kind: "top_activity" | "finance";
+  chatId: string;
+  chatTitle?: string | null;
+  configuredByOpenId: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище настроек private-логов временно недоступно");
+  await db.insert(telegramOperationLogDestinations).values(input).onDuplicateKeyUpdate({
+    set: {
+      chatId: input.chatId,
+      chatTitle: input.chatTitle ?? null,
+      configuredByOpenId: input.configuredByOpenId,
+    },
   });
 }
 
@@ -498,9 +522,9 @@ export async function createTonWithdrawal(input: { userOpenId: string; amountTon
   const payoutWalletAddress = await getConfiguredTonPayoutWalletAddress();
   if (destinationWalletAddress === payoutWalletAddress) throw new Error("Адрес получателя не может совпадать с горячим кошельком выплат");
   const existing = (await db.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), eq(tonWithdrawals.idempotencyKey, input.idempotencyKey))).limit(1))[0];
-  if (existing) return toTonWithdrawalView(existing);
+  if (existing) return { ...toTonWithdrawalView(existing), newlyCreated: false };
   const active = (await db.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), inArray(tonWithdrawals.status, ["queued", "manual_review", "broadcast_pending", "sent"]))).orderBy(desc(tonWithdrawals.createdAt), desc(tonWithdrawals.id)).limit(1))[0];
-  if (active) return toTonWithdrawalView(active);
+  if (active) return { ...toTonWithdrawalView(active), newlyCreated: false };
 
   const now = new Date();
   const [priorDestination, userHour, addressRecent, userDay, globalMinute] = await Promise.all([
@@ -523,6 +547,7 @@ export async function createTonWithdrawal(input: { userOpenId: string; amountTon
   const grossTon = formatWithdrawalNanoTon(quote.grossAmountNano);
   const reference = `TGTOP-WD-${randomBytes(16).toString("hex").toUpperCase()}`;
   let created: typeof tonWithdrawals.$inferSelect | undefined;
+  let newlyCreated = false;
   await db.transaction(async tx => {
     const duplicate = (await tx.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), eq(tonWithdrawals.idempotencyKey, input.idempotencyKey))).limit(1))[0];
     if (duplicate) {
@@ -549,12 +574,13 @@ export async function createTonWithdrawal(input: { userOpenId: string; amountTon
       riskReasons: risk.reasons.join(",") || null,
     });
     created = (await tx.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, Number(result[0]?.insertId ?? 0))).limit(1))[0];
+    newlyCreated = Boolean(created);
     if (created?.status === "queued") {
       await tx.insert(tonPayoutJobs).values({ withdrawalId: created.id, kind: "broadcast" });
     }
   });
   if (!created) throw new Error("Не удалось создать заявку на вывод");
-  return toTonWithdrawalView(created);
+  return { ...toTonWithdrawalView(created), newlyCreated };
 }
 
 export async function reconcileTonWithdrawal(input: { withdrawalId: number; userOpenId?: string }) {
@@ -563,7 +589,7 @@ export async function reconcileTonWithdrawal(input: { withdrawalId: number; user
   const ownership = input.userOpenId ? and(eq(tonWithdrawals.id, input.withdrawalId), eq(tonWithdrawals.userOpenId, input.userOpenId)) : eq(tonWithdrawals.id, input.withdrawalId);
   const withdrawal = (await db.select().from(tonWithdrawals).where(ownership).limit(1))[0];
   if (!withdrawal) throw new Error("Заявка на вывод не найдена");
-  if (withdrawal.status !== "broadcast_pending" && withdrawal.status !== "sent") return toTonWithdrawalView(withdrawal);
+  if (withdrawal.status !== "broadcast_pending" && withdrawal.status !== "sent") return { ...toTonWithdrawalView(withdrawal), newlyConfirmed: false };
   const transactions = await getRecentTonDepositTransactions(withdrawal.payoutWalletAddress);
   const trackedTransaction = withdrawal.externalMessageHash
     ? await getTonPayoutTransactionByMessageHash(withdrawal.externalMessageHash)
@@ -600,7 +626,7 @@ export async function reconcileTonWithdrawal(input: { withdrawalId: number; user
       return false;
     }
   }));
-  if (!matched || !matched.hash || matched.lt === null || matched.lt === undefined) return toTonWithdrawalView(withdrawal);
+  if (!matched || !matched.hash || matched.lt === null || matched.lt === undefined) return { ...toTonWithdrawalView(withdrawal), newlyConfirmed: false };
   const actualFeeNano = BigInt(matched.total_fees ?? "0");
   const refundNano = actualFeeNano < BigInt(withdrawal.feeReserveNano) ? BigInt(withdrawal.feeReserveNano) - actualFeeNano : BigInt(0);
   let newlyConfirmed = false;
