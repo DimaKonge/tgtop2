@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -105,6 +105,38 @@ export async function claimTelegramEvent(eventKey: string, firstBot: string) {
     if (isDuplicateTelegramEventError(error)) return false;
     throw error;
   }
+}
+
+export async function getTelegramUserAgentSession() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [session] = await db.select().from(telegramUserAgentSessions).where(eq(telegramUserAgentSessions.scope, "primary")).limit(1);
+  return session;
+}
+
+export async function saveTelegramUserAgentSession(input: {
+  status: "disconnected" | "code_pending" | "password_pending" | "connected" | "error";
+  encryptedSession?: string | null;
+  encryptedPhone?: string | null;
+  encryptedPhoneCodeHash?: string | null;
+  accountTelegramId?: string | null;
+  accountUsername?: string | null;
+  expiresAt?: Date | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище состояния рабочего Telegram-аккаунта временно недоступно");
+  const values = { scope: "primary", ...input };
+  await db.insert(telegramUserAgentSessions).values(values).onDuplicateKeyUpdate({ set: input });
+}
+
+export async function recordTelegramUserAgentAuditEvent(input: { action: string; actorOpenId: string; details?: string | null }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(telegramUserAgentAuditEvents).values({
+    action: input.action.slice(0, 64),
+    actorOpenId: input.actorOpenId,
+    details: input.details?.slice(0, 255) ?? null,
+  });
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {

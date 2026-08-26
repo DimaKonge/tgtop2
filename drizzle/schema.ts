@@ -42,6 +42,31 @@ export const telegramEventReceipts = mysqlTable("telegram_event_receipts", {
 
 export type TelegramEventReceipt = typeof telegramEventReceipts.$inferSelect;
 
+export const telegramUserAgentSessions = mysqlTable("telegram_user_agent_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  scope: varchar("scope", { length: 32 }).notNull(),
+  status: mysqlEnum("status", ["disconnected", "code_pending", "password_pending", "connected", "error"]).default("disconnected").notNull(),
+  encryptedSession: text("encryptedSession"),
+  encryptedPhone: text("encryptedPhone"),
+  encryptedPhoneCodeHash: text("encryptedPhoneCodeHash"),
+  accountTelegramId: varchar("accountTelegramId", { length: 64 }),
+  accountUsername: varchar("accountUsername", { length: 128 }),
+  expiresAt: timestamp("expiresAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("telegram_user_agent_sessions_scope_unique").on(table.scope)]);
+
+export type TelegramUserAgentSession = typeof telegramUserAgentSessions.$inferSelect;
+
+export const telegramUserAgentAuditEvents = mysqlTable("telegram_user_agent_audit_events", {
+  id: int("id").autoincrement().primaryKey(),
+  action: varchar("action", { length: 64 }).notNull(),
+  actorOpenId: varchar("actorOpenId", { length: 64 }).notNull(),
+  details: varchar("details", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("telegram_user_agent_audit_created_idx").on(table.createdAt)]);
+
+export type TelegramUserAgentAuditEvent = typeof telegramUserAgentAuditEvents.$inferSelect;
+
 export const catalogCountries = mysqlTable("catalog_countries", {
   id: int("id").autoincrement().primaryKey(),
   code: varchar("code", { length: 64 }).notNull(),

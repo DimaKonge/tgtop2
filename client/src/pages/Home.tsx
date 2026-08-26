@@ -1397,6 +1397,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     | undefined;
   const moderationAccessQuery = trpc.tgTop.getModerationAccess.useQuery(undefined, { enabled: isAuthenticated });
   const moderationAccess = moderationAccessQuery.data as { role: "user" | "moderator" | "admin"; canModerate: boolean; canManageModerators: boolean } | undefined;
+  const telegramUserAgentStatusQuery = trpc.telegramUserAgent.status.useQuery(undefined, {
+    enabled: Boolean(isAuthenticated && page === "admin" && moderationAccess?.role === "admin"),
+    retry: false,
+  });
+  const telegramUserAgentStatus = telegramUserAgentStatusQuery.data as { status: "disconnected" | "code_pending" | "password_pending" | "connected" | "error"; accountTelegramId: string | null; accountUsername: string | null; expiresAt: Date | null } | undefined;
   const catalogTaxonomyQuery = trpc.tgTop.getCatalogTaxonomy.useQuery();
   const catalogTaxonomy = catalogTaxonomyQuery.data as {
     countries: Array<{ id: number; code: string; label: string; sortOrder: number }>;
@@ -1481,6 +1486,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [botTelegramLinkDraft, setBotTelegramLinkDraft] = useState("");
   const [botModerationDrafts, setBotModerationDrafts] = useState<Record<number, { category: string; reason: string }>>({});
   const [moderationWindowOpen, setModerationWindowOpen] = useState(false);
+  const [telegramUserAgentSheetOpen, setTelegramUserAgentSheetOpen] = useState(false);
+  const [telegramUserAgentPhone, setTelegramUserAgentPhone] = useState("");
+  const [telegramUserAgentCode, setTelegramUserAgentCode] = useState("");
+  const [telegramUserAgentPassword, setTelegramUserAgentPassword] = useState("");
   const [moderationTab, setModerationTab] = useState<"communities" | "bots">("communities");
   const [botModerationFilter, setBotModerationFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [botCategorySheetOpen, setBotCategorySheetOpen] = useState(false);
@@ -1536,6 +1545,40 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void utils.tgTop.getAccount.invalidate();
       void utils.tgTop.getOwnerLeaderboard.invalidate();
       void utils.tgTop.getPublicOwnerProfile.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const requestTelegramUserAgentCode = trpc.telegramUserAgent.requestCode.useMutation({
+    onSuccess: result => {
+      setTelegramUserAgentCode("");
+      toast.success(result.codeViaTelegram ? "Код отправлен в Telegram рабочего аккаунта" : "Код отправлен по SMS");
+      void utils.telegramUserAgent.status.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const confirmTelegramUserAgentCode = trpc.telegramUserAgent.confirmCode.useMutation({
+    onSuccess: result => {
+      setTelegramUserAgentCode("");
+      toast.success(result.status === "password_pending" ? "Telegram запросил пароль двухэтапной защиты" : "Рабочий Telegram-аккаунт подключён в read-only режиме");
+      void utils.telegramUserAgent.status.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const confirmTelegramUserAgentPassword = trpc.telegramUserAgent.confirmPassword.useMutation({
+    onSuccess: () => {
+      setTelegramUserAgentPassword("");
+      toast.success("Рабочий Telegram-аккаунт подключён в read-only режиме");
+      void utils.telegramUserAgent.status.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const disconnectTelegramUserAgent = trpc.telegramUserAgent.disconnect.useMutation({
+    onSuccess: () => {
+      setTelegramUserAgentPhone("");
+      setTelegramUserAgentCode("");
+      setTelegramUserAgentPassword("");
+      toast.success("Сессия рабочего Telegram-аккаунта отключена");
+      void utils.telegramUserAgent.status.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -4038,6 +4081,38 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <button type="button" onClick={() => setModerationWindowOpen(true)} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-4 text-left transition-colors hover:bg-[#3f8cff]/[0.11] active:scale-[0.99]">
               <span className="flex min-w-0 items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#72a8ff]/25 bg-[#3f8cff]/10 text-[#a6c8ff]"><ShieldCheck className="h-5 w-5" /></span><span className="min-w-0"><b className="block text-sm text-slate-100">Модерация</b><small className="mt-1 block truncate text-[11px] text-slate-400">Сообщества и боты · {botModerationQueue.length} заявок на проверке</small></span></span><span className="rounded-lg border border-[#72a8ff]/25 px-2.5 py-2 text-[10px] font-semibold text-[#c8ddff]">Открыть</span>
             </button>
+
+            {moderationAccess.role === "admin" && (
+              <>
+                <button type="button" onClick={() => setTelegramUserAgentSheetOpen(true)} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/20 bg-emerald-400/[0.055] p-4 text-left transition-colors hover:bg-emerald-400/[0.09] active:scale-[0.99]">
+                  <span className="flex min-w-0 items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-300/20 bg-emerald-400/10 text-emerald-100"><ShieldCheck className="h-5 w-5" /></span><span className="min-w-0"><b className="block text-sm text-slate-100">Рабочий аккаунт Telegram</b><small className="mt-1 block truncate text-[11px] text-slate-400">{telegramUserAgentStatus?.status === "connected" ? `Read-only · ${telegramUserAgentStatus.accountUsername ? `@${telegramUserAgentStatus.accountUsername}` : "подключён"}` : "Подключение API-клиента и безопасная синхронизация"}</small></span></span><span className={`rounded-lg border px-2.5 py-2 text-[10px] font-semibold ${telegramUserAgentStatus?.status === "connected" ? "border-emerald-300/25 text-emerald-100" : "border-white/10 text-slate-300"}`}>{telegramUserAgentStatus?.status === "connected" ? "Активен" : "Настроить"}</span>
+                </button>
+
+                <Sheet open={telegramUserAgentSheetOpen} onOpenChange={setTelegramUserAgentSheetOpen}>
+                  <SheetContent side="bottom" className="max-h-[88dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
+                    <SheetHeader className="px-4 pb-2"><SheetTitle className="text-slate-100">Рабочий аккаунт Telegram</SheetTitle><p className="text-xs leading-5 text-slate-500">Отдельный аккаунт TG TOP. По умолчанию он только читает разрешённые данные и не публикует посты, не меняет права и не выполняет финансовые действия.</p></SheetHeader>
+                    <div className="space-y-3 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2">
+                      {!telegramUserAgentStatus || telegramUserAgentStatus.status === "disconnected" || telegramUserAgentStatus.status === "error" ? <>
+                        <div className="rounded-xl border border-white/8 bg-white/[0.035] p-3 text-[11px] leading-4 text-slate-400">Введи номер отдельного рабочего аккаунта в международном формате. Код Telegram и 2FA вводятся только здесь, не в сообщениях.</div>
+                        <Input value={telegramUserAgentPhone} onChange={event => setTelegramUserAgentPhone(event.target.value)} inputMode="tel" autoComplete="tel" placeholder="+380…" className="h-11 border-white/10 bg-[#17212b] text-sm text-slate-100" />
+                        <Button onClick={() => requestTelegramUserAgentCode.mutate({ phone: telegramUserAgentPhone })} disabled={requestTelegramUserAgentCode.isPending || telegramUserAgentPhone.trim().length < 8} className="h-11 w-full bg-[#3f8cff] text-sm text-white">{requestTelegramUserAgentCode.isPending ? ui.loading : "Получить код Telegram"}</Button>
+                      </> : telegramUserAgentStatus.status === "code_pending" ? <>
+                        <div className="rounded-xl border border-[#72a8ff]/20 bg-[#3f8cff]/[0.07] p-3 text-[11px] leading-4 text-[#c8ddff]">Код уже отправлен. Введи его здесь — он не сохраняется в журнале и не попадает в чат.</div>
+                        <Input value={telegramUserAgentCode} onChange={event => setTelegramUserAgentCode(event.target.value.replace(/\s/g, ""))} inputMode="numeric" autoComplete="one-time-code" maxLength={8} placeholder="Код Telegram" className="h-11 border-white/10 bg-[#17212b] text-center text-lg tracking-[0.35em] text-slate-100" />
+                        <Button onClick={() => confirmTelegramUserAgentCode.mutate({ code: telegramUserAgentCode })} disabled={confirmTelegramUserAgentCode.isPending || telegramUserAgentCode.length < 4} className="h-11 w-full bg-[#3f8cff] text-sm text-white">{confirmTelegramUserAgentCode.isPending ? ui.loading : "Подтвердить код"}</Button>
+                      </> : telegramUserAgentStatus.status === "password_pending" ? <>
+                        <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.07] p-3 text-[11px] leading-4 text-amber-100">Telegram запросил пароль двухэтапной защиты. Он используется только для этого входа и не сохраняется.</div>
+                        <Input value={telegramUserAgentPassword} onChange={event => setTelegramUserAgentPassword(event.target.value)} type="password" autoComplete="current-password" placeholder="Пароль 2FA" className="h-11 border-white/10 bg-[#17212b] text-sm text-slate-100" />
+                        <Button onClick={() => confirmTelegramUserAgentPassword.mutate({ password: telegramUserAgentPassword })} disabled={confirmTelegramUserAgentPassword.isPending || !telegramUserAgentPassword} className="h-11 w-full bg-[#3f8cff] text-sm text-white">{confirmTelegramUserAgentPassword.isPending ? ui.loading : "Подтвердить пароль"}</Button>
+                      </> : <>
+                        <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/[0.07] p-3"><b className="block text-xs text-emerald-100">Read-only контур активен</b><p className="mt-1 text-[11px] leading-4 text-slate-400">{telegramUserAgentStatus.accountUsername ? `@${telegramUserAgentStatus.accountUsername}` : telegramUserAgentStatus.accountTelegramId ? `Telegram ID ${telegramUserAgentStatus.accountTelegramId}` : "Рабочий аккаунт"}. Любое действие записи будет требовать отдельного подтверждения.</p></div>
+                        <Button variant="outline" onClick={() => disconnectTelegramUserAgent.mutate()} disabled={disconnectTelegramUserAgent.isPending} className="h-11 w-full border-red-300/25 text-red-100">{disconnectTelegramUserAgent.isPending ? ui.loading : "Отключить рабочий аккаунт"}</Button>
+                      </>}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </>
+            )}
 
             <Sheet open={moderationWindowOpen} onOpenChange={setModerationWindowOpen}>
               <SheetContent side="bottom" className="max-h-[88dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
