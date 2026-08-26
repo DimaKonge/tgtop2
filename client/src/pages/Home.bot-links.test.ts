@@ -73,7 +73,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Сначала добавьте бота администратором своей группы.');
     expect(source).toContain('const isTelegramMiniApp = Boolean(webApp?.initData);');
     expect(source).toContain('const openTelegramInNewBrowserTab = (url: string) => {');
-    expect(source).toContain('openTelegramInNewBrowserTab(detailEntryUrl)');
+    expect(source).toContain('openTelegramCommunityLink(detailEntryUrl)');
+    expect(source).toContain('Не удалось открыть ссылку. Разрешите открытие ссылок и повторите попытку.');
     expect(source).toContain('openTelegramInNewBrowserTab(`https://t.me/${detail.group.managerUsername}`)');
     expect(source).not.toContain('Не на продаже');
     expect(source).not.toContain('{ownsDetail ? "На продаже" : "Купить за"}');
@@ -89,11 +90,16 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0;');
     expect(source).toContain('const hasConfiguredRewardCampaign = (group: Group) => {');
     expect(source).toContain('setRewardCampaignEnabled(firstGroup ? hasConfiguredRewardCampaign(firstGroup) : false);');
-    expect(source).toContain('const detailTotalRankingCost = detailRankingBidAmount + detailRewardBudgetDeltaUnits / 100;');
-    expect(source).toContain('Итого к списанию');
-    expect(source).toContain('Ставка {formatTon(detailRankingBidAmount)} + бюджет вознаграждений');
+    expect(source).toContain('const detailPlacementTotalUnits = detailRewardBudgetUnits === undefined');
+    expect(source).toContain('const detailBalanceChangeUnits = detailRewardBudgetUnits === undefined');
+    expect(source).toContain('Итого размещение');
+    expect(source).toContain('вознаграждения выключены');
+    expect(source).toContain('Сейчас спишется');
     expect(source).toContain('await tonConnectUi.disconnect();');
     expect(source).toContain('Отключить кошелёк');
+    expect(source).toContain('Кошелёк вывода');
+    expect(source).toContain('onClick={() => void disconnectTonWallet()}');
+    expect(source).toContain('max-h-[76dvh]');
     expect(source).toContain('Баланс и история операций не изменятся.');
     expect(source).toContain('const withdrawalProcessingTitle = activeTonWithdrawal?.status === "sent"');
     expect(source).toContain('Ожидаем сетевое подтверждение перевода.');
@@ -216,6 +222,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('<p className="mt-1.5 truncate text-[11px] font-medium text-[#92b8ed]">{detailHeaderAddress}</p>');
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('Рабочее пространство');
+    expect(source).not.toContain('<b className="block text-sm">{tx("Мои группы", "My groups")}</b>');
     expect(source).toContain('const getRussianLanguage = (): Language => "ru";');
     expect(source).not.toContain('localStorage.getItem("tg-top-language")');
     expect(source).not.toContain('tx("Личная папка", "Personal cabinet")');
@@ -368,7 +375,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Прогресс подтверждается только действиями, зафиксированными в TG TOP. Награды не начисляются автоматически.');
     expect(source).toContain('connect-community');
     expect(source).not.toContain('Connect Wallet появится после настройки TON Wallet.');
-    expect(source).toContain('<WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" />');
+    expect(source).toContain('<WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" ownerOpenId={user?.openId} address={safeWalletAddress} restored={walletConnectionRestored} onDisconnect={disconnectTonWallet} />');
     expect(source).toContain('trpc.tgTop.getTonDeposits.useQuery');
     expect(source).toContain('trpc.tgTop.createTonDeposit.useMutation');
     expect(source).toContain('tonConnectUi.sendTransaction({');

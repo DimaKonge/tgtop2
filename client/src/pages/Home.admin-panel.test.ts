@@ -28,6 +28,9 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain('Рубрика ботов');
     expect(source).toContain('botTopicOptions.map(topic =>');
     expect(source).toContain('setLotGroupId(starsPaymentGroup.id)');
+    expect(source).toContain('setLotGroupId(detail.group.id);');
     expect(source).toContain('getGroupAdministrators.useQuery');
+    expect(source).toContain('groupAdministratorsQuery.refetch()');
+    expect(source).toContain('Обновить список');
   });
 });

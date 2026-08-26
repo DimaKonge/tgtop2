@@ -28,7 +28,7 @@ export function sortRankingEntriesByBid<T extends RankingEntry>(entries: T[]) {
   return [...entries].sort((left, right) => {
     const priceOrder = right.bidAmount - left.bidAmount;
     if (priceOrder) return priceOrder;
-    const occupancyOrder = left.heldSince.getTime() - right.heldSince.getTime();
+    const occupancyOrder = right.heldSince.getTime() - left.heldSince.getTime();
     if (occupancyOrder) return occupancyOrder;
     return Number(left.groupId ?? 0) - Number(right.groupId ?? 0);
   });

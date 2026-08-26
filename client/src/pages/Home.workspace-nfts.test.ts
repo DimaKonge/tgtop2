@@ -18,7 +18,7 @@ describe("TG TOP workspace wallet NFT view", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 
     expect(source).toContain('trpc.tgTop.getWalletNfts.useQuery');
-    expect(source).toContain('walletAddress },');
+    expect(source).toContain('walletAddress: safeWalletAddress ?? "" },');
     expect(source).toContain('workspaceSection === "nft"');
     expect(source).toContain('["gifts", tx("Подарки", "Gifts")]');
     expect(source).toContain('["usernames", tx("Юзернеймы", "Usernames")]');
@@ -37,6 +37,11 @@ describe("TG TOP workspace wallet NFT view", () => {
     expect(source).toContain('storedOwner !== user.openId && pendingOwner !== user.openId');
     expect(source).toContain('void tonConnectUi.disconnect().catch(() => undefined)');
     expect(source).toContain('window.localStorage.removeItem(ownerKey)');
+    expect(source).toContain('const [safeWalletAddress, setSafeWalletAddress] = useState<string | null>(null);');
+    expect(source).toContain('setTonWithdrawalAddress("");');
+    expect(source).toContain('const tonWithdrawalDefaultRecipient = safeWalletAddress ?? "";');
+    expect(source).toContain('setTonWithdrawalAddress(safeWalletAddress ?? "");');
+    expect(source).not.toContain('getTonWithdrawalDefaultRecipient.useQuery');
     expect(source).toContain('ownerOpenId={user?.openId}');
     expect(source).toContain('Аренда collectible-юзернейма');
     expect(source).toContain('Эскроу подтверждено');
