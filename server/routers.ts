@@ -72,6 +72,10 @@ export const appRouter = router({
       await ownerOnly(ctx.user.openId);
       return await telegramUserAgent.disconnectTelegramUserAgent(ctx.user.openId);
     }),
+    bootstrapOwnerDm: protectedProcedure.input(z.object({ username: z.string().trim().min(5).max(33) })).mutation(async ({ ctx, input }) => {
+      await ownerOnly(ctx.user.openId);
+      return await telegramUserAgent.bootstrapTelegramOwnerDmGreeting(ctx.user.openId, input.username);
+    }),
   }),
 
   tgTop: router({

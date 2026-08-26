@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOperationLogDestinations, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOperationLogDestinations, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -137,6 +137,22 @@ export async function recordTelegramUserAgentAuditEvent(input: { action: string;
     actorOpenId: input.actorOpenId,
     details: input.details?.slice(0, 255) ?? null,
   });
+}
+
+export async function getTelegramOwnerDmBinding() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [binding] = await db.select().from(telegramOwnerDmBindings).where(eq(telegramOwnerDmBindings.scope, "primary")).limit(1);
+  return binding;
+}
+
+export async function saveTelegramOwnerDmBinding(input: { ownerTelegramId: string; expectedUsername: string; boundByOpenId: string; greetingSentAt: Date }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  const [existing] = await db.select().from(telegramOwnerDmBindings).where(eq(telegramOwnerDmBindings.scope, "primary")).limit(1);
+  if (existing) throw new Error("Owner-диалог уже привязан. Изменение получателя требует отдельного безопасного сброса.");
+  await db.insert(telegramOwnerDmBindings).values({ scope: "primary", ...input });
+  return await getTelegramOwnerDmBinding();
 }
 
 export async function getTelegramOperationLogDestination(kind: "top_activity" | "finance") {

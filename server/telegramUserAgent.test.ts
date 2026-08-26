@@ -20,12 +20,18 @@ describe("Telegram user-agent safety boundary", () => {
     expect(__private__.getErrorCode({ errorMessage: "SESSION_PASSWORD_NEEDED" })).toBe("SESSION_PASSWORD_NEEDED");
   });
 
-  it("uses encrypted stored state and contains no posting, chat-management or financial operations", () => {
+  it("accepts a username only as a future immutable owner-DM lookup hint", () => {
+    expect(__private__.normalizeOwnerUsername("@dimij")).toBe("dimij");
+    expect(() => __private__.normalizeOwnerUsername("@bad-name")).toThrow();
+  });
+
+  it("uses encrypted stored state and contains no posting, chat-management or financial operations outside explicit owner bootstrap", () => {
     const source = readFileSync(new URL("./telegramUserAgent.ts", import.meta.url), "utf8");
+    const ownerBootstrap = source.slice(source.indexOf("export async function bootstrapTelegramOwnerDmGreeting"), source.indexOf("export async function beginTelegramUserAgentLogin"));
     expect(source).toContain('createCipheriv("aes-256-gcm"');
     expect(source).toContain('createDecipheriv("aes-256-gcm"');
     expect(source).toContain('action: "connected"');
-    expect(source).not.toContain("sendMessage");
+    expect(ownerBootstrap).toContain("sendMessage");
     expect(source).not.toContain("inviteToChannel");
     expect(source).not.toContain("sendFile");
     expect(source).not.toContain("transfer");

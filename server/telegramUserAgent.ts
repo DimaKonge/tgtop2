@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { Api, TelegramClient } from "teleproto";
 import { StringSession } from "teleproto/sessions/index.js";
-import { getTelegramUserAgentSession, recordTelegramUserAgentAuditEvent, saveTelegramUserAgentSession } from "./db";
+import { getTelegramOwnerDmBinding, getTelegramUserAgentSession, recordTelegramUserAgentAuditEvent, saveTelegramOwnerDmBinding, saveTelegramUserAgentSession } from "./db";
 
 const LOGIN_TTL_MS = 10 * 60_000;
 
@@ -70,6 +70,12 @@ function normalizeCode(code: string) {
   return normalized;
 }
 
+function normalizeOwnerUsername(username: string) {
+  const normalized = username.trim().replace(/^@/, "").toLowerCase();
+  if (!/^[a-z][a-z0-9_]{4,31}$/.test(normalized)) throw new Error("Укажите корректный @username owner-аккаунта");
+  return normalized;
+}
+
 function getErrorCode(error: unknown) {
   if (typeof error === "object" && error && "errorMessage" in error && typeof error.errorMessage === "string") {
     return error.errorMessage;
@@ -78,7 +84,30 @@ function getErrorCode(error: unknown) {
 }
 
 export async function getTelegramUserAgentStatus() {
-  return safeStatus(await getTelegramUserAgentSession());
+  const [session, ownerDm] = await Promise.all([getTelegramUserAgentSession(), getTelegramOwnerDmBinding()]);
+  return { ...safeStatus(session), ownerDm: ownerDm ? { username: ownerDm.expectedUsername, active: true } : null };
+}
+
+export async function bootstrapTelegramOwnerDmGreeting(actorOpenId: string, rawUsername: string) {
+  const username = normalizeOwnerUsername(rawUsername);
+  const [pending, existing] = await Promise.all([getTelegramUserAgentSession(), getTelegramOwnerDmBinding()]);
+  if (existing) throw new Error("Owner-диалог уже привязан. Изменение получателя требует отдельного безопасного сброса.");
+  if (!pending?.encryptedSession || pending.status !== "connected") throw new Error("Сначала подключите рабочий Telegram-аккаунт.");
+  const { client } = await createClient(decrypt(pending.encryptedSession));
+  try {
+    const entity = await client.getEntity(`@${username}`);
+    if (!(entity instanceof Api.User) || entity.bot) throw new Error("@username должен принадлежать личному Telegram-аккаунту владельца.");
+    const ownerTelegramId = String(entity.id);
+    await client.sendMessage(entity, {
+      message: "TG TOP Assistant готов. Этот личный канал закреплён только за владельцем TG TOP. Публикации, права каналов и финансовые действия выключены и требуют отдельного подтверждения.",
+      linkPreview: false,
+    });
+    await saveTelegramOwnerDmBinding({ ownerTelegramId, expectedUsername: username, boundByOpenId: actorOpenId, greetingSentAt: new Date() });
+    await recordTelegramUserAgentAuditEvent({ action: "owner_dm_bound", actorOpenId, details: `username=@${username}` });
+    return { username, active: true } as const;
+  } finally {
+    await client.disconnect();
+  }
 }
 
 export async function beginTelegramUserAgentLogin(actorOpenId: string, rawPhone: string) {
@@ -186,4 +215,4 @@ export async function disconnectTelegramUserAgent(actorOpenId: string) {
   return { status: "disconnected" as const };
 }
 
-export const __private__ = { decrypt, encrypt, getErrorCode, normalizePhone, normalizeCode, safeStatus };
+export const __private__ = { decrypt, encrypt, getErrorCode, normalizeOwnerUsername, normalizePhone, normalizeCode, safeStatus };

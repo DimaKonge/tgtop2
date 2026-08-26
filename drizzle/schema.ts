@@ -67,6 +67,22 @@ export const telegramUserAgentAuditEvents = mysqlTable("telegram_user_agent_audi
 
 export type TelegramUserAgentAuditEvent = typeof telegramUserAgentAuditEvents.$inferSelect;
 
+export const telegramOwnerDmBindings = mysqlTable("telegram_owner_dm_bindings", {
+  id: int("id").autoincrement().primaryKey(),
+  scope: varchar("scope", { length: 32 }).notNull(),
+  ownerTelegramId: varchar("ownerTelegramId", { length: 64 }).notNull(),
+  expectedUsername: varchar("expectedUsername", { length: 128 }).notNull(),
+  boundByOpenId: varchar("boundByOpenId", { length: 64 }).notNull(),
+  greetingSentAt: timestamp("greetingSentAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("telegram_owner_dm_bindings_scope_unique").on(table.scope),
+  uniqueIndex("telegram_owner_dm_bindings_owner_unique").on(table.ownerTelegramId),
+]);
+
+export type TelegramOwnerDmBinding = typeof telegramOwnerDmBindings.$inferSelect;
+
 export const telegramOperationLogDestinations = mysqlTable("telegram_operation_log_destinations", {
   id: int("id").autoincrement().primaryKey(),
   kind: mysqlEnum("kind", ["top_activity", "finance"]).notNull(),

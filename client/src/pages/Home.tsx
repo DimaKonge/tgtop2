@@ -1401,7 +1401,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     enabled: Boolean(isAuthenticated && page === "admin" && moderationAccess?.role === "admin"),
     retry: false,
   });
-  const telegramUserAgentStatus = telegramUserAgentStatusQuery.data as { status: "disconnected" | "code_pending" | "password_pending" | "connected" | "error"; accountTelegramId: string | null; accountUsername: string | null; expiresAt: Date | null } | undefined;
+  const telegramUserAgentStatus = telegramUserAgentStatusQuery.data as { status: "disconnected" | "code_pending" | "password_pending" | "connected" | "error"; accountTelegramId: string | null; accountUsername: string | null; expiresAt: Date | null; ownerDm?: { username: string; active: boolean } | null } | undefined;
   const catalogTaxonomyQuery = trpc.tgTop.getCatalogTaxonomy.useQuery();
   const catalogTaxonomy = catalogTaxonomyQuery.data as {
     countries: Array<{ id: number; code: string; label: string; sortOrder: number }>;
@@ -1490,6 +1490,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [telegramUserAgentPhone, setTelegramUserAgentPhone] = useState("");
   const [telegramUserAgentCode, setTelegramUserAgentCode] = useState("");
   const [telegramUserAgentPassword, setTelegramUserAgentPassword] = useState("");
+  const [telegramOwnerDmUsername, setTelegramOwnerDmUsername] = useState("");
   const [moderationTab, setModerationTab] = useState<"communities" | "bots">("communities");
   const [botModerationFilter, setBotModerationFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [botCategorySheetOpen, setBotCategorySheetOpen] = useState(false);
@@ -1578,6 +1579,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setTelegramUserAgentCode("");
       setTelegramUserAgentPassword("");
       toast.success("Сессия рабочего Telegram-аккаунта отключена");
+      void utils.telegramUserAgent.status.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const bootstrapTelegramOwnerDm = trpc.telegramUserAgent.bootstrapOwnerDm.useMutation({
+    onSuccess: result => {
+      setTelegramOwnerDmUsername(result.username);
+      toast.success(`TG TOP Assistant написал @${result.username}`);
       void utils.telegramUserAgent.status.invalidate();
     },
     onError: error => toast.error(error.message),
@@ -4106,6 +4115,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         <Button onClick={() => confirmTelegramUserAgentPassword.mutate({ password: telegramUserAgentPassword })} disabled={confirmTelegramUserAgentPassword.isPending || !telegramUserAgentPassword} className="h-11 w-full bg-[#3f8cff] text-sm text-white">{confirmTelegramUserAgentPassword.isPending ? ui.loading : "Подтвердить пароль"}</Button>
                       </> : <>
                         <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/[0.07] p-3"><b className="block text-xs text-emerald-100">Read-only контур активен</b><p className="mt-1 text-[11px] leading-4 text-slate-400">{telegramUserAgentStatus.accountUsername ? `@${telegramUserAgentStatus.accountUsername}` : telegramUserAgentStatus.accountTelegramId ? `Telegram ID ${telegramUserAgentStatus.accountTelegramId}` : "Рабочий аккаунт"}. Любое действие записи будет требовать отдельного подтверждения.</p></div>
+                        {telegramUserAgentStatus.ownerDm?.active ? <div className="rounded-xl border border-[#72a8ff]/20 bg-[#3f8cff]/[0.07] p-3 text-[11px] leading-4 text-[#c8ddff]">Личный канал TG TOP Assistant закреплён за @{telegramUserAgentStatus.ownerDm.username}. Другие личные сообщения не будут иметь доступа.</div> : <div className="space-y-2 rounded-xl border border-white/8 bg-white/[0.035] p-3"><p className="text-[11px] leading-4 text-slate-400">Одно стартовое приветствие будет отправлено только указанному owner-аккаунту. Username сразу закрепится как постоянный Telegram ID.</p><Input value={telegramOwnerDmUsername} onChange={event => setTelegramOwnerDmUsername(event.target.value)} autoComplete="off" placeholder="@username владельца" className="h-10 border-white/10 bg-[#17212b] text-sm text-slate-100" /><Button onClick={() => bootstrapTelegramOwnerDm.mutate({ username: telegramOwnerDmUsername })} disabled={bootstrapTelegramOwnerDm.isPending || telegramOwnerDmUsername.trim().length < 5} className="h-10 w-full bg-[#3f8cff] text-sm text-white">{bootstrapTelegramOwnerDm.isPending ? ui.loading : "Отправить стартовое приветствие"}</Button></div>}
                         <Button variant="outline" onClick={() => disconnectTelegramUserAgent.mutate()} disabled={disconnectTelegramUserAgent.isPending} className="h-11 w-full border-red-300/25 text-red-100">{disconnectTelegramUserAgent.isPending ? ui.loading : "Отключить рабочий аккаунт"}</Button>
                       </>}
                     </div>
