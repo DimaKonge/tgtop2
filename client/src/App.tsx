@@ -32,7 +32,10 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <TonConnectUIProvider manifestUrl="https://tgtop.xyz/tonconnect-manifest.json">
+      <TonConnectUIProvider
+        manifestUrl="https://tgtop.me/tonconnect-manifest.json"
+        actionsConfiguration={{ twaReturnUrl: "https://t.me/TG_TOPBOT" }}
+      >
         <ThemeProvider>
           <TooltipProvider>
             <Toaster />

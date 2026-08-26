@@ -14,11 +14,13 @@ import {
   observeProtectedGroupTransfer,
   approveStarsRankingPayment,
   claimTelegramEvent,
+  flagGroupForModeration,
+  getRankedEntryLinkTargets,
   settleStarsRankingPayment,
   upsertTelegramGroup,
   upsertUser,
 } from "./db";
-import { notifyRankingOutbid } from "./telegramNotifications";
+import { notifyCommunityEntryLinkInvalidated, notifyRankingOutbid } from "./telegramNotifications";
 
 type TelegramChat = {
   id: number;
@@ -27,6 +29,7 @@ type TelegramChat = {
   username?: string;
   description?: string;
   photo?: { small_file_id?: string };
+  invite_link?: string;
 };
 
 type TelegramUser = { id: number; first_name?: string; last_name?: string; username?: string; is_bot?: boolean };
@@ -70,6 +73,59 @@ function isActiveMember(status: string): boolean { return ["creator", "administr
 function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { return chat.type === "channel" ? "Каналы" : "Чаты"; }
 function catalogChatId(chatId: number): string { return String(chatId); }
 function publicGroupUrl(chat: TelegramChat): string | undefined { return chat.username ? `https://t.me/${chat.username}` : undefined; }
+
+type RankedEntryLinkTarget = {
+  id: number;
+  chatId: string;
+  title: string;
+  ownerOpenId: string;
+  username: string | null;
+  inviteLink: string | null;
+  monthlyEntryInviteLink: string | null;
+  status: string;
+};
+
+async function invalidateStaleEntryLink(target: RankedEntryLinkTarget) {
+  if (target.status !== "listed") return false;
+  const removed = await flagGroupForModeration(target.chatId, "Подтверждённая ссылка входа изменилась или больше недоступна");
+  if (removed) void notifyCommunityEntryLinkInvalidated({ openId: target.ownerOpenId, groupTitle: target.title });
+  return removed;
+}
+
+export async function resolveVerifiedGroupEntryLink(target: RankedEntryLinkTarget): Promise<string> {
+  const chatId = Number(target.chatId);
+  if (!Number.isSafeInteger(chatId)) throw new Error("Не удалось проверить сообщество в Telegram");
+  let profile: TelegramChat;
+  try {
+    profile = await getChatProfile(chatId);
+  } catch {
+    throw new Error("Не удалось проверить ссылку сообщества. Убедитесь, что TG TOP остаётся администратором.");
+  }
+  if (target.username) {
+    if (profile.username === target.username) return `https://t.me/${profile.username}`;
+    await invalidateStaleEntryLink(target);
+    throw new Error("Ссылка сообщества изменилась. Карточка снята с ТОПа до повторной проверки.");
+  }
+  if (target.monthlyEntryInviteLink) return target.monthlyEntryInviteLink;
+  if (target.inviteLink && profile.invite_link === target.inviteLink) return target.inviteLink;
+  await invalidateStaleEntryLink(target);
+  throw new Error("Подтверждённая ссылка входа больше недоступна. Карточка снята с ТОПа до повторной проверки.");
+}
+
+let lastEntryLinkAuditAt = 0;
+async function auditRankedEntryLinks() {
+  const now = Date.now();
+  if (now - lastEntryLinkAuditAt < 10 * 60_000) return;
+  lastEntryLinkAuditAt = now;
+  const targets = await getRankedEntryLinkTargets();
+  for (const target of targets) {
+    try {
+      await resolveVerifiedGroupEntryLink(target);
+    } catch (error) {
+      console.info(`[Telegram] Entry link audit skipped ${target.id}: ${error instanceof Error ? error.message : "unknown error"}`);
+    }
+  }
+}
 async function getChatInviteLink(chatId: number): Promise<string | undefined> {
   try {
     const link = await telegramCall<string>("exportChatInviteLink", { chat_id: chatId });
@@ -77,7 +133,6 @@ async function getChatInviteLink(chatId: number): Promise<string | undefined> {
   } catch {
     try {
       const chat = await getChatProfile(chatId);
-      // @ts-expect-error invite_link might exist on chat object
       return chat.invite_link || undefined;
     } catch {
       return undefined;
@@ -480,6 +535,7 @@ export async function runTelegramBot(botLabel = "@TG_TOPBOT"): Promise<void> {
   while (true) {
     try {
       const updates = await telegramCall<TelegramUpdate[]>("getUpdates", { offset, timeout: pollTimeoutSeconds, allowed_updates: ["message", "channel_post", "my_chat_member", "chat_member", "pre_checkout_query"] });
+      await auditRankedEntryLinks();
       for (const update of updates) {
         offset = update.update_id + 1;
         try {
@@ -498,5 +554,5 @@ export async function runTelegramBot(botLabel = "@TG_TOPBOT"): Promise<void> {
   }
 }
 
-export const __private__ = { buildOnboardingConfirmation, catalogCategory, getActiveBotTokens, getReferralCodeFromStartText, getTelegramEventKey, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, isTelegramBotEntrypoint, publicGroupUrl };
+export const __private__ = { auditRankedEntryLinks, buildOnboardingConfirmation, catalogCategory, getActiveBotTokens, getReferralCodeFromStartText, getTelegramEventKey, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, isTelegramBotEntrypoint, publicGroupUrl, resolveVerifiedGroupEntryLink };
 if (isTelegramBotEntrypoint(process.argv[1])) void runTelegramBot();

@@ -1399,6 +1399,24 @@ export async function flagGroupForModeration(chatId: string, reason: string, evi
   return true;
 }
 
+export async function getRankedEntryLinkTargets() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({
+    id: groupsCatalog.id,
+    chatId: groupsCatalog.chatId,
+    title: groupsCatalog.title,
+    ownerOpenId: groupsCatalog.ownerOpenId,
+    username: groupsCatalog.username,
+    inviteLink: groupsCatalog.inviteLink,
+    monthlyEntryInviteLink: groupsCatalog.monthlyEntryInviteLink,
+    status: groupsCatalog.status,
+  }).from(auctionSlots)
+    .innerJoin(groupsCatalog, eq(auctionSlots.groupId, groupsCatalog.id))
+    .where(eq(groupsCatalog.status, "listed"));
+  return Array.from(new Map(rows.map(row => [row.id, row])).values());
+}
+
 export async function getModerationQueue() {
   const db = await getDb();
   if (!db) return [];

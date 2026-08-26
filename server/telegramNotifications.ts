@@ -193,6 +193,30 @@ export async function notifyCommunityRemovedFromTop(input: { openId: string; gro
   }
 }
 
+export async function notifyCommunityEntryLinkInvalidated(input: { openId: string; groupTitle: string }) {
+  const chatId = getTelegramChatIdFromOpenId(input.openId);
+  if (!chatId || !botToken) return false;
+  const text = [
+    "⚠️ Размещение в TG TOP остановлено",
+    "",
+    `Площадка: ${input.groupTitle}`,
+    "Подтверждённая ссылка входа изменилась или больше недоступна, поэтому карточка снята с ТОПа.",
+    "",
+    "Проверьте права бота и создайте новую ссылку входа перед повторным размещением.",
+  ].join("\n");
+  try {
+    const response = await axios.post<{ ok: boolean }>(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId,
+      text,
+      reply_markup: { inline_keyboard: [[{ text: "Открыть TG TOP", web_app: { url: miniAppUrl } }]] },
+    }, { timeout: 15_000 });
+    return response.data.ok;
+  } catch (error) {
+    console.warn("[Telegram] Could not send entry-link removal notification:", error);
+    return false;
+  }
+}
+
 export async function createStarsRankingInvoiceLink(input: { payload: string; starsAmount: number; groupTitle: string; slotNumber: number }) {
   if (!botToken) return null;
   try {

@@ -75,10 +75,14 @@ describe("TG TOP Telegram catalog onboarding", () => {
     ]));
   });
 
-  it("does not automatically inspect or hide a listing from bot messages", () => {
+  it("does not inspect message content, but audits ranked entry links without trusting stale usernames", () => {
     const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
     expect(source).not.toContain("inspectLocalContent");
-    expect(source).not.toContain("flagGroupForModeration");
+    expect(source).toContain("resolveVerifiedGroupEntryLink");
+    expect(source).toContain("auditRankedEntryLinks");
+    expect(source).toContain("flagGroupForModeration");
+    expect(source).toContain("10 * 60_000");
+    expect(source).toContain("profile.username === target.username");
     expect(source).toContain('moderationStatus: "approved"');
   });
 

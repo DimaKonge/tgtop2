@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyCommunityRemovedFromTop, notifyRecordedRankingBid, notifyTonDepositCredited } from "./telegramNotifications";
-import { getTelegramChatGifts, getTelegramGroupAdministrators, getTelegramUserAvatarUrl } from "./telegramBot";
+import { getTelegramChatGifts, getTelegramGroupAdministrators, getTelegramUserAvatarUrl, resolveVerifiedGroupEntryLink } from "./telegramBot";
 import { formatTonAmount } from "./tonFormatting";
 import { getWalletNfts } from "./tonNft";
 import { getSafeTonDepositError } from "./tonDepositErrorPolicy";
@@ -545,6 +545,15 @@ export const appRouter = router({
         const inviteLink = await createTelegramPrivateInviteLink({ chatId: group.chatId, linkName: "TG TOP private entry" });
         await db.savePrivateEntryInviteLink(ctx.user.openId, group.id, inviteLink);
         return { success: true, inviteLink };
+      }),
+
+    resolveVerifiedEntryLink: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive() }))
+      .mutation(async ({ input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group) throw new Error("Сообщество не найдено");
+        const entryUrl = await resolveVerifiedGroupEntryLink(group);
+        return { entryUrl };
       }),
 
     createRewardInviteLink: protectedProcedure

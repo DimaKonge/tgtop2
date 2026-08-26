@@ -1870,8 +1870,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const createRewardInviteLink = trpc.tgTop.createRewardInviteLink.useMutation({
     onSuccess: ({ inviteLink, existing }) => {
-      openTelegramInNewBrowserTab(inviteLink);
+      openTelegramCommunityLink(inviteLink);
       toast.success(tx(existing ? "Открыта ваша персональная ссылка" : "Создана и открыта персональная ссылка", existing ? "Your personal link is open" : "Your personal link was created and opened"));
+    },
+    onError: error => toast.error(error.message),
+  });
+  const resolveVerifiedEntryLink = trpc.tgTop.resolveVerifiedEntryLink.useMutation({
+    onSuccess: ({ entryUrl }) => {
+      if (!openTelegramCommunityLink(entryUrl)) {
+        toast.error(tx("Не удалось открыть ссылку. Разрешите открытие ссылок и повторите попытку.", "Could not open the link. Allow links and try again."));
+      }
     },
     onError: error => toast.error(error.message),
   });
@@ -2416,19 +2424,18 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     : 0;
   const detailRewardActive = Boolean(detail?.group.rewardActive && detailEntryReward > 0);
   const openRewardAwareEntry = () => {
-    if (!detailEntryUrl || !detail) return;
-    if (!detailRewardActive) {
-      if (!openTelegramCommunityLink(detailEntryUrl)) {
-        toast.error(tx("Не удалось открыть ссылку. Разрешите открытие ссылок и повторите попытку.", "Could not open the link. Allow links and try again."));
-      }
+    if (!detail) return;
+    const openVerifiedEntry = () => resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });
+    if (!detailRewardActive || !isAuthenticated) {
+      openVerifiedEntry();
       return;
     }
-    if (!isAuthenticated) {
-      toast.message(tx("Войдите через Telegram, чтобы получить персональную ссылку", "Sign in with Telegram to receive a personal link"));
-      startTelegramLogin();
-      return;
-    }
-    createRewardInviteLink.mutate({ groupId: detail.group.id });
+    createRewardInviteLink.mutate({ groupId: detail.group.id }, {
+      onError: () => {
+        toast.message(tx("Персональная ссылка пока недоступна — открываем подтверждённый вход без награды.", "Your personal link is unavailable — opening verified entry without a reward."));
+        openVerifiedEntry();
+      },
+    });
   };
   const persistedDetailSalePrice = detail?.group.salePriceTon ? formatTon(detail.group.salePriceTon) : "";
   const detailSalePrice = ownsDetail ? salePriceTon : persistedDetailSalePrice;
@@ -3689,7 +3696,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
                   <div className="mt-3 flex items-start gap-3">
                     <div className="relative shrink-0">
-                      <button type="button" onClick={openRewardAwareEntry} disabled={!detailEntryUrl} className="rounded-[22px] transition-transform active:scale-[0.98] disabled:cursor-default">
+                      <button type="button" onClick={openRewardAwareEntry} disabled={resolveVerifiedEntryLink.isPending || createRewardInviteLink.isPending} className="rounded-[22px] transition-transform active:scale-[0.98] disabled:cursor-default">
                         <Avatar group={detail.group} hero />
                       </button>
                       <span className={`absolute bottom-1 right-1 inline-flex items-center gap-0.5 whitespace-nowrap text-[8px] font-medium leading-none ${dailyGrowthPct !== null && dailyGrowthPct < 0 ? "text-rose-300/75" : "text-emerald-300/75"}`}>
@@ -3708,7 +3715,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <button
                       type="button"
                       onClick={openRewardAwareEntry}
-                      disabled={!detailEntryUrl}
+                      disabled={resolveVerifiedEntryLink.isPending || createRewardInviteLink.isPending}
                       className="flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center rounded-xl border border-[#5ba8f2] bg-[#3390ec] px-2 text-center text-white transition-colors hover:bg-[#4199ee] active:scale-[0.98] disabled:opacity-50"
                     >
                       <span className="flex items-center justify-center gap-1"><Send className="h-3.5 w-3.5 text-white/90" /><b className="text-[12px] leading-3">Перейти</b></span>

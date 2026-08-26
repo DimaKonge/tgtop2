@@ -73,7 +73,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Сначала добавьте бота администратором своей группы.');
     expect(source).toContain('const isTelegramMiniApp = Boolean(webApp?.initData);');
     expect(source).toContain('const openTelegramInNewBrowserTab = (url: string) => {');
-    expect(source).toContain('openTelegramCommunityLink(detailEntryUrl)');
+    expect(source).toContain('const resolveVerifiedEntryLink = trpc.tgTop.resolveVerifiedEntryLink.useMutation');
+    expect(source).toContain('const openVerifiedEntry = () => resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });');
+    expect(source).toContain('Персональная ссылка пока недоступна — открываем подтверждённый вход без награды.');
     expect(source).toContain('Не удалось открыть ссылку. Разрешите открытие ссылок и повторите попытку.');
     expect(source).toContain('openTelegramInNewBrowserTab(`https://t.me/${detail.group.managerUsername}`)');
     expect(source).not.toContain('Не на продаже');
@@ -100,6 +102,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Кошелёк вывода');
     expect(source).toContain('onClick={() => void disconnectTonWallet()}');
     expect(source).toContain('max-h-[76dvh]');
+    expect(source).toContain('const openTonWalletForCurrentUser = () => {');
+    expect(source).toContain('tonConnectUi.openModal();');
     expect(source).toContain('Баланс и история операций не изменятся.');
     expect(source).toContain('const withdrawalProcessingTitle = activeTonWithdrawal?.status === "sent"');
     expect(source).toContain('Ожидаем сетевое подтверждение перевода.');
@@ -193,7 +197,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const groupUrl = group.inviteLink ?? (group.username ? `https://t.me/${group.username}` : null);');
     expect(source).toContain('const openRewardAwareEntry = () => {');
     expect(source).toContain('onClick={openRewardAwareEntry}');
-    expect(source).toContain('disabled={!detailEntryUrl}');
+    expect(source).toContain('disabled={resolveVerifiedEntryLink.isPending || createRewardInviteLink.isPending}');
     expect(source).toContain('const secondary = variant === "secondary";');
     expect(source).toContain('{lead && <>{groupUrl ? <a href={groupUrl}');
     expect(source).toContain('<span className="flex items-center justify-center gap-1"><Send className="h-3.5 w-3.5 text-white/90" /><b className="text-[12px] leading-3">Перейти</b></span>');
@@ -437,9 +441,9 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('#{selectedSlot?.slotNumber ?? 1}');
     expect(source).toContain('const detailDisplayedSlotNumber = detailBoardScope?.displayPosition ?? selectedSlot?.slotNumber ?? detailRankingPreviewSlotNumber;');
     expect(source).toContain('`Прогноз #${detailDisplayedSlotNumber}`');
-    expect(source).toContain('if (!detailRewardActive) {');
-    expect(source).toContain('createRewardInviteLink.mutate({ groupId: detail.group.id });');
-    expect(source).toContain('openTelegramInNewBrowserTab(inviteLink);');
+    expect(source).toContain('if (!detailRewardActive || !isAuthenticated) {');
+    expect(source).toContain('createRewardInviteLink.mutate({ groupId: detail.group.id }, {');
+    expect(source).toContain('openTelegramCommunityLink(inviteLink);');
     expect(source).toContain('trpc.tgTop.getRewardCampaignStats.useQuery');
     expect(source).toContain('Подтверждённые участники:');
     expect(source).toContain('При снятии лота ставка за место не возвращается.');
@@ -601,7 +605,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const saveInlineDetailListing = () => {');
     expect(source).toContain('tx("Параметры публикации", "Publication settings")');
     expect(source).toContain('tx("Публичная публикация", "Public publication")');
-    expect(source).toContain('disabled={!detailEntryUrl}');
+    expect(source).toContain('disabled={resolveVerifiedEntryLink.isPending || createRewardInviteLink.isPending}');
     expect(source).toContain('const applyLotGroupSettings = (group: Group) => {');
     expect(source).toContain('setDetailVisibility(group.showOwnerContact && !group.anonymousListing ? "public" : "anonymous");');
     expect(source).toContain('tx(`Минимальная цена: ${formatTon(getMinimumRankingBidGram(targetSlot))} GRAM`');
