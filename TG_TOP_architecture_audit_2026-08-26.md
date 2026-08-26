@@ -108,7 +108,7 @@ flowchart TB
 | Риск | Наблюдение | Рекомендация |
 |---|---|---|
 | HTTP hardening на proxy | В Express включены заголовки, отключён `X-Powered-By`, действует rate limit и DB-backed `/healthz`; HSTS/CSP пока не закреплены на reverse proxy. | Сформировать CSP с Telegram WebApp, TonConnect, TonAPI и asset origins; после проверки закрепить CSP/HSTS на Nginx. |
-| Edge anti-DDoS | In-memory rate limiter bounded по памяти, а финансовая заявка ограничена DB risk policy и одной активной операцией; distributed edge limit/WAF ещё нет. | Настроить Nginx limit zones, request-size limits, 429 observability и upstream circuit controls. |
+| Внешний anti-DDoS | Edge Nginx уже ограничивает соединения, `/api/trpc`, финансовые procedures и request body; подтверждён безопасный `429`. Однако CDN/WAF перед VPS ещё нет. | До роста трафика добавить CDN/WAF, 429/5xx alerting и provider-level DDoS plan. |
 | Наблюдаемость и alerting | Есть rate limit и readiness, но нет request ID, структурированного audit log и alerting на сбои DB, bot polling или payout. | Добавить JSON logs, error IDs, owner alerts и dashboard по трём сервисам. |
 | Неоднородность DB ошибок вне auth | Для валидной Telegram-сессии DB outage теперь явно сигнализируется; в менее критичных read-only путях остаются разные legacy-поведения. | Расширить явную политику DB outage на money/ranking/admin операции и controlled degraded response для публичного чтения. |
 | Доступы заданы непоследовательно | Есть `adminProcedure`, но основной router использует `protectedProcedure` и 11 ручных проверок moderation access. | Ввести `ownerProcedure`, `moderatorProcedure`, `financeReviewerProcedure`; добавить router authorization tests. |
@@ -176,7 +176,7 @@ flowchart LR
 1. Не расширять TON payouts, escrow и NFT transfers до controlled activation payout worker с отдельно согласованным E2E smoke.
 2. Поддерживать уже внедрённые atomic ranking transaction и DB payout worker отдельными integration/load/recovery-тестами.
 3. Поддерживать текущий чистый dependency audit отдельными изолированными обновлениями, не смешивая их с feature-работой.
-4. Закрепить CSP/HSTS на reverse proxy, добавить alerting и structured logs поверх уже работающих rate limit и health/readiness.
+4. Закрепить CSP на reverse proxy, добавить 429/5xx alerting и structured logs поверх уже работающих rate limit, edge Nginx limits и health/readiness.
 5. Расширить явную DB-outage политику с auth на money/ranking/admin flows и понятный режим обслуживания UI.
 
 **Результат:** рейтинговые и денежные операции становятся предсказуемыми, а сервис — наблюдаемым.
@@ -225,7 +225,7 @@ flowchart LR
 | Неделя | Результат |
 |---|---|
 | 1 | Завершено: atomic ranking bid, Express 5 dependency remediation, headers/rate limits/health, явная auth DB-outage policy, staged runtime release и payout worker с DB job/lease. |
-| 2 | Controlled TON E2E smoke, payout audit controls, bot poller lock, integration tests на БД и edge anti-DDoS. |
+| 2 | Controlled TON E2E smoke, payout audit controls, bot poller lock, integration tests на БД, CDN/WAF и 429/5xx alerting. |
 | 3 | Разделение `Home.tsx`: detail/top/workspace/wallet/moderation; no visible product change. |
 | 4 | Domain subrouters/services, first E2E smoke suite, CSP/HSTS и observability/alerts. |
 

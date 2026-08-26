@@ -924,7 +924,8 @@
 - [x] Перенести обработку TON-выплат из памяти веб-процесса в изолированный DB-backed worker с lease, wallet-lock, recovery после рестарта и запретом повторной отправки.
 - [x] Усилить anti-DDoS/anti-abuse периметр финансовых API: server-side rate limits, ограничение одновременных заявок, audit trail и controlled degraded mode.
 - [x] Сохранить быстрый публичный путь для новых функций: финансовые проверки и сетевые операции выполнять только в изолированном worker, не блокируя каталог, ТОП, аналитику и интерфейс.
-- [ ] Настроить внешний edge anti-DDoS слой: Nginx limit zones, request-size limits, 429 monitoring и controlled proxy-level circuit controls.
+- [x] Настроить внешний edge anti-DDoS слой: Nginx limit zones, request-size limits, 429 monitoring и controlled proxy-level circuit controls.
 - [ ] Провести отдельный controlled TON E2E smoke только после точного подтверждения владельцем recipient, суммы и допустимого финансового последствия; до этого держать payout broadcast выключенным.
+- [ ] Подключить CDN/WAF перед VPS и настроить provider-level anti-DDoS/429/5xx alerting для распределённых и канальных атак.
 - [x] Восстановить отдельный SSH-ключ безопасного релиза, проверить VPS-доступ и выпустить проверенные P0/P1 исправления staged-процедурой.
 - [x] Добавить в архитектурную документацию понятную владельцу карту: закрытые риски, оставшиеся риски, статус и очередность работ.
