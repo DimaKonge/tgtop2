@@ -23,7 +23,7 @@ const CSP_REPORT_ONLY = [
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' data: blob: https:",
-  "connect-src 'self' https://tgtop.me https://tgtop.xyz https://telegram.org https://*.telegram.org https://oauth.telegram.org https://tonapi.io https://*.tonapi.io https://bridge.tonapi.io https://manus-analytics.com",
+  "connect-src 'self' https://tgtop.me https://tgtop.xyz https://telegram.org https://*.telegram.org https://oauth.telegram.org https://tonapi.io https://*.tonapi.io https://bridge.tonapi.io https://config.ton.org https://manus-analytics.com",
   "frame-src 'self' https://telegram.org https://*.telegram.org https://app.tonkeeper.com",
   "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
   "report-uri /api/csp-report",

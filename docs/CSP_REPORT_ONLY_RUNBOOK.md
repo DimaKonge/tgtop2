@@ -12,6 +12,8 @@ TG TOP отправляет заголовок `Content-Security-Policy-Report-O
 | Лог | Только `effective-directive` и normalized origin; максимум один лог на пару в минуту | URL path и query не сохраняются. |
 | Production checks | Web, два bot process и payout worker active; локальный/public health `200` | Подтверждено после staged release. |
 
+Первый реальный TonConnect report указал `connect-src` origin `https://config.ton.org`. Он добавлен в Report-Only allowlist как evidence-based origin; это изменение не включает блокирующую CSP.
+
 ## Как читать evidence
 
 Отчёт CSP не является инцидентом сам по себе. Он показывает источник, который нужно проверить перед строгой policy. Просматривать только агрегированные строки `CSP Report-Only` в журнале web service; не публиковать и не копировать сырые request payload, потому что в них теоретически могут быть browser URL.

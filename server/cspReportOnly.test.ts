@@ -9,6 +9,7 @@ describe("CSP Report-Only perimeter", () => {
     expect(source).toContain('"report-uri /api/csp-report"');
     expect(source).toContain("https://telegram.org");
     expect(source).toContain("https://bridge.tonapi.io");
+    expect(source).toContain("https://config.ton.org");
     expect(source).not.toContain('setHeader("Content-Security-Policy", CSP_REPORT_ONLY)');
   });
 
