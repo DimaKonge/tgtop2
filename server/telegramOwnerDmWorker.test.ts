@@ -7,12 +7,19 @@ describe("Telegram owner-DM worker safety", () => {
   it("filters incoming private messages by the permanent owner numeric ID", () => {
     expect(source).toContain("event.isPrivate");
     expect(source).toContain("binding.ownerTelegramId");
-    expect(source).toContain("fromUsers: [binding.ownerTelegramId]");
+    expect(source).toContain("enqueueOwnerText");
+    expect(source).toContain("scanBoundOwnerInbox");
+    expect(source).toContain("client.getMessages(owner, { limit: 20 })");
   });
 
   it("requires a separate confirmation instead of confirming agent actions", () => {
     expect(source).toContain("automatic confirmation prohibited");
     expect(source).not.toContain("task.confirmAction");
+  });
+
+  it("resets a stale task reference instead of repeatedly polling a missing task", () => {
+    expect(source).toContain("Stale Manus task reference reset");
+    expect(source).toContain("restartTelegramOwnerDmJobForMissingTask");
   });
 
   it("keeps publishing, rights and financial operations out of the worker", () => {

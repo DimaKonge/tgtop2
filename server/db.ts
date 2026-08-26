@@ -191,6 +191,16 @@ export async function enqueueTelegramOwnerDmJob(input: { telegramMessageId: stri
   }
 }
 
+export async function getTelegramOwnerDmJobStatus(input: { telegramMessageId: string; ownerTelegramId: string }) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [job] = await db.select({ id: telegramOwnerDmJobs.id, status: telegramOwnerDmJobs.status, attempts: telegramOwnerDmJobs.attempts })
+    .from(telegramOwnerDmJobs)
+    .where(and(eq(telegramOwnerDmJobs.telegramMessageId, input.telegramMessageId), eq(telegramOwnerDmJobs.ownerTelegramId, input.ownerTelegramId)))
+    .limit(1);
+  return job;
+}
+
 export async function claimNextTelegramOwnerDmJob(workerId: string) {
   const db = await getDb();
   if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
@@ -251,6 +261,13 @@ export async function reviewTelegramOwnerDmJob(input: { id: number; reason: stri
   const db = await getDb();
   if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
   await db.update(telegramOwnerDmJobs).set({ status: "manual_review", completedAt: new Date(), lastError: input.reason.slice(0, 255) }).where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "waiting_agent")));
+}
+
+export async function restartTelegramOwnerDmJobForMissingTask(input: { id: number; reason: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await db.update(telegramOwnerDmJobs).set({ status: "queued", availableAt: new Date(), manusTaskId: null, dispatchedAt: null, leaseToken: null, leaseExpiresAt: null, lastError: input.reason.slice(0, 255) })
+    .where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "waiting_agent")));
 }
 
 export async function getTelegramOperationLogDestination(kind: "top_activity" | "finance") {
