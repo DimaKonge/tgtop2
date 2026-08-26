@@ -1005,14 +1005,29 @@ function SettingsSheet({
   );
 }
 
-function BotAvatar({ username, className = "" }: { username: string; className?: string }) {
+function BotAvatar({ username, className = "", imageClassName = "" }: { username: string; className?: string; imageClassName?: string }) {
   const [imageFailed, setImageFailed] = useState(false);
   return (
     <span className={`relative grid shrink-0 place-items-center overflow-hidden rounded-xl border border-[#72a8ff]/25 bg-[#3f8cff]/10 text-[#a6c8ff] ${className}`}>
       <Bot className="h-5 w-5" />
-      {!imageFailed && <img src={`https://t.me/i/userpic/320/${encodeURIComponent(username)}.jpg`} alt="" onError={() => setImageFailed(true)} className="absolute inset-0 h-full w-full object-cover" />}
+      {!imageFailed && <img src={`https://t.me/i/userpic/320/${encodeURIComponent(username)}.jpg`} alt="" onError={() => setImageFailed(true)} className={`absolute inset-0 h-full w-full object-cover ${imageClassName}`} />}
     </span>
   );
+}
+
+type PublicBotTile = { id: number; username: string; telegramLink: string; category: string };
+
+function BotRankingTile({ bot, categoryLabel, variant, onOpen }: { bot: PublicBotTile; categoryLabel: string; variant: "lead" | "secondary" | "compact"; onOpen: () => void }) {
+  const height = variant === "lead" ? "h-[214px]" : variant === "secondary" ? "h-[142px]" : "h-[96px]";
+  return <button type="button" onClick={onOpen} className={`group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#111720] text-left transition-all hover:border-[#3f8cff]/45 active:scale-[0.985] ${height}`}>
+    <BotAvatar username={bot.username} className="absolute inset-0 h-full w-full rounded-none border-0 bg-[#111720]" imageClassName="brightness-[0.76] saturate-[1.08]" />
+    <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,13,22,0.05)_10%,rgba(8,13,22,0.4)_48%,rgba(8,13,22,0.94)_100%)]" />
+    <span className={`relative flex h-full flex-col justify-end ${variant === "lead" ? "p-4" : "p-3"}`}>
+      <b className={`${variant === "lead" ? "text-lg" : variant === "secondary" ? "text-sm" : "text-xs"} block truncate text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]`}>@{bot.username}</b>
+      <small className="mt-1 block truncate text-[10px] text-slate-200/85">{categoryLabel}</small>
+      {variant !== "compact" && <small className="mt-2 inline-flex w-fit rounded-md border border-[#b9d7ff]/25 bg-[#0e1c31]/80 px-1.5 py-1 text-[9px] font-semibold text-[#d4e6ff]">Открыть</small>}
+    </span>
+  </button>;
 }
 
 export default function Home({ onReady }: { onReady?: () => void }) {
@@ -3007,8 +3022,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {approvedBotsQuery.isLoading ? (
                   <div className="rounded-2xl border border-white/8 bg-[#111720] px-5 py-10 text-center text-xs text-slate-500">{tx("Загружаем каталог ботов…", "Loading bot catalog…")}</div>
                 ) : approvedBots.length ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    {approvedBots.map((bot, index) => <button key={bot.id} type="button" onClick={() => openTelegramInNewBrowserTab(bot.telegramLink)} className={`group relative min-h-36 overflow-hidden rounded-2xl border border-white/10 bg-[#111720] p-3 text-left transition-colors hover:border-[#3f8cff]/40 hover:bg-[#17212b] active:scale-[0.985] ${index === 0 && approvedBots.length % 2 === 1 ? "col-span-2 min-h-44" : ""}`}><div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(63,140,255,0.16),transparent_58%)]" /><div className="relative flex h-full flex-col"><BotAvatar username={bot.username} className={`${index === 0 && approvedBots.length % 2 === 1 ? "h-16 w-16" : "h-11 w-11"}`} /><span className="mt-auto min-w-0"><b className="block truncate text-sm text-slate-100">@{bot.username}</b><small className="mt-1 block truncate text-[10px] text-slate-400">{bot.category === "General" ? tx("Без рубрики", "Uncategorized") : botTopicOptions.find(topic => topic.code === bot.category)?.label ?? bot.category}</small><small className="mt-2 inline-flex rounded-md border border-[#72a8ff]/20 bg-[#3f8cff]/10 px-1.5 py-1 text-[9px] font-semibold text-[#c8ddff]">{tx("Открыть", "Open")}</small></span></div></button>)}
+                  <div className="space-y-2">
+                    {approvedBots[0] && <BotRankingTile bot={approvedBots[0]} variant="lead" categoryLabel={approvedBots[0].category === "General" ? tx("Без рубрики", "Uncategorized") : botTopicOptions.find(topic => topic.code === approvedBots[0].category)?.label ?? approvedBots[0].category} onOpen={() => openTelegramInNewBrowserTab(approvedBots[0].telegramLink)} />}
+                    {approvedBots.slice(1, 3).length > 0 && <div className="grid grid-cols-2 gap-2">{approvedBots.slice(1, 3).map(bot => <BotRankingTile key={bot.id} bot={bot} variant="secondary" categoryLabel={bot.category === "General" ? tx("Без рубрики", "Uncategorized") : botTopicOptions.find(topic => topic.code === bot.category)?.label ?? bot.category} onOpen={() => openTelegramInNewBrowserTab(bot.telegramLink)} />)}</div>}
+                    {approvedBots.slice(3, 7).length > 0 && <div className="grid grid-cols-4 gap-2">{approvedBots.slice(3, 7).map(bot => <BotRankingTile key={bot.id} bot={bot} variant="compact" categoryLabel={bot.category === "General" ? tx("Без рубрики", "Uncategorized") : botTopicOptions.find(topic => topic.code === bot.category)?.label ?? bot.category} onOpen={() => openTelegramInNewBrowserTab(bot.telegramLink)} />)}</div>}
+                    {approvedBots.slice(7).length > 0 && <div className="grid grid-cols-2 gap-2">{approvedBots.slice(7).map(bot => <BotRankingTile key={bot.id} bot={bot} variant="secondary" categoryLabel={bot.category === "General" ? tx("Без рубрики", "Uncategorized") : botTopicOptions.find(topic => topic.code === bot.category)?.label ?? bot.category} onOpen={() => openTelegramInNewBrowserTab(bot.telegramLink)} />)}</div>}
                   </div>
                 ) : (
                   <section className="rounded-2xl border border-dashed border-[#3390ec]/25 bg-[#202b3a] px-5 py-10 text-center">
@@ -3855,9 +3873,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </div>
 
                       {!selectedLotGroup ? (
-                        <div className="mt-2 flex items-center gap-2 rounded-xl border border-[#31435f] bg-[#101a2d] p-2">
-                          <span className="min-w-0 flex-1 px-1"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Текущая ставка за лот</small><b className="mt-0.5 block text-sm text-[#63f5b1]">{formatTon(selectedSlot ? selectedSlot.bidAmount / 1000 : detailMinimumBid ?? 0.1)} GRAM</b></span>
-                          <button type="button" onClick={() => { if (!isAuthenticated) { toast.message(tx("Войдите через Telegram, чтобы добавить свою группу", "Sign in with Telegram to add your community")); return; } setLotGroupPickerOpen(true); }} aria-label="Добавить свою группу" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-dashed border-[#3f8cff]/55 bg-[#3f8cff]/[0.09] text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.16] active:scale-[0.94]">
+                        <div className="mt-2 rounded-xl border border-[#31435f] bg-[#101a2d] p-2">
+                          <span className="block px-1"><small className="block text-[9px] font-medium uppercase tracking-wide text-slate-500">Текущая ставка за лот</small><b className="mt-0.5 block text-sm text-[#63f5b1]">{formatTon(selectedSlot ? selectedSlot.bidAmount / 1000 : detailMinimumBid ?? 0.1)} GRAM</b></span>
+                          <button type="button" onClick={() => { if (!isAuthenticated) { toast.message(tx("Войдите через Telegram, чтобы добавить свою группу", "Sign in with Telegram to add your community")); return; } setLotGroupPickerOpen(true); }} aria-label="Добавить свою группу" title="Добавить свою группу" className="mt-2 flex h-10 w-full items-center justify-center rounded-xl border border-dashed border-[#3f8cff]/35 bg-[#3f8cff]/[0.045] text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/12 active:scale-[0.985]">
                             <Plus className="h-5 w-5" />
                           </button>
                         </div>

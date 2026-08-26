@@ -619,4 +619,17 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('{selectedLotGroup && <div className="mt-2 grid grid-cols-2 gap-2">');
     expect(source).toContain('{selectedLotGroup && <div aria-disabled={lotSettingsLocked}');
   });
+
+  it("uses the TOP pyramid for bots and a long plus button before choosing a group for an outbid", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain('function BotRankingTile');
+    expect(source).toContain('variant="lead"');
+    expect(source).toContain('approvedBots.slice(1, 3)');
+    expect(source).toContain('approvedBots.slice(3, 7)');
+    expect(source).toContain('BotAvatar username={bot.username} className="absolute inset-0 h-full w-full rounded-none border-0 bg-[#111720]"');
+    expect(source).toContain('imageClassName="brightness-[0.76] saturate-[1.08]"');
+    expect(source).toContain('aria-label="Добавить свою группу" title="Добавить свою группу" className="mt-2 flex h-10 w-full items-center justify-center');
+    expect(source).not.toContain('className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-dashed border-[#3f8cff]/55');
+  });
 });
