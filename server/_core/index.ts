@@ -2,6 +2,9 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
+import { sql } from "drizzle-orm";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -10,6 +13,7 @@ import { createContext } from "./context";
 import { registerTelegramMediaRoutes } from "../telegramMedia";
 import { registerTelegramLoginRoutes } from "../telegramLogin";
 import { registerPublicCommunityPages } from "../publicCommunityPages";
+import { getDb } from "../db";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -34,6 +38,34 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  app.disable("x-powered-by");
+  app.set("trust proxy", 1);
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
+    frameguard: false,
+    hsts: process.env.NODE_ENV === "production" ? { maxAge: 15_552_000, includeSubDomains: true } : false,
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  }));
+  const trpcRateLimit = rateLimit({
+    windowMs: 60_000,
+    limit: 120,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Слишком много запросов. Повторите через минуту." },
+  });
+  app.get("/healthz", async (_req, res) => {
+    try {
+      const db = await getDb();
+      if (!db) throw new Error("database_unavailable");
+      await db.execute(sql`SELECT 1`);
+      res.status(200).json({ status: "ok" });
+    } catch {
+      res.status(503).json({ status: "degraded" });
+    }
+  });
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -45,6 +77,7 @@ async function startServer() {
   // tRPC API
   app.use(
     "/api/trpc",
+    trpcRateLimit,
     createExpressMiddleware({
       router: appRouter,
       createContext,

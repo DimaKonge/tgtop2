@@ -982,7 +982,13 @@ function getRankingRewardBudgetAdjustment(group: typeof groupsCatalog.$inferSele
   };
 }
 
-export async function placeBid(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, options?: RankingLotOptions) {
+type RankingCreditDebit = {
+  spendUnits: number;
+  reservedRewardBudget: number;
+  releasedRewardBudget: number;
+};
+
+export async function placeBid(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, options?: RankingLotOptions, creditDebit?: RankingCreditDebit) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -1021,32 +1027,62 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
       : slotFloor;
     throw new Error(`Минимальная ставка для этой позиции — ${formatTonAmount(requiredMilliTon / 1000)} GRAM`);
   }
-  const outbid = target.groupId && target.groupId !== groupId && target.leaderUserId
-    ? {
-        openId: target.leaderUserId,
-        groupTitle: target.title,
-        slotId: target.id,
-        slotNumber: target.slotNumber,
-        competitorBidAmount: bidAmount,
-        restoreMinimumBidAmount: getMinimumRankingBidMilliTon(bidAmount, true, slotFloor),
-      }
-    : undefined;
+  let outbid: { openId: string; groupTitle: string; slotId: number; slotNumber: number; competitorBidAmount: number; restoreMinimumBidAmount: number } | undefined;
   const rankingCategories = ["Все"] as const;
   await Promise.all(rankingCategories.map(category => ensureAuctionBoard(db, category, target.subcategory, target.country)));
-  const boards = await Promise.all(rankingCategories.map(category =>
-    db.select().from(auctionSlots).where(and(
-      eq(auctionSlots.category, category),
-      eq(auctionSlots.subcategory, target.subcategory),
-      eq(auctionSlots.country, target.country)
-    )).orderBy(asc(auctionSlots.slotNumber))
-  ));
 
   let rankingIntentId = 0;
   await db.transaction(async tx => {
+    // A no-op update deliberately takes an exclusive lock for every canonical board row.
+    // Re-reading only after this lock makes concurrent bids serialize on one source of truth.
+    for (const category of rankingCategories) {
+      await tx.update(auctionSlots).set({ updatedAt: sql`${auctionSlots.updatedAt}` }).where(and(
+        eq(auctionSlots.category, category),
+        eq(auctionSlots.subcategory, target.subcategory),
+        eq(auctionSlots.country, target.country)
+      ));
+    }
+    const boards = await Promise.all(rankingCategories.map(category =>
+      tx.select().from(auctionSlots).where(and(
+        eq(auctionSlots.category, category),
+        eq(auctionSlots.subcategory, target.subcategory),
+        eq(auctionSlots.country, target.country)
+      )).orderBy(asc(auctionSlots.slotNumber))
+    ));
+    const lockedTarget = boards[0]?.find(slot => slot.id === target.id);
+    if (!lockedTarget) throw new Error("Позиция рейтинга изменилась. Обновите рейтинг и повторите попытку.");
+    const lockedSlotFloor = getRankingFloorMilliTon(lockedTarget.slotNumber);
+    const lockedByAnotherGroup = lockedTarget.groupId !== null && lockedTarget.groupId !== groupId;
+    if (!isQualifyingRankingBid(bidAmount, lockedByAnotherGroup ? lockedTarget.bidAmount : 0, lockedByAnotherGroup, lockedSlotFloor)) {
+      const requiredMilliTon = lockedByAnotherGroup
+        ? getMinimumRankingBidMilliTon(lockedTarget.bidAmount, true, lockedSlotFloor)
+        : lockedSlotFloor;
+      throw new Error(`Ставка уже изменилась. Минимальная ставка сейчас — ${formatTonAmount(requiredMilliTon / 1000)} GRAM`);
+    }
+    outbid = lockedTarget.groupId && lockedTarget.groupId !== groupId && lockedTarget.leaderUserId
+      ? {
+          openId: lockedTarget.leaderUserId,
+          groupTitle: lockedTarget.title,
+          slotId: lockedTarget.id,
+          slotNumber: lockedTarget.slotNumber,
+          competitorBidAmount: bidAmount,
+          restoreMinimumBidAmount: getMinimumRankingBidMilliTon(bidAmount, true, lockedSlotFloor),
+        }
+      : undefined;
+    if (creditDebit) {
+      const totalDebit = creditDebit.spendUnits + creditDebit.reservedRewardBudget - creditDebit.releasedRewardBudget;
+      const balance = await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${creditDebit.spendUnits + creditDebit.reservedRewardBudget} + ${creditDebit.releasedRewardBudget}` }).where(and(eq(users.openId, leaderUserId), gte(users.bonusBalance, Math.max(0, totalDebit))));
+      if (Number(balance[0]?.affectedRows ?? 0) !== 1) {
+        throw new Error(`Недостаточно GRAM на балансе. Нужно ${formatTonAmount(Math.max(0, totalDebit) / 100)} GRAM`);
+      }
+      await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -creditDebit.spendUnits, kind: "ranking_spend" });
+      if (creditDebit.reservedRewardBudget) await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -creditDebit.reservedRewardBudget, kind: "reward_campaign_reserve" });
+      if (creditDebit.releasedRewardBudget) await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: creditDebit.releasedRewardBudget, kind: "reward_campaign_release" });
+    }
     const now = new Date();
     const incoming = {
       bidAmount,
-      currentBid: currentBidStr,
+      currentBid: `${formatTonAmount(bidAmount / 1000)} GRAM`,
       leaderUsername,
       leaderUserId,
       groupId,
@@ -1128,27 +1164,11 @@ export async function payRankingBidWithGramCredit(slotId: number, bidAmount: num
   const group = groupId ? await getGroupById(groupId) : undefined;
   if (!group || group.ownerOpenId !== leaderUserId) throw new Error("Выберите свою группу из личной папки");
   const { reservedRewardBudget, releasedRewardBudget } = getRankingRewardBudgetAdjustment(group, options);
-  const totalDebit = spendUnits + reservedRewardBudget - releasedRewardBudget;
-
-  await db.transaction(async tx => {
-    const result = await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${spendUnits + reservedRewardBudget} + ${releasedRewardBudget}` }).where(and(eq(users.openId, leaderUserId), gte(users.bonusBalance, Math.max(0, totalDebit))));
-    if (Number(result[0]?.affectedRows ?? 0) !== 1) {
-      throw new Error(`Недостаточно GRAM на балансе. Нужно ${formatTonAmount(Math.max(0, totalDebit) / 100)} GRAM`);
-    }
-    await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -spendUnits, kind: "ranking_spend" });
-    if (reservedRewardBudget) await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -reservedRewardBudget, kind: "reward_campaign_reserve" });
-    if (releasedRewardBudget) await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: releasedRewardBudget, kind: "reward_campaign_release" });
+  return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId, options, {
+    spendUnits,
+    reservedRewardBudget,
+    releasedRewardBudget,
   });
-
-  try {
-    return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId, options);
-  } catch (error) {
-    await db.transaction(async tx => {
-      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${totalDebit}` }).where(eq(users.openId, leaderUserId));
-      await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: totalDebit, kind: "ranking_refund" });
-    });
-    throw error;
-  }
 }
 
 export async function createStarsRankingPaymentIntent(input: { userOpenId: string; slotId: number; groupId: number; bidAmount: number }) {

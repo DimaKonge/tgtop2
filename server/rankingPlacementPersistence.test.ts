@@ -24,4 +24,13 @@ describe("ranking placement persistence", () => {
     expect(source).toContain("showOwnerContact: options.showOwnerContact");
     expect(source).toContain("managerPublic: options.managerPublic");
   });
+
+  it("serializes competing paid bids on the canonical board before debiting the balance", () => {
+    const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+    expect(source).toContain("A no-op update deliberately takes an exclusive lock for every canonical board row.");
+    expect(source).toContain("const lockedTarget = boards[0]?.find(slot => slot.id === target.id);");
+    expect(source).toContain("Ставка уже изменилась. Минимальная ставка сейчас");
+    expect(source).toContain("const balance = await tx.update(users)");
+    expect(source).toContain("currentBid: `${formatTonAmount(bidAmount / 1000)} GRAM`");
+  });
 });

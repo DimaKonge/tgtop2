@@ -6,13 +6,16 @@ describe("ranking reward budget reservation", () => {
 
   it("reserves a new reward budget together with the ranking bid", () => {
     expect(source).toContain("function getRankingRewardBudgetAdjustment");
-    expect(source).toContain("const totalDebit = spendUnits + reservedRewardBudget - releasedRewardBudget;");
+    expect(source).toContain("const totalDebit = creditDebit.spendUnits + creditDebit.reservedRewardBudget - creditDebit.releasedRewardBudget;");
     expect(source).toContain('kind: "reward_campaign_reserve"');
     expect(source).toContain('kind: "reward_campaign_release"');
   });
 
-  it("refunds the full amount if placement fails after debiting", () => {
-    expect(source).toContain("bonusBalance: sql`${users.bonusBalance} + ${totalDebit}`");
-    expect(source).toContain("amount: totalDebit, kind: \"ranking_refund\"");
+  it("debits the budget only inside the locked placement transaction", () => {
+    expect(source).toContain("type RankingCreditDebit");
+    expect(source).toContain("if (creditDebit) {");
+    expect(source).toContain("const balance = await tx.update(users)");
+    expect(source).toContain("return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId, options, {");
+    expect(source).not.toContain("amount: totalDebit, kind: \"ranking_refund\"");
   });
 });
