@@ -145,6 +145,17 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
 export type GroupCatalog = typeof groupsCatalog.$inferSelect;
 export type InsertGroupCatalog = typeof groupsCatalog.$inferInsert;
 
+export const groupEntryLinkAudits = mysqlTable("group_entry_link_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("groupId").notNull(),
+  chatId: varchar("chatId", { length: 64 }).notNull(),
+  previousUsername: varchar("previousUsername", { length: 128 }),
+  verifiedUsername: varchar("verifiedUsername", { length: 128 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("group_entry_link_audits_group_created_idx").on(table.groupId, table.createdAt)]);
+
+export type GroupEntryLinkAudit = typeof groupEntryLinkAudits.$inferSelect;
+
 export const botListings = mysqlTable("bot_listings", {
   id: int("id").autoincrement().primaryKey(),
   ownerOpenId: varchar("ownerOpenId", { length: 64 }).notNull(),

@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -1434,6 +1434,36 @@ export async function flagGroupForModeration(chatId: string, reason: string, evi
     });
   });
   return true;
+}
+
+/**
+ * Rebind a public Telegram username only after the caller has proved the
+ * numeric chat ID through Telegram's getChat response. This deliberately
+ * leaves listing, moderation and ranking slots untouched.
+ */
+export async function recordVerifiedPublicUsername(input: { chatId: string; verifiedUsername: string }) {
+  const db = await getDb();
+  if (!db) return false;
+  const verifiedUsername = input.verifiedUsername.trim().replace(/^@/, "");
+  if (!verifiedUsername) return false;
+
+  return await db.transaction(async tx => {
+    const [group] = await tx.select().from(groupsCatalog).where(eq(groupsCatalog.chatId, input.chatId)).limit(1);
+    if (!group) return false;
+    if (group.username === verifiedUsername) return false;
+
+    await tx.update(groupsCatalog).set({ username: verifiedUsername }).where(and(
+      eq(groupsCatalog.id, group.id),
+      eq(groupsCatalog.chatId, input.chatId),
+    ));
+    await tx.insert(groupEntryLinkAudits).values({
+      groupId: group.id,
+      chatId: input.chatId,
+      previousUsername: group.username,
+      verifiedUsername,
+    });
+    return true;
+  });
 }
 
 export async function getRankedEntryLinkTargets() {

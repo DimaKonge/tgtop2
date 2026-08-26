@@ -217,6 +217,29 @@ export async function notifyCommunityEntryLinkInvalidated(input: { openId: strin
   }
 }
 
+export async function notifyCommunityEntryLinkRevalidated(input: { openId: string; groupTitle: string; username: string }) {
+  const chatId = getTelegramChatIdFromOpenId(input.openId);
+  if (!chatId || !botToken) return false;
+  const text = [
+    "✅ Ссылка TG TOP обновлена",
+    "",
+    `Площадка: ${input.groupTitle}`,
+    `Telegram подтвердил тот же чат и новый адрес: @${input.username}`,
+    "Размещение и место в TOP сохранены.",
+  ].join("\n");
+  try {
+    const response = await axios.post<{ ok: boolean }>(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: chatId,
+      text,
+      reply_markup: { inline_keyboard: [[{ text: "Открыть TG TOP", web_app: { url: miniAppUrl } }]] },
+    }, { timeout: 15_000 });
+    return response.data.ok;
+  } catch (error) {
+    console.warn("[Telegram] Could not send entry-link revalidation notification:", error);
+    return false;
+  }
+}
+
 export async function createStarsRankingInvoiceLink(input: { payload: string; starsAmount: number; groupTitle: string; slotNumber: number }) {
   if (!botToken) return null;
   try {

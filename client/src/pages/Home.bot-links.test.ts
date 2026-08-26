@@ -174,7 +174,9 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('Record a TON bid without payment');
     expect(source).toContain('Добавить свою группу');
     expect(source).toContain('const automaticPlacementSlot = firstAvailableRankingSlot');
-    expect(source).toContain('onClick={() => openMine(automaticPlacementSlot ?? undefined)}');
+    expect(source).toContain('onClick={openTopListingPicker}');
+    expect(source).toContain('const openTopListingPicker = () => {');
+    expect(source).toContain('const continueTopListingPicker = () => {');
     expect(source).toContain('aria-label={tx("Добавить свою группу", "Add your community")}');
     expect(source).toContain('className="grid h-8 w-full place-items-center');
     expect(source).not.toContain('className="flex h-10 w-full items-center justify-center gap-1.5');

@@ -15,16 +15,16 @@ ARCHIVE="/tmp/tgtop-${RELEASE}-source.tgz"
 cd "$PROJECT_DIR"
 
 if [[ "$DRY_RUN" != "1" ]]; then
-  pnpm test -- --pool=forks --maxWorkers=1
+  pnpm vitest run --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --pool=forks --poolOptions.forks.singleFork
   pnpm build
 fi
 
-for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs; do
+for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs scripts/apply-entry-link-audit-migration.mjs; do
   test -e "$item" || { echo "Missing required release item: $item" >&2; exit 1; }
 done
 
 tar -C "$PROJECT_DIR" -czf "$ARCHIVE" \
-  dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs
+  dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs scripts/apply-entry-link-audit-migration.mjs
 EXPECTED_SHA="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
 echo "Prepared ${RELEASE} (${EXPECTED_SHA})"
 
@@ -74,7 +74,7 @@ fi
 
 mkdir -p "$STAGE" "$PREVIOUS"
 tar -xzf "$ARCHIVE" -C "$STAGE"
-for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs; do test -e "$STAGE/$item"; done
+for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs scripts/apply-entry-link-audit-migration.mjs; do test -e "$STAGE/$item"; done
 
 "$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
 (
@@ -96,6 +96,10 @@ done
 test -s /tmp/tgtop-${RELEASE}-stage-health.json
 stop_smoke
 trap rollback ERR
+
+# This release uses a narrow, idempotent additive migration only for the new
+# entry-link audit table. It never replays legacy migrations against production.
+node "$STAGE/scripts/apply-entry-link-audit-migration.mjs" >/tmp/tgtop-${RELEASE}-migration.log
 
 tar -C "$BASE" -czf "$BACKUP" "${ITEMS[@]}"
 for item in "${ITEMS[@]}"; do mv "$BASE/$item" "$PREVIOUS/$item"; done

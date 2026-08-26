@@ -16,11 +16,12 @@ import {
   claimTelegramEvent,
   flagGroupForModeration,
   getRankedEntryLinkTargets,
+  recordVerifiedPublicUsername,
   settleStarsRankingPayment,
   upsertTelegramGroup,
   upsertUser,
 } from "./db";
-import { notifyCommunityEntryLinkInvalidated, notifyRankingOutbid } from "./telegramNotifications";
+import { notifyCommunityEntryLinkInvalidated, notifyCommunityEntryLinkRevalidated, notifyRankingOutbid } from "./telegramNotifications";
 
 type TelegramChat = {
   id: number;
@@ -92,23 +93,48 @@ async function invalidateStaleEntryLink(target: RankedEntryLinkTarget) {
   return removed;
 }
 
-export async function resolveVerifiedGroupEntryLink(target: RankedEntryLinkTarget): Promise<string> {
+type EntryLinkResolverDependencies = {
+  getChatProfile?: (chatId: number) => Promise<TelegramChat>;
+  invalidateStaleEntryLink?: (target: RankedEntryLinkTarget) => Promise<boolean>;
+  recordVerifiedPublicUsername?: (input: { chatId: string; verifiedUsername: string }) => Promise<boolean>;
+  notifyCommunityEntryLinkRevalidated?: (input: { openId: string; groupTitle: string; username: string }) => unknown;
+};
+
+export async function resolveVerifiedGroupEntryLink(target: RankedEntryLinkTarget, dependencies: EntryLinkResolverDependencies = {}): Promise<string> {
   const chatId = Number(target.chatId);
   if (!Number.isSafeInteger(chatId)) throw new Error("Не удалось проверить сообщество в Telegram");
+  const getProfile = dependencies.getChatProfile ?? getChatProfile;
+  const invalidate = dependencies.invalidateStaleEntryLink ?? invalidateStaleEntryLink;
+  const recordUsername = dependencies.recordVerifiedPublicUsername ?? recordVerifiedPublicUsername;
+  const notifyRevalidated = dependencies.notifyCommunityEntryLinkRevalidated ?? notifyCommunityEntryLinkRevalidated;
   let profile: TelegramChat;
   try {
-    profile = await getChatProfile(chatId);
+    profile = await getProfile(chatId);
   } catch {
     throw new Error("Не удалось проверить ссылку сообщества. Убедитесь, что TG TOP остаётся администратором.");
   }
+  if (profile.id !== chatId) {
+    await invalidate(target);
+    throw new Error("Не удалось подтвердить Telegram-идентичность сообщества. Карточка снята с ТОПа до повторной проверки.");
+  }
   if (target.username) {
-    if (profile.username === target.username) return `https://t.me/${profile.username}`;
-    await invalidateStaleEntryLink(target);
-    throw new Error("Ссылка сообщества изменилась. Карточка снята с ТОПа до повторной проверки.");
+    if (!profile.username) {
+      await invalidate(target);
+      throw new Error("Публичный адрес сообщества больше недоступен. Карточка снята с ТОПа до повторной проверки.");
+    }
+    if (profile.username !== target.username) {
+      try {
+        const updated = await recordUsername({ chatId: target.chatId, verifiedUsername: profile.username });
+        if (updated) void notifyRevalidated({ openId: target.ownerOpenId, groupTitle: target.title, username: profile.username });
+      } catch (error) {
+        console.warn(`[Telegram] Verified username update skipped for ${target.id}:`, error);
+      }
+    }
+    return `https://t.me/${profile.username}`;
   }
   if (target.monthlyEntryInviteLink) return target.monthlyEntryInviteLink;
   if (target.inviteLink && profile.invite_link === target.inviteLink) return target.inviteLink;
-  await invalidateStaleEntryLink(target);
+  await invalidate(target);
   throw new Error("Подтверждённая ссылка входа больше недоступна. Карточка снята с ТОПа до повторной проверки.");
 }
 

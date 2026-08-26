@@ -132,7 +132,6 @@ function AudienceGrowthChart({ snapshots, language, embedded = false }: { snapsh
   const first = chartData[0];
   const last = chartData.at(-1);
   const netGrowth = first && last ? last.members - first.members : 0;
-
   return (
     <section className={embedded ? "" : "rounded-xl border border-white/8 bg-white/[0.025] p-3"}>
       {!embedded && <div className="flex items-start justify-between gap-3">
@@ -167,6 +166,7 @@ function AudienceGrowthChart({ snapshots, language, embedded = false }: { snapsh
     </section>
   );
 }
+
 type ListingType = "catalog" | "sale";
 type ListingCountry = string;
 type GlobalDirection = "Все" | "Каналы" | "Чаты" | "NFT";
@@ -1133,6 +1133,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [myGroupsSelectionMode, setMyGroupsSelectionMode] = useState(false);
   const myGroupsSelectionHoldTimer = useRef<number | null>(null);
   const myGroupsSelectionHoldTriggered = useRef(false);
+  const [topListingPickerOpen, setTopListingPickerOpen] = useState(false);
+  const [topListingGroupIds, setTopListingGroupIds] = useState<number[]>([]);
   const [listingOpen, setListingOpen] = useState(false);
   const [inlineListingOpen, setInlineListingOpen] = useState(false);
   const [managerSheetOpen, setManagerSheetOpen] = useState(false);
@@ -2547,6 +2549,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setTargetSlot(slot ?? null);
     setPage("mine");
   };
+  const openTopListingPicker = () => {
+    if (!isAuthenticated) {
+      startTelegramLogin();
+      return;
+    }
+    void mineQuery.refetch();
+    setTopListingGroupIds([]);
+    setTopListingPickerOpen(true);
+  };
+  const toggleTopListingGroup = (groupId: number) => {
+    setTopListingGroupIds(ids => ids.includes(groupId) ? ids.filter(id => id !== groupId) : [...ids, groupId]);
+  };
+  const continueTopListingPicker = () => {
+    if (!topListingGroupIds.length) return;
+    setTopListingPickerOpen(false);
+    openListing(topListingGroupIds);
+  };
   const getTargetSlotAddress = (slot: Slot) => {
     const slotCategory = slot.category && slot.category !== "Все" ? getCategoryLabel(slot.category, language) : tx("Все сообщества", "All communities");
     const slotCountry = slot.country && slot.country !== "Global" ? getCountryLabel(slot.country, language) : tx("Весь мир", "Worldwide");
@@ -3183,7 +3202,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>
               <button
                 type="button"
-                onClick={() => openMine(automaticPlacementSlot ?? undefined)}
+                onClick={openTopListingPicker}
                 aria-label={tx("Добавить свою группу", "Add your community")}
                 title={tx("Добавить свою группу", "Add your community")}
                 className="grid h-8 w-full place-items-center rounded-lg border border-dashed border-[#3f8cff]/45 bg-[#3f8cff]/[0.055] text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/[0.13] active:scale-[0.985]"
@@ -3807,7 +3826,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
                 <div className="relative flex flex-col">
                   {detail && ownsDetail && (
-                    <section className="hidden order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">
+                    <section className="order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">
                       <button type="button" onClick={() => setInlineListingOpen(value => !value)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
                         <span className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/10 text-[#8fb9ff]"><Settings2 className="h-3.5 w-3.5" /></span><span><b className="block text-xs text-slate-100">{tx("Параметры публикации", "Publication settings")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detail.group.status === "listed" ? tx("Видимость, объявление, продажа", "Visibility, announcement, sale") : tx("Настройте перед размещением", "Configure before listing")}</small></span></span>
                         <ChevronRight className={`h-4 w-4 text-slate-500 transition-transform ${inlineListingOpen ? "rotate-90" : ""}`} />
@@ -4844,6 +4863,46 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>;
             })()}
           </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={topListingPickerOpen} onOpenChange={setTopListingPickerOpen}>
+        <SheetContent side="bottom" className="max-h-[82dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4 pb-2 text-left">
+            <SheetTitle className="text-lg text-slate-100">{tx("Выберите свои группы", "Choose your communities")}</SheetTitle>
+            <p className="text-xs leading-5 text-slate-500">{tx("Отметьте одну или несколько групп. На следующем шаге вы настроите листинг — сейчас ничего не публикуется и GRAM не списываются.", "Choose one or more communities. You will configure listing on the next step — nothing is published or charged yet.")}</p>
+          </SheetHeader>
+          <div className="space-y-2 px-4 pb-4 pt-2">
+            {mineQuery.isPending ? (
+              <div className="space-y-2">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-[60px] animate-pulse rounded-xl bg-white/[0.045]" />)}</div>
+            ) : mine.length ? mine.map(group => {
+              const selected = topListingGroupIds.includes(group.id);
+              const status = group.status === "listed"
+                ? tx("Уже в каталоге", "Already in catalog")
+                : group.status === "pending"
+                  ? tx("Ожидает проверки", "Awaiting review")
+                  : tx("Не в листинге", "Not listed");
+              return (
+                <button key={group.id} type="button" onClick={() => toggleTopListingGroup(group.id)} className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-colors active:scale-[0.99] ${selected ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+                  <Avatar group={group} compact />
+                  <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.category} · {status}</small></span>
+                  <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg border transition-colors ${selected ? "border-[#72a8ff] bg-[#3f8cff] text-white" : "border-white/15 bg-black/15 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+                </button>
+              );
+            }) : (
+              <div className="rounded-xl border border-dashed border-[#3f8cff]/30 bg-[#3f8cff]/[0.035] p-4 text-center">
+                <b className="block text-sm text-slate-200">{tx("Пока нет подключённых групп", "No connected communities yet")}</b>
+                <p className="mt-1 text-[11px] leading-4 text-slate-500">{tx("Добавьте канал или чат — Telegram предложит выдать @TG_TOPBOT права администратора.", "Add a channel or chat — Telegram will offer to grant @TG_TOPBOT administrator rights.")}</p>
+                <button type="button" onClick={() => { setTopListingPickerOpen(false); setMyGroupsAddOpen(true); }} className="mt-3 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2 text-xs font-semibold text-[#a6c8ff]">{tx("Добавить площадку", "Add community")}</button>
+              </div>
+            )}
+          </div>
+          <SheetFooter className="sticky bottom-0 border-t border-white/8 bg-[#10161f] px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:flex-row">
+            <Button variant="outline" onClick={() => setTopListingPickerOpen(false)} className="border-white/10 text-slate-300">{tx("Отмена", "Cancel")}</Button>
+            <Button onClick={continueTopListingPicker} disabled={!topListingGroupIds.length} className="bg-[#3f8cff] text-white disabled:opacity-45">
+              {topListingGroupIds.length ? tx(`Продолжить · ${topListingGroupIds.length}`, `Continue · ${topListingGroupIds.length}`) : tx("Выберите группы", "Choose communities")}
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 

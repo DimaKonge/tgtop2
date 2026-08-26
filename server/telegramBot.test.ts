@@ -82,7 +82,8 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(source).toContain("auditRankedEntryLinks");
     expect(source).toContain("flagGroupForModeration");
     expect(source).toContain("10 * 60_000");
-    expect(source).toContain("profile.username === target.username");
+    expect(source).toContain("profile.id !== chatId");
+    expect(source).toContain("recordVerifiedPublicUsername");
     expect(source).toContain('moderationStatus: "approved"');
   });
 

@@ -66,4 +66,13 @@ describe("TG TOP workspace wallet NFT view", () => {
     expect(source.indexOf('Приглашения')).toBeLessThan(source.indexOf('Подарки, которыми владеет канал'));
     expect(source.indexOf('Подарки, которыми владеет канал')).toBeLessThan(source.indexOf('Обновить лот'));
   });
+
+  it("keeps publication controls visible for a confirmed owner even when their community is pending or under review", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain('const ownsDetail = detail?.group.ownerOpenId === user?.openId;');
+    expect(source).toContain('{detail && ownsDetail && (\n                    <section className="order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">');
+    expect(source).toContain('Параметры публикации');
+    expect(source).not.toContain('<section className="hidden order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">');
+  });
 });
