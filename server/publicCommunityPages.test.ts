@@ -7,7 +7,7 @@ describe("public community HTML", () => {
       id: 1, chatId: "-1001", title: "Amber <WIN>", username: "amberlend", description: "<script>alert(1)</script>", avatarFileId: null,
       membersCount: 5, category: "Каналы", country: "Global", subcategory: "Crypto", managerName: null, managerUsername: null, managerAvatarUrl: null, lastStatsAt: null, snapshots: [],
     });
-    expect(html).toContain('<link rel="canonical" href="https://tgtop.xyz/c/amberlend">');
+    expect(html).toContain('<link rel="canonical" href="https://tgtop.me/c/amberlend">');
     expect(html).toContain('<meta name="robots" content="index,follow">');
     expect(html).toContain("Amber &lt;WIN&gt;");
     expect(html).not.toContain("<script>alert(1)</script>");

@@ -8,6 +8,6 @@ describe("Google publication opt-in", () => {
     expect(source).toContain('const [searchIndexable, setSearchIndexable] = useState(false);');
     expect(source).toContain('Показывать в Google');
     expect(source).toContain('searchIndexable,');
-    expect(source).toContain('tgtop.xyz/c/{detail.group.username}');
+    expect(source).toContain('tgtop.me/c/{detail.group.username}');
   });
 });

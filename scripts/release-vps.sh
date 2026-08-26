@@ -15,7 +15,7 @@ ARCHIVE="/tmp/tgtop-${RELEASE}-source.tgz"
 cd "$PROJECT_DIR"
 
 if [[ "$DRY_RUN" != "1" ]]; then
-  pnpm test
+  pnpm test -- --pool=forks --maxWorkers=1
   pnpm build
 fi
 

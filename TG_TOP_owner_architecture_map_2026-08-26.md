@@ -55,6 +55,7 @@ VPS `/opt/tgtop`
 | **Боты** | Telegram-права, группы, ссылки, статистика и уведомления | Работают в primary + reserve схеме. |
 | **TON** | Подключение кошелька, депозитные/withdrawal-потоки | Очередь вынесена в БД, а signing — в отдельный worker. Broadcast по умолчанию выключен до controlled activation. |
 | **VPS** | Production-развёртывание и четыре сервиса | Работает; release проверяет staged runtime, checksum, зависимости на VPS, backup и rollback. |
+| **Домен** | Public web, SEO и TonConnect | `tgtop.me` — единый canonical URL; `tgtop.xyz` сохранён как 301 legacy redirect и Telegram Login compatibility path. |
 
 ## 2. Какие реальные риски были найдены и уже закрыты
 
@@ -118,4 +119,5 @@ VPS `/opt/tgtop`
 | **`docs/PAYOUT_WORKER_DEPLOYMENT.md`** | Операционный порядок controlled activation отдельного payout worker. |
 | **`docs/EDGE_ANTIDDOS_RUNBOOK.md`** | Действующие Nginx лимиты, 429-проверка и граница ответственности между VPS и будущим CDN/WAF. |
 | **`docs/CSP_REPORT_ONLY_RUNBOOK.md`** | Рабочий CSP Report-Only, приватное логирование evidence и условия безопасного enforcing. |
+| **`docs/DOMAIN_CANONICALIZATION.md`** | Canonical `tgtop.me`, legacy redirect и границы совместимости Telegram Login. |
 | **`todo.md`** | История задач и актуальные незавершённые работы. |

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { getPublicSearchGroupByUsername, getSearchIndexableGroups } from "./db";
 
-const SITE_ORIGIN = (process.env.CANONICAL_ORIGIN || "https://tgtop.xyz").replace(/\/$/, "");
+const SITE_ORIGIN = (process.env.CANONICAL_ORIGIN || "https://tgtop.me").replace(/\/$/, "");
 
 function escapeHtml(value: string | number | null | undefined) {
   return String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] ?? character);

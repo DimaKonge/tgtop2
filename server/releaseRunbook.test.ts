@@ -6,6 +6,7 @@ describe("VPS release runbook", () => {
   const runbook = readFileSync(new URL("../docs/RELEASE_RUNBOOK.md", import.meta.url), "utf8");
 
   it("builds dependencies on the VPS from the locked source release, then activates runtime atomically", () => {
+    expect(script).toContain("pnpm test -- --pool=forks --maxWorkers=1");
     expect(script).toContain('ITEMS=(dist node_modules package.json pnpm-lock.yaml)');
     expect(script).toContain('dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs');
     expect(script).toContain('install --frozen-lockfile --ignore-scripts');

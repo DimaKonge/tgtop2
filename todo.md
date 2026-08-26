@@ -932,3 +932,5 @@
 - [x] Добавить подтверждённый TonConnect origin `config.ton.org` в CSP Report-Only allowlist без включения enforcing.
 - [x] Восстановить отдельный SSH-ключ безопасного релиза, проверить VPS-доступ и выпустить проверенные P0/P1 исправления staged-процедурой.
 - [x] Добавить в архитектурную документацию понятную владельцу карту: закрытые риски, оставшиеся риски, статус и очередность работ.
+- [x] Выровнять canonical/OG metadata, robots/sitemap и пользовательские SEO-ссылки на `tgtop.me`, сохранив legacy `tgtop.xyz` только для совместимости redirect и Telegram auth.
+- [x] Сделать полный локальный quality gate staged-релиза устойчивым к memory-pressure через последовательный запуск Vitest.
