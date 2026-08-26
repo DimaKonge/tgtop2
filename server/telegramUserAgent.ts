@@ -98,16 +98,36 @@ export async function bootstrapTelegramOwnerDmGreeting(actorOpenId: string, rawU
     const entity = await client.getEntity(`@${username}`);
     if (!(entity instanceof Api.User) || entity.bot) throw new Error("@username должен принадлежать личному Telegram-аккаунту владельца.");
     const ownerTelegramId = String(entity.id);
+    await saveTelegramUserAgentSession({ status: "connected", encryptedSession: encrypt(client.session.save()) });
     await client.sendMessage(entity, {
       message: "TG TOP Assistant готов. Этот личный канал закреплён только за владельцем TG TOP. Публикации, права каналов и финансовые действия выключены и требуют отдельного подтверждения.",
       linkPreview: false,
     });
+    await saveTelegramUserAgentSession({ status: "connected", encryptedSession: encrypt(client.session.save()) });
     await saveTelegramOwnerDmBinding({ ownerTelegramId, expectedUsername: username, boundByOpenId: actorOpenId, greetingSentAt: new Date() });
     await recordTelegramUserAgentAuditEvent({ action: "owner_dm_bound", actorOpenId, details: `username=@${username}` });
     return { username, active: true } as const;
   } finally {
     await client.disconnect();
   }
+}
+
+export async function openConnectedTelegramUserAgentClientForWorker() {
+  const session = await getTelegramUserAgentSession();
+  if (!session?.encryptedSession || session.status !== "connected") throw new Error("Рабочий Telegram-аккаунт отключён");
+  return await createClient(decrypt(session.encryptedSession));
+}
+
+export async function persistConnectedTelegramUserAgentClientSession(client: { session: { save: () => string } }) {
+  await saveTelegramUserAgentSession({ status: "connected", encryptedSession: encrypt(client.session.save()) });
+}
+
+export function encryptTelegramOwnerDmPayload(value: string) {
+  return encrypt(value);
+}
+
+export function decryptTelegramOwnerDmPayload(value: string) {
+  return decrypt(value);
 }
 
 export async function beginTelegramUserAgentLogin(actorOpenId: string, rawPhone: string) {

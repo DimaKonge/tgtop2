@@ -83,6 +83,42 @@ export const telegramOwnerDmBindings = mysqlTable("telegram_owner_dm_bindings", 
 
 export type TelegramOwnerDmBinding = typeof telegramOwnerDmBindings.$inferSelect;
 
+export const telegramOwnerDmWorkerStates = mysqlTable("telegram_owner_dm_worker_states", {
+  scope: varchar("scope", { length: 32 }).primaryKey(),
+  enabled: boolean("enabled").default(true).notNull(),
+  manusTaskId: varchar("manusTaskId", { length: 128 }),
+  activationSentAt: timestamp("activationSentAt"),
+  lastError: varchar("lastError", { length: 255 }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TelegramOwnerDmWorkerState = typeof telegramOwnerDmWorkerStates.$inferSelect;
+
+export const telegramOwnerDmJobs = mysqlTable("telegram_owner_dm_jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  telegramMessageId: varchar("telegramMessageId", { length: 64 }).notNull(),
+  ownerTelegramId: varchar("ownerTelegramId", { length: 64 }).notNull(),
+  encryptedInput: text("encryptedInput").notNull(),
+  status: mysqlEnum("status", ["queued", "leased", "waiting_agent", "completed", "manual_review", "cancelled"]).default("queued").notNull(),
+  availableAt: timestamp("availableAt").defaultNow().notNull(),
+  leaseToken: varchar("leaseToken", { length: 96 }),
+  leaseExpiresAt: timestamp("leaseExpiresAt"),
+  attempts: int("attempts").default(0).notNull(),
+  manusTaskId: varchar("manusTaskId", { length: 128 }),
+  dispatchedAt: timestamp("dispatchedAt"),
+  deliveredEventId: varchar("deliveredEventId", { length: 128 }),
+  lastError: varchar("lastError", { length: 255 }),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("telegram_owner_dm_jobs_message_unique").on(table.ownerTelegramId, table.telegramMessageId),
+  index("telegram_owner_dm_jobs_status_available_idx").on(table.status, table.availableAt, table.id),
+  index("telegram_owner_dm_jobs_lease_expires_idx").on(table.status, table.leaseExpiresAt),
+]);
+
+export type TelegramOwnerDmJob = typeof telegramOwnerDmJobs.$inferSelect;
+
 export const telegramOperationLogDestinations = mysqlTable("telegram_operation_log_destinations", {
   id: int("id").autoincrement().primaryKey(),
   kind: mysqlEnum("kind", ["top_activity", "finance"]).notNull(),
