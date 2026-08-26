@@ -2,17 +2,11 @@ import { Address, beginCell, Cell, external, internal, SendMode, storeMessage } 
 import { mnemonicToPrivateKey, mnemonicValidate } from "@ton/crypto";
 import { WalletContractV4 } from "@ton/ton/dist/wallets/v4/WalletContractV4.js";
 import { normalizeTonAddress } from "./tonDeposits";
+import { getConfiguredTonPayoutWalletAddress } from "./tonPayoutConfig";
+import { getTonApiHeaders, type TonPayoutTrackedTransaction } from "./tonPayoutNetwork";
 
 type TonApiAccount = { status?: string | null };
 type TonApiSeqno = { decoded?: { seqno?: number | string }; stack?: Array<unknown> };
-export type TonPayoutTrackedTransaction = {
-  hash?: string | null;
-  lt?: string | number | null;
-  success?: boolean | null;
-  total_fees?: string | number | null;
-  out_msgs?: Array<{ destination?: { address?: string | null } | null; value?: string | number | null; raw_body?: string | null }> | null;
-};
-
 function getNormalizedExternalMessageHash(destination: Address, body: Cell) {
   return beginCell()
     .storeUint(2, 2)
@@ -25,12 +19,6 @@ function getNormalizedExternalMessageHash(destination: Address, body: Cell) {
     .endCell()
     .hash()
     .toString("hex");
-}
-
-function getTonApiHeaders() {
-  const key = process.env.TONAPI_API_KEY?.trim();
-  if (!key) throw new Error("TonAPI не настроен");
-  return { Authorization: `Bearer ${key}` };
 }
 
 function parseSeqnoValue(value: unknown): number | null {
@@ -49,14 +37,14 @@ function parseSeqnoValue(value: unknown): number | null {
 }
 
 async function getWalletMaterial() {
-  const configuredAddress = process.env.TON_PAYOUT_WALLET_ADDRESS?.trim();
+  const configuredAddress = getConfiguredTonPayoutWalletAddress();
   const mnemonic = process.env.TON_PAYOUT_WALLET_MNEMONIC?.trim();
-  if (!configuredAddress || !mnemonic) throw new Error("Горячий кошелёк выплат не настроен");
+  if (!mnemonic) throw new Error("Секрет горячего кошелька не настроен");
   const words = mnemonic.split(/\s+/).filter(Boolean);
   if (words.length !== 24 || !(await mnemonicValidate(words))) throw new Error("Секрет горячего кошелька недействителен");
   const keyPair = await mnemonicToPrivateKey(words);
   const wallet = WalletContractV4.create({ workchain: 0, publicKey: keyPair.publicKey });
-  const expected = normalizeTonAddress(configuredAddress);
+  const expected = configuredAddress;
   if (normalizeTonAddress(wallet.address.toString({ urlSafe: true, bounceable: true, testOnly: false })) !== expected) {
     throw new Error("Секрет не соответствует адресу горячего кошелька");
   }
@@ -77,10 +65,6 @@ async function getPayoutWalletNetworkState(address: string) {
   return { isActive: account.status === "active", seqno };
 }
 
-export async function getConfiguredTonPayoutWalletAddress() {
-  const material = await getWalletMaterial();
-  return material.payoutWalletAddress;
-}
 
 export async function buildTonPayoutExternalBoc(input: { destinationWalletAddress: string; amountNano: bigint; reference: string }) {
   if (input.amountNano <= BigInt(0)) throw new Error("Сумма выплаты должна быть больше нуля");
@@ -119,17 +103,6 @@ export async function broadcastTonPayoutBoc(boc: string) {
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new TonPayoutRejectedError();
-}
-
-export async function getTonPayoutTransactionByMessageHash(messageHash: string): Promise<TonPayoutTrackedTransaction | null> {
-  if (!/^[a-f0-9]{64}$/i.test(messageHash)) return null;
-  const response = await fetch(`https://tonapi.io/v2/blockchain/messages/${messageHash}/transaction`, {
-    headers: getTonApiHeaders(),
-    signal: AbortSignal.timeout(12_000),
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error("Не удалось проверить статус сообщения выплаты");
-  return await response.json() as TonPayoutTrackedTransaction;
 }
 
 export async function emulateTonPayoutFee(boc: string) {

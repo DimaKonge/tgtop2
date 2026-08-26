@@ -99,16 +99,16 @@ flowchart TB
 
 | Риск | Почему это важно | Подтверждение | Безопасное решение |
 |---|---|---|---|
-| **Горячий кошелёк в runtime environment** | Код умеет подписывать реальный payout BOC. При росте лимитов или ошибке операционного доступа последствия материальны. | Mnemonic читается из env, валидируется и сопоставляется с payout address. | До расширения: feature flag по умолчанию off, лимиты, двухэтапный manual review, key rotation plan. Далее — multisig/custody split или KMS/HSM-стратегия. |
-| **In-process payout queue** | Очередь и защита seqno не переживают restart и не работают между несколькими web instances. | `payoutQueue` — Promise в памяти Node process. | MySQL advisory lock / job table сначала; затем отдельный worker + distributed lock per payout wallet. |
+| **Горячий кошелёк и controlled activation** | Реальная подпись payout BOC материально чувствительна, даже после изоляции процесса. | Mnemonic отсутствует у web/ботов и есть только в отдельном worker environment; `TON_PAYOUT_WORKER_BROADCAST_ENABLED=false`, а новые заявки fail closed. | Перед включением: заранее согласованный smoke recipient/amount, approval, chain reconciliation, лимиты и key-rotation plan. Далее — multisig/custody split или KMS/HSM-стратегия. |
 
-> Закрыто во время stabilisation release: ставка/списание/intent/перестройка слотов объединены в одну блокирующую transaction; production dependency audit после Express 5.2.1 показывает **0 critical / 0 high / 0 moderate / 0 low**.
+> Закрыто во время stabilisation release: ставка/списание/intent/перестройка слотов объединены в одну блокирующую transaction; production dependency audit после Express 5.2.1 показывает **0 critical / 0 high / 0 moderate / 0 low**. Закрыто во время payout hardening release: `payoutQueue` из памяти заменена на MySQL job/lease records; отдельный worker владеет signing-кодом, а ambiguous broadcast никогда не повторяется автоматически.
 
 ### P1 — сделать в ближайшем стабилизационном спринте
 
 | Риск | Наблюдение | Рекомендация |
 |---|---|---|
 | HTTP hardening на proxy | В Express включены заголовки, отключён `X-Powered-By`, действует rate limit и DB-backed `/healthz`; HSTS/CSP пока не закреплены на reverse proxy. | Сформировать CSP с Telegram WebApp, TonConnect, TonAPI и asset origins; после проверки закрепить CSP/HSTS на Nginx. |
+| Edge anti-DDoS | In-memory rate limiter bounded по памяти, а финансовая заявка ограничена DB risk policy и одной активной операцией; distributed edge limit/WAF ещё нет. | Настроить Nginx limit zones, request-size limits, 429 observability и upstream circuit controls. |
 | Наблюдаемость и alerting | Есть rate limit и readiness, но нет request ID, структурированного audit log и alerting на сбои DB, bot polling или payout. | Добавить JSON logs, error IDs, owner alerts и dashboard по трём сервисам. |
 | Неоднородность DB ошибок вне auth | Для валидной Telegram-сессии DB outage теперь явно сигнализируется; в менее критичных read-only путях остаются разные legacy-поведения. | Расширить явную политику DB outage на money/ranking/admin операции и controlled degraded response для публичного чтения. |
 | Доступы заданы непоследовательно | Есть `adminProcedure`, но основной router использует `protectedProcedure` и 11 ручных проверок moderation access. | Ввести `ownerProcedure`, `moderatorProcedure`, `financeReviewerProcedure`; добавить router authorization tests. |
@@ -135,7 +135,7 @@ flowchart TB
 3. TON deposit / withdrawal используют idempotency, transaction hash uniqueness, preflight комиссии, status workflow и reconciliation с TonAPI.
 4. Entry link больше не строится из слепого старого username: проверяется актуальная связь с Telegram, а устаревшая карточка снимается с ТОПа.
 5. Telegram event receipts, reward event uniqueness и Stars payload позволяют защищаться от повторной обработки.
-6. Последний полный pipeline проходит: **155 tests passed**, **3 intentionally skipped**, TypeScript и production build успешны; `pnpm audit --prod` показывает ноль advisories.
+6. Последний полный pipeline проходит: **160 tests passed**, **3 intentionally skipped**, TypeScript и production build успешны; `pnpm audit --prod` показывает ноль advisories.
 
 ## 5. Целевая архитектура, чтобы развивать продукт без каскадных поломок
 
@@ -173,8 +173,8 @@ flowchart LR
 
 ### Этап A — стабилизация и безопасность (первый приоритет)
 
-1. Не расширять TON payouts, escrow и NFT transfers до закрытия оставшихся P0 hot-wallet/queue рисков.
-2. Поддерживать уже внедрённую atomic ranking transaction отдельными integration/load-тестами.
+1. Не расширять TON payouts, escrow и NFT transfers до controlled activation payout worker с отдельно согласованным E2E smoke.
+2. Поддерживать уже внедрённые atomic ranking transaction и DB payout worker отдельными integration/load/recovery-тестами.
 3. Поддерживать текущий чистый dependency audit отдельными изолированными обновлениями, не смешивая их с feature-работой.
 4. Закрепить CSP/HSTS на reverse proxy, добавить alerting и structured logs поверх уже работающих rate limit и health/readiness.
 5. Расширить явную DB-outage политику с auth на money/ranking/admin flows и понятный режим обслуживания UI.
@@ -224,8 +224,8 @@ flowchart LR
 
 | Неделя | Результат |
 |---|---|
-| 1 | Завершено: atomic ranking bid, Express 5 dependency remediation, headers/rate limits/health, явная auth DB-outage policy и staged runtime release. |
-| 2 | Wallet worker lock, payout audit controls, bot poller lock, integration tests на БД. |
+| 1 | Завершено: atomic ranking bid, Express 5 dependency remediation, headers/rate limits/health, явная auth DB-outage policy, staged runtime release и payout worker с DB job/lease. |
+| 2 | Controlled TON E2E smoke, payout audit controls, bot poller lock, integration tests на БД и edge anti-DDoS. |
 | 3 | Разделение `Home.tsx`: detail/top/workspace/wallet/moderation; no visible product change. |
 | 4 | Domain subrouters/services, first E2E smoke suite, CSP/HSTS и observability/alerts. |
 

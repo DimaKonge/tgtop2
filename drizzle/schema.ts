@@ -267,6 +267,47 @@ export const tonWithdrawals = mysqlTable("ton_withdrawals", {
 
 export type TonWithdrawal = typeof tonWithdrawals.$inferSelect;
 
+/**
+ * Durable background work for a TON withdrawal. A user request only writes this
+ * record; a separate worker claims it with a lease and never shares process
+ * memory with the public API.
+ */
+export const tonPayoutJobs = mysqlTable("ton_payout_jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  withdrawalId: int("withdrawalId").notNull(),
+  kind: mysqlEnum("kind", ["broadcast", "reconcile"]).notNull(),
+  status: mysqlEnum("status", ["queued", "leased", "completed", "manual_review", "cancelled"]).default("queued").notNull(),
+  availableAt: timestamp("availableAt").defaultNow().notNull(),
+  leaseToken: varchar("leaseToken", { length: 96 }),
+  leaseExpiresAt: timestamp("leaseExpiresAt"),
+  attempts: int("attempts").default(0).notNull(),
+  lastError: varchar("lastError", { length: 255 }),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("ton_payout_jobs_withdrawal_kind_unique").on(table.withdrawalId, table.kind),
+  index("ton_payout_jobs_status_available_idx").on(table.status, table.availableAt, table.id),
+  index("ton_payout_jobs_lease_expires_idx").on(table.status, table.leaseExpiresAt),
+]);
+
+export type TonPayoutJob = typeof tonPayoutJobs.$inferSelect;
+
+/**
+ * A fencing lease for the one wallet sequence that may sign/broadcast payouts.
+ * The token is checked on every release/update so a stale process cannot take
+ * over after its lease expires.
+ */
+export const tonPayoutWalletLeases = mysqlTable("ton_payout_wallet_leases", {
+  payoutWalletAddress: varchar("payoutWalletAddress", { length: 96 }).primaryKey(),
+  leaseToken: varchar("leaseToken", { length: 96 }).notNull(),
+  holderId: varchar("holderId", { length: 96 }).notNull(),
+  leaseExpiresAt: timestamp("leaseExpiresAt").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TonPayoutWalletLease = typeof tonPayoutWalletLeases.$inferSelect;
+
 export const rewardEvents = mysqlTable("reward_events", {
   id: int("id").autoincrement().primaryKey(),
   groupId: int("groupId").notNull(),

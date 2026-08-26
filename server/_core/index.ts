@@ -43,12 +43,23 @@ function applySecurityHeaders(req: express.Request, res: express.Response, next:
   next();
 }
 
-function createInMemoryRateLimit(windowMs: number, limit: number) {
+function createInMemoryRateLimit(windowMs: number, limit: number, maxTrackedClients = 20_000) {
   const requests = new Map<string, { count: number; resetAt: number }>();
+  let nextPruneAt = 0;
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const now = Date.now();
+    if (now >= nextPruneAt || requests.size >= maxTrackedClients) {
+      for (const [trackedKey, tracked] of Array.from(requests.entries())) {
+        if (tracked.resetAt <= now) requests.delete(trackedKey);
+      }
+      nextPruneAt = now + Math.min(windowMs, 15_000);
+    }
     const key = req.ip || req.socket.remoteAddress || "unknown";
     const previous = requests.get(key);
+    if (!previous && requests.size >= maxTrackedClients) {
+      res.status(429).json({ error: "Слишком много новых подключений. Повторите позже." });
+      return;
+    }
     const entry = !previous || previous.resetAt <= now
       ? { count: 0, resetAt: now + windowMs }
       : previous;

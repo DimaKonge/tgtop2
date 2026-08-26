@@ -921,5 +921,10 @@
 - [x] Разобрать оставшиеся high dependency advisory по достижимости в TG TOP и подготовить изолированный безопасный план обновления.
 - [x] Провести отдельную Express 5 migration с contract/smoke-тестами OAuth, storage proxy, tRPC, media, public pages и SPA fallback вместо принудительной подмены path-to-regexp в Express 4.
 - [x] Оформить параметризованный staged-релиз с синхронизацией runtime dependencies, backup/rollback и понятным VPS runbook для будущих изменений.
+- [x] Перенести обработку TON-выплат из памяти веб-процесса в изолированный DB-backed worker с lease, wallet-lock, recovery после рестарта и запретом повторной отправки.
+- [x] Усилить anti-DDoS/anti-abuse периметр финансовых API: server-side rate limits, ограничение одновременных заявок, audit trail и controlled degraded mode.
+- [x] Сохранить быстрый публичный путь для новых функций: финансовые проверки и сетевые операции выполнять только в изолированном worker, не блокируя каталог, ТОП, аналитику и интерфейс.
+- [ ] Настроить внешний edge anti-DDoS слой: Nginx limit zones, request-size limits, 429 monitoring и controlled proxy-level circuit controls.
+- [ ] Провести отдельный controlled TON E2E smoke только после точного подтверждения владельцем recipient, суммы и допустимого финансового последствия; до этого держать payout broadcast выключенным.
 - [x] Восстановить отдельный SSH-ключ безопасного релиза, проверить VPS-доступ и выпустить проверенные P0/P1 исправления staged-процедурой.
 - [x] Добавить в архитектурную документацию понятную владельцу карту: закрытые риски, оставшиеся риски, статус и очередность работ.

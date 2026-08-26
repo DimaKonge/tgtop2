@@ -69,7 +69,7 @@ export function classifyTonWithdrawalRisk(snapshot: TonWithdrawalRiskSnapshot, q
   if (snapshot.lastAddressRequestAtMs !== null && snapshot.nowMs - snapshot.lastAddressRequestAtMs < TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS) reasons.push("address_cooldown");
   if (snapshot.globalRequestsLastMinute >= TON_WITHDRAWAL_GLOBAL_MAX_PER_MINUTE) reasons.push("global_velocity");
   if (snapshot.emergencyPaused) throw new Error("Автоматический вывод временно приостановлен");
-  return { status: "queued", reasons };
+  return { status: reasons.length > 0 ? "manual_review" : "queued", reasons };
 }
 
 export function getTonWithdrawalRiskLabel(reason: TonWithdrawalRiskReason): string {

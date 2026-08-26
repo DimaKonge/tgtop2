@@ -1,0 +1,32 @@
+[Unit]
+Description=TG TOP isolated TON payout worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tgtop
+Group=tgtop
+WorkingDirectory=/opt/tgtop
+EnvironmentFile=/etc/tgtop/payout-worker.conf
+ExecStart=/usr/bin/node /opt/tgtop/dist/tonPayoutWorkerProcess.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+MemoryMax=256M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

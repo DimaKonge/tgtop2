@@ -274,9 +274,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         try {
-          const withdrawal = await db.createTonWithdrawal({ ...input, userOpenId: ctx.user.openId });
-          if (withdrawal.status === "queued") await db.broadcastQueuedTonWithdrawal(withdrawal.id);
-          return withdrawal;
+          return await db.createTonWithdrawal({ ...input, userOpenId: ctx.user.openId });
         } catch (error) {
           console.error("[TonWithdrawal] Could not create withdrawal:", error);
           throw new Error(getSafeTonWithdrawalError(error));
@@ -287,7 +285,7 @@ export const appRouter = router({
       .input(z.object({ withdrawalId: z.number().int().positive() }))
       .mutation(async ({ ctx, input }) => {
         try {
-          return await db.reconcileTonWithdrawal({ userOpenId: ctx.user.openId, withdrawalId: input.withdrawalId });
+          return await db.enqueueTonWithdrawalReconciliation({ userOpenId: ctx.user.openId, withdrawalId: input.withdrawalId });
         } catch (error) {
           console.error("[TonWithdrawal] Could not reconcile withdrawal:", error);
           throw new Error(getSafeTonWithdrawalError(error));
@@ -306,9 +304,7 @@ export const appRouter = router({
         const access = await db.getModerationAccess(ctx.user.openId);
         if (!access.canModerate) throw new Error("Недостаточно прав для ручной проверки вывода");
         try {
-          const withdrawal = await db.reviewTonWithdrawal({ ...input, reviewerOpenId: ctx.user.openId });
-          if (input.action === "approve") await db.broadcastQueuedTonWithdrawal(withdrawal.id);
-          return withdrawal;
+          return await db.reviewTonWithdrawal({ ...input, reviewerOpenId: ctx.user.openId });
         } catch (error) {
           console.error("[TonWithdrawal] Could not review withdrawal:", error);
           throw new Error(getSafeTonWithdrawalError(error));

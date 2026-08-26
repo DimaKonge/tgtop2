@@ -1,7 +1,7 @@
-import { eq, and, or, asc, desc, gte, gt, inArray, sql } from "drizzle-orm";
+import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, moderationEvents, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -15,7 +15,8 @@ import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
 import { getTelegramChatIdFromOpenId, verifyTelegramUserChatBoost } from "./telegramNotifications";
 import { getSearchIndexingError } from "./seoPolicy";
 import { buildTonDepositPayload, createTonDepositReference, decodeTonComment, findMatchingTonDepositTransaction, findRejectedTonDepositTransaction, formatNanoTon, getRecentTonDepositTransactions, normalizeTonAddress, parseTonToNano, toFriendlyTonAddress, TON_DEPOSIT_TTL_MS } from "./tonDeposits";
-import { buildTonPayoutExternalBoc, broadcastTonPayoutBoc, emulateTonPayoutFee, getConfiguredTonPayoutWalletAddress, getTonPayoutTransactionByMessageHash, TonPayoutRejectedError } from "./tonPayoutWallet";
+import { getTonPayoutTransactionByMessageHash } from "./tonPayoutNetwork";
+import { getConfiguredTonPayoutWalletAddress } from "./tonPayoutConfig";
 import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, getTonWithdrawalRiskLabel, quoteTonWithdrawal as getTonWithdrawalQuote, TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS, TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO } from "./tonWithdrawalPolicy";
 import { canCancelNftRental, canConfirmNftRental, rentalTotalUnits, validateRentalDays, NFT_RENTAL_MAX_DAYS as POLICY_NFT_RENTAL_MAX_DAYS } from "./nftRentalPolicy";
 import { normalizeTelegramBotLink } from "./botListingPolicy";
@@ -320,16 +321,14 @@ export async function verifyTonDeposit(input: { userOpenId: string; depositId: n
 }
 
 type TonWithdrawalStatus = "queued" | "manual_review" | "broadcast_pending" | "sent" | "confirmed" | "failed_refunded" | "cancelled";
-let payoutQueue: Promise<void> = Promise.resolve();
-
-function runInPayoutQueue<T>(operation: () => Promise<T>) {
-  const current = payoutQueue.then(operation, operation);
-  payoutQueue = current.then(() => undefined, () => undefined);
-  return current;
-}
+type TonPayoutJobKind = "broadcast" | "reconcile";
+const PAYOUT_JOB_LEASE_MS = 30_000;
+const PAYOUT_WALLET_LEASE_MS = 45_000;
 
 function isTonWithdrawalAutomationEnabled() {
-  return process.env.TON_WITHDRAWALS_ENABLED === "true" && process.env.TON_WITHDRAWALS_PAUSED !== "true";
+  return process.env.TON_WITHDRAWALS_ENABLED === "true"
+    && process.env.TON_WITHDRAWALS_PAUSED !== "true"
+    && process.env.TON_PAYOUT_QUEUE_ENABLED === "true";
 }
 
 function toTonWithdrawalView(row: typeof tonWithdrawals.$inferSelect) {
@@ -354,16 +353,94 @@ function toTonWithdrawalView(row: typeof tonWithdrawals.$inferSelect) {
 export async function getTonWithdrawals(openId: string) {
   const db = await getDb();
   if (!db) return [];
-  const pending = await db.select({ id: tonWithdrawals.id }).from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, openId), inArray(tonWithdrawals.status, ["broadcast_pending", "sent"]))).limit(3);
-  for (const withdrawal of pending) {
-    try {
-      await reconcileTonWithdrawal({ userOpenId: openId, withdrawalId: withdrawal.id });
-    } catch {
-      // Временная ошибка сети не должна ломать историю; следующая загрузка повторит только сверку.
-    }
-  }
   const rows = await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.userOpenId, openId)).orderBy(desc(tonWithdrawals.createdAt), desc(tonWithdrawals.id)).limit(20);
   return rows.map(toTonWithdrawalView);
+}
+
+export async function enqueueTonWithdrawalReconciliation(input: { userOpenId: string; withdrawalId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.transaction(async tx => {
+    const withdrawal = (await tx.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.id, input.withdrawalId), eq(tonWithdrawals.userOpenId, input.userOpenId))).limit(1))[0];
+    if (!withdrawal) throw new Error("Заявка на вывод не найдена");
+    if (withdrawal.status !== "broadcast_pending" && withdrawal.status !== "sent") return;
+    await tx.insert(tonPayoutJobs).values({ withdrawalId: withdrawal.id, kind: "reconcile" }).onDuplicateKeyUpdate({
+      set: { status: "queued", availableAt: new Date(), leaseToken: null, leaseExpiresAt: null, lastError: null },
+    });
+  });
+  const withdrawal = (await db.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.id, input.withdrawalId), eq(tonWithdrawals.userOpenId, input.userOpenId))).limit(1))[0];
+  if (!withdrawal) throw new Error("Заявка на вывод не найдена");
+  return toTonWithdrawalView(withdrawal);
+}
+
+export async function enqueueTonPayoutJob(withdrawalId: number, kind: TonPayoutJobKind) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(tonPayoutJobs).values({ withdrawalId, kind }).onDuplicateKeyUpdate({
+    set: { status: "queued", availableAt: new Date(), leaseToken: null, leaseExpiresAt: null, lastError: null },
+  });
+}
+
+export async function claimNextTonPayoutJob(workerId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const now = new Date();
+  await db.update(tonPayoutJobs).set({ status: "queued", leaseToken: null, leaseExpiresAt: null, lastError: "Lease восстановлен после остановки worker" })
+    .where(and(eq(tonPayoutJobs.status, "leased"), lte(tonPayoutJobs.leaseExpiresAt, now)));
+  const candidate = (await db.select().from(tonPayoutJobs)
+    .where(and(eq(tonPayoutJobs.status, "queued"), lte(tonPayoutJobs.availableAt, now)))
+    .orderBy(asc(tonPayoutJobs.availableAt), asc(tonPayoutJobs.id)).limit(1))[0];
+  if (!candidate) return null;
+  const leaseToken = randomBytes(24).toString("hex");
+  const leaseExpiresAt = new Date(now.getTime() + PAYOUT_JOB_LEASE_MS);
+  const claimed = await db.update(tonPayoutJobs).set({ status: "leased", leaseToken, leaseExpiresAt, attempts: sql`${tonPayoutJobs.attempts} + 1`, lastError: null })
+    .where(and(eq(tonPayoutJobs.id, candidate.id), eq(tonPayoutJobs.status, "queued"), lte(tonPayoutJobs.availableAt, now)));
+  if (Number(claimed[0]?.affectedRows ?? 0) !== 1) return null;
+  return { ...candidate, status: "leased" as const, leaseToken, leaseExpiresAt, attempts: candidate.attempts + 1, workerId };
+}
+
+export async function completeTonPayoutJob(jobId: number, leaseToken: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(tonPayoutJobs).set({ status: "completed", completedAt: new Date(), leaseToken: null, leaseExpiresAt: null, lastError: null })
+    .where(and(eq(tonPayoutJobs.id, jobId), eq(tonPayoutJobs.status, "leased"), eq(tonPayoutJobs.leaseToken, leaseToken)));
+}
+
+export async function deferTonPayoutJob(jobId: number, leaseToken: string, delayMs: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(tonPayoutJobs).set({ status: "queued", availableAt: new Date(Date.now() + delayMs), leaseToken: null, leaseExpiresAt: null, lastError: reason.slice(0, 255) })
+    .where(and(eq(tonPayoutJobs.id, jobId), eq(tonPayoutJobs.status, "leased"), eq(tonPayoutJobs.leaseToken, leaseToken)));
+}
+
+export async function sendTonPayoutJobToManualReview(jobId: number, leaseToken: string, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(tonPayoutJobs).set({ status: "manual_review", leaseToken: null, leaseExpiresAt: null, lastError: reason.slice(0, 255) })
+    .where(and(eq(tonPayoutJobs.id, jobId), eq(tonPayoutJobs.status, "leased"), eq(tonPayoutJobs.leaseToken, leaseToken)));
+}
+
+export async function acquireTonPayoutWalletLease(input: { payoutWalletAddress: string; workerId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const now = new Date();
+  const leaseToken = randomBytes(24).toString("hex");
+  const leaseExpiresAt = new Date(now.getTime() + PAYOUT_WALLET_LEASE_MS);
+  try {
+    await db.insert(tonPayoutWalletLeases).values({ payoutWalletAddress: input.payoutWalletAddress, leaseToken, holderId: input.workerId, leaseExpiresAt });
+    return { leaseToken, leaseExpiresAt };
+  } catch (error) {
+    if (!isDuplicateTelegramEventError(error)) throw error;
+  }
+  const claimed = await db.update(tonPayoutWalletLeases).set({ leaseToken, holderId: input.workerId, leaseExpiresAt })
+    .where(and(eq(tonPayoutWalletLeases.payoutWalletAddress, input.payoutWalletAddress), lt(tonPayoutWalletLeases.leaseExpiresAt, now)));
+  return Number(claimed[0]?.affectedRows ?? 0) === 1 ? { leaseToken, leaseExpiresAt } : null;
+}
+
+export async function releaseTonPayoutWalletLease(input: { payoutWalletAddress: string; leaseToken: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(tonPayoutWalletLeases).where(and(eq(tonPayoutWalletLeases.payoutWalletAddress, input.payoutWalletAddress), eq(tonPayoutWalletLeases.leaseToken, input.leaseToken)));
 }
 
 export async function quoteTonWithdrawal(input: { amountTon: string; destinationWalletAddress: string }) {
@@ -381,6 +458,7 @@ export async function quoteTonWithdrawal(input: { amountTon: string; destination
 }
 
 export async function createTonWithdrawal(input: { userOpenId: string; amountTon: string; destinationWalletAddress: string; idempotencyKey: string }) {
+  if (!isTonWithdrawalAutomationEnabled()) throw new Error("Вывод временно приостановлен до завершения проверки защищённой очереди");
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const quote = getTonWithdrawalQuote(input.amountTon);
@@ -439,83 +517,19 @@ export async function createTonWithdrawal(input: { userOpenId: string; amountTon
       riskReasons: risk.reasons.join(",") || null,
     });
     created = (await tx.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, Number(result[0]?.insertId ?? 0))).limit(1))[0];
+    if (created?.status === "queued") {
+      await tx.insert(tonPayoutJobs).values({ withdrawalId: created.id, kind: "broadcast" });
+    }
   });
   if (!created) throw new Error("Не удалось создать заявку на вывод");
   return toTonWithdrawalView(created);
 }
 
-export async function broadcastQueuedTonWithdrawal(withdrawalId: number) {
-  if (!isTonWithdrawalAutomationEnabled()) return { attempted: false as const, reason: "automation_disabled" as const };
-  return runInPayoutQueue(async () => {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
-    const withdrawal = (await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, withdrawalId)).limit(1))[0];
-    if (!withdrawal || withdrawal.status !== "queued") return { attempted: false as const, reason: "not_queued" as const };
-    const grossAmountNano = BigInt(withdrawal.grossAmountNano);
-    let prepared = await buildTonPayoutExternalBoc({ destinationWalletAddress: withdrawal.destinationWalletAddress, amountNano: grossAmountNano, reference: withdrawal.reference });
-    const emulateFeeWithRetry = async (boc: string) => {
-      let lastError: unknown;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        try {
-          return await emulateTonPayoutFee(boc);
-        } catch (error) {
-          lastError = error;
-          if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
-        }
-      }
-      throw lastError;
-    };
-    let estimatedFeeNano: bigint;
-    try {
-      estimatedFeeNano = await emulateFeeWithRetry(prepared.boc);
-      if (estimatedFeeNano <= BigInt(0) || estimatedFeeNano >= grossAmountNano) throw new Error("fee_exceeds_amount");
-      const estimatedNetNano = grossAmountNano - estimatedFeeNano;
-      prepared = await buildTonPayoutExternalBoc({ destinationWalletAddress: withdrawal.destinationWalletAddress, amountNano: estimatedNetNano, reference: withdrawal.reference });
-      // Re-estimate the final message once; this keeps the user's fee tied to the actual message being sent.
-      estimatedFeeNano = await emulateFeeWithRetry(prepared.boc);
-      if (estimatedFeeNano <= BigInt(0) || estimatedFeeNano >= grossAmountNano) throw new Error("fee_exceeds_amount");
-      const finalNetNano = grossAmountNano - estimatedFeeNano;
-      if (finalNetNano !== estimatedNetNano) {
-        prepared = await buildTonPayoutExternalBoc({ destinationWalletAddress: withdrawal.destinationWalletAddress, amountNano: finalNetNano, reference: withdrawal.reference });
-      }
-    } catch {
-      const grossTon = formatWithdrawalNanoTon(grossAmountNano);
-      await db.transaction(async tx => {
-        const cancelled = await tx.update(tonWithdrawals).set({ status: "cancelled", riskReasons: `${withdrawal.riskReasons ? `${withdrawal.riskReasons},` : ""}fee_preflight`, failureReason: "Отмена: комиссию сети нельзя безопасно рассчитать" }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "queued")));
-        if (Number(cancelled[0]?.affectedRows ?? 0) === 1) {
-          await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${grossTon}` }).where(eq(users.openId, withdrawal.userOpenId));
-        }
-      });
-      return { attempted: false as const, reason: "fee_preflight_cancelled" as const };
-    }
-    const netAmountNano = grossAmountNano - estimatedFeeNano;
-    const marked = await db.update(tonWithdrawals).set({ status: "broadcast_pending", feeReserveNano: estimatedFeeNano.toString(), netAmountNano: netAmountNano.toString(), externalMessageHash: prepared.externalMessageHash, broadcastAt: new Date(), failureReason: null }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "queued")));
-    if (Number(marked[0]?.affectedRows ?? 0) !== 1) return { attempted: false as const, reason: "state_changed" as const };
-    try {
-      await broadcastTonPayoutBoc(prepared.boc);
-      return { attempted: true as const, reason: "submitted" as const };
-    } catch (error) {
-      if (error instanceof TonPayoutRejectedError) {
-        const grossTon = formatWithdrawalNanoTon(grossAmountNano);
-        await db.transaction(async tx => {
-          const cancelled = await tx.update(tonWithdrawals).set({ status: "cancelled", actualFeeNano: "0", failureReason: "Сеть отклонила транзакцию; GRAM возвращён на основной баланс" }).where(and(eq(tonWithdrawals.id, withdrawal.id), eq(tonWithdrawals.status, "broadcast_pending"), sql`${tonWithdrawals.transactionHash} IS NULL`));
-          if (Number(cancelled[0]?.affectedRows ?? 0) === 1) {
-            await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${grossTon}` }).where(eq(users.openId, withdrawal.userOpenId));
-          }
-        });
-        return { attempted: false as const, reason: "broadcast_rejected_refunded" as const };
-      }
-      // Тайм-аут может означать уже принятую трансляцию; до сетевой сверки повтор не выполняется.
-      await db.update(tonWithdrawals).set({ failureReason: "Трансляция проверяется в сети" }).where(eq(tonWithdrawals.id, withdrawal.id));
-      return { attempted: true as const, reason: "broadcast_ambiguous" as const };
-    }
-  });
-}
-
-export async function reconcileTonWithdrawal(input: { userOpenId: string; withdrawalId: number }) {
+export async function reconcileTonWithdrawal(input: { withdrawalId: number; userOpenId?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const withdrawal = (await db.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.id, input.withdrawalId), eq(tonWithdrawals.userOpenId, input.userOpenId))).limit(1))[0];
+  const ownership = input.userOpenId ? and(eq(tonWithdrawals.id, input.withdrawalId), eq(tonWithdrawals.userOpenId, input.userOpenId)) : eq(tonWithdrawals.id, input.withdrawalId);
+  const withdrawal = (await db.select().from(tonWithdrawals).where(ownership).limit(1))[0];
   if (!withdrawal) throw new Error("Заявка на вывод не найдена");
   if (withdrawal.status !== "broadcast_pending" && withdrawal.status !== "sent") return toTonWithdrawalView(withdrawal);
   const transactions = await getRecentTonDepositTransactions(withdrawal.payoutWalletAddress);
@@ -561,7 +575,7 @@ export async function reconcileTonWithdrawal(input: { userOpenId: string; withdr
   await db.transaction(async tx => {
     const update = await tx.update(tonWithdrawals).set({ status: "confirmed", actualFeeNano: actualFeeNano.toString(), transactionHash: matched.hash!, transactionLt: String(matched.lt), sentAt: new Date(), confirmedAt: new Date(), failureReason: null }).where(and(eq(tonWithdrawals.id, withdrawal.id), inArray(tonWithdrawals.status, ["broadcast_pending", "sent"])));
     if (Number(update[0]?.affectedRows ?? 0) !== 1) return;
-    if (refundNano > BigInt(0)) await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${formatWithdrawalNanoTon(refundNano)}` }).where(eq(users.openId, input.userOpenId));
+    if (refundNano > BigInt(0)) await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${formatWithdrawalNanoTon(refundNano)}` }).where(eq(users.openId, withdrawal.userOpenId));
     newlyConfirmed = true;
   });
   const final = (await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, withdrawal.id)).limit(1))[0];
@@ -580,6 +594,9 @@ export async function reviewTonWithdrawal(input: { withdrawalId: number; reviewe
       await tx.update(tonWithdrawals).set({ status: "cancelled", reviewedAt: new Date(), reviewedByOpenId: input.reviewerOpenId, failureReason: input.reason?.trim() || "Операция отклонена при ручной проверке" }).where(eq(tonWithdrawals.id, withdrawal.id));
     } else {
       await tx.update(tonWithdrawals).set({ status: "queued", reviewedAt: new Date(), reviewedByOpenId: input.reviewerOpenId, failureReason: null }).where(eq(tonWithdrawals.id, withdrawal.id));
+      await tx.insert(tonPayoutJobs).values({ withdrawalId: withdrawal.id, kind: "broadcast" }).onDuplicateKeyUpdate({
+        set: { status: "queued", availableAt: new Date(), leaseToken: null, leaseExpiresAt: null, lastError: null },
+      });
     }
     result = (await tx.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, withdrawal.id)).limit(1))[0];
   });
