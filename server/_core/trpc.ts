@@ -13,6 +13,10 @@ export const publicProcedure = t.procedure;
 const requireUser = t.middleware(async opts => {
   const { ctx, next } = opts;
 
+  if (ctx.authUnavailable) {
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "TG TOP временно не может подтвердить аккаунт. Повторите попытку позже." });
+  }
+
   if (!ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
   }

@@ -8,12 +8,14 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  authUnavailable?: boolean;
 };
 
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
+  let authUnavailable = false;
 
   try {
     const initData = opts.req.header("x-telegram-init-data");
@@ -22,17 +24,23 @@ export async function createContext(
       : null;
 
     if (verifiedTelegram) {
-      const telegramUser = verifiedTelegram.user;
-      const openId = `telegram:${telegramUser.id}`;
-      await upsertUser({
-        openId,
-        name: telegramUser.username ?? [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(" "),
-        avatarUrl: telegramUser.photo_url ?? null,
-        telegramUsername: telegramUser.username ?? null,
-        loginMethod: "telegram-mini-app",
-        lastSignedIn: new Date(),
-      });
-      user = (await getUserByOpenId(openId)) ?? null;
+      try {
+        const telegramUser = verifiedTelegram.user;
+        const openId = `telegram:${telegramUser.id}`;
+        await upsertUser({
+          openId,
+          name: telegramUser.username ?? [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(" "),
+          avatarUrl: telegramUser.photo_url ?? null,
+          telegramUsername: telegramUser.username ?? null,
+          loginMethod: "telegram-mini-app",
+          lastSignedIn: new Date(),
+        });
+        user = (await getUserByOpenId(openId)) ?? null;
+        if (!user) authUnavailable = true;
+      } catch (error) {
+        authUnavailable = true;
+        console.warn("[Auth] Telegram identity could not be loaded", error instanceof Error ? error.name : "unknown_error");
+      }
     } else {
       user = await sdk.authenticateRequest(opts.req);
     }
@@ -45,5 +53,6 @@ export async function createContext(
     req: opts.req,
     res: opts.res,
     user,
+    authUnavailable,
   };
 }

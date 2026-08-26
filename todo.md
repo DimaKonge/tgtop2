@@ -916,5 +916,5 @@
 - [x] Заменить горизонтальную полосу рубрик ботов на компактный фильтр с выдвижным нижним меню.
 - [x] Объединить проверку актуальной ставки, списание GRAM, ranking intent и перестроение слотов в одну транзакцию с защитой от конкурирующих ставок.
 - [x] Обновить critical и высокорисковые production-зависимости в отдельном проверяемом изменении без смешивания с продуктовыми функциями.
-- [ ] Добавить базовый production-hardening: security headers, rate limit, health/readiness и явную политику ошибок БД для критичных операций.
+- [x] Добавить базовый production-hardening: security headers, rate limit, health/readiness и явную политику ошибок БД для критичных операций.
 - [x] Добавить security headers, rate limit и database-backed health/readiness endpoint для production HTTP-контура.
