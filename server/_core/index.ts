@@ -14,6 +14,54 @@ import { registerPublicCommunityPages } from "../publicCommunityPages";
 import { getDb } from "../db";
 import { serveStatic, setupVite } from "./vite";
 
+const CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "script-src 'self' 'unsafe-inline' https://telegram.org https://*.telegram.org https://manus-analytics.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' data: blob: https:",
+  "connect-src 'self' https://tgtop.me https://tgtop.xyz https://telegram.org https://*.telegram.org https://oauth.telegram.org https://tonapi.io https://*.tonapi.io https://bridge.tonapi.io https://manus-analytics.com",
+  "frame-src 'self' https://telegram.org https://*.telegram.org https://app.tonkeeper.com",
+  "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
+  "report-uri /api/csp-report",
+].join("; ");
+
+const cspReportLogTimes = new Map<string, number>();
+
+function toCspOrigin(value: unknown) {
+  if (typeof value !== "string" || value.length === 0) return "unknown";
+  try {
+    return new URL(value).origin;
+  } catch {
+    return value.slice(0, 80).replace(/[\r\n]/g, " ");
+  }
+}
+
+function recordCspReport(payload: unknown) {
+  const report = payload && typeof payload === "object" && "csp-report" in payload
+    ? (payload as { "csp-report"?: Record<string, unknown> })["csp-report"]
+    : undefined;
+  if (!report) return;
+  const directive = typeof report["effective-directive"] === "string"
+    ? report["effective-directive"].slice(0, 80)
+    : "unknown";
+  const blockedOrigin = toCspOrigin(report["blocked-uri"]);
+  const key = `${directive}:${blockedOrigin}`;
+  const now = Date.now();
+  const lastLoggedAt = cspReportLogTimes.get(key) ?? 0;
+  if (now - lastLoggedAt < 60_000) return;
+  cspReportLogTimes.set(key, now);
+  if (cspReportLogTimes.size > 1_000) {
+    for (const [reportKey, loggedAt] of Array.from(cspReportLogTimes.entries())) {
+      if (now - loggedAt > 60_000) cspReportLogTimes.delete(reportKey);
+    }
+  }
+  console.warn("[CSP Report-Only]", JSON.stringify({ directive, blockedOrigin }));
+}
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
@@ -37,6 +85,7 @@ function applySecurityHeaders(req: express.Request, res: express.Response, next:
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY);
   if (process.env.NODE_ENV === "production") {
     res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
   }
@@ -83,6 +132,7 @@ async function startServer() {
   app.set("trust proxy", 1);
   app.use(applySecurityHeaders);
   const trpcRateLimit = createInMemoryRateLimit(60_000, 120);
+  const cspReportRateLimit = createInMemoryRateLimit(60_000, 60, 1_000);
   app.get("/healthz", async (_req, res) => {
     try {
       const db = await getDb();
@@ -93,6 +143,15 @@ async function startServer() {
       res.status(503).json({ status: "degraded" });
     }
   });
+  app.post(
+    "/api/csp-report",
+    express.json({ type: ["application/csp-report", "application/json"], limit: "16kb" }),
+    cspReportRateLimit,
+    (req, res) => {
+      recordCspReport(req.body);
+      res.status(204).end();
+    }
+  );
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

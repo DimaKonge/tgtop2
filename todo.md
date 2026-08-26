@@ -927,5 +927,7 @@
 - [x] Настроить внешний edge anti-DDoS слой: Nginx limit zones, request-size limits, 429 monitoring и controlled proxy-level circuit controls.
 - [ ] Провести отдельный controlled TON E2E smoke только после точного подтверждения владельцем recipient, суммы и допустимого финансового последствия; до этого держать payout broadcast выключенным.
 - [ ] Подключить CDN/WAF перед VPS и настроить provider-level anti-DDoS/429/5xx alerting для распределённых и канальных атак.
+- [x] Включить CSP Report-Only с контролируемым логом нарушений, проверить Telegram Mini App и TonConnect, затем отдельно решить вопрос enforcing CSP.
+- [ ] Собрать реальные CSP evidence из Telegram Mini App, browser Telegram Login и TonConnect и только затем отдельно решить enforcing CSP с rollback.
 - [x] Восстановить отдельный SSH-ключ безопасного релиза, проверить VPS-доступ и выпустить проверенные P0/P1 исправления staged-процедурой.
 - [x] Добавить в архитектурную документацию понятную владельцу карту: закрытые риски, оставшиеся риски, статус и очередность работ.

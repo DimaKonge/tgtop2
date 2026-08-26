@@ -77,6 +77,7 @@ VPS `/opt/tgtop`
 |---|---|---|---|
 | **P1** | Controlled activation исходящих TON-выплат ещё не проводилась. | Без реальной controlled E2E-проверки нельзя объявлять automated broadcast операционно готовым. | Оставить broadcast выключенным; перед включением согласовать точный test recipient и сумму, провести один контролируемый smoke и сверку chain. |
 | **P2** | Нет внешнего CDN/WAF перед VPS. | Nginx уже ограничивает connection flood, API, финансовые вызовы и тяжёлые request body; но канал и распределённые атаки остаются зоной провайдера/edge. | До заметного роста трафика поставить CDN/WAF и alerting на 429/5xx. |
+| **P2** | CSP пока работает в режиме наблюдения. | Report-Only уже собирает безопасные evidence без влияния на Telegram/TonConnect. | После реальных Mini App, Login и TonConnect reports отдельно решить enforcing CSP и rollback. |
 | **P1** | Telegram Stars: если лот меняется между оплатой и активацией, intent получает `refund_required`. | Нельзя считать такой платёж окончательно решённым без операционного refund-процесса. | Сделать отдельный контролируемый refund workflow и журнал оператора. |
 | **P1** | Нет полного E2E-контура реального Telegram/TON/Stars. | Unit-тесты ловят регрессии кода, но не весь внешний путь. | Добавить production smoke-checklist и защищённый staging test account. |
 | **P2** | `Home.tsx` содержит слишком много логики. | Небольшая UI-правка может задеть листинги, кошелёк, рейтинг и модерацию одновременно. | Разделить на доменные модули: ranking, group detail, wallet, moderation, workspace. |
@@ -116,4 +117,5 @@ VPS `/opt/tgtop`
 | **`docs/PAYOUT_SECURITY_MODEL.md`** | Security-инварианты, DB jobs, wallet lease, fail-closed правила и быстрый публичный путь. |
 | **`docs/PAYOUT_WORKER_DEPLOYMENT.md`** | Операционный порядок controlled activation отдельного payout worker. |
 | **`docs/EDGE_ANTIDDOS_RUNBOOK.md`** | Действующие Nginx лимиты, 429-проверка и граница ответственности между VPS и будущим CDN/WAF. |
+| **`docs/CSP_REPORT_ONLY_RUNBOOK.md`** | Рабочий CSP Report-Only, приватное логирование evidence и условия безопасного enforcing. |
 | **`todo.md`** | История задач и актуальные незавершённые работы. |
