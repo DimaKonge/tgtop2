@@ -19,12 +19,12 @@ if [[ "$DRY_RUN" != "1" ]]; then
   pnpm build
 fi
 
-for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs scripts/apply-entry-link-audit-migration.mjs; do
+for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts; do
   test -e "$item" || { echo "Missing required release item: $item" >&2; exit 1; }
 done
 
 tar -C "$PROJECT_DIR" -czf "$ARCHIVE" \
-  dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs scripts/apply-entry-link-audit-migration.mjs
+  dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts
 EXPECTED_SHA="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
 echo "Prepared ${RELEASE} (${EXPECTED_SHA})"
 
@@ -48,7 +48,7 @@ STAGE="$BASE/releases/stage-${RELEASE}"
 PREVIOUS="$BASE/releases/previous-${RELEASE}"
 FAILED="$BASE/releases/failed-${RELEASE}"
 BACKUP="$BASE/backups/pre-${RELEASE}-runtime.tgz"
-ITEMS=(dist node_modules package.json pnpm-lock.yaml)
+ITEMS=(dist node_modules package.json pnpm-lock.yaml scripts)
 UNITS=(tgtop.service tgtop-bot.service tgtop-bot-reserve.service)
 if [ -f /etc/systemd/system/tgtop-payout-worker.service ]; then UNITS+=(tgtop-payout-worker.service); fi
 ACTIVATED=0
@@ -74,7 +74,7 @@ fi
 
 mkdir -p "$STAGE" "$PREVIOUS"
 tar -xzf "$ARCHIVE" -C "$STAGE"
-for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts/runtime-package-probe.mjs scripts/apply-entry-link-audit-migration.mjs; do test -e "$STAGE/$item"; done
+for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts; do test -e "$STAGE/$item"; done
 
 "$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
 (
