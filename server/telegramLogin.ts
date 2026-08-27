@@ -15,6 +15,7 @@ const TELEGRAM_JWKS = createRemoteJWKSet(new URL("https://oauth.telegram.org/.we
 const TELEGRAM_STATE_COOKIE = "__Host-tgtop-telegram-login-state";
 const TELEGRAM_VERIFIER_COOKIE = "__Host-tgtop-telegram-login-verifier";
 const TELEGRAM_RETURN_TO_COOKIE = "__Host-tgtop-telegram-login-return-to";
+const CANONICAL_PRODUCTION_ORIGIN = "https://tgtop.me";
 
 type TelegramIdTokenClaims = {
   id?: number;
@@ -37,13 +38,16 @@ function requestOrigin(req: Request) {
 }
 
 export function getTelegramLoginCallbackUrl(origin: string) {
-  const canonicalOrigin = origin === "https://www.tgtop.xyz" ? "https://tgtop.xyz" : origin;
+  const canonicalOrigin = /^https:\/\/(?:www\.)?tgtop\.(?:me|xyz)$/i.test(origin)
+    ? CANONICAL_PRODUCTION_ORIGIN
+    : origin;
   return `${canonicalOrigin}/api/auth/telegram/callback`;
 }
 
 export function getCanonicalTelegramLoginStartUrl(origin: string, requestPath: string) {
-  if (origin !== "https://www.tgtop.xyz" || !requestPath.startsWith("/api/auth/telegram/login")) return null;
-  return `https://tgtop.xyz${requestPath}`;
+  const isProductionAlias = /^https:\/\/(?:www\.)?tgtop\.(?:me|xyz)$/i.test(origin);
+  if (!isProductionAlias || origin === CANONICAL_PRODUCTION_ORIGIN || !requestPath.startsWith("/api/auth/telegram/login")) return null;
+  return `${CANONICAL_PRODUCTION_ORIGIN}${requestPath}`;
 }
 
 function callbackUrl(req: Request) {
@@ -72,7 +76,7 @@ export async function validateTelegramLoginClient() {
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code: "tgtop-credential-validation",
-    redirect_uri: "https://tgtop.xyz/api/auth/telegram/callback",
+    redirect_uri: `${CANONICAL_PRODUCTION_ORIGIN}/api/auth/telegram/callback`,
     client_id: clientId,
     code_verifier: "tgtop-credential-validation",
   });
