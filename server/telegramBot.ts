@@ -74,6 +74,7 @@ const pollTimeoutSeconds = 30;
 function isBotAdmin(status: string): boolean { return status === "administrator" || status === "creator"; }
 function isChatOwner(status: string): boolean { return status === "creator" || status === "owner"; }
 function isActiveMember(status: string): boolean { return ["creator", "administrator", "member", "restricted"].includes(status); }
+export function isValidTelegramMemberCount(value: unknown): value is number { return typeof value === "number" && Number.isSafeInteger(value) && value >= 0; }
 function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { return chat.type === "channel" ? "Каналы" : "Чаты"; }
 function catalogChatId(chatId: number): string { return String(chatId); }
 function publicGroupUrl(chat: TelegramChat): string | undefined { return chat.username ? `https://t.me/${chat.username}` : undefined; }
@@ -325,9 +326,18 @@ export async function getTelegramUserAvatarUrl(telegramUserId: string): Promise<
   return null;
 }
 
-async function getMemberCount(chatId: number): Promise<number> {
-  try { return await telegramCall<number>("getChatMemberCount", { chat_id: chatId }); }
-  catch (error) { console.warn(`[Telegram] Could not read member count for ${chatId}:`, error); return 0; }
+async function getMemberCount(chatId: number): Promise<number | undefined> {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const count = await telegramCall<unknown>("getChatMemberCount", { chat_id: chatId });
+      if (isValidTelegramMemberCount(count)) return count;
+      console.warn(`[Telegram] Invalid member count for ${chatId}`);
+    } catch (error) {
+      console.warn(`[Telegram] Could not read member count for ${chatId} (attempt ${attempt}/3):`, error);
+    }
+    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 750));
+  }
+  return undefined;
 }
 
 async function getChatProfile(chatId: number): Promise<TelegramChat> { return await telegramCall<TelegramChat>("getChat", { chat_id: chatId }); }
@@ -359,6 +369,13 @@ async function sendOnboardingConfirmation(ownerChatId: number, group: TelegramCh
   catch (error) { console.warn(`[Telegram] Could not send onboarding confirmation to ${ownerChatId}:`, error); }
 }
 
+async function sendOnboardingReadFailure(ownerChatId: number): Promise<void> {
+  await telegramCall<boolean>("sendMessage", {
+    chat_id: ownerChatId,
+    text: "TG TOP не смог получить данные сообщества из Telegram, поэтому карточка не создана с неточными цифрами. Убедитесь, что @TG_TOPBOT остаётся администратором, затем удалите и снова добавьте его в администраторы, чтобы повторить подключение.",
+  }).catch(() => {});
+}
+
 async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   const membership = update.my_chat_member;
   if (!membership) return;
@@ -366,8 +383,18 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   if (chat.type !== "group" && chat.type !== "supergroup" && chat.type !== "channel") return;
   if (!isBotAdmin(current.status) || isBotAdmin(previous.status)) return;
 
-  const profile = await getChatProfile(chat.id);
+  let profile: TelegramChat;
+  try {
+    profile = await getChatProfile(chat.id);
+  } catch {
+    await sendOnboardingReadFailure(from.id);
+    return;
+  }
   const membersCount = await getMemberCount(chat.id);
+  if (membersCount === undefined) {
+    await sendOnboardingReadFailure(from.id);
+    return;
+  }
   const inviteLink = await getChatInviteLink(chat.id);
   const ownerOpenId = `telegram:${from.id}`;
   await upsertUser({ openId: ownerOpenId, name: from.username ?? from.first_name ?? "Telegram user", telegramUsername: from.username ?? null, loginMethod: "telegram-bot", lastSignedIn: new Date() });

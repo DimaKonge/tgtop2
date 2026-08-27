@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { __private__ } from "./telegramBot";
+import { __private__, isValidTelegramMemberCount } from "./telegramBot";
 
 describe("TG TOP Telegram catalog onboarding", () => {
   it("recognises only Telegram administrator statuses as catalog-ready", () => {
@@ -92,5 +92,20 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(source).toContain('telegramCall<RawOwnedGifts>("getChatGifts"');
     expect(source).toContain("exclude_unsaved: false");
     expect(source).not.toContain('"transferGift"');
+  });
+
+  it("never converts an unavailable Telegram audience count into a fabricated zero", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    const memberCountBlock = source.slice(source.indexOf("async function getMemberCount"), source.indexOf("async function getChatProfile"));
+
+    expect(isValidTelegramMemberCount(0)).toBe(true);
+    expect(isValidTelegramMemberCount(42)).toBe(true);
+    expect(isValidTelegramMemberCount(-1)).toBe(false);
+    expect(isValidTelegramMemberCount(1.5)).toBe(false);
+    expect(memberCountBlock).toContain("attempt <= 3");
+    expect(memberCountBlock).toContain("return undefined;");
+    expect(memberCountBlock).not.toContain("return 0");
+    expect(source).toContain("if (membersCount === undefined)");
+    expect(source).toContain("карточка не создана с неточными цифрами");
   });
 });

@@ -971,12 +971,14 @@
 - [x] Подготовить владельцу простую актуальную карту архитектуры TG TOP: Mini App, API, база, два Telegram-бота, рабочий Telegram-аккаунт, payout worker, VPS и release/rollback границы.
 - [x] Сформировать короткий приоритетный план «сначала стабилизируем, затем запускаем» с понятными критериями готовности к реальному запуску.
 - [x] Построчно проверить release-vps.sh и VPS release storage: retention, preflight свободного места, failed-stage cleanup, rollback и health gates.
-- [ ] Построчно проверить authentication, tRPC role gates и все owner/moderator/finance privileged procedures на fail-closed доступ.
-- [ ] Закрыть найденный entry-link access defect: generic resolver должен выдавать public `@username` всем авторизованным пользователям, но private/monthly invite link — только владельцу или модератору.
-- [ ] Закрыть найденный finance access defect: очередь и review заявок вывода должны быть доступны только главному администратору, а не любому модератору.
-- [ ] Ужесточить Telegram initData timestamp policy: запретить нецелые, нулевые и слишком будущие signed auth_date, сохранив допустимый небольшой clock skew.
-- [ ] Закрыть найденный listing/GRAM race: bulk listing должен проверять и списывать баланс в одной transaction с условием достаточного остатка.
+- [x] По явному запросу владельца удалить текущие runtime release backup archives на VPS после подтверждения завершения запущенного release; не затрагивать код, MySQL, Telegram-сессии или application data.
+- [x] Построчно проверить authentication, tRPC role gates и все owner/moderator/finance privileged procedures на fail-closed доступ.
+- [x] Закрыть найденный entry-link access defect: generic resolver должен выдавать public `@username` всем авторизованным пользователям, но private/monthly invite link — только владельцу или модератору.
+- [x] Закрыть найденный finance access defect: очередь и review заявок вывода должны быть доступны только главному администратору, а не любому модератору.
+- [x] Ужесточить Telegram initData timestamp policy: запретить нецелые, нулевые и слишком будущие signed auth_date, сохранив допустимый небольшой clock skew.
+- [x] Закрыть найденный listing/GRAM race: bulk listing должен проверять и списывать баланс в одной transaction с условием достаточного остатка.
 - [ ] Построчно проверить основной и резервный Telegram bot flows: ownership, admin rights, idempotent events, entry-link validation и понятные пользовательские ошибки.
+- [ ] Закрыть найденный Telegram onboarding data-integrity defect: при ошибке member-count API не создавать новую карточку с искусственным `0` участников; вернуть владельцу понятную retry-инструкцию.
 - [ ] Построчно проверить listing, TOP ranking, GRAM ledger и moderation flows с фокусом на согласованность статусов и reload-safe UI.
 - [ ] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.
 - [ ] Построчно проверить NFT, deals, rewards, bot catalog и Telegram analytics как второстепенные workflows на broken states и data boundaries.
