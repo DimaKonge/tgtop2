@@ -994,7 +994,7 @@
 - [x] Закрыть критический legacy NFT rental defect: удалить direct rent endpoint/state update, который мог пометить NFT арендованным без protected deal, escrow и external assignment verification.
 - [x] Закрыть critical NFT ownership truthfulness defects: не публиковать on-chain NFT до независимой проверки владения и не менять ownership off-chain NFT в каталоге без внешнего доказательства назначения.
 - [ ] Разбить Home.tsx, routers.ts и db.ts на изолированные domain modules, сохраняя API contracts и добавляя регрессионные тесты на каждый перенос.
-- [ ] Без изменения API извлечь owner-only `telegramUserAgent` endpoints из central `routers.ts` в отдельный domain router with the same server-side owner gate.
-- [ ] Без изменения UI behavior извлечь pure format/parse helpers из `Home.tsx` в shared client module as the first safe page-monolith reduction.
+- [x] Без изменения API извлечь owner-only `telegramUserAgent` endpoints из central `routers.ts` в отдельный domain router with the same server-side owner gate.
+- [x] Без изменения UI behavior извлечь pure format/parse helpers из `Home.tsx` в shared client module as the first safe page-monolith reduction.
 - [ ] Провести mobile-first review ключевых экранов и реальные Telegram E2E-проверки: вход, добавление бота, выбор группы, листинг, снятие, переход, модерация.
 - [ ] Выпустить release candidate только после полного deterministic gate, mobile verification, VPS preflight и явного списка известных ограничений.
