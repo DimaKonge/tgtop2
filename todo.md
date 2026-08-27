@@ -1046,3 +1046,4 @@
 - [x] Убрать пользовательское промежуточное сообщение `Сообщение получено. Ответ придёт сюда от поддержки TG TOP.` из inbound support relay; сохранить доставку карточки в topic «Поддержка» и ответ owner через основной бот.
 - [x] Исправить confirmation после owner support reply: отправлять `✅ Ответ отправлен пользователю.` с тем же `message_thread_id`, а не в General.
 - [x] Расширить inbound support relay на фото, видео, документы, стикеры, GIF/анимации и emoji; сохранять минимальный metadata mapping и разрешать owner reply из закрытого topic.
+- [x] Расширить owner reply в support relay на стикеры, фото, GIF/анимации, видео, документы, audio/voice и emoji; отправлять reply пользователю от `@TG_TOPBOT` и подтверждать в исходном topic.

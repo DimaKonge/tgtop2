@@ -73,5 +73,7 @@ describe("Telegram support relay contract", () => {
     expect(botSource).toContain('"sendDocument"');
     expect(botSource).toContain("message.photo?.length");
     expect(botSource).toContain("message.sticker");
+    expect(botSource).toContain("const mediaLabel = supportMediaLabel(message);");
+    expect(botSource).toContain("sendSupportOwnerMessage(message, { chatId: inbound.telegramUserId");
   });
 });

@@ -250,20 +250,19 @@ async function handleSupportReply(message: NonNullable<TelegramUpdate["message"]
   if (!message.from || message.from.is_bot || !(await isAuthorizedOperationsOwner(message))) return false;
   const replyId = message.reply_to_message?.message_id;
   const text = message.text?.trim();
-  if (!replyId || !text || text.startsWith("/")) return false;
+  const mediaLabel = supportMediaLabel(message);
+  if (!replyId || ((!text && !mediaLabel) || text?.startsWith("/"))) return false;
   const destination = await getTelegramOperationLogDestination("support");
   if (!destination || destination.chatId !== catalogChatId(message.chat.id)) return false;
   if (destination.messageThreadId !== null && destination.messageThreadId !== message.message_thread_id) return false;
   const inbound = await getTelegramSupportMessageByOwnerNotification(String(replyId));
   if (!inbound) return false;
-  const delivered = await telegramCall<{ message_id: number }>("sendMessage", {
-    chat_id: inbound.telegramUserId,
-    text: text.slice(0, 4_000),
-  });
+  const replyText = (text ?? `[${mediaLabel}]${message.caption ? ` ${message.caption.trim()}` : ""}`).slice(0, 4_000);
+  const delivered = await sendSupportOwnerMessage(message, { chatId: inbound.telegramUserId, messageThreadId: null }, replyText);
   await recordTelegramSupportOutbound({
     telegramUserId: inbound.telegramUserId,
     telegramUsername: inbound.telegramUsername,
-    text: text.slice(0, 4_000),
+    text: replyText,
     telegramMessageId: String(delivered.message_id),
   });
   await telegramCall<boolean>("sendMessage", {
