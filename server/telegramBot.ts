@@ -538,7 +538,11 @@ async function getMemberCount(chatId: number): Promise<number | undefined> {
 async function getChatProfile(chatId: number): Promise<TelegramChat> { return await telegramCall<TelegramChat>("getChat", { chat_id: chatId }); }
 
 async function openMiniApp(chatId: number, greeting: string): Promise<void> {
-  await telegramCall<boolean>("sendMessage", { chat_id: chatId, text: greeting, reply_markup: { inline_keyboard: [[{ text: "Открыть TG TOP", web_app: { url: miniAppUrl } }]] } });
+  await telegramCall<boolean>("sendMessage", {
+    chat_id: chatId,
+    text: greeting,
+    reply_markup: { inline_keyboard: [[{ text: "Открыть TG TOP", web_app: { url: miniAppUrl } }]] },
+  });
 }
 
 function buildOnboardingConfirmation(group: TelegramChat, awarded: boolean): { text: string; buttons: Array<Array<Record<string, unknown>>> } {
@@ -820,11 +824,11 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
       }));
     }
     await openMiniApp(message.chat.id, attributed
-      ? "Вы присоединились к TG TOP по приглашению. Откройте приложение, чтобы добавить группу и посмотреть каталог."
-      : "Добро пожаловать в TG TOP. Откройте приложение, чтобы управлять каталогом и рейтингом.");
+      ? "Добро пожаловать в TG TOP. Откройте каталог по приглашению и добавьте своё сообщество."
+      : "Добро пожаловать в TG TOP — каталог Telegram-сообществ. Откройте приложение, чтобы начать.");
     return;
   }
-  await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP. Откройте приложение, чтобы управлять каталогом и рейтингом.");
+  await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — каталог Telegram-сообществ. Откройте приложение, чтобы начать.");
 }
 
 function getTelegramPollingErrorSummary(error: unknown): string {

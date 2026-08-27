@@ -1036,3 +1036,6 @@
 - [x] Подготовить topic-aware setup replies: success и owner-denied используют исходный `message_thread_id`; сообщения из General получают отдельное требование открыть нужный topic.
 - [x] Добавить owner-only `/allmembers` в теме «Запуски`: отправлять UTF-8 `.txt` с уникальными аккаунтами, которые запускали бота, по последнему launch от новых к старым, без времени, рефереров, балансов и иных лишних данных.
 - [x] Расширить `/allmembers` до объединённого списка historical known Telegram accounts TG TOP и новых confirmed `/start`; не выдавать исторические profiles за точные bot-start events и сортировать по последней известной активности.
+- [ ] Добавить публичную страницу Privacy Policy на `tgtop.me` для ссылки BotFather; описать Mini App, Telegram account data, support relay, launch audit, storage, retention, security and contact route.
+- [ ] Подготовить и проверить TG TOP description photo 640×360 и отдельный animated avatar asset для BotFather.
+- [x] Создать и подключить frontend route `/privacy-policy` с русской Privacy Policy для TG TOP; TypeScript, build и safe tests прошли.
