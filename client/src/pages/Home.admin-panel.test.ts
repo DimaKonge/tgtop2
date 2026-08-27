@@ -33,4 +33,19 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain('groupAdministratorsQuery.refetch()');
     expect(source).toContain('Обновить список');
   });
+
+  it("renders only Telegram-returned analytics with readable labels and explicit unavailable states", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain('"Total followers": "Всего подписчиков"');
+    expect(source).toContain('"Joined": "Подписались"');
+    expect(source).toContain('"Left": "Отписались"');
+    expect(source).toContain("Telegram не отдал этот график за выбранный период.");
+    expect(source).toContain("const bucketGraph =");
+    expect(source).toContain('title="Уведомления"');
+    expect(source).toContain('title="Языки аудитории"');
+    expect(source).toContain('title="Реакции"');
+    expect(source).toContain('title="Источники новых подписчиков"');
+    expect(source).toContain('showLatest={false}');
+  });
 });
