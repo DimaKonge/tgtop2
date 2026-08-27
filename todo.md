@@ -997,6 +997,6 @@
 - [x] Без изменения API извлечь owner-only `telegramUserAgent` endpoints из central `routers.ts` в отдельный domain router with the same server-side owner gate.
 - [x] Без изменения UI behavior извлечь pure format/parse helpers из `Home.tsx` в shared client module as the first safe page-monolith reduction.
 - [x] Без изменения API извлечь wallet/deposit/withdrawal/manual-review endpoints из central `routers.ts` в isolated finance router, сохранив fail-closed validation, error policy, audit log и main-admin review gate.
-- [ ] Без изменения data flow извлечь pure audience/GRAM/official-Telegram chart panels and metric display из `Home.tsx` в reusable client presentation module.
+- [x] Без изменения data flow извлечь pure audience/GRAM/official-Telegram chart panels and metric display из `Home.tsx` в reusable client presentation module.
 - [ ] Провести mobile-first review ключевых экранов и реальные Telegram E2E-проверки: вход, добавление бота, выбор группы, листинг, снятие, переход, модерация.
 - [ ] Выпустить release candidate только после полного deterministic gate, mobile verification, VPS preflight и явного списка известных ограничений.
