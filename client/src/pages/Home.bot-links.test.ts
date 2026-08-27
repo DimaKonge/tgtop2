@@ -155,7 +155,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('value="onchain"');
     expect(source).toContain('value="offchain"');
     expect(source).toContain('prepareNftTransfer');
-    expect(source).toContain('completeOffchainNftTransfer');
+    expect(source).not.toContain('completeOffchainNftTransfer');
+    expect(source).toContain('Заявка на передачу');
     expect(source).toContain('group.title.slice(0, 1).toUpperCase()');
     expect(source).not.toContain('accept="video/mp4"');
     expect(source).not.toContain('uploadSelectedAnimatedAvatar');
