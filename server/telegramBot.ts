@@ -16,6 +16,12 @@ import {
   claimTelegramEvent,
   flagGroupForModeration,
   getRankedEntryLinkTargets,
+  recordMiniAppLaunch,
+  recordTelegramSupportInbound,
+  recordTelegramSupportOutbound,
+  getTelegramOperationLogDestination,
+  getTelegramSupportMessageByOwnerNotification,
+  linkTelegramSupportOwnerNotification,
   recordVerifiedPublicUsername,
   saveTelegramOperationLogDestination,
   settleStarsRankingPayment,
@@ -24,7 +30,7 @@ import {
 } from "./db";
 import { notifyCommunityEntryLinkInvalidated, notifyCommunityEntryLinkRevalidated, notifyRankingOutbid } from "./telegramNotifications";
 import { ENV } from "./_core/env";
-import { deliverOperationsLog, formatTopActivityLog } from "./telegramOperationsLogger";
+import { deliverOperationsLog, formatLaunchLog, formatTopActivityLog } from "./telegramOperationsLogger";
 
 type TelegramChat = {
   id: number;
@@ -54,11 +60,13 @@ type TelegramUpdate = {
     from?: TelegramUser;
     text?: string;
     caption?: string;
+    message_thread_id?: number;
     new_chat_members?: TelegramUser[];
     left_chat_member?: TelegramUser;
     new_chat_title?: string;
     pinned_message?: unknown;
     successful_payment?: { currency: string; total_amount: number; invoice_payload: string; telegram_payment_charge_id: string };
+    reply_to_message?: { message_id?: number; from?: TelegramUser; text?: string };
   };
   channel_post?: TelegramActivity & { text?: string; caption?: string; message_id: number };
   chat_member?: ChatMemberUpdate;
@@ -70,6 +78,7 @@ const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const reserveBotToken = process.env.TELEGRAM_RESERVE_BOT_TOKEN;
 const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.me";
 const pollTimeoutSeconds = 30;
+let activeBotLabel = "@TG_TOPBOT";
 
 function isBotAdmin(status: string): boolean { return status === "administrator" || status === "creator"; }
 function isChatOwner(status: string): boolean { return status === "creator" || status === "owner"; }
@@ -79,10 +88,13 @@ function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { retu
 function catalogChatId(chatId: number): string { return String(chatId); }
 function publicGroupUrl(chat: TelegramChat): string | undefined { return chat.username ? `https://t.me/${chat.username}` : undefined; }
 
-export function parsePrivateLogDestinationCommand(text: string | undefined): "top_activity" | "finance" | null {
+export function parsePrivateLogDestinationCommand(text: string | undefined): "top_activity" | "finance" | "support" | "launches" | null {
   const normalized = text?.trim().toLowerCase() ?? "";
   if (/^\/tgtop_log_top(?:@\w+)?$/.test(normalized)) return "top_activity";
+  if (/^\/tgtop_log_connections(?:@\w+)?$/.test(normalized)) return "top_activity";
   if (/^\/tgtop_log_finance(?:@\w+)?$/.test(normalized)) return "finance";
+  if (/^\/tgtop_support(?:@\w+)?$/.test(normalized)) return "support";
+  if (/^\/tgtop_log_launches(?:@\w+)?$/.test(normalized)) return "launches";
   return null;
 }
 
@@ -93,21 +105,96 @@ async function configurePrivateLogDestination(message: NonNullable<TelegramUpdat
     await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Эту закрытую log-группу может подключить только владелец TG TOP." }).catch(() => {});
     return true;
   }
-  if (message.chat.type !== "group" && message.chat.type !== "supergroup") {
-    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Подключите private-группу, а не личный чат." }).catch(() => {});
+  if (message.chat.type !== "group" && message.chat.type !== "supergroup" && message.chat.type !== "channel") {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Подключите закрытую группу или канал, а не личный чат." }).catch(() => {});
     return true;
   }
   await saveTelegramOperationLogDestination({
     kind,
     chatId: catalogChatId(message.chat.id),
+    messageThreadId: message.message_thread_id ?? null,
     chatTitle: message.chat.title ?? null,
     configuredByOpenId: ENV.ownerOpenId,
   });
-  const label = kind === "top_activity" ? "TOP-активность" : "Финансы";
+  const label = kind === "top_activity" ? "TOP-активность" : kind === "finance" ? "Финансы" : kind === "support" ? "Поддержка" : "Запуски";
   await telegramCall<boolean>("sendMessage", {
     chat_id: message.chat.id,
     text: `✅ Private log «${label}» подключён. Сюда будут приходить только подтверждённые события TG TOP. Никаких команд управления деньгами этот журнал не выполняет.`,
   }).catch(() => {});
+  return true;
+}
+
+function ownerTelegramChatId(): string | null {
+  const match = ENV.ownerOpenId?.match(/^telegram:(-?\d+)$/);
+  return match?.[1] ?? null;
+}
+
+async function handleSupportReply(message: NonNullable<TelegramUpdate["message"]>) {
+  if (activeBotLabel.toLowerCase() !== "@tg_topbot") return false;
+  if (message.chat.type !== "group" && message.chat.type !== "supergroup") return false;
+  if (!message.from || message.from.is_bot || message.from.id.toString() !== ownerTelegramChatId()) return false;
+  const replyId = message.reply_to_message?.message_id;
+  const text = message.text?.trim();
+  if (!replyId || !text || text.startsWith("/")) return false;
+  const destination = await getTelegramOperationLogDestination("support");
+  if (!destination || destination.chatId !== catalogChatId(message.chat.id)) return false;
+  if (destination.messageThreadId !== null && destination.messageThreadId !== message.message_thread_id) return false;
+  const inbound = await getTelegramSupportMessageByOwnerNotification(String(replyId));
+  if (!inbound) return false;
+  const delivered = await telegramCall<{ message_id: number }>("sendMessage", {
+    chat_id: inbound.telegramUserId,
+    text: text.slice(0, 4_000),
+  });
+  await recordTelegramSupportOutbound({
+    telegramUserId: inbound.telegramUserId,
+    telegramUsername: inbound.telegramUsername,
+    text: text.slice(0, 4_000),
+    telegramMessageId: String(delivered.message_id),
+  });
+  await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "✅ Ответ отправлен пользователю." });
+  return true;
+}
+
+async function handleSupportInbound(message: NonNullable<TelegramUpdate["message"]>) {
+  if (activeBotLabel.toLowerCase() !== "@tg_topbot") return false;
+  if (message.chat.type !== "private" || !message.from || message.from.is_bot) return false;
+  const text = message.text?.trim();
+  if (!text || text.startsWith("/")) return false;
+  const destination = await getTelegramOperationLogDestination("support");
+  if (!destination) {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Поддержка временно не подключена. Попробуйте позже." }).catch(() => {});
+    return true;
+  }
+  const inboundId = await recordTelegramSupportInbound({
+    telegramUserId: String(message.from.id),
+    telegramUsername: message.from.username ?? null,
+    text: text.slice(0, 4_000),
+    telegramMessageId: String(message.message_id),
+  });
+  const ownerMessage = await telegramCall<{ message_id: number }>("sendMessage", {
+    chat_id: destination.chatId,
+    ...(destination.messageThreadId ? { message_thread_id: destination.messageThreadId } : {}),
+    text: [
+      "📩 Новое сообщение в поддержку TG TOP",
+      `Пользователь: ${message.from.username ? `@${message.from.username}` : `ID ${message.from.id}`}`,
+      "",
+      text.slice(0, 3_600),
+      "",
+      "Ответьте реплаем на эту карточку — бот отправит ответ пользователю.",
+    ].join("\n"),
+    disable_web_page_preview: true,
+  });
+  await linkTelegramSupportOwnerNotification(inboundId, String(ownerMessage.message_id));
+  const acknowledgement = await telegramCall<{ message_id: number }>("sendMessage", {
+    chat_id: message.chat.id,
+    text: "Сообщение получено. Ответ придёт сюда от поддержки TG TOP.",
+  });
+  await recordTelegramSupportOutbound({
+    telegramUserId: String(message.from.id),
+    telegramUsername: message.from.username ?? null,
+    text: "Сообщение получено. Ответ придёт сюда от поддержки TG TOP.",
+    telegramMessageId: String(acknowledgement.message_id),
+  });
   return true;
 }
 
@@ -543,6 +630,8 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     return;
   }
   const message = update.message;
+  if (message && await handleSupportReply(message)) return;
+  if (message && await handleSupportInbound(message)) return;
   if (message?.successful_payment) {
     const payment = message.successful_payment;
     if (!message.from || payment.currency !== "XTR") return;
@@ -606,6 +695,19 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     await upsertUser({ openId, name: message.from.username ?? message.from.first_name ?? "Telegram user", telegramUsername: message.from.username ?? null, loginMethod: "telegram-bot", lastSignedIn: new Date() });
     const referralCode = getReferralCodeFromStartText(message.text);
     const attributed = referralCode ? await attributeTelegramReferral(message.from.id, referralCode) : false;
+    const launch = await recordMiniAppLaunch({
+      userOpenId: openId,
+      source: attributed ? "referral" : "direct",
+      startParam: attributed ? `ref_${referralCode}` : undefined,
+      sessionKey: `telegram_bot_start:${message.from.id}`,
+    });
+    if (launch.isNew) {
+      void deliverOperationsLog("launches", formatLaunchLog({
+        username: message.from.username ?? null,
+        userId: String(message.from.id),
+        source: attributed ? "referral" : "direct",
+      }));
+    }
     await openMiniApp(message.chat.id, attributed
       ? "Вы присоединились к TG TOP по приглашению. Откройте приложение, чтобы добавить группу и посмотреть каталог."
       : "Добро пожаловать в TG TOP. Откройте приложение, чтобы управлять каталогом и рейтингом.");
@@ -647,6 +749,7 @@ export function getTelegramEventKey(update: TelegramUpdate): string | null {
 
 export async function runTelegramBot(botLabel = "@TG_TOPBOT"): Promise<void> {
   if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
+  activeBotLabel = botLabel;
   console.info(`[Telegram] Starting long-polling for ${botLabel}`);
   let offset = 0;
   while (true) {

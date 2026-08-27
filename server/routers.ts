@@ -14,6 +14,7 @@ import { canResolveVerifiedEntryLink } from "./entryLinkAccess";
 import { countSuccessfulTelegramAnnouncements } from "./listingAnnouncementPolicy";
 import { telegramUserAgentRouter } from "./routers/telegramUserAgentRouter";
 import { financeProcedures } from "./routers/financeRouter";
+import { supportRouter } from "./routers/supportRouter";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -49,6 +50,7 @@ export const appRouter = router({
   }),
 
   telegramUserAgent: telegramUserAgentRouter,
+  support: supportRouter,
 
   tgTop: router({
     ...financeProcedures,

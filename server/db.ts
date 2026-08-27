@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, miniAppLaunchEvents, telegramSupportMessages, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -315,7 +315,7 @@ export async function getLatestTelegramStatsSnapshot(targetId: number) {
   return snapshot;
 }
 
-export async function getTelegramOperationLogDestination(kind: "top_activity" | "finance") {
+export async function getTelegramOperationLogDestination(kind: "top_activity" | "finance" | "support" | "launches") {
   const db = await getDb();
   if (!db) return undefined;
   const [destination] = await db.select().from(telegramOperationLogDestinations).where(eq(telegramOperationLogDestinations.kind, kind)).limit(1);
@@ -323,8 +323,9 @@ export async function getTelegramOperationLogDestination(kind: "top_activity" | 
 }
 
 export async function saveTelegramOperationLogDestination(input: {
-  kind: "top_activity" | "finance";
+  kind: "top_activity" | "finance" | "support" | "launches";
   chatId: string;
+  messageThreadId?: number | null;
   chatTitle?: string | null;
   configuredByOpenId: string;
 }) {
@@ -333,6 +334,7 @@ export async function saveTelegramOperationLogDestination(input: {
   await db.insert(telegramOperationLogDestinations).values(input).onDuplicateKeyUpdate({
     set: {
       chatId: input.chatId,
+      messageThreadId: input.messageThreadId ?? null,
       chatTitle: input.chatTitle ?? null,
       configuredByOpenId: input.configuredByOpenId,
     },
@@ -1841,6 +1843,79 @@ export async function getModerationAccess(openId: string) {
   const [user] = await db.select({ role: users.role }).from(users).where(eq(users.openId, openId)).limit(1);
   const role = user?.role ?? "user";
   return { role, canModerate: role === "admin" || role === "moderator", canManageModerators: role === "admin" };
+}
+
+export async function recordMiniAppLaunch(input: { userOpenId: string; source: string; startParam?: string; sessionKey: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [existing] = await db.select({ id: miniAppLaunchEvents.id }).from(miniAppLaunchEvents).where(eq(miniAppLaunchEvents.sessionKey, input.sessionKey)).limit(1);
+  if (existing) return { recorded: true, isNew: false } as const;
+  try {
+    await db.insert(miniAppLaunchEvents).values(input);
+    return { recorded: true, isNew: true } as const;
+  } catch (error) {
+    if (isDuplicateTelegramEventError(error)) return { recorded: true, isNew: false } as const;
+    throw error;
+  }
+}
+
+export async function getMiniAppLaunches(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    id: miniAppLaunchEvents.id,
+    userOpenId: miniAppLaunchEvents.userOpenId,
+    telegramUsername: users.telegramUsername,
+    userName: users.name,
+    source: miniAppLaunchEvents.source,
+    startParam: miniAppLaunchEvents.startParam,
+    createdAt: miniAppLaunchEvents.createdAt,
+  }).from(miniAppLaunchEvents)
+    .leftJoin(users, eq(users.openId, miniAppLaunchEvents.userOpenId))
+    .orderBy(desc(miniAppLaunchEvents.createdAt))
+    .limit(limit);
+}
+
+export async function recordTelegramSupportInbound(input: { telegramUserId: string; telegramUsername?: string | null; text: string; telegramMessageId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(telegramSupportMessages).values({ ...input, direction: "inbound" }).onDuplicateKeyUpdate({
+    set: { telegramMessageId: sql`${telegramSupportMessages.telegramMessageId}` },
+  });
+  const [row] = await db.select({ id: telegramSupportMessages.id }).from(telegramSupportMessages).where(and(
+    eq(telegramSupportMessages.telegramUserId, input.telegramUserId),
+    eq(telegramSupportMessages.telegramMessageId, input.telegramMessageId),
+    eq(telegramSupportMessages.direction, "inbound"),
+  )).limit(1);
+  if (!row) throw new Error("Support message was not persisted");
+  return row.id;
+}
+
+export async function linkTelegramSupportOwnerNotification(messageId: number, ownerNotificationMessageId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(telegramSupportMessages).set({ ownerNotificationMessageId }).where(eq(telegramSupportMessages.id, messageId));
+}
+
+export async function getTelegramSupportMessageByOwnerNotification(ownerNotificationMessageId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [row] = await db.select().from(telegramSupportMessages).where(eq(telegramSupportMessages.ownerNotificationMessageId, ownerNotificationMessageId)).limit(1);
+  return row;
+}
+
+export async function recordTelegramSupportOutbound(input: { telegramUserId: string; telegramUsername?: string | null; text: string; telegramMessageId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(telegramSupportMessages).values({ ...input, direction: "outbound" }).onDuplicateKeyUpdate({
+    set: { telegramMessageId: sql`${telegramSupportMessages.telegramMessageId}` },
+  });
+}
+
+export async function getTelegramSupportInbox(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(telegramSupportMessages).orderBy(desc(telegramSupportMessages.createdAt)).limit(limit);
 }
 
 export async function getCatalogTaxonomy() {

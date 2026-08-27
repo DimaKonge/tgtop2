@@ -23,6 +23,21 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+export const miniAppLaunchEvents = mysqlTable("mini_app_launch_events", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  source: varchar("source", { length: 32 }).notNull(),
+  startParam: varchar("startParam", { length: 128 }),
+  sessionKey: varchar("sessionKey", { length: 128 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("mini_app_launch_session_unique").on(table.sessionKey),
+  index("mini_app_launch_created_idx").on(table.createdAt),
+  index("mini_app_launch_source_created_idx").on(table.source, table.createdAt),
+]);
+
+export type MiniAppLaunchEvent = typeof miniAppLaunchEvents.$inferSelect;
+
 export const websiteLoginSessions = mysqlTable("website_login_sessions", {
   nonce: varchar("nonce", { length: 96 }).primaryKey(),
   telegramOpenId: varchar("telegramOpenId", { length: 64 }),
@@ -41,6 +56,24 @@ export const telegramEventReceipts = mysqlTable("telegram_event_receipts", {
 });
 
 export type TelegramEventReceipt = typeof telegramEventReceipts.$inferSelect;
+
+export const telegramSupportMessages = mysqlTable("telegram_support_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  telegramUserId: varchar("telegramUserId", { length: 64 }).notNull(),
+  telegramUsername: varchar("telegramUsername", { length: 128 }),
+  direction: mysqlEnum("direction", ["inbound", "outbound"]).notNull(),
+  text: text("text").notNull(),
+  telegramMessageId: varchar("telegramMessageId", { length: 64 }).notNull(),
+  ownerNotificationMessageId: varchar("ownerNotificationMessageId", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("telegram_support_message_unique").on(table.telegramUserId, table.telegramMessageId, table.direction),
+  uniqueIndex("telegram_support_owner_notification_unique").on(table.ownerNotificationMessageId),
+  index("telegram_support_user_created_idx").on(table.telegramUserId, table.createdAt),
+  index("telegram_support_created_idx").on(table.createdAt),
+]);
+
+export type TelegramSupportMessage = typeof telegramSupportMessages.$inferSelect;
 
 export const telegramUserAgentSessions = mysqlTable("telegram_user_agent_sessions", {
   id: int("id").autoincrement().primaryKey(),
@@ -153,8 +186,9 @@ export type TelegramStatsSnapshot = typeof telegramStatsSnapshots.$inferSelect;
 
 export const telegramOperationLogDestinations = mysqlTable("telegram_operation_log_destinations", {
   id: int("id").autoincrement().primaryKey(),
-  kind: mysqlEnum("kind", ["top_activity", "finance"]).notNull(),
+  kind: mysqlEnum("kind", ["top_activity", "finance", "support", "launches"]).notNull(),
   chatId: varchar("chatId", { length: 64 }).notNull(),
+  messageThreadId: int("messageThreadId"),
   chatTitle: varchar("chatTitle", { length: 255 }),
   configuredByOpenId: varchar("configuredByOpenId", { length: 64 }).notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

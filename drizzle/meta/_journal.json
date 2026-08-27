@@ -400,6 +400,34 @@
       "when": 1787810574028,
       "tag": "0056_luxuriant_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "5",
+      "when": 1787840987031,
+      "tag": "0057_tough_red_ghost",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "5",
+      "when": 1787841175602,
+      "tag": "0058_nice_the_twelve",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "5",
+      "when": 1787841476174,
+      "tag": "0059_bright_hammerhead",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "5",
+      "when": 1787843942789,
+      "tag": "0060_amusing_longshot",
+      "breakpoints": true
     }
   ]
 }

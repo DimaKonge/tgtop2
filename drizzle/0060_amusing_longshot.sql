@@ -1,0 +1,2 @@
+ALTER TABLE `telegram_operation_log_destinations` MODIFY COLUMN `kind` enum('top_activity','finance','support','launches') NOT NULL;--> statement-breakpoint
+ALTER TABLE `telegram_operation_log_destinations` ADD `messageThreadId` int;

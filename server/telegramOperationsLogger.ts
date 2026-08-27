@@ -1,9 +1,9 @@
 import axios from "axios";
 import { getTelegramOperationLogDestination } from "./db";
 
-export type OperationsLogKind = "top_activity" | "finance";
+export type OperationsLogKind = "top_activity" | "finance" | "launches";
 
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const botToken = process.env.TELEGRAM_RESERVE_BOT_TOKEN;
 
 function sanitizeLine(value: string, maximum = 120) {
   return value.replace(/[\r\n]+/g, " ").trim().slice(0, maximum);
@@ -42,6 +42,16 @@ export function formatFinanceLog(input: { event: "deposit_confirmed" | "withdraw
   ].join("\n");
 }
 
+export function formatLaunchLog(input: { username?: string | null; userId: string; source: "direct" | "referral"; referrerUsername?: string | null; createdAt?: Date }) {
+  return [
+    "🚀 Новый запуск TG TOP",
+    "",
+    `Пользователь: ${input.username ? `@${sanitizeLine(input.username.replace(/^@/, ""), 64)}` : `ID ${sanitizeLine(input.userId, 48)}`}`,
+    ...(input.source === "referral" && input.referrerUsername ? [`Пришёл от: @${sanitizeLine(input.referrerUsername.replace(/^@/, ""), 64)}`] : []),
+    `Время: ${(input.createdAt ?? new Date()).toISOString()}`,
+  ].join("\n");
+}
+
 export async function deliverOperationsLog(kind: OperationsLogKind, text: string) {
   if (!botToken) return false;
   const destination = await getTelegramOperationLogDestination(kind);
@@ -49,6 +59,7 @@ export async function deliverOperationsLog(kind: OperationsLogKind, text: string
   try {
     const response = await axios.post<{ ok: boolean }>(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       chat_id: destination.chatId,
+      ...(destination.messageThreadId ? { message_thread_id: destination.messageThreadId } : {}),
       text: text.slice(0, 3_800),
       disable_web_page_preview: true,
     }, { timeout: 15_000 });
