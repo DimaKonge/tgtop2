@@ -1068,3 +1068,6 @@
 - [x] Подогнать экран профиля и баланс-карточки под единые Telegram Clean surfaces без изменения финансовой логики.
 - [x] Подогнать SettingsSheet под единый Telegram Clean стиль: секции, разделители, акцентные controls и читаемые состояния тем.
 - [x] Исправить category TOP fallback: каналы и чаты из списка ниже должны заполнять доступные верхние TOP-слоты своей категории до показа пустых ячеек.
+- [ ] Выпустить проверенный category TOP fallback на production VPS через staged release и подтвердить health без финансовых действий.
+- [ ] В том же staged release выкатить Telegram Clean тему: navy surfaces, SettingsSheet, outline icons, Gift-палитру и Liquid Glass нижнюю панель.
+- [x] Добавить в верхнюю навигацию TG TOP кнопку «Создать» с выбором только «Канал» или «Чат» и переходом в существующий onboarding @TG_TOPBOT.

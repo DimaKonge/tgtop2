@@ -987,6 +987,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     }
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
   const language = getRussianLanguage();
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
@@ -2868,10 +2869,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <button
             onClick={() => setPage("top")}
-            className="flex items-center gap-2"
+            className="flex shrink-0 items-center gap-2"
           >
             <BrandMark />
-            <b className="text-sm tracking-tight">TG TOP</b>
+            <b className="whitespace-nowrap text-sm tracking-tight">TG TOP</b>
           </button>
           <div className="flex items-center gap-2">
             {isAuthenticated && (
@@ -2883,6 +2884,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <b className="block whitespace-nowrap text-[12px] font-semibold tracking-tight text-[#b9d6ff]">{totalBalanceLabel}</b>
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              aria-label={tx("Создать канал или чат", "Create a channel or chat")}
+              className="flex h-8 items-center gap-1.5 rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/14 px-2 text-[11px] font-semibold text-[#b9d6ff] shadow-[0_4px_14px_rgba(31,104,224,0.12)] transition-colors hover:border-[#72a8ff]/55 hover:bg-[#3f8cff]/22"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden min-[440px]:inline">{tx("Создать", "Create")}</span>
+            </button>
             <button
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
@@ -2913,10 +2923,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             ) : (
               <button
                 onClick={() => startTelegramLogin()}
-                className="flex items-center gap-2 rounded-xl border border-[#3f8cff]/40 bg-[#3f8cff]/15 px-3.5 py-1.5 text-xs font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/25"
+                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-[#3f8cff]/40 bg-[#3f8cff]/15 px-3 py-1.5 text-[11px] font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/25"
               >
                 <Send className="h-3.5 w-3.5 text-[#72a8ff]" />
-                <span>Войти через Telegram</span>
+                <span className="min-[440px]:hidden">Войти</span>
+                <span className="hidden min-[440px]:inline">Войти через Telegram</span>
               </button>
             )}
           </div>
@@ -5404,6 +5415,26 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
       />
+      <Sheet open={createOpen} onOpenChange={setCreateOpen}>
+        <SheetContent side="bottom" className="max-h-[48dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-[calc(1rem+env(safe-area-inset-bottom))] text-slate-100">
+          <SheetHeader className="border-b border-white/8 px-4 pb-3 text-left">
+            <SheetTitle className="text-base font-semibold tracking-tight text-slate-100">{tx("Создать площадку", "Create a community")}</SheetTitle>
+            <p className="text-[11px] leading-4 text-slate-500">{tx("Выберите тип — Telegram откроет добавление @TG_TOPBOT администратором.", "Choose a type — Telegram will open @TG_TOPBOT administrator setup.")}</p>
+          </SheetHeader>
+          <div className="space-y-2 px-4 pt-3">
+            <button type="button" onClick={() => { setCreateOpen(false); startBotAdminSetup("channel"); }} className="tg-clean-surface flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-[#111720] px-3 py-3 text-left shadow-[0_8px_22px_rgba(2,8,16,0.12)] transition-colors hover:border-[#3f8cff]/40 hover:bg-[#14263b]/55">
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/12 text-[#8fb9ff]"><Send className="h-5 w-5" /></span>
+              <span className="min-w-0 flex-1"><b className="block text-sm text-slate-100">{tx("Канал", "Channel")}</b><small className="mt-0.5 block text-[11px] text-slate-500">{tx("Публикации и подписчики", "Posts and subscribers")}</small></span>
+              <ChevronRight className="h-5 w-5 text-slate-500" />
+            </button>
+            <button type="button" onClick={() => { setCreateOpen(false); startBotAdminSetup("group"); }} className="tg-clean-surface flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-[#111720] px-3 py-3 text-left shadow-[0_8px_22px_rgba(2,8,16,0.12)] transition-colors hover:border-[#3f8cff]/40 hover:bg-[#14263b]/55">
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/12 text-[#8fb9ff]"><MessageSquare className="h-5 w-5" /></span>
+              <span className="min-w-0 flex-1"><b className="block text-sm text-slate-100">{tx("Чат", "Chat")}</b><small className="mt-0.5 block text-[11px] text-slate-500">{tx("Сообщество и обсуждения", "Community and discussions")}</small></span>
+              <ChevronRight className="h-5 w-5 text-slate-500" />
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
       <Sheet open={Boolean(adminGuideKind)} onOpenChange={open => !open && setAdminGuideKind(null)}>
         <SheetContent side="bottom" className="!bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[52dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-[calc(1rem+env(safe-area-inset-bottom))] text-slate-100">
           <SheetHeader className="px-4 pb-2">

@@ -10,6 +10,15 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('startgroup=tgtop_admin&admin=${groupAdminRights}');
     expect(source).toContain('delete_messages+invite_users+pin_messages+manage_chat');
     expect(source).toContain('setAdminGuideKind(kind)');
+    expect(source).toContain('setCreateOpen(true)');
+    expect(source).toContain('tx("Создать площадку", "Create a community")');
+    expect(source).toContain('startBotAdminSetup("channel")');
+    expect(source).toContain('startBotAdminSetup("group")');
+    const createSheet = source.slice(source.indexOf('<Sheet open={createOpen}'), source.indexOf('<Sheet open={Boolean(adminGuideKind)}'));
+    expect(createSheet).toContain('tx("Канал", "Channel")');
+    expect(createSheet).toContain('tx("Чат", "Chat")');
+    expect(createSheet.match(/startBotAdminSetup\("(?:channel|group)"\)/g)).toHaveLength(2);
+    expect(createSheet).not.toContain('tx("Группа", "Group")');
     expect(source).toContain('tx("Подтвердите права администратора", "Confirm administrator rights")');
     expect(source).toContain('Telegram should show Add as administrator, not Add as member.');
     expect(source).not.toContain("GiftsLabBot");
