@@ -970,7 +970,7 @@
 - [x] Провести stabilisation audit перед рабочим релизом: зафиксировать только подтверждённые поломки пользовательских путей, production-инфраструктуры, данных и финансовых границ, без добавления новых функций.
 - [x] Подготовить владельцу простую актуальную карту архитектуры TG TOP: Mini App, API, база, два Telegram-бота, рабочий Telegram-аккаунт, payout worker, VPS и release/rollback границы.
 - [x] Сформировать короткий приоритетный план «сначала стабилизируем, затем запускаем» с понятными критериями готовности к реальному запуску.
-- [ ] Построчно проверить release-vps.sh и VPS release storage: retention, preflight свободного места, failed-stage cleanup, rollback и health gates.
+- [x] Построчно проверить release-vps.sh и VPS release storage: retention, preflight свободного места, failed-stage cleanup, rollback и health gates.
 - [ ] Построчно проверить authentication, tRPC role gates и все owner/moderator/finance privileged procedures на fail-closed доступ.
 - [ ] Построчно проверить основной и резервный Telegram bot flows: ownership, admin rights, idempotent events, entry-link validation и понятные пользовательские ошибки.
 - [ ] Построчно проверить listing, TOP ranking, GRAM ledger и moderation flows с фокусом на согласованность статусов и reload-safe UI.
