@@ -1035,3 +1035,4 @@
 - [x] Подготовить code-path immutable owner binding: до первой привязки допускается только `@dimij` со статусом Telegram `creator/owner`; далее команды и support replies сверяются с сохранёнными chat ID и Telegram ID.
 - [x] Подготовить topic-aware setup replies: success и owner-denied используют исходный `message_thread_id`; сообщения из General получают отдельное требование открыть нужный topic.
 - [x] Добавить owner-only `/allmembers` в теме «Запуски`: отправлять UTF-8 `.txt` с уникальными аккаунтами, которые запускали бота, по последнему launch от новых к старым, без времени, рефереров, балансов и иных лишних данных.
+- [x] Расширить `/allmembers` до объединённого списка historical known Telegram accounts TG TOP и новых confirmed `/start`; не выдавать исторические profiles за точные bot-start events и сортировать по последней известной активности.

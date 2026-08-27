@@ -1,4 +1,4 @@
-import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, sql } from "drizzle-orm";
+import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, like, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
 import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, telegramOperationsOwnerBindings, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, miniAppLaunchEvents, telegramSupportMessages, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
@@ -1919,6 +1919,35 @@ export async function getUniqueMiniAppLaunchMembers() {
     if (!uniqueMembers.has(launch.userOpenId)) uniqueMembers.set(launch.userOpenId, launch);
   }
   return Array.from(uniqueMembers.values());
+}
+
+export async function getAllKnownTelegramMembers() {
+  const db = await getDb();
+  if (!db) return [];
+  const [launches, historicalUsers] = await Promise.all([
+    db.select({
+      userOpenId: miniAppLaunchEvents.userOpenId,
+      telegramUsername: users.telegramUsername,
+      lastActivity: miniAppLaunchEvents.createdAt,
+      source: sql<"confirmed_start">`'confirmed_start'`,
+    }).from(miniAppLaunchEvents)
+      .leftJoin(users, eq(users.openId, miniAppLaunchEvents.userOpenId))
+      .orderBy(desc(miniAppLaunchEvents.createdAt)),
+    db.select({
+      userOpenId: users.openId,
+      telegramUsername: users.telegramUsername,
+      lastActivity: users.lastSignedIn,
+      source: sql<"historical_profile">`'historical_profile'`,
+    }).from(users).where(like(users.openId, "telegram:%")),
+  ]);
+  const members = new Map<string, { userOpenId: string; telegramUsername: string | null; lastActivity: Date; source: "confirmed_start" | "historical_profile" }>();
+  for (const member of [...launches, ...historicalUsers]) {
+    const current = members.get(member.userOpenId);
+    if (!current || member.lastActivity > current.lastActivity) {
+      members.set(member.userOpenId, member);
+    }
+  }
+  return Array.from(members.values()).sort((left, right) => right.lastActivity.getTime() - left.lastActivity.getTime());
 }
 
 export async function recordTelegramSupportInbound(input: { telegramUserId: string; telegramUsername?: string | null; text: string; telegramMessageId: string }) {

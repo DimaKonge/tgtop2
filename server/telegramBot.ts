@@ -19,6 +19,7 @@ import {
   getRankedEntryLinkTargets,
   getTelegramReferralReferrer,
   getTelegramOperationsOwnerBinding,
+  getAllKnownTelegramMembers,
   getUniqueMiniAppLaunchMembers,
   recordMiniAppLaunch,
   recordTelegramSupportInbound,
@@ -199,7 +200,7 @@ async function handleAllMembersExport(message: NonNullable<TelegramUpdate["messa
     await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, ...topicReply, text: "Сначала подключите этот topic командой /tgtop_log_launches@TGTOP_robot." }).catch(() => {});
     return true;
   }
-  const members = await getUniqueMiniAppLaunchMembers();
+  const members = await getAllKnownTelegramMembers();
   if (!members.length) {
     await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, ...topicReply, text: "Подтверждённых запусков пока нет." }).catch(() => {});
     return true;
