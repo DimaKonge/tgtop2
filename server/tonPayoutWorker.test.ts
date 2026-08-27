@@ -24,12 +24,12 @@ describe("isolated TON payout worker", () => {
   });
 
   it("keeps the public API on a short DB-only payout path", () => {
-    const router = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
+    const financeRouter = readFileSync(new URL("./routers/financeRouter.ts", import.meta.url), "utf8");
     const dbSource = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
     const worker = readFileSync(new URL("./tonPayoutWorker.ts", import.meta.url), "utf8");
 
-    expect(router).not.toContain("broadcastQueuedTonWithdrawal");
-    expect(router).toContain("enqueueTonWithdrawalReconciliation");
+    expect(financeRouter).not.toContain("broadcastQueuedTonWithdrawal");
+    expect(financeRouter).toContain("enqueueTonWithdrawalReconciliation");
     expect(dbSource).not.toContain("let payoutQueue");
     expect(dbSource).toContain("tonPayoutJobs");
     expect(dbSource).toContain('process.env.TON_PAYOUT_WORKER_BROADCAST_ENABLED === "true"');
