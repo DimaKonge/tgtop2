@@ -13,4 +13,10 @@ describe("manual moderation API", () => {
     expect(routerSource).toContain("notifyCommunityRemovedFromTop");
     expect(routerSource).toContain('input.action !== "approve"');
   });
+
+  it("keeps an approved active listing in the listed lifecycle while approving a review-held group returns it pending", () => {
+    const dbSource = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+    expect(dbSource).toContain("getModeratedGroupLifecycle(group.status, action)");
+    expect(dbSource).toContain("listedAt: lifecycle.keepsListedAt ? group.listedAt : null");
+  });
 });

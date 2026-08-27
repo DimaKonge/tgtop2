@@ -8,6 +8,7 @@ import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCa
 import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
 import { assignRankingEntriesToSlots, getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
 import { canEnterTopRanking } from "./rankingListingPolicy";
+import { getModeratedGroupLifecycle } from "./moderationApprovalPolicy";
 import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
 import { canCreateRewardPersonalInviteLink, DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
@@ -1795,19 +1796,18 @@ export async function getActiveModerationListings() {
 export async function moderateGroup(actorOpenId: string, groupId: number, action: "review" | "block" | "approve", reason: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const status = action === "block" ? "blocked" : action === "review" ? "review" : "pending";
-  const moderationStatus = action === "block" ? "blocked" : action === "review" ? "review" : "approved";
   return await db.transaction(async tx => {
-    const [group] = await tx.select({ id: groupsCatalog.id, ownerOpenId: groupsCatalog.ownerOpenId, title: groupsCatalog.title })
+    const [group] = await tx.select({ id: groupsCatalog.id, ownerOpenId: groupsCatalog.ownerOpenId, title: groupsCatalog.title, status: groupsCatalog.status, listedAt: groupsCatalog.listedAt })
       .from(groupsCatalog).where(eq(groupsCatalog.id, groupId)).limit(1);
     if (!group) throw new Error("Площадка не найдена");
+    const lifecycle = getModeratedGroupLifecycle(group.status, action);
     await tx.update(groupsCatalog).set({
-      status,
-      moderationStatus,
+      status: lifecycle.status,
+      moderationStatus: lifecycle.moderationStatus,
       moderationReason: reason,
       moderationReviewedBy: actorOpenId,
       moderationReviewedAt: new Date(),
-      listedAt: null,
+      listedAt: lifecycle.keepsListedAt ? group.listedAt : null,
     }).where(eq(groupsCatalog.id, groupId));
     if (action !== "approve") {
       await tx.update(auctionSlots).set({

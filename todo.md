@@ -984,9 +984,10 @@
 - [x] Закрыть найденный onboarding-link defect: fallback Mini App URL в bot/notifications должен использовать canonical `https://tgtop.me`, не legacy `tgtop.xyz`.
 - [x] Закрыть найденный listing-notification truthfulness defect: возвращать фактическое число успешных Telegram announcements, а не число всех размещённых групп.
 - [ ] Построчно проверить listing, TOP ranking, GRAM ledger и moderation flows с фокусом на согласованность статусов и reload-safe UI.
-- [ ] Закрыть найденный TOP read-side-effect defect: public getSlots должен быть read-only и не создавать доски, не размещать и не переупорядочивать TOP от открытия экрана.
-- [ ] Закрыть найденный TOP/listing status defect: successful paid ranking bid должен atomically переводить выбранное сообщество в `listed` с датой размещения и согласованными listing fields.
-- [ ] Закрыть найденный duplicate listing-announcement defect: повторное сохранение уже размещённой группы не должно автоматически публиковать объявление в Telegram.
+- [x] Закрыть найденный TOP read-side-effect defect: public getSlots должен быть read-only и не создавать доски, не размещать и не переупорядочивать TOP от открытия экрана.
+- [x] Закрыть найденный TOP/listing status defect: successful paid ranking bid должен atomically переводить выбранное сообщество в `listed` с датой размещения и согласованными listing fields.
+- [x] Закрыть найденный duplicate listing-announcement defect: повторное сохранение уже размещённой группы не должно автоматически публиковать объявление в Telegram.
+- [ ] Закрыть найденный moderation approval defect: manual approve активного listing должен сохранять `listed`/`listedAt` и TOP slot, а approve review-held группы — возвращать её в owner-controlled pending state.
 - [ ] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.
 - [ ] Построчно проверить NFT, deals, rewards, bot catalog и Telegram analytics как второстепенные workflows на broken states и data boundaries.
 - [ ] Разбить Home.tsx, routers.ts и db.ts на изолированные domain modules, сохраняя API contracts и добавляя регрессионные тесты на каждый перенос.
