@@ -11,7 +11,6 @@ DRY_RUN="${DRY_RUN:-0}"
 RELEASE="${RELEASE_NAME:-release-$(date -u +%Y%m%dT%H%M%SZ)}"
 STAGE_PORT="${TG_TOP_STAGE_PORT:-3101}"
 ARCHIVE="/tmp/tgtop-${RELEASE}-source.tgz"
-BACKUP_RETENTION="${TG_TOP_BACKUP_RETENTION:-5}"
 MIN_FREE_KB="${TG_TOP_RELEASE_MIN_FREE_KB:-786432}"
 STAGE_RETENTION_MINUTES="${TG_TOP_STAGE_RETENTION_MINUTES:-120}"
 SOURCE_RETENTION_MINUTES="${TG_TOP_SOURCE_RETENTION_MINUTES:-10080}"
@@ -41,17 +40,16 @@ fi
 SSH=(ssh -i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes "$HOST")
 SCP=(scp -i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes)
 
-"${SSH[@]}" 'mkdir -p /opt/tgtop/releases /opt/tgtop/backups'
+"${SSH[@]}" 'mkdir -p /opt/tgtop/releases'
 "${SCP[@]}" "$ARCHIVE" "$HOST:/opt/tgtop/releases/${RELEASE}-source.tgz"
 
-"${SSH[@]}" "RELEASE='$RELEASE' EXPECTED_SHA='$EXPECTED_SHA' STAGE_PORT='$STAGE_PORT' BACKUP_RETENTION='$BACKUP_RETENTION' MIN_FREE_KB='$MIN_FREE_KB' STAGE_RETENTION_MINUTES='$STAGE_RETENTION_MINUTES' SOURCE_RETENTION_MINUTES='$SOURCE_RETENTION_MINUTES' bash -s" <<'REMOTE'
+"${SSH[@]}" "RELEASE='$RELEASE' EXPECTED_SHA='$EXPECTED_SHA' STAGE_PORT='$STAGE_PORT' MIN_FREE_KB='$MIN_FREE_KB' STAGE_RETENTION_MINUTES='$STAGE_RETENTION_MINUTES' SOURCE_RETENTION_MINUTES='$SOURCE_RETENTION_MINUTES' bash -s" <<'REMOTE'
 set -euo pipefail
 BASE=/opt/tgtop
 ARCHIVE="$BASE/releases/${RELEASE}-source.tgz"
 STAGE="$BASE/releases/stage-${RELEASE}"
 PREVIOUS="$BASE/releases/previous-${RELEASE}"
 FAILED="$BASE/releases/failed-${RELEASE}"
-BACKUP="$BASE/backups/pre-${RELEASE}-runtime.tgz"
 LOCK_FILE="$BASE/releases/.release.lock"
 ITEMS=(dist node_modules package.json pnpm-lock.yaml scripts)
 UNITS=(tgtop.service tgtop-bot.service tgtop-bot-reserve.service)
@@ -59,21 +57,11 @@ if [ -f /etc/systemd/system/tgtop-payout-worker.service ]; then UNITS+=(tgtop-pa
 if [ -f /etc/systemd/system/tgtop-owner-dm-worker.service ]; then UNITS+=(tgtop-owner-dm-worker.service); fi
 ACTIVATED=0
 
-prune_runtime_backups() {
-  local keep="$1"
-  local -a stale=()
-  mapfile -t stale < <(find "$BASE/backups" -maxdepth 1 -type f -name 'pre-release-*-runtime.tgz' -printf '%T@ %p\n' | sort -nr | tail -n +$((keep + 1)) | cut -d' ' -f2-)
-  if ((${#stale[@]})); then
-    rm -f -- "${stale[@]}"
-  fi
-}
-
 ensure_release_space() {
   local available_kb
-  prune_runtime_backups "$((BACKUP_RETENTION - 1))"
   available_kb="$(df -Pk "$BASE" | awk 'NR == 2 { print $4 }')"
   if [ -z "$available_kb" ] || [ "$available_kb" -lt "$MIN_FREE_KB" ]; then
-    echo "Insufficient release space: ${available_kb:-0}KB available, ${MIN_FREE_KB}KB required after backup retention" >&2
+    echo "Insufficient release space: ${available_kb:-0}KB available, ${MIN_FREE_KB}KB required" >&2
     exit 1
   fi
 }
@@ -97,7 +85,6 @@ trap rollback ERR
 [ ! -e "$STAGE" ]
 [ ! -e "$PREVIOUS" ]
 [ -x "$BASE/node_modules/.bin/pnpm" ] || { echo "Project-local pnpm is unavailable; refusing release" >&2; exit 1; }
-case "$BACKUP_RETENTION" in ''|*[!0-9]*|0) echo "TG_TOP_BACKUP_RETENTION must be a positive integer" >&2; exit 1;; esac
 case "$MIN_FREE_KB" in ''|*[!0-9]*|0) echo "TG_TOP_RELEASE_MIN_FREE_KB must be a positive integer" >&2; exit 1;; esac
 case "$STAGE_RETENTION_MINUTES" in ''|*[!0-9]*|0) echo "TG_TOP_STAGE_RETENTION_MINUTES must be a positive integer" >&2; exit 1;; esac
 case "$SOURCE_RETENTION_MINUTES" in ''|*[!0-9]*|0) echo "TG_TOP_SOURCE_RETENTION_MINUTES must be a positive integer" >&2; exit 1;; esac
@@ -140,7 +127,6 @@ trap rollback ERR
 # entry-link audit table. It never replays legacy migrations against production.
 node "$STAGE/scripts/apply-entry-link-audit-migration.mjs" >/tmp/tgtop-${RELEASE}-migration.log
 
-tar -C "$BASE" -czf "$BACKUP" "${ITEMS[@]}"
 for item in "${ITEMS[@]}"; do mv "$BASE/$item" "$PREVIOUS/$item"; done
 for item in "${ITEMS[@]}"; do mv "$STAGE/$item" "$BASE/$item"; done
 ACTIVATED=1
@@ -151,9 +137,8 @@ curl -fsS --max-time 15 http://127.0.0.1:3000/healthz >/tmp/tgtop-release-health
 rm -rf -- "$PREVIOUS" "$STAGE"
 rm -f -- "$ARCHIVE"
 prune_release_artifacts
-prune_runtime_backups "$BACKUP_RETENTION"
 trap - ERR
-printf 'release=%s\nbackup=%s\nstage_health=ok\n' "$RELEASE" "$BACKUP"
+printf 'release=%s\nstage_health=ok\n' "$RELEASE"
 REMOTE
 
 rm -f "$ARCHIVE"

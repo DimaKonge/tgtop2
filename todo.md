@@ -972,16 +972,17 @@
 - [x] Сформировать короткий приоритетный план «сначала стабилизируем, затем запускаем» с понятными критериями готовности к реальному запуску.
 - [x] Построчно проверить release-vps.sh и VPS release storage: retention, preflight свободного места, failed-stage cleanup, rollback и health gates.
 - [x] По явному запросу владельца удалить текущие runtime release backup archives на VPS после подтверждения завершения запущенного release; не затрагивать код, MySQL, Telegram-сессии или application data.
+- [ ] По уточнённому запросу владельца отключить persistent retention runtime release archives после успешной активации; оставлять rollback-copy только на время самого staged release.
 - [x] Построчно проверить authentication, tRPC role gates и все owner/moderator/finance privileged procedures на fail-closed доступ.
 - [x] Закрыть найденный entry-link access defect: generic resolver должен выдавать public `@username` всем авторизованным пользователям, но private/monthly invite link — только владельцу или модератору.
 - [x] Закрыть найденный finance access defect: очередь и review заявок вывода должны быть доступны только главному администратору, а не любому модератору.
 - [x] Ужесточить Telegram initData timestamp policy: запретить нецелые, нулевые и слишком будущие signed auth_date, сохранив допустимый небольшой clock skew.
 - [x] Закрыть найденный listing/GRAM race: bulk listing должен проверять и списывать баланс в одной transaction с условием достаточного остатка.
-- [ ] Построчно проверить основной и резервный Telegram bot flows: ownership, admin rights, idempotent events, entry-link validation и понятные пользовательские ошибки.
+- [x] Построчно проверить основной и резервный Telegram bot flows: ownership, admin rights, idempotent events, entry-link validation и понятные пользовательские ошибки.
 - [x] Закрыть найденный Telegram onboarding data-integrity defect: при ошибке member-count API не создавать новую карточку с искусственным `0` участников; вернуть владельцу понятную retry-инструкцию.
 - [x] Закрыть найденный Telegram ownership defect: принимать onboarding/перепривязку сообщества только от Telegram creator/owner, не от произвольного администратора, чтобы исключить захват карточки через re-add бота.
-- [ ] Закрыть найденный onboarding-link defect: fallback Mini App URL в bot/notifications должен использовать canonical `https://tgtop.me`, не legacy `tgtop.xyz`.
-- [ ] Закрыть найденный listing-notification truthfulness defect: возвращать фактическое число успешных Telegram announcements, а не число всех размещённых групп.
+- [x] Закрыть найденный onboarding-link defect: fallback Mini App URL в bot/notifications должен использовать canonical `https://tgtop.me`, не legacy `tgtop.xyz`.
+- [x] Закрыть найденный listing-notification truthfulness defect: возвращать фактическое число успешных Telegram announcements, а не число всех размещённых групп.
 - [ ] Построчно проверить listing, TOP ranking, GRAM ledger и moderation flows с фокусом на согласованность статусов и reload-safe UI.
 - [ ] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.
 - [ ] Построчно проверить NFT, deals, rewards, bot catalog и Telegram analytics как второстепенные workflows на broken states и data boundaries.
