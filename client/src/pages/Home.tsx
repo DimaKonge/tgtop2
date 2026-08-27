@@ -755,6 +755,12 @@ function telegramSeriesLabel(label: string) {
   return TELEGRAM_SERIES_LABELS[label] ?? label;
 }
 
+function telegramSeriesColor(label: string, fallback: string) {
+  if (label === "Joined" || label === "New members") return "#57d5a2";
+  if (label === "Left") return "#f26667";
+  return fallback;
+}
+
 function telegramNotificationPercent(summary: unknown) {
   if (!summary || typeof summary !== "object") return null;
   const notifications = (summary as TelegramAnalyticsSummary).notificationsEnabled;
@@ -780,7 +786,7 @@ function TelegramAnalyticsChart({ title, graph, range, accent = "#72a8ff", showL
   const colors = [accent, "#57d5a2", "#f7b955"];
   const periodLabel = bucketGraph ? "Распределение, которое отдал Telegram" : `до ${new Date(maxX).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}`;
   const latestValue = series.length === 1 ? series[0].points.at(-1)?.value ?? null : null;
-  return <div className="rounded-xl border border-white/8 bg-black/10 p-3"><div className="flex items-start justify-between gap-2"><span><b className="block text-xs text-slate-100">{title}</b><small className="mt-0.5 block text-[10px] text-slate-500">Официальный график Telegram · {periodLabel}</small></span>{showLatest && latestValue !== null ? <b className="text-sm text-slate-100">{Math.round(latestValue).toLocaleString("ru-RU")}</b> : null}</div><svg className="mt-3 h-28 w-full overflow-visible" viewBox="0 0 300 112" role="img" aria-label={title}>{[28, 56, 84].map(y => <line key={y} x1="0" y1={y} x2="300" y2={y} stroke="rgba(148,163,184,.16)" strokeWidth="1" />)}{series.map((item, index) => <polyline key={item.key} fill="none" stroke={colors[index]} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={item.points.map(point => `${((point.at - minX) / spanX) * 300},${94 - ((point.value - minY) / spanY) * 78}`).join(" ")} />)}</svg><div className="mt-1 flex min-w-0 flex-wrap gap-x-3 gap-y-1">{series.map((item, index) => <small key={item.key} className="flex min-w-0 items-center gap-1 text-[9px] text-slate-500"><i className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: colors[index] }} />{telegramSeriesLabel(item.label)}</small>)}</div></div>;
+  return <div className="rounded-xl border border-white/8 bg-black/10 p-3"><div className="flex items-start justify-between gap-2"><span><b className="block text-xs text-slate-100">{title}</b><small className="mt-0.5 block text-[10px] text-slate-500">Официальный график Telegram · {periodLabel}</small></span>{showLatest && latestValue !== null ? <b className="text-sm text-slate-100">{Math.round(latestValue).toLocaleString("ru-RU")}</b> : null}</div><svg className="mt-3 h-28 w-full overflow-visible" viewBox="0 0 300 112" role="img" aria-label={title}>{[28, 56, 84].map(y => <line key={y} x1="0" y1={y} x2="300" y2={y} stroke="rgba(148,163,184,.16)" strokeWidth="1" />)}{series.map((item, index) => <polyline key={item.key} fill="none" stroke={telegramSeriesColor(item.label, colors[index])} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={item.points.map(point => `${((point.at - minX) / spanX) * 300},${94 - ((point.value - minY) / spanY) * 78}`).join(" ")} />)}</svg><div className="mt-1 flex min-w-0 flex-wrap gap-x-3 gap-y-1">{series.map((item, index) => <small key={item.key} className="flex min-w-0 items-center gap-1 text-[9px] text-slate-500"><i className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: telegramSeriesColor(item.label, colors[index]) }} />{telegramSeriesLabel(item.label)}</small>)}</div></div>;
 }
 
 function NftCard({ nft, language, onRent }: { nft: Nft; language: Language; onRent?: (nft: Nft) => void }) {

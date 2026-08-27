@@ -40,6 +40,8 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain('"Total followers": "Всего подписчиков"');
     expect(source).toContain('"Joined": "Подписались"');
     expect(source).toContain('"Left": "Отписались"');
+    expect(source).toContain('label === "Joined" || label === "New members"');
+    expect(source).toContain('if (label === "Left") return "#f26667"');
     expect(source).toContain("Telegram не отдал этот график за выбранный период.");
     expect(source).toContain("const bucketGraph =");
     expect(source).toContain('title="Уведомления"');
