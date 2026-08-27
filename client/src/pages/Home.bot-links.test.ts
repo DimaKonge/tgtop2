@@ -472,7 +472,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('detailHasPaidEntry');
     expect(source).toContain('onClick={openRewardAwareEntry}');
     expect(source).toContain('tx("Сделать вход платным", "Make entry paid")');
-    expect(source).toContain('max-h-[78dvh] rounded-t-[20px]');
+    expect(source).toContain('max-h-[78dvh] rounded-t-[22px]');
     expect(source).toContain('Стиль интерфейса');
     expect(source).toContain('Цветовой акцент');
     expect(source).toContain('Azure Blue');

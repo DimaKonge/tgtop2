@@ -829,20 +829,20 @@ function SettingsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[78dvh] rounded-t-[20px] border-white/10 bg-[#10161f] pb-4 text-slate-100"
+        className="max-h-[78dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-4 text-slate-100 shadow-[0_-18px_55px_rgba(2,8,16,0.28)]"
       >
-        <SheetHeader className="px-4 pb-1">
-          <SheetTitle className="text-sm font-semibold text-slate-100">
+        <SheetHeader className="border-b border-white/8 px-4 pb-3">
+          <SheetTitle className="text-base font-semibold tracking-tight text-slate-100">
             Настройки
           </SheetTitle>
         </SheetHeader>
         <div className="mx-4 space-y-3 overflow-y-auto pb-1">
-          <section className="rounded-xl border border-white/8 bg-black/10 p-3">
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
               <Settings2 className="h-4 w-4 text-[#72a8ff]" />
               Стиль интерфейса
             </div>
-            <div className="grid grid-cols-2 gap-1 rounded-lg border border-white/8 bg-[#0b0f14] p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
               {styleItems.map(item => (
                 <button key={item.value} onClick={() => setStyle(item.value)} aria-pressed={style === item.value} className={`h-8 rounded-md text-[11px] font-semibold transition-colors ${style === item.value ? "bg-[#3f8cff]/18 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}>
                   {item.label}
@@ -851,12 +851,12 @@ function SettingsSheet({
             </div>
             <p className="mt-2 text-[10px] leading-4 text-slate-500">TG TOP сохраняет фирменную сетку, Clean делает оболочку спокойнее и ближе к Telegram-native интерфейсам.</p>
           </section>
-          <section className="rounded-xl border border-white/8 bg-black/10 p-3">
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
               <Sun className="h-4 w-4 text-[#72a8ff]" />
               Тема
             </div>
-            <div className="grid grid-cols-3 gap-1 rounded-lg border border-white/8 bg-[#0b0f14] p-1">
+            <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
               {appearanceItems.map(item => {
                 const Icon = item.icon;
                 const active = appearance === item.value;
@@ -864,7 +864,7 @@ function SettingsSheet({
               })}
             </div>
           </section>
-          <section className="rounded-xl border border-white/8 bg-black/10 p-3">
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
               <Palette className="h-4 w-4 text-[#72a8ff]" />
               Цветовой акцент
