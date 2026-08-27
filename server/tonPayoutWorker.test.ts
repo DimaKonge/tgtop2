@@ -7,6 +7,7 @@ describe("isolated TON payout worker", () => {
 
   it("fails closed unless the dedicated worker gate is explicitly enabled", () => {
     vi.stubEnv("TON_WITHDRAWALS_ENABLED", "true");
+    vi.stubEnv("TON_PAYOUT_QUEUE_ENABLED", "true");
     vi.stubEnv("TON_WITHDRAWALS_PAUSED", "false");
     vi.stubEnv("TON_PAYOUT_WORKER_BROADCAST_ENABLED", "false");
     expect(isTonPayoutWorkerBroadcastEnabled()).toBe(false);
@@ -15,6 +16,10 @@ describe("isolated TON payout worker", () => {
     expect(isTonPayoutWorkerBroadcastEnabled()).toBe(true);
 
     vi.stubEnv("TON_WITHDRAWALS_PAUSED", "true");
+    expect(isTonPayoutWorkerBroadcastEnabled()).toBe(false);
+
+    vi.stubEnv("TON_WITHDRAWALS_PAUSED", "false");
+    vi.stubEnv("TON_PAYOUT_QUEUE_ENABLED", "false");
     expect(isTonPayoutWorkerBroadcastEnabled()).toBe(false);
   });
 
@@ -27,6 +32,8 @@ describe("isolated TON payout worker", () => {
     expect(router).toContain("enqueueTonWithdrawalReconciliation");
     expect(dbSource).not.toContain("let payoutQueue");
     expect(dbSource).toContain("tonPayoutJobs");
+    expect(dbSource).toContain('process.env.TON_PAYOUT_WORKER_BROADCAST_ENABLED === "true"');
+    expect(dbSource).toContain('input.action === "approve" && !isTonWithdrawalAutomationEnabled()');
     expect(worker).toContain("TON_PAYOUT_WORKER_BROADCAST_ENABLED");
     expect(worker).toContain("never rebroadcast");
   });

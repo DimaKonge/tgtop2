@@ -42,4 +42,10 @@ describe("withdrawal reliability guards", () => {
     expect(routerSource).toContain("requireFinanceReviewer(access);");
     expect(routerSource).not.toContain('if (!access.canModerate) throw new Error("Недостаточно прав для ручной проверки вывода")');
   });
+
+  it("does not debit or approve a withdrawal into an inactive broadcast queue", () => {
+    expect(dbSource).toContain('process.env.TON_PAYOUT_WORKER_BROADCAST_ENABLED === "true"');
+    expect(dbSource).toContain('input.action === "approve" && !isTonWithdrawalAutomationEnabled()');
+    expect(dbSource).toContain("Вывод временно приостановлен до включения проверенной payout-очереди");
+  });
 });

@@ -559,7 +559,8 @@ const PAYOUT_WALLET_LEASE_MS = 45_000;
 function isTonWithdrawalAutomationEnabled() {
   return process.env.TON_WITHDRAWALS_ENABLED === "true"
     && process.env.TON_WITHDRAWALS_PAUSED !== "true"
-    && process.env.TON_PAYOUT_QUEUE_ENABLED === "true";
+    && process.env.TON_PAYOUT_QUEUE_ENABLED === "true"
+    && process.env.TON_PAYOUT_WORKER_BROADCAST_ENABLED === "true";
 }
 
 function toTonWithdrawalView(row: typeof tonWithdrawals.$inferSelect) {
@@ -818,6 +819,9 @@ export async function reconcileTonWithdrawal(input: { withdrawalId: number; user
 export async function reviewTonWithdrawal(input: { withdrawalId: number; reviewerOpenId: string; action: "approve" | "reject"; reason?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  if (input.action === "approve" && !isTonWithdrawalAutomationEnabled()) {
+    throw new Error("Вывод временно приостановлен до включения проверенной payout-очереди");
+  }
   let result: typeof tonWithdrawals.$inferSelect | undefined;
   await db.transaction(async tx => {
     const withdrawal = (await tx.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, input.withdrawalId)).limit(1))[0];

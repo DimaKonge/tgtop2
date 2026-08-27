@@ -26,6 +26,7 @@ const MAX_RECONCILIATION_ATTEMPTS = 60;
 export function isTonPayoutWorkerBroadcastEnabled() {
   return process.env.TON_PAYOUT_WORKER_BROADCAST_ENABLED === "true"
     && process.env.TON_WITHDRAWALS_ENABLED === "true"
+    && process.env.TON_PAYOUT_QUEUE_ENABLED === "true"
     && process.env.TON_WITHDRAWALS_PAUSED !== "true";
 }
 
