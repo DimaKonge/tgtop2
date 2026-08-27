@@ -189,6 +189,33 @@ html[data-theme="dark"] .brand-mark-symbol { transform: rotate(180deg); }
 .ranking-slot-lead { --ranking-slot-offset: 26px; --ranking-slot-scale: 0.982; }
 .ranking-slot-secondary { --ranking-slot-offset: 26px; --ranking-slot-scale: 0.982; }
 .ranking-slot-compact { --ranking-slot-offset: 26px; --ranking-slot-scale: 0.982; }
+.tg-bottom-nav {
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+  backdrop-filter: blur(24px) saturate(145%);
+}
+
+@media (max-width: 380px) {
+  .tg-bottom-nav button { height: 52px; }
+  .tg-bottom-nav button span { font-size: 9px; }
+}
+
+html[data-theme="light"] .tg-bottom-nav {
+  border-color: rgba(37, 99, 235, 0.18) !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  box-shadow: 0 12px 34px rgba(30, 64, 175, 0.16) !important;
+}
+
+html[data-theme="light"] .tg-bottom-nav-inactive { color: #64748b !important; }
+html[data-theme="light"] .tg-bottom-nav-inactive:hover {
+  background: rgba(37, 99, 235, 0.08) !important;
+  color: #1e3a8a !important;
+}
+html[data-theme="light"] .tg-bottom-nav-active {
+  background: rgba(37, 99, 235, 0.14) !important;
+  color: #2563eb !important;
+  box-shadow: 0 5px 16px rgba(37, 99, 235, 0.14) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tg-launch-cube, .tg-launch-progress span, .ranking-slot-enter { animation: none; opacity: 1; transform: none; width: 100%; }
 }

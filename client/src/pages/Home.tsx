@@ -4551,10 +4551,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/8 bg-[#0b0f14]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-center px-2 py-1.5">
+      <nav className="pointer-events-none fixed inset-x-3 bottom-[calc(0.65rem+env(safe-area-inset-bottom))] z-40">
+        <div className="tg-bottom-nav pointer-events-auto mx-auto flex max-w-3xl items-center justify-center rounded-[24px] border border-white/15 bg-[#132338]/80 p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.34)] backdrop-blur-2xl">
           {isAuthenticated ? (
-            <div className={`grid w-full ${moderationAccess?.canModerate ? "grid-cols-4" : "grid-cols-3"}`}>
+            <div className={`grid w-full gap-1 ${moderationAccess?.canModerate ? "grid-cols-4" : "grid-cols-3"}`}>
               {(
                 [
                   { key: "top", label: "ТОП", icon: Trophy },
@@ -4571,10 +4571,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       item.key === "mine" ? openMine() : setPage(item.key as Page)
                     }
                     aria-label={item.label}
-                    className={`grid h-[46px] min-w-0 place-items-center rounded-xl transition-colors ${page === item.key ? "bg-[#3f8cff]/10 text-[#72a8ff]" : "text-slate-500"}`}
+                    className={`flex h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] px-1 transition-all duration-200 ${page === item.key ? "tg-bottom-nav-active bg-[#3f8cff]/20 text-[#8fc1ff] shadow-[0_5px_16px_rgba(63,140,255,0.18)]" : "tg-bottom-nav-inactive text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"}`}
                   >
-                    <Icon className="h-5 w-5" />
-                    <span className="sr-only">{item.label}</span>
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className="max-w-full truncate px-0.5 text-[10px] font-medium leading-none">{item.key === "mine" ? tx("Рабочее", "Workspace") : item.key === "profile" ? tx("Профиль", "Profile") : item.label}</span>
                   </button>
                 );
               })}
@@ -4583,10 +4583,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <button
               onClick={() => setPage("top")}
               aria-label="ТОП"
-              className="grid h-[46px] place-items-center rounded-xl bg-[#3f8cff]/10 text-[#72a8ff]"
+              className="tg-bottom-nav-active flex h-[56px] flex-col items-center justify-center gap-1 rounded-[18px] bg-[#3f8cff]/20 text-[#8fc1ff]"
             >
               <Trophy className="h-5 w-5" />
-              <span className="sr-only">ТОП</span>
+              <span className="text-[10px] font-medium leading-none">ТОП</span>
             </button>
           )}
         </div>

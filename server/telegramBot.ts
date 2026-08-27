@@ -79,7 +79,7 @@ type TelegramUpdate = {
     new_chat_title?: string;
     pinned_message?: unknown;
     successful_payment?: { currency: string; total_amount: number; invoice_payload: string; telegram_payment_charge_id: string };
-    reply_to_message?: { message_id?: number; from?: TelegramUser; text?: string };
+    reply_to_message?: { message_id?: number; from?: TelegramUser; text?: string; sticker?: { file_id: string } };
   };
   channel_post?: TelegramActivity & { text?: string; caption?: string; message_id: number };
   chat_member?: ChatMemberUpdate;
@@ -91,6 +91,7 @@ const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const reserveBotToken = process.env.TELEGRAM_RESERVE_BOT_TOKEN;
 const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.me";
 const pollTimeoutSeconds = 30;
+const welcomeStickerFileId = "CAACAgQAAxkBAAM7apCKivp2Zo4HRaVZkvKXmfrdXZIAAtYjAALqAohQfiIRNuroIOM9BA";
 let activeBotLabel = "@TG_TOPBOT";
 
 function isBotAdmin(status: string): boolean { return status === "administrator" || status === "creator"; }
@@ -117,6 +118,10 @@ export function parsePrivateLogDestinationCommand(text: string | undefined): "to
 
 function isAllMembersCommand(text: string | undefined) {
   return /^\/allmembers(?:@tgtop_robot)?$/i.test(text?.trim() ?? "");
+}
+
+function isStickerIdCommand(text: string | undefined) {
+  return /^\/stickerid(?:@tgtop_robot)?$/i.test(text?.trim() ?? "");
 }
 
 async function configurePrivateLogDestination(message: NonNullable<TelegramUpdate["message"]>) {
@@ -168,6 +173,7 @@ async function shouldBypassGlobalEventClaim(update: TelegramUpdate) {
   const command = parsePrivateLogDestinationCommand(message.text);
   if (command && activeBotLabel.toLowerCase() !== isExpectedLogBot(command)) return true;
   if (isAllMembersCommand(message.text) && activeBotLabel.toLowerCase() !== "@tgtop_robot") return true;
+  if (isStickerIdCommand(message.text) && activeBotLabel.toLowerCase() !== "@tgtop_robot") return true;
   if (activeBotLabel.toLowerCase() !== "@tgtop_robot" || !message.reply_to_message?.message_id) return false;
   const destination = await getTelegramOperationLogDestination("support");
   return Boolean(
@@ -192,6 +198,27 @@ async function sendTextDocument(input: { chatId: number; messageThreadId: number
   form.append("document", new Blob([input.text], { type: "text/plain;charset=utf-8" }), input.fileName);
   const response = await axios.post<{ ok: boolean; description?: string }>(getApiUrl("sendDocument"), form, { timeout: 40_000 });
   if (!response.data.ok) throw new Error(response.data.description ?? "Telegram API sendDocument failed");
+}
+
+async function handleStickerIdCommand(message: NonNullable<TelegramUpdate["message"]>) {
+  if (!isStickerIdCommand(message.text) || activeBotLabel.toLowerCase() !== "@tgtop_robot") return false;
+  const topicReply = message.message_thread_id === undefined ? {} : { message_thread_id: message.message_thread_id };
+  if (!message.from || message.from.is_bot || !(await isAuthorizedOperationsOwner(message))) {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, ...topicReply, text: "Эта команда доступна только владельцу TG TOP." }).catch(() => {});
+    return true;
+  }
+  const sticker = message.reply_to_message?.sticker;
+  if (!sticker?.file_id) {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, ...topicReply, text: "Ответь командой /stickerid именно на сообщение со стикером." }).catch(() => {});
+    return true;
+  }
+  await telegramCall<boolean>("sendMessage", {
+    chat_id: message.chat.id,
+    ...topicReply,
+    text: `Sticker file_id:\n${sticker.file_id}`,
+    disable_web_page_preview: true,
+  }).catch(() => {});
+  return true;
 }
 
 async function handleAllMembersExport(message: NonNullable<TelegramUpdate["message"]>) {
@@ -561,7 +588,10 @@ async function getMemberCount(chatId: number): Promise<number | undefined> {
 
 async function getChatProfile(chatId: number): Promise<TelegramChat> { return await telegramCall<TelegramChat>("getChat", { chat_id: chatId }); }
 
-async function openMiniApp(chatId: number, greeting: string): Promise<void> {
+async function openMiniApp(chatId: number, greeting: string, includeWelcomeSticker = false): Promise<void> {
+  if (includeWelcomeSticker) {
+    await telegramCall<boolean>("sendSticker", { chat_id: chatId, sticker: welcomeStickerFileId });
+  }
   await telegramCall<boolean>("sendMessage", {
     chat_id: chatId,
     text: greeting,
@@ -753,6 +783,7 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
   }
   if (update.my_chat_member) { await saveAdminChat(update); return; }
   if (update.message && await configurePrivateLogDestination(update.message)) return;
+  if (update.message && await handleStickerIdCommand(update.message)) return;
   if (update.message && await handleAllMembersExport(update.message)) return;
   if (update.chat_member) {
     const membership = update.chat_member;
@@ -847,9 +878,7 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
         referrer,
       }));
     }
-    await openMiniApp(message.chat.id, attributed
-      ? "Добро пожаловать в TG TOP. Откройте каталог по приглашению и добавьте своё сообщество."
-      : "Добро пожаловать в TG TOP — каталог Telegram-сообществ. Откройте приложение, чтобы начать.");
+    await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — каталог Telegram-сообществ. Откройте приложение, чтобы начать.", true);
     return;
   }
   await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — каталог Telegram-сообществ. Откройте приложение, чтобы начать.");
@@ -913,5 +942,5 @@ export async function runTelegramBot(botLabel = "@TG_TOPBOT"): Promise<void> {
   }
 }
 
-export const __private__ = { auditRankedEntryLinks, buildOnboardingConfirmation, catalogCategory, getActiveBotTokens, getReferralCodeFromStartText, getTelegramEventKey, getTelegramPollingErrorSummary, isActiveMember, isBotAdmin, isChatOwner, isTelegramBotEntrypoint, publicGroupUrl, resolveVerifiedGroupEntryLink };
+export const __private__ = { auditRankedEntryLinks, buildOnboardingConfirmation, catalogCategory, getActiveBotTokens, getReferralCodeFromStartText, getTelegramEventKey, getTelegramPollingErrorSummary, isActiveMember, isAllMembersCommand, isBotAdmin, isChatOwner, isStickerIdCommand, isTelegramBotEntrypoint, publicGroupUrl, resolveVerifiedGroupEntryLink };
 if (isTelegramBotEntrypoint(process.argv[1])) void runTelegramBot();

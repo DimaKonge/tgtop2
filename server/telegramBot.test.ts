@@ -50,6 +50,35 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(__private__.getReferralCodeFromStartText("/start ref_invalid-payload")).toBeUndefined();
   });
 
+  it("recognises only the owner sticker-id command and reads the replied sticker file_id", () => {
+    expect(__private__.isStickerIdCommand("/stickerid")).toBe(true);
+    expect(__private__.isStickerIdCommand("/stickerid@TGTOP_robot")).toBe(true);
+    expect(__private__.isStickerIdCommand("/stickerid extra")).toBe(false);
+    expect(__private__.isStickerIdCommand("/allmembers")).toBe(false);
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    expect(source).toContain("isAuthorizedOperationsOwner(message)");
+    expect(source).toContain("message.reply_to_message?.sticker");
+    expect(source).toContain("Sticker file_id:");
+  });
+
+  it("keeps referral attribution silent in the welcome copy", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    expect(source).not.toContain("Откройте каталог по приглашению");
+    expect(source).toContain('source: attributed ? "referral" : "direct"');
+    expect(source).toContain("Добро пожаловать в TG TOP — каталог Telegram-сообществ");
+  });
+
+  it("sends the selected TGTOP16 sticker before the welcome text", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    const stickerIndex = source.indexOf('telegramCall<boolean>("sendSticker"');
+    const textIndex = source.indexOf('telegramCall<boolean>("sendMessage"', stickerIndex);
+    expect(source).toContain("CAACAgQAAxkBAAM7apCKivp2Zo4HRaVZkvKXmfrdXZIAAtYjAALqAohQfiIRNuroIOM9BA");
+    expect(source).toContain("includeWelcomeSticker = false");
+    expect(stickerIndex).toBeGreaterThan(-1);
+    expect(textIndex).toBeGreaterThan(stickerIndex);
+    expect(source).toContain("openMiniApp(message.chat.id, \"Добро пожаловать в TG TOP");
+  });
+
   it("reduces Telegram polling failures to a safe API summary without request internals", () => {
     const summary = __private__.getTelegramPollingErrorSummary({
       config: { url: "https://api.telegram.org/bot-secret/getUpdates" },

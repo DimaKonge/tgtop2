@@ -266,7 +266,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('label: "Рабочее пространство"');
     expect(source).toContain('label: "Мой кабинет"');
     expect(source).toContain('aria-label={item.label}');
-    expect(source).toContain('<span className="sr-only">{item.label}</span>');
+    expect(source).toContain('className="pointer-events-none fixed inset-x-3 bottom-[calc(0.65rem+env(safe-area-inset-bottom))] z-40"');
+    expect(source).toContain('tg-bottom-nav pointer-events-auto');
+    expect(source).toContain('backdrop-blur-2xl');
+    expect(source).toContain('tg-bottom-nav-active');
+    expect(source).toContain('item.key === "mine" ? tx("Рабочее", "Workspace")');
     expect(source).toContain('const totalBalanceLabel = `${(Number(mainTon) + bonusBalanceUnits / 100).toFixed(2)} GRAM`;');
     expect(source).not.toContain('>Общий баланс</small>');
     expect(source).toContain('bg-[#14263b]/35');
