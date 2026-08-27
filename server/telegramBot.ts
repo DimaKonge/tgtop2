@@ -383,6 +383,24 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   if (chat.type !== "group" && chat.type !== "supergroup" && chat.type !== "channel") return;
   if (!isBotAdmin(current.status) || isBotAdmin(previous.status)) return;
 
+  let actorMembership: ChatMember;
+  try {
+    actorMembership = await telegramCall<ChatMember>("getChatMember", { chat_id: chat.id, user_id: from.id });
+  } catch {
+    await telegramCall<boolean>("sendMessage", {
+      chat_id: from.id,
+      text: "TG TOP не смог подтвердить владельца сообщества. Убедитесь, что вы владелец и @TG_TOPBOT остаётся администратором, затем повторите подключение.",
+    }).catch(() => {});
+    return;
+  }
+  if (!isChatOwner(actorMembership.status)) {
+    await telegramCall<boolean>("sendMessage", {
+      chat_id: from.id,
+      text: "Подключить сообщество к TG TOP может только его владелец Telegram. Попросите владельца добавить @TG_TOPBOT в администраторы.",
+    }).catch(() => {});
+    return;
+  }
+
   let profile: TelegramChat;
   try {
     profile = await getChatProfile(chat.id);

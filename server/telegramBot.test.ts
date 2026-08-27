@@ -10,6 +10,13 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(__private__.isBotAdmin("left")).toBe(false);
   });
 
+  it("requires Telegram creator/owner status before allowing an onboarding ownership binding", () => {
+    expect(__private__.isChatOwner("creator")).toBe(true);
+    expect(__private__.isChatOwner("owner")).toBe(true);
+    expect(__private__.isChatOwner("administrator")).toBe(false);
+    expect(__private__.isChatOwner("member")).toBe(false);
+  });
+
   it("distinguishes active membership states for verified growth tracking", () => {
     expect(__private__.isActiveMember("member")).toBe(true);
     expect(__private__.isActiveMember("administrator")).toBe(true);
@@ -85,6 +92,8 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(source).toContain("profile.id !== chatId");
     expect(source).toContain("recordVerifiedPublicUsername");
     expect(source).toContain('moderationStatus: "approved"');
+    expect(source).toContain('telegramCall<ChatMember>("getChatMember"');
+    expect(source).toContain("Подключить сообщество к TG TOP может только его владелец Telegram");
   });
 
   it("loads real channel gifts only through Telegram getChatGifts without any transfer action", () => {
