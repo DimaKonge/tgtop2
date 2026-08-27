@@ -18,6 +18,7 @@ describe("TG TOP production bot links", () => {
   it("uses the shared GroupCard component for ranked and general catalog placements", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const styles = readFileSync(new URL("../index.css", import.meta.url), "utf8");
+    const chartPanelsSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
 
     expect(source).toContain('type GroupCardVariant = "lead" | "secondary" | "compact" | "list"');
     expect(source).toMatch(/<GroupCard\s+group=\{leadSlot\.group\}\s+variant="lead"/);
@@ -556,10 +557,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Снять группу с листинга?');
     expect(source).toContain('rounded-[22px] border border-[#31435f]');
     expect(source).toContain('className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3"');
-    expect(source).toContain('function AudienceGrowthChart');
-    expect(source).toContain('Снимки @TG_TOPBOT с первого наблюдения.');
-    expect(source).toContain('Нейтральная линия: данных пока недостаточно');
-    expect(source).toContain('M4 38 C48 36, 76 40, 116 37');
+    expect(source).toContain('from "@/components/analytics/ChartPanels"');
+    expect(chartPanelsSource).toContain('function AudienceGrowthChart');
+    expect(chartPanelsSource).toContain('Снимки @TG_TOPBOT с первого наблюдения.');
+    expect(chartPanelsSource).toContain('Нейтральная линия: данных пока недостаточно');
+    expect(chartPanelsSource).toContain('M4 38 C48 36, 76 40, 116 37');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');
     expect(source).toContain('Перебить можно от');
     expect(source).toContain('Перебить ставку');

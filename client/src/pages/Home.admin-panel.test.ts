@@ -36,14 +36,16 @@ describe("TG TOP admin panel", () => {
 
   it("renders only Telegram-returned analytics with readable labels and explicit unavailable states", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    const chartPanelsSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
 
-    expect(source).toContain('"Total followers": "Всего подписчиков"');
-    expect(source).toContain('"Joined": "Подписались"');
-    expect(source).toContain('"Left": "Отписались"');
-    expect(source).toContain('label === "Joined" || label === "New members"');
-    expect(source).toContain('if (label === "Left") return "#f26667"');
-    expect(source).toContain("Telegram не отдал этот график за выбранный период.");
-    expect(source).toContain("const bucketGraph =");
+    expect(source).toContain('from "@/components/analytics/ChartPanels"');
+    expect(chartPanelsSource).toContain('"Total followers": "Всего подписчиков"');
+    expect(chartPanelsSource).toContain('"Joined": "Подписались"');
+    expect(chartPanelsSource).toContain('"Left": "Отписались"');
+    expect(chartPanelsSource).toContain('label === "Joined" || label === "New members"');
+    expect(chartPanelsSource).toContain('if (label === "Left") return "#f26667"');
+    expect(chartPanelsSource).toContain("Telegram не отдал этот график за выбранный период.");
+    expect(chartPanelsSource).toContain("const bucketGraph =");
     expect(source).toContain('title="Уведомления"');
     expect(source).toContain('title="Языки аудитории"');
     expect(source).toContain('title="Реакции"');
