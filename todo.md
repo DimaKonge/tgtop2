@@ -996,6 +996,6 @@
 - [ ] Разбить Home.tsx, routers.ts и db.ts на изолированные domain modules, сохраняя API contracts и добавляя регрессионные тесты на каждый перенос.
 - [x] Без изменения API извлечь owner-only `telegramUserAgent` endpoints из central `routers.ts` в отдельный domain router with the same server-side owner gate.
 - [x] Без изменения UI behavior извлечь pure format/parse helpers из `Home.tsx` в shared client module as the first safe page-monolith reduction.
-- [ ] Без изменения API извлечь wallet/deposit/withdrawal/manual-review endpoints из central `routers.ts` в isolated finance router, сохранив fail-closed validation, error policy, audit log и main-admin review gate.
+- [x] Без изменения API извлечь wallet/deposit/withdrawal/manual-review endpoints из central `routers.ts` в isolated finance router, сохранив fail-closed validation, error policy, audit log и main-admin review gate.
 - [ ] Провести mobile-first review ключевых экранов и реальные Telegram E2E-проверки: вход, добавление бота, выбор группы, листинг, снятие, переход, модерация.
 - [ ] Выпустить release candidate только после полного deterministic gate, mobile verification, VPS preflight и явного списка известных ограничений.
