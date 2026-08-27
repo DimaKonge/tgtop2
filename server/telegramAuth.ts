@@ -17,7 +17,8 @@ export type VerifiedTelegramInitData = {
 export function validateTelegramInitData(
   initData: string,
   botToken: string,
-  maxAgeSeconds = 86_400
+  maxAgeSeconds = 86_400,
+  maxFutureSkewSeconds = 300,
 ): VerifiedTelegramInitData | null {
   if (!initData || !botToken) return null;
 
@@ -26,8 +27,9 @@ export function validateTelegramInitData(
   const authDate = Number(params.get("auth_date"));
   const rawUser = params.get("user");
 
-  if (!receivedHash || !rawUser || !Number.isFinite(authDate)) return null;
-  if (Math.abs(Math.floor(Date.now() / 1000) - authDate) > maxAgeSeconds) return null;
+  if (!receivedHash || !rawUser || !Number.isSafeInteger(authDate) || authDate <= 0) return null;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (authDate > nowSeconds + maxFutureSkewSeconds || nowSeconds - authDate > maxAgeSeconds) return null;
 
   params.delete("hash");
   const dataCheckString = Array.from(params.entries())
@@ -61,9 +63,10 @@ export function validateTelegramInitDataWithTokens(
   initData: string,
   botTokens: Array<string | undefined>,
   maxAgeSeconds = 86_400,
+  maxFutureSkewSeconds = 300,
 ) {
   for (const token of Array.from(new Set(botTokens.filter((value): value is string => Boolean(value))))) {
-    const verified = validateTelegramInitData(initData, token, maxAgeSeconds);
+    const verified = validateTelegramInitData(initData, token, maxAgeSeconds, maxFutureSkewSeconds);
     if (verified) return verified;
   }
   return null;

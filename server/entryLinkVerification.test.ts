@@ -64,6 +64,8 @@ describe("verified TG TOP entry links", () => {
     expect(botSource).toContain('if (profile.id !== chatId) {');
     expect(botSource).toContain('recordVerifiedPublicUsername');
     expect(routerSource).toContain('resolveVerifiedEntryLink: protectedProcedure');
+    expect(routerSource).toContain('canResolveVerifiedEntryLink');
+    expect(routerSource).toContain('Закрытая ссылка доступна только владельцу сообщества или модератору');
   });
 
   it("keeps private entry restricted to a confirmed stored invite and notifies the owner after removal", () => {

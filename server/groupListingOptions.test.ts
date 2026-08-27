@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { normalizeGroupListingOptions } from "./db";
 
 describe("normalizeGroupListingOptions", () => {
@@ -110,5 +111,17 @@ describe("normalizeGroupListingOptions", () => {
       rewardPerInvite: 2,
       rewardPerManualAdd: 1,
     });
+  });
+
+  it("keeps listing balance validation inside the transaction that performs the debit", () => {
+    const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+    const start = source.indexOf("export async function listGroupsWithCredits");
+    const end = source.indexOf("export async function saveMonthlyEntryInviteLink", start);
+    const listing = source.slice(start, end);
+
+    expect(listing).toContain("const debitUnits = totalCost + reservedRewardBudget - releasedRewardBudget;");
+    expect(listing).toContain("gte(users.bonusBalance, debitUnits)");
+    expect(listing).toContain('if (!debit[0]?.affectedRows) throw new Error("Недостаточно бонусных GRAM")');
+    expect(listing).not.toContain("const user = await getUserByOpenId(ownerOpenId);");
   });
 });

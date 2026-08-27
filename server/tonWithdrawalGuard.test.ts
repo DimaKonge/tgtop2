@@ -5,6 +5,7 @@ const dbSource = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
 const payoutSource = readFileSync(new URL("./tonPayoutWallet.ts", import.meta.url), "utf8");
 const networkSource = readFileSync(new URL("./tonPayoutNetwork.ts", import.meta.url), "utf8");
 const workerSource = readFileSync(new URL("./tonPayoutWorker.ts", import.meta.url), "utf8");
+const routerSource = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
 
 describe("withdrawal reliability guards", () => {
   it("returns the existing active withdrawal before another balance debit", () => {
@@ -33,5 +34,12 @@ describe("withdrawal reliability guards", () => {
     expect(dbSource).toContain('status: "cancelled"');
     expect(dbSource).toContain("GRAM возвращён на основной баланс");
     expect(dbSource).toContain('sql`${tonWithdrawals.transactionHash} IS NULL`');
+  });
+
+  it("does not give moderators the sensitive withdrawal-review path", () => {
+    expect(routerSource).toContain("getTonWithdrawalsForManualReview: protectedProcedure");
+    expect(routerSource).toContain("reviewTonWithdrawal: protectedProcedure");
+    expect(routerSource).toContain("requireFinanceReviewer(access);");
+    expect(routerSource).not.toContain('if (!access.canModerate) throw new Error("Недостаточно прав для ручной проверки вывода")');
   });
 });

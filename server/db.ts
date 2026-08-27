@@ -2583,13 +2583,18 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
   const groupsNeedingListing = groups.filter(group => group.status !== "listed");
   const targetGroupsForAnnouncement = groups;
   const totalCost = groupsNeedingListing.length * cost;
-  const user = await getUserByOpenId(ownerOpenId);
   const reservedRewardBudget = rewardConfig && rewardGroup ? Math.max(0, rewardConfig.rewardBudget - rewardGroup.rewardBudget) : 0;
   const releasedRewardBudget = rewardConfig && rewardGroup ? Math.max(0, rewardGroup.rewardBudget - rewardConfig.rewardBudget) : 0;
-  if (!user || user.bonusBalance + releasedRewardBudget < totalCost + reservedRewardBudget) throw new Error("Недостаточно бонусных GRAM");
+  const debitUnits = totalCost + reservedRewardBudget - releasedRewardBudget;
   await db.transaction(async tx => {
-    if (totalCost || reservedRewardBudget || releasedRewardBudget) {
-      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${totalCost + reservedRewardBudget} + ${releasedRewardBudget}` }).where(eq(users.openId, ownerOpenId));
+    if (debitUnits > 0) {
+      const debit = await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} - ${debitUnits}` }).where(and(
+        eq(users.openId, ownerOpenId),
+        gte(users.bonusBalance, debitUnits),
+      ));
+      if (!debit[0]?.affectedRows) throw new Error("Недостаточно бонусных GRAM");
+    } else if (debitUnits < 0) {
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${Math.abs(debitUnits)}` }).where(eq(users.openId, ownerOpenId));
     }
     if (totalCost) {
       await tx.insert(creditTransactions).values(groupsNeedingListing.map(group => ({ userOpenId: ownerOpenId, groupId: group.id, amount: -cost, kind: "listing_spend" as const })));

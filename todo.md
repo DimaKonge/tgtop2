@@ -972,6 +972,10 @@
 - [x] Сформировать короткий приоритетный план «сначала стабилизируем, затем запускаем» с понятными критериями готовности к реальному запуску.
 - [x] Построчно проверить release-vps.sh и VPS release storage: retention, preflight свободного места, failed-stage cleanup, rollback и health gates.
 - [ ] Построчно проверить authentication, tRPC role gates и все owner/moderator/finance privileged procedures на fail-closed доступ.
+- [ ] Закрыть найденный entry-link access defect: generic resolver должен выдавать public `@username` всем авторизованным пользователям, но private/monthly invite link — только владельцу или модератору.
+- [ ] Закрыть найденный finance access defect: очередь и review заявок вывода должны быть доступны только главному администратору, а не любому модератору.
+- [ ] Ужесточить Telegram initData timestamp policy: запретить нецелые, нулевые и слишком будущие signed auth_date, сохранив допустимый небольшой clock skew.
+- [ ] Закрыть найденный listing/GRAM race: bulk listing должен проверять и списывать баланс в одной transaction с условием достаточного остатка.
 - [ ] Построчно проверить основной и резервный Telegram bot flows: ownership, admin rights, idempotent events, entry-link validation и понятные пользовательские ошибки.
 - [ ] Построчно проверить listing, TOP ranking, GRAM ledger и moderation flows с фокусом на согласованность статусов и reload-safe UI.
 - [ ] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.

@@ -30,6 +30,13 @@ describe("Telegram Mini App initData validation", () => {
     expect(validateTelegramInitData(makeInitData(Math.floor(Date.now() / 1000) - 86_401), botToken)).toBeNull();
   });
 
+  it("rejects non-integer, zero and materially future signed timestamps", () => {
+    const now = Math.floor(Date.now() / 1000);
+    expect(validateTelegramInitData(makeInitData(0), botToken)).toBeNull();
+    expect(validateTelegramInitData(makeInitData(now + 301), botToken)).toBeNull();
+    expect(validateTelegramInitData(makeInitData(now + 120), botToken)?.user.id).toBe(123456);
+  });
+
   it("accepts initialization data signed by the reserve bot in parallel mode", () => {
     const reserveToken = "test-token-for-reserve-bot";
     expect(validateTelegramInitDataWithTokens(makeInitData(undefined, reserveToken), [botToken, reserveToken])?.user.id).toBe(123456);

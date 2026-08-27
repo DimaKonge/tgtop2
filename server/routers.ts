@@ -13,6 +13,8 @@ import { getSafeTonWithdrawalError } from "./tonWithdrawalErrorPolicy";
 import * as telegramUserAgent from "./telegramUserAgent";
 import { requireTelegramUserAgentOwner } from "./telegramUserAgentAccess";
 import { deliverOperationsLog, formatFinanceLog, formatTopActivityLog } from "./telegramOperationsLogger";
+import { canResolveVerifiedEntryLink } from "./entryLinkAccess";
+import { requireFinanceReviewer } from "./financeReviewAccess";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -363,7 +365,7 @@ export const appRouter = router({
 
     getTonWithdrawalsForManualReview: protectedProcedure.query(async ({ ctx }) => {
       const access = await db.getModerationAccess(ctx.user.openId);
-      if (!access.canModerate) throw new Error("Недостаточно прав для ручной проверки вывода");
+      requireFinanceReviewer(access);
       return await db.getTonWithdrawalsForManualReview();
     }),
 
@@ -371,7 +373,7 @@ export const appRouter = router({
       .input(z.object({ withdrawalId: z.number().int().positive(), action: z.enum(["approve", "reject"]), reason: z.string().trim().max(255).optional() }))
       .mutation(async ({ ctx, input }) => {
         const access = await db.getModerationAccess(ctx.user.openId);
-        if (!access.canModerate) throw new Error("Недостаточно прав для ручной проверки вывода");
+        requireFinanceReviewer(access);
         try {
           return await db.reviewTonWithdrawal({ ...input, reviewerOpenId: ctx.user.openId });
         } catch (error) {
@@ -614,9 +616,13 @@ export const appRouter = router({
 
     resolveVerifiedEntryLink: protectedProcedure
       .input(z.object({ groupId: z.number().int().positive() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const group = await db.getGroupById(input.groupId);
         if (!group) throw new Error("Сообщество не найдено");
+        const access = group.username ? { canModerate: false } : await db.getModerationAccess(ctx.user.openId);
+        if (!canResolveVerifiedEntryLink({ target: group, viewerOpenId: ctx.user.openId, canModerate: access.canModerate })) {
+          throw new Error("Закрытая ссылка доступна только владельцу сообщества или модератору");
+        }
         const entryUrl = await resolveVerifiedGroupEntryLink(group);
         return { entryUrl };
       }),
