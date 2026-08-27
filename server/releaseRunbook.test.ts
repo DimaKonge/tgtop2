@@ -12,6 +12,7 @@ describe("VPS release runbook", () => {
     expect(script).toContain('install --frozen-lockfile --ignore-scripts');
     expect(script).toContain('node scripts/runtime-package-probe.mjs');
     expect(script).toContain('node "$STAGE/scripts/apply-entry-link-audit-migration.mjs"');
+    expect(script).toContain('node "$STAGE/scripts/apply-operations-topic-migrations.mjs"');
     expect(script).toContain('for item in "${ITEMS[@]}"; do mv "$BASE/$item" "$PREVIOUS/$item"; done');
     expect(script).toContain('tgtop-owner-dm-worker.service');
   });
@@ -24,7 +25,7 @@ describe("VPS release runbook", () => {
     expect(script).toContain('stage_health=ok');
     expect(runbook).toContain('Не выполняйте `git reset`');
     expect(runbook).toContain('не копируются с локальной машины');
-    expect(runbook).toContain('узкая additive migration');
+    expect(runbook).toContain('reviewed additive migrations');
   });
 
   it("fails safely before a release would exhaust storage and retains no persistent runtime archive", () => {

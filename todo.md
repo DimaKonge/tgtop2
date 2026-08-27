@@ -1025,3 +1025,4 @@
 - [x] В Finance-topic карточках подтверждённых TON deposit/withdrawal передавать настоящий network hash в Tonviewer; для requested/sent статусов hash не показывать.
 - [x] Подготовить code-path одной закрытой forum-группы: @TG_TOPBOT настраивает/ведёт поддержку, @TGTOP_robot настраивает/ведёт служебные launch/TOP/finance topics; reserve bot не захватывает support reply до глобальной дедупликации.
 - [x] В launch log передавать только реального владельца успешно применённого рефкода; direct start не содержит строки «Пришёл от».
+- [ ] Исправить staged VPS release: до переключения code, требующего новую Drizzle schema, применять проверенные аддитивные migrations и проверять migration health без ручного доступа к production БД.

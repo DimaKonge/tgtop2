@@ -123,9 +123,10 @@ test -s /tmp/tgtop-${RELEASE}-stage-health.json
 stop_smoke
 trap rollback ERR
 
-# This release uses a narrow, idempotent additive migration only for the new
-# entry-link audit table. It never replays legacy migrations against production.
+# This release uses idempotent, reviewed additive migrations only. It never
+# replays the full legacy Drizzle migration history against production.
 node "$STAGE/scripts/apply-entry-link-audit-migration.mjs" >/tmp/tgtop-${RELEASE}-migration.log
+node "$STAGE/scripts/apply-operations-topic-migrations.mjs" >>/tmp/tgtop-${RELEASE}-migration.log
 
 for item in "${ITEMS[@]}"; do mv "$BASE/$item" "$PREVIOUS/$item"; done
 for item in "${ITEMS[@]}"; do mv "$STAGE/$item" "$BASE/$item"; done
