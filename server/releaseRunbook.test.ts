@@ -13,6 +13,7 @@ describe("VPS release runbook", () => {
     expect(script).toContain('node scripts/runtime-package-probe.mjs');
     expect(script).toContain('node "$STAGE/scripts/apply-entry-link-audit-migration.mjs"');
     expect(script).toContain('for item in "${ITEMS[@]}"; do mv "$BASE/$item" "$PREVIOUS/$item"; done');
+    expect(script).toContain('tgtop-owner-dm-worker.service');
   });
 
   it("checks integrity and rolls back on a service or readiness failure", () => {
@@ -24,5 +25,16 @@ describe("VPS release runbook", () => {
     expect(runbook).toContain('Не выполняйте `git reset`');
     expect(runbook).toContain('не копируются с локальной машины');
     expect(runbook).toContain('узкая additive migration');
+  });
+
+  it("fails safely before a release cannot make its backup and keeps bounded restore points", () => {
+    expect(script).toContain('BACKUP_RETENTION="${TG_TOP_BACKUP_RETENTION:-5}"');
+    expect(script).toContain('MIN_FREE_KB="${TG_TOP_RELEASE_MIN_FREE_KB:-786432}"');
+    expect(script).toContain('ensure_release_space');
+    expect(script).toContain('Insufficient release space:');
+    expect(script).toContain("prune_runtime_backups \"$((BACKUP_RETENTION - 1))\"");
+    expect(script).toContain('prune_runtime_backups "$BACKUP_RETENTION"');
+    expect(script).toContain('rm -rf -- "$PREVIOUS" "$STAGE"');
+    expect(script).toContain('rm -f -- "$ARCHIVE"');
   });
 });

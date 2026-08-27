@@ -11,6 +11,8 @@ DRY_RUN="${DRY_RUN:-0}"
 RELEASE="${RELEASE_NAME:-release-$(date -u +%Y%m%dT%H%M%SZ)}"
 STAGE_PORT="${TG_TOP_STAGE_PORT:-3101}"
 ARCHIVE="/tmp/tgtop-${RELEASE}-source.tgz"
+BACKUP_RETENTION="${TG_TOP_BACKUP_RETENTION:-5}"
+MIN_FREE_KB="${TG_TOP_RELEASE_MIN_FREE_KB:-786432}"
 
 cd "$PROJECT_DIR"
 
@@ -40,7 +42,7 @@ SCP=(scp -i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecki
 "${SSH[@]}" 'mkdir -p /opt/tgtop/releases /opt/tgtop/backups'
 "${SCP[@]}" "$ARCHIVE" "$HOST:/opt/tgtop/releases/${RELEASE}-source.tgz"
 
-"${SSH[@]}" "RELEASE='$RELEASE' EXPECTED_SHA='$EXPECTED_SHA' STAGE_PORT='$STAGE_PORT' bash -s" <<'REMOTE'
+"${SSH[@]}" "RELEASE='$RELEASE' EXPECTED_SHA='$EXPECTED_SHA' STAGE_PORT='$STAGE_PORT' BACKUP_RETENTION='$BACKUP_RETENTION' MIN_FREE_KB='$MIN_FREE_KB' bash -s" <<'REMOTE'
 set -euo pipefail
 BASE=/opt/tgtop
 ARCHIVE="$BASE/releases/${RELEASE}-source.tgz"
@@ -51,7 +53,27 @@ BACKUP="$BASE/backups/pre-${RELEASE}-runtime.tgz"
 ITEMS=(dist node_modules package.json pnpm-lock.yaml scripts)
 UNITS=(tgtop.service tgtop-bot.service tgtop-bot-reserve.service)
 if [ -f /etc/systemd/system/tgtop-payout-worker.service ]; then UNITS+=(tgtop-payout-worker.service); fi
+if [ -f /etc/systemd/system/tgtop-owner-dm-worker.service ]; then UNITS+=(tgtop-owner-dm-worker.service); fi
 ACTIVATED=0
+
+prune_runtime_backups() {
+  local keep="$1"
+  local -a stale=()
+  mapfile -t stale < <(find "$BASE/backups" -maxdepth 1 -type f -name 'pre-release-*-runtime.tgz' -printf '%T@ %p\n' | sort -nr | tail -n +$((keep + 1)) | cut -d' ' -f2-)
+  if ((${#stale[@]})); then
+    rm -f -- "${stale[@]}"
+  fi
+}
+
+ensure_release_space() {
+  local available_kb
+  prune_runtime_backups "$((BACKUP_RETENTION - 1))"
+  available_kb="$(df -Pk "$BASE" | awk 'NR == 2 { print $4 }')"
+  if [ -z "$available_kb" ] || [ "$available_kb" -lt "$MIN_FREE_KB" ]; then
+    echo "Insufficient release space: ${available_kb:-0}KB available, ${MIN_FREE_KB}KB required after backup retention" >&2
+    exit 1
+  fi
+}
 
 rollback() {
   if [ "$ACTIVATED" = 1 ]; then
@@ -67,11 +89,14 @@ trap rollback ERR
 [ ! -e "$STAGE" ]
 [ ! -e "$PREVIOUS" ]
 [ -x "$BASE/node_modules/.bin/pnpm" ] || { echo "Project-local pnpm is unavailable; refusing release" >&2; exit 1; }
+case "$BACKUP_RETENTION" in ''|*[!0-9]*|0) echo "TG_TOP_BACKUP_RETENTION must be a positive integer" >&2; exit 1;; esac
+case "$MIN_FREE_KB" in ''|*[!0-9]*|0) echo "TG_TOP_RELEASE_MIN_FREE_KB must be a positive integer" >&2; exit 1;; esac
 if command -v ss >/dev/null && ss -ltn | grep -q ":${STAGE_PORT} "; then
   echo "Staging port ${STAGE_PORT} is already in use" >&2
   exit 1
 fi
 
+ensure_release_space
 mkdir -p "$STAGE" "$PREVIOUS"
 tar -xzf "$ARCHIVE" -C "$STAGE"
 for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts; do test -e "$STAGE/$item"; done
@@ -109,6 +134,9 @@ systemctl restart "${UNITS[@]}"
 sleep 10
 for unit in "${UNITS[@]}"; do systemctl is-active --quiet "$unit" || { rollback; exit 1; }; done
 curl -fsS --max-time 15 http://127.0.0.1:3000/healthz >/tmp/tgtop-release-health.json || { rollback; exit 1; }
+rm -rf -- "$PREVIOUS" "$STAGE"
+rm -f -- "$ARCHIVE"
+prune_runtime_backups "$BACKUP_RETENTION"
 trap - ERR
 printf 'release=%s\nbackup=%s\nstage_health=ok\n' "$RELEASE" "$BACKUP"
 REMOTE
