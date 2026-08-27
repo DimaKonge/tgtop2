@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useTheme, type Appearance } from "@/contexts/ThemeContext";
+import { useTheme, type Appearance, type ThemeAccent, type ThemeStyle } from "@/contexts/ThemeContext";
 import {
   ArrowLeft,
   BarChart3,
@@ -40,6 +40,7 @@ import {
    Minus,
   Moon,
   PackageOpen,
+  Palette,
   Plus,
   Pin,
   PinOff,
@@ -806,48 +807,70 @@ function SettingsSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { appearance, setAppearance } = useTheme();
-  const appearanceItems: Array<{
-    value: Appearance;
-    label: string;
-    icon: typeof Moon;
-  }> = [
+  const { appearance, setAppearance, style, setStyle, accent, setAccent } = useTheme();
+  const appearanceItems: Array<{ value: Appearance; label: string; icon: typeof Moon }> = [
+    { value: "system", label: "Система", icon: Settings2 },
     { value: "dark", label: "Темная", icon: Moon },
     { value: "light", label: "Светлая", icon: Sun },
+  ];
+  const styleItems: Array<{ value: ThemeStyle; label: string }> = [
+    { value: "original", label: "TG TOP" },
+    { value: "clean", label: "Clean" },
+  ];
+  const accentItems: Array<{ value: ThemeAccent; label: string; color: string }> = [
+    { value: "blue", label: "Azure Blue", color: "#3f8cff" },
+    { value: "purple", label: "Electric Purple", color: "#9b6cff" },
+    { value: "rose", label: "Rose", color: "#f06b91" },
+    { value: "gold", label: "Pure Gold", color: "#e9b949" },
+    { value: "green", label: "Emerald", color: "#4cc978" },
+    { value: "turquoise", label: "Turquoise", color: "#35c6c2" },
   ];
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[34dvh] rounded-t-[20px] border-white/10 bg-[#10161f] pb-3 text-slate-100"
+        className="max-h-[78dvh] rounded-t-[20px] border-white/10 bg-[#10161f] pb-4 text-slate-100"
       >
         <SheetHeader className="px-4 pb-1">
           <SheetTitle className="text-sm font-semibold text-slate-100">
             Настройки
           </SheetTitle>
         </SheetHeader>
-        <div className="mx-4 overflow-hidden rounded-xl border border-white/8 bg-black/10">
-          <section className="flex h-12 items-center justify-between gap-3 px-3">
-            <div className="flex items-center gap-2 text-xs text-slate-300">
-              <Sun className="h-4 w-4" />
-              Оформление
+        <div className="mx-4 space-y-3 overflow-y-auto pb-1">
+          <section className="rounded-xl border border-white/8 bg-black/10 p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Settings2 className="h-4 w-4 text-[#72a8ff]" />
+              Стиль интерфейса
             </div>
-            <div className="inline-flex overflow-hidden rounded-md border border-white/8 bg-[#0b0f14] p-0.5">
+            <div className="grid grid-cols-2 gap-1 rounded-lg border border-white/8 bg-[#0b0f14] p-1">
+              {styleItems.map(item => (
+                <button key={item.value} onClick={() => setStyle(item.value)} aria-pressed={style === item.value} className={`h-8 rounded-md text-[11px] font-semibold transition-colors ${style === item.value ? "bg-[#3f8cff]/18 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] leading-4 text-slate-500">TG TOP сохраняет фирменную сетку, Clean делает оболочку спокойнее и ближе к Telegram-native интерфейсам.</p>
+          </section>
+          <section className="rounded-xl border border-white/8 bg-black/10 p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Sun className="h-4 w-4 text-[#72a8ff]" />
+              Тема
+            </div>
+            <div className="grid grid-cols-3 gap-1 rounded-lg border border-white/8 bg-[#0b0f14] p-1">
               {appearanceItems.map(item => {
                 const Icon = item.icon;
                 const active = appearance === item.value;
-                return (
-                  <button
-                    key={item.value}
-                    onClick={() => setAppearance(item.value)}
-                    aria-label={item.label}
-                    className={`flex h-7 items-center gap-1 rounded px-2 text-[10px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-400"}`}
-                  >
-                    <Icon className="h-3 w-3" />
-                    {item.value === "dark" ? "Темн." : "Светл."}
-                  </button>
-                );
+                return <button key={item.value} onClick={() => setAppearance(item.value)} aria-label={item.label} aria-pressed={active} className={`flex h-8 items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}><Icon className="h-3 w-3" />{item.label}</button>;
               })}
+            </div>
+          </section>
+          <section className="rounded-xl border border-white/8 bg-black/10 p-3">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Palette className="h-4 w-4 text-[#72a8ff]" />
+              Цветовой акцент
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {accentItems.map(item => <button key={item.value} onClick={() => setAccent(item.value)} aria-label={item.label} aria-pressed={accent === item.value} className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg border px-1 transition-colors ${accent === item.value ? "border-[#72a8ff] bg-[#3f8cff]/12" : "border-white/8 bg-[#0b0f14] hover:border-white/20"}`}><span className="h-6 w-6 rounded-md shadow-inner" style={{ backgroundColor: item.color }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>)}
             </div>
           </section>
         </div>

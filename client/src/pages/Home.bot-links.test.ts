@@ -396,7 +396,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Подтвердить в кошельке');
     expect(source).not.toContain('Не отправляйте TON на этот адрес вручную без кода из этого окна');
     expect(source).toContain('Платёж вернулся в кошелёк. Средства не зачислены.');
-    expect(source).not.toContain('{ value: "system"');
+    expect(source).toContain('{ value: "system"');
     expect(source).toContain('setFiltersOpen(true)');
     expect(source).toContain('side="bottom"');
     expect(source).toContain('max-h-[82dvh] rounded-t-[22px]');
@@ -472,8 +472,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('detailHasPaidEntry');
     expect(source).toContain('onClick={openRewardAwareEntry}');
     expect(source).toContain('tx("Сделать вход платным", "Make entry paid")');
-    expect(source).toContain('max-h-[34dvh] rounded-t-[20px]');
-    expect(source).toContain('Оформление');
+    expect(source).toContain('max-h-[78dvh] rounded-t-[20px]');
+    expect(source).toContain('Стиль интерфейса');
+    expect(source).toContain('Цветовой акцент');
+    expect(source).toContain('Azure Blue');
+    expect(source).toContain('Electric Purple');
     expect(source).not.toContain('onLanguageChange');
     expect(source).toContain('tx("Весь мир", "Worldwide")');
     expect(source).toContain('<Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)}');
