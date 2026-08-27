@@ -15,6 +15,7 @@ function Router({ onHomeReady }: { onHomeReady: () => void }) {
   return (
     <Switch>
       <Route path={"/"}>{() => <Home onReady={onHomeReady} />}</Route>
+      <Route path={"/privacy"} component={PrivacyPolicy} />
       <Route path={"/privacy-policy"} component={PrivacyPolicy} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
@@ -31,6 +32,7 @@ function Router({ onHomeReady }: { onHomeReady: () => void }) {
 function App() {
   const [isLaunching, setIsLaunching] = useState(true);
   const [appReady, setAppReady] = useState(false);
+  const isExternalPolicyRoute = typeof window !== "undefined" && ["/privacy", "/privacy-policy"].includes(window.location.pathname);
 
   return (
     <ErrorBoundary>
@@ -42,7 +44,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router onHomeReady={() => setAppReady(true)} />
-            {isLaunching && <TgTopLaunchScreen ready={appReady} onComplete={() => setIsLaunching(false)} />}
+            {!isExternalPolicyRoute && isLaunching && <TgTopLaunchScreen ready={appReady} onComplete={() => setIsLaunching(false)} />}
           </TooltipProvider>
         </ThemeProvider>
       </TonConnectUIProvider>

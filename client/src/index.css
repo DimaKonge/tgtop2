@@ -224,7 +224,10 @@ html[data-accent="gold"] { --tg-accent: #e9b949; --tg-accent-soft: rgba(233, 185
 html[data-accent="green"] { --tg-accent: #4cc978; --tg-accent-soft: rgba(76, 201, 120, 0.18); }
 html[data-accent="turquoise"] { --tg-accent: #35c6c2; --tg-accent-soft: rgba(53, 198, 194, 0.18); }
 html[data-accent="blue"], html:not([data-accent]) { --tg-accent: #3f8cff; --tg-accent-soft: rgba(63, 140, 255, 0.18); }
-.tg-bottom-nav-active { background: var(--tg-accent-soft) !important; color: var(--tg-accent) !important; }
+.tg-bottom-nav-active {
+  background: var(--tg-accent-soft) !important;
+  color: var(--tg-accent) !important;
+}
 
 .tg-bottom-nav {
   position: relative;
@@ -243,10 +246,10 @@ html[data-accent="blue"], html:not([data-accent]) { --tg-accent: #3f8cff; --tg-a
   pointer-events: none;
 }
 .tg-bottom-nav > * { position: relative; z-index: 1; }
-.tg-bottom-nav-active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 5px 16px rgba(63, 140, 255, 0.18) !important; }
+.tg-bottom-nav-active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 5px 16px color-mix(in srgb, var(--tg-accent) 24%, transparent) !important; }
 
 @media (max-width: 380px) {
-  .tg-bottom-nav button { height: 52px; }
+  .tg-bottom-nav button { height: 48px; }
   .tg-bottom-nav button span { font-size: 9px; }
 }
 
@@ -262,11 +265,7 @@ html[data-theme="light"] .tg-bottom-nav-inactive:hover {
   background: rgba(37, 99, 235, 0.08) !important;
   color: #1e3a8a !important;
 }
-html[data-theme="light"] .tg-bottom-nav-active {
-  background: rgba(37, 99, 235, 0.14) !important;
-  color: #2563eb !important;
-  box-shadow: 0 5px 16px rgba(37, 99, 235, 0.14) !important;
-}
+html[data-theme="light"] .tg-bottom-nav-active { box-shadow: 0 5px 16px color-mix(in srgb, var(--tg-accent) 20%, transparent) !important; }
 
 @media (prefers-reduced-motion: reduce) {
   .tg-launch-cube, .tg-launch-progress span, .ranking-slot-enter { animation: none; opacity: 1; transform: none; width: 100%; }
@@ -302,13 +301,60 @@ html[data-theme="light"] .tg-shell .border-white\/10,
 html[data-theme="light"] .tg-shell .border-white\/12,
 html[data-theme="light"] .tg-shell .border-white\/15 { border-color: rgba(38, 61, 88, 0.14) !important; }
 html[data-theme="light"] .tg-bottom-nav {
-  background: linear-gradient(135deg, rgba(231, 240, 249, 0.94), rgba(213, 228, 242, 0.9)) !important;
+  background: linear-gradient(135deg, rgba(238, 246, 253, 0.72), rgba(212, 229, 245, 0.62)) !important;
   border-color: rgba(37, 99, 235, 0.2) !important;
-  box-shadow: 0 14px 34px rgba(40, 72, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+  box-shadow: 0 12px 28px rgba(40, 72, 108, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
 }
 html[data-theme="light"] .tg-bottom-nav::before {
   border-color: rgba(255, 255, 255, 0.72);
   background: linear-gradient(115deg, rgba(255, 255, 255, 0.5), transparent 36%, transparent 72%, rgba(126, 164, 205, 0.1));
 }
 html[data-theme="light"] .tg-bottom-nav-inactive { color: #60738a !important; }
-html[data-theme="light"] .tg-bottom-nav-active { color: #2169d5 !important; background: rgba(37, 99, 235, 0.14) !important; }
+html[data-theme="light"] .tg-bottom-nav-active { color: var(--tg-accent) !important; background: var(--tg-accent-soft) !important; }
+
+/* Light mode must win over the Telegram Clean dark base even when both data attributes are present. */
+html[data-theme="light"][data-style="clean"],
+html[data-theme="light"][data-style="clean"] body,
+html[data-theme="light"][data-style="clean"] .tg-shell {
+  background: #edf3f9 !important;
+  color-scheme: light;
+  color: #172338 !important;
+}
+html[data-theme="light"] .tg-shell .bg-\[\#0e1c31\],
+html[data-theme="light"] .tg-shell .bg-\[\#0f1825\],
+html[data-theme="light"] .tg-shell .bg-\[\#101a2a\],
+html[data-theme="light"] .tg-shell .bg-\[\#101a2d\],
+html[data-theme="light"] .tg-shell .bg-\[\#111d32\],
+html[data-theme="light"] .tg-shell .bg-\[\#132338\],
+html[data-theme="light"] .tg-shell .bg-\[\#14263b\],
+html[data-theme="light"] .tg-shell .bg-\[\#151d28\],
+html[data-theme="light"] .tg-shell .bg-\[\#151d29\],
+html[data-theme="light"] .tg-shell .bg-\[\#151e2b\],
+html[data-theme="light"] .tg-shell .bg-\[\#17212b\],
+html[data-theme="light"] .tg-shell .bg-\[\#182334\],
+html[data-theme="light"] .tg-shell .bg-\[\#1b2836\],
+html[data-theme="light"] .tg-shell .bg-\[\#202b3a\],
+html[data-theme="light"] .tg-shell .bg-\[\#203a35\],
+html[data-theme="light"] .tg-shell .bg-\[\#213750\],
+html[data-theme="light"] .tg-shell .bg-\[\#223447\],
+html[data-theme="light"] .tg-shell .bg-\[\#253247\],
+html[data-theme="light"] .tg-shell .bg-\[\#26443e\],
+html[data-theme="light"] .tg-shell .bg-\[\#274363\],
+html[data-theme="light"] .tg-shell .bg-\[\#293d52\],
+html[data-theme="light"] .tg-shell .bg-\[\#2b3648\],
+html[data-theme="light"] .tg-shell .bg-\[\#2b4158\] {
+  background-color: #f7faff !important;
+  color: #172338 !important;
+}
+
+html[data-theme="light"] .brand-mark {
+  overflow: hidden;
+  border-color: rgba(37, 99, 235, 0.2) !important;
+  background-color: #f7fbff !important;
+  background-image: url("/manus-storage/tgtop-logo-light-header-512_31677d56.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 78%;
+  color: transparent !important;
+  text-shadow: none !important;
+}

@@ -31,10 +31,9 @@ export default function PrivacyPolicy() {
           <p>По вопросам доступа, исправления или удаления данных напишите владельцу TG TOP через поддержку основного бота <strong className="text-foreground">@TG_TOPBOT</strong>. В запросе не указывайте коды входа, пароли, seed-фразы или другие секреты.</p>
 
           <h2 className="pt-4 text-xl font-semibold text-foreground">7. Изменения политики</h2>
-          <p>Мы можем обновлять эту страницу при изменении функций TG TOP. Актуальная версия всегда доступна по адресу <a className="text-primary hover:underline" href="https://tgtop.me/privacy-policy">tgtop.me/privacy-policy</a>.</p>
+          <p>Мы можем обновлять эту страницу при изменении функций TG TOP. Актуальная версия всегда доступна по адресу <a className="text-primary hover:underline" href="https://tgtop.me/privacy">tgtop.me/privacy</a>.</p>
         </section>
       </article>
     </main>
   );
 }
-

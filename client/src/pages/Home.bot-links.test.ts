@@ -9,6 +9,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('startchannel&admin=${channelAdminRights}');
     expect(source).toContain('startgroup=tgtop_admin&admin=${groupAdminRights}');
     expect(source).toContain('delete_messages+invite_users+pin_messages+manage_chat');
+    expect(source).toContain('openTelegramCommunityLink(`https://t.me/TG_TOPBOT?${query}`)');
+    expect(source).not.toContain('window.open(`https://t.me/TG_TOPBOT?${query}`, "_blank")');
     expect(source).toContain('setAdminGuideKind(kind)');
     expect(source).not.toContain('createOpen');
     expect(source).not.toContain('tx("Создать площадку", "Create a community")');
@@ -458,7 +460,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('`Прогноз #${detailDisplayedSlotNumber}`');
     expect(source).toContain('if (!detailRewardActive || !isAuthenticated) {');
     expect(source).toContain('createRewardInviteLink.mutate({ groupId: detail.group.id }, {');
-    expect(source).toContain('openTelegramCommunityLink(inviteLink);');
+    expect(source).toContain('if (!openTelegramCommunityLink(inviteLink)) {');
+    expect(source).toContain('Не удалось открыть сообщество. Разрешите открытие ссылок и повторите попытку.');
+    expect(source).not.toContain('Открыта ваша персональная ссылка');
     expect(source).toContain('trpc.tgTop.getRewardCampaignStats.useQuery');
     expect(source).toContain('Подтверждённые участники:');
     expect(source).toContain('При снятии лота ставка за место не возвращается.');

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { AudienceGrowthChart, GramBalanceChart, Metric, TelegramAnalyticsChart, telegramNotificationPercent, type AudienceSnapshot, type TelegramAnalyticsGraph, type TelegramAnalyticsSummary } from "@/components/analytics/ChartPanels";
+import { TgTopPyramidIcon } from "@/components/TgTopPyramidIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -1827,9 +1828,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     onError: error => toast.error(error.message),
   });
   const createRewardInviteLink = trpc.tgTop.createRewardInviteLink.useMutation({
-    onSuccess: ({ inviteLink, existing }) => {
-      openTelegramCommunityLink(inviteLink);
-      toast.success(tx(existing ? "Открыта ваша персональная ссылка" : "Создана и открыта персональная ссылка", existing ? "Your personal link is open" : "Your personal link was created and opened"));
+    onSuccess: ({ inviteLink }) => {
+      if (!openTelegramCommunityLink(inviteLink)) {
+        toast.error(tx("Не удалось открыть сообщество. Разрешите открытие ссылок и повторите попытку.", "Could not open the community. Allow links and try again."));
+      }
     },
     onError: error => toast.error(error.message),
   });
@@ -2743,7 +2745,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     const query = kind === "channel"
       ? `startchannel&admin=${channelAdminRights}`
       : `startgroup=tgtop_admin&admin=${groupAdminRights}`;
-    window.open(`https://t.me/TG_TOPBOT?${query}`, "_blank");
+    openTelegramCommunityLink(`https://t.me/TG_TOPBOT?${query}`);
   };
   const startBotAdminSetup = (kind: "channel" | "group") => {
     setAdminGuideKind(kind);
@@ -4597,7 +4599,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       </main>
 
       <nav className="pointer-events-none fixed inset-x-3 bottom-[calc(0.65rem+env(safe-area-inset-bottom))] z-40">
-        <div className="tg-bottom-nav pointer-events-auto mx-auto flex max-w-3xl items-center justify-center rounded-[24px] border border-white/15 bg-[#132338]/80 p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.34)] backdrop-blur-2xl">
+        <div className="tg-bottom-nav pointer-events-auto mx-auto flex max-w-3xl items-center justify-center rounded-[22px] border border-white/15 bg-[#132338]/80 p-1.25 shadow-[0_12px_36px_rgba(0,0,0,0.34)] backdrop-blur-2xl">
           {isAuthenticated ? (
             <div className={`grid w-full gap-1 ${moderationAccess?.canModerate ? "grid-cols-4" : "grid-cols-3"}`}>
               {(
@@ -4616,9 +4618,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       item.key === "mine" ? openMine() : setPage(item.key as Page)
                     }
                     aria-label={item.label}
-                    className={`flex h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] px-1 transition-all duration-200 ${page === item.key ? "tg-bottom-nav-active bg-[#3f8cff]/20 text-[#8fc1ff] shadow-[0_5px_16px_rgba(63,140,255,0.18)]" : "tg-bottom-nav-inactive text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"}`}
+                    className={`flex h-[50px] min-w-0 flex-col items-center justify-center gap-[3px] rounded-[16px] px-1 transition-all duration-200 ${page === item.key ? "tg-bottom-nav-active" : "tg-bottom-nav-inactive text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"}`}
                   >
-                    <Icon className="h-5 w-5 shrink-0" />
+                    {item.key === "top" ? <TgTopPyramidIcon className="h-[18px] w-[22px] shrink-0" /> : <Icon className="h-[18px] w-[18px] shrink-0" />}
                     <span className="max-w-full truncate px-0.5 text-[10px] font-medium leading-none">{item.key === "mine" ? tx("Рабочее", "Workspace") : item.key === "profile" ? tx("Профиль", "Profile") : item.label}</span>
                   </button>
                 );
@@ -4628,9 +4630,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <button
               onClick={() => setPage("top")}
               aria-label="ТОП"
-              className="tg-bottom-nav-active flex h-[56px] flex-col items-center justify-center gap-1 rounded-[18px] bg-[#3f8cff]/20 text-[#8fc1ff]"
+              className="tg-bottom-nav-active flex h-[50px] flex-col items-center justify-center gap-[3px] rounded-[16px]"
             >
-              <Trophy className="h-5 w-5" />
+              <TgTopPyramidIcon className="h-[18px] w-[22px]" />
               <span className="text-[10px] font-medium leading-none">ТОП</span>
             </button>
           )}
