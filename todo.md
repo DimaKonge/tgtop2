@@ -972,7 +972,7 @@
 - [x] Сформировать короткий приоритетный план «сначала стабилизируем, затем запускаем» с понятными критериями готовности к реальному запуску.
 - [x] Построчно проверить release-vps.sh и VPS release storage: retention, preflight свободного места, failed-stage cleanup, rollback и health gates.
 - [x] По явному запросу владельца удалить текущие runtime release backup archives на VPS после подтверждения завершения запущенного release; не затрагивать код, MySQL, Telegram-сессии или application data.
-- [ ] По уточнённому запросу владельца отключить persistent retention runtime release archives после успешной активации; оставлять rollback-copy только на время самого staged release.
+- [x] По уточнённому запросу владельца отключить persistent retention runtime release archives после успешной активации; оставлять rollback-copy только на время самого staged release.
 - [x] Построчно проверить authentication, tRPC role gates и все owner/moderator/finance privileged procedures на fail-closed доступ.
 - [x] Закрыть найденный entry-link access defect: generic resolver должен выдавать public `@username` всем авторизованным пользователям, но private/monthly invite link — только владельцу или модератору.
 - [x] Закрыть найденный finance access defect: очередь и review заявок вывода должны быть доступны только главному администратору, а не любому модератору.
@@ -984,6 +984,9 @@
 - [x] Закрыть найденный onboarding-link defect: fallback Mini App URL в bot/notifications должен использовать canonical `https://tgtop.me`, не legacy `tgtop.xyz`.
 - [x] Закрыть найденный listing-notification truthfulness defect: возвращать фактическое число успешных Telegram announcements, а не число всех размещённых групп.
 - [ ] Построчно проверить listing, TOP ranking, GRAM ledger и moderation flows с фокусом на согласованность статусов и reload-safe UI.
+- [ ] Закрыть найденный TOP read-side-effect defect: public getSlots должен быть read-only и не создавать доски, не размещать и не переупорядочивать TOP от открытия экрана.
+- [ ] Закрыть найденный TOP/listing status defect: successful paid ranking bid должен atomically переводить выбранное сообщество в `listed` с датой размещения и согласованными listing fields.
+- [ ] Закрыть найденный duplicate listing-announcement defect: повторное сохранение уже размещённой группы не должно автоматически публиковать объявление в Telegram.
 - [ ] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.
 - [ ] Построчно проверить NFT, deals, rewards, bot catalog и Telegram analytics как второстепенные workflows на broken states и data boundaries.
 - [ ] Разбить Home.tsx, routers.ts и db.ts на изолированные domain modules, сохраняя API contracts и добавляя регрессионные тесты на каждый перенос.
