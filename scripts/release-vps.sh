@@ -13,6 +13,8 @@ STAGE_PORT="${TG_TOP_STAGE_PORT:-3101}"
 ARCHIVE="/tmp/tgtop-${RELEASE}-source.tgz"
 BACKUP_RETENTION="${TG_TOP_BACKUP_RETENTION:-5}"
 MIN_FREE_KB="${TG_TOP_RELEASE_MIN_FREE_KB:-786432}"
+STAGE_RETENTION_MINUTES="${TG_TOP_STAGE_RETENTION_MINUTES:-120}"
+SOURCE_RETENTION_MINUTES="${TG_TOP_SOURCE_RETENTION_MINUTES:-10080}"
 
 cd "$PROJECT_DIR"
 
@@ -42,7 +44,7 @@ SCP=(scp -i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecki
 "${SSH[@]}" 'mkdir -p /opt/tgtop/releases /opt/tgtop/backups'
 "${SCP[@]}" "$ARCHIVE" "$HOST:/opt/tgtop/releases/${RELEASE}-source.tgz"
 
-"${SSH[@]}" "RELEASE='$RELEASE' EXPECTED_SHA='$EXPECTED_SHA' STAGE_PORT='$STAGE_PORT' BACKUP_RETENTION='$BACKUP_RETENTION' MIN_FREE_KB='$MIN_FREE_KB' bash -s" <<'REMOTE'
+"${SSH[@]}" "RELEASE='$RELEASE' EXPECTED_SHA='$EXPECTED_SHA' STAGE_PORT='$STAGE_PORT' BACKUP_RETENTION='$BACKUP_RETENTION' MIN_FREE_KB='$MIN_FREE_KB' STAGE_RETENTION_MINUTES='$STAGE_RETENTION_MINUTES' SOURCE_RETENTION_MINUTES='$SOURCE_RETENTION_MINUTES' bash -s" <<'REMOTE'
 set -euo pipefail
 BASE=/opt/tgtop
 ARCHIVE="$BASE/releases/${RELEASE}-source.tgz"
@@ -50,6 +52,7 @@ STAGE="$BASE/releases/stage-${RELEASE}"
 PREVIOUS="$BASE/releases/previous-${RELEASE}"
 FAILED="$BASE/releases/failed-${RELEASE}"
 BACKUP="$BASE/backups/pre-${RELEASE}-runtime.tgz"
+LOCK_FILE="$BASE/releases/.release.lock"
 ITEMS=(dist node_modules package.json pnpm-lock.yaml scripts)
 UNITS=(tgtop.service tgtop-bot.service tgtop-bot-reserve.service)
 if [ -f /etc/systemd/system/tgtop-payout-worker.service ]; then UNITS+=(tgtop-payout-worker.service); fi
@@ -75,6 +78,11 @@ ensure_release_space() {
   fi
 }
 
+prune_release_artifacts() {
+  find "$BASE/releases" -mindepth 1 -maxdepth 1 -type d \( -name 'stage-release-*' -o -name 'previous-release-*' \) -mmin +"$STAGE_RETENTION_MINUTES" -exec rm -rf -- {} +
+  find "$BASE/releases" -mindepth 1 -maxdepth 1 -type f -name 'release-*-source.tgz' -mmin +"$SOURCE_RETENTION_MINUTES" -delete
+}
+
 rollback() {
   if [ "$ACTIVATED" = 1 ]; then
     mkdir -p "$FAILED"
@@ -91,11 +99,17 @@ trap rollback ERR
 [ -x "$BASE/node_modules/.bin/pnpm" ] || { echo "Project-local pnpm is unavailable; refusing release" >&2; exit 1; }
 case "$BACKUP_RETENTION" in ''|*[!0-9]*|0) echo "TG_TOP_BACKUP_RETENTION must be a positive integer" >&2; exit 1;; esac
 case "$MIN_FREE_KB" in ''|*[!0-9]*|0) echo "TG_TOP_RELEASE_MIN_FREE_KB must be a positive integer" >&2; exit 1;; esac
+case "$STAGE_RETENTION_MINUTES" in ''|*[!0-9]*|0) echo "TG_TOP_STAGE_RETENTION_MINUTES must be a positive integer" >&2; exit 1;; esac
+case "$SOURCE_RETENTION_MINUTES" in ''|*[!0-9]*|0) echo "TG_TOP_SOURCE_RETENTION_MINUTES must be a positive integer" >&2; exit 1;; esac
+command -v flock >/dev/null || { echo "flock is required for safe staged releases" >&2; exit 1; }
+exec 9>"$LOCK_FILE"
+flock -n 9 || { echo "Another TG TOP release is already running; refusing overlap" >&2; exit 1; }
 if command -v ss >/dev/null && ss -ltn | grep -q ":${STAGE_PORT} "; then
   echo "Staging port ${STAGE_PORT} is already in use" >&2
   exit 1
 fi
 
+prune_release_artifacts
 ensure_release_space
 mkdir -p "$STAGE" "$PREVIOUS"
 tar -xzf "$ARCHIVE" -C "$STAGE"
@@ -136,6 +150,7 @@ for unit in "${UNITS[@]}"; do systemctl is-active --quiet "$unit" || { rollback;
 curl -fsS --max-time 15 http://127.0.0.1:3000/healthz >/tmp/tgtop-release-health.json || { rollback; exit 1; }
 rm -rf -- "$PREVIOUS" "$STAGE"
 rm -f -- "$ARCHIVE"
+prune_release_artifacts
 prune_runtime_backups "$BACKUP_RETENTION"
 trap - ERR
 printf 'release=%s\nbackup=%s\nstage_health=ok\n' "$RELEASE" "$BACKUP"

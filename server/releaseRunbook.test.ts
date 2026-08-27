@@ -30,11 +30,21 @@ describe("VPS release runbook", () => {
   it("fails safely before a release cannot make its backup and keeps bounded restore points", () => {
     expect(script).toContain('BACKUP_RETENTION="${TG_TOP_BACKUP_RETENTION:-5}"');
     expect(script).toContain('MIN_FREE_KB="${TG_TOP_RELEASE_MIN_FREE_KB:-786432}"');
+    expect(script).toContain('STAGE_RETENTION_MINUTES="${TG_TOP_STAGE_RETENTION_MINUTES:-120}"');
+    expect(script).toContain('SOURCE_RETENTION_MINUTES="${TG_TOP_SOURCE_RETENTION_MINUTES:-10080}"');
     expect(script).toContain('ensure_release_space');
     expect(script).toContain('Insufficient release space:');
     expect(script).toContain("prune_runtime_backups \"$((BACKUP_RETENTION - 1))\"");
     expect(script).toContain('prune_runtime_backups "$BACKUP_RETENTION"');
     expect(script).toContain('rm -rf -- "$PREVIOUS" "$STAGE"');
     expect(script).toContain('rm -f -- "$ARCHIVE"');
+  });
+
+  it("prevents overlapping releases and bounds stale staging artifacts", () => {
+    expect(script).toContain('LOCK_FILE="$BASE/releases/.release.lock"');
+    expect(script).toContain('flock -n 9 || { echo "Another TG TOP release is already running; refusing overlap" >&2; exit 1; }');
+    expect(script).toContain('prune_release_artifacts');
+    expect(script).toContain("-name 'stage-release-*' -o -name 'previous-release-*'");
+    expect(script).toContain("-name 'release-*-source.tgz'");
   });
 });
