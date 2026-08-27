@@ -1039,3 +1039,10 @@
 - [ ] Добавить публичную страницу Privacy Policy на `tgtop.me` для ссылки BotFather; описать Mini App, Telegram account data, support relay, launch audit, storage, retention, security and contact route.
 - [ ] Подготовить и проверить TG TOP description photo 640×360 и отдельный animated avatar asset для BotFather.
 - [x] Создать и подключить frontend route `/privacy-policy` с русской Privacy Policy для TG TOP; TypeScript, build и safe tests прошли.
+- [ ] Отдельно перевести Telegram Login Redirect URI и Trusted Origin с `tgtop.xyz` на `tgtop.me`, обновив code contract, BotFather/Telegram Login settings и проверив вход до удаления старого домена.
+- [ ] Сгенерировать минималистичный статичный логотип TG TOP: узнаваемый силуэт TOP-пирамиды из геометрических ячеек, без текста, читаемый в круглом Telegram-аватаре.
+- [x] Доработать существующий splash keyframe с силуэтом пирамиды ячеек в чистый минималистичный квадратный логотип TG TOP для Telegram-аватара; не использовать несвязанные новые варианты.
+- [x] Согласовать static и animated TG TOP avatars: одна геометрия splash-пирамиды с длинной нижней ячейкой-фундаментом, без расхождения знака между версиями.
+- [x] Убрать пользовательское промежуточное сообщение `Сообщение получено. Ответ придёт сюда от поддержки TG TOP.` из inbound support relay; сохранить доставку карточки в topic «Поддержка» и ответ owner через основной бот.
+- [x] Исправить confirmation после owner support reply: отправлять `✅ Ответ отправлен пользователю.` с тем же `message_thread_id`, а не в General.
+- [x] Расширить inbound support relay на фото, видео, документы, стикеры, GIF/анимации и emoji; сохранять минимальный metadata mapping и разрешать owner reply из закрытого topic.

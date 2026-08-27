@@ -58,4 +58,20 @@ describe("Telegram support relay contract", () => {
     expect(dbSource).toContain("getTelegramReferralReferrer");
     expect(dbSource).toContain("eq(users.referralCode, referredUser.referredBy)");
   });
+
+  it("keeps inbound support silent while preserving the owner reply path", () => {
+    expect(botSource).not.toContain("Сообщение получено. Ответ придёт сюда от поддержки TG TOP.");
+    expect(botSource).toContain("linkTelegramSupportOwnerNotification(inboundId");
+    expect(botSource).toContain("Ответ отправлен пользователю.");
+  });
+
+  it("relays common media as replyable owner cards", () => {
+    expect(botSource).toContain("sendSupportOwnerMessage");
+    expect(botSource).toContain('"sendPhoto"');
+    expect(botSource).toContain('"sendSticker"');
+    expect(botSource).toContain('"sendAnimation"');
+    expect(botSource).toContain('"sendDocument"');
+    expect(botSource).toContain("message.photo?.length");
+    expect(botSource).toContain("message.sticker");
+  });
 });

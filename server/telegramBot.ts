@@ -67,6 +67,13 @@ type TelegramUpdate = {
     text?: string;
     caption?: string;
     message_thread_id?: number;
+    photo?: Array<{ file_id: string }>;
+    video?: { file_id: string };
+    document?: { file_id: string };
+    sticker?: { file_id: string };
+    animation?: { file_id: string };
+    audio?: { file_id: string };
+    voice?: { file_id: string };
     new_chat_members?: TelegramUser[];
     left_chat_member?: TelegramUser;
     new_chat_title?: string;
@@ -259,15 +266,47 @@ async function handleSupportReply(message: NonNullable<TelegramUpdate["message"]
     text: text.slice(0, 4_000),
     telegramMessageId: String(delivered.message_id),
   });
-  await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "✅ Ответ отправлен пользователю." });
+  await telegramCall<boolean>("sendMessage", {
+    chat_id: message.chat.id,
+    message_thread_id: message.message_thread_id,
+    text: "✅ Ответ отправлен пользователю.",
+  });
   return true;
+}
+
+function supportMediaLabel(message: NonNullable<TelegramUpdate["message"]>) {
+  if (message.photo?.length) return "Фото";
+  if (message.video) return "Видео";
+  if (message.document) return "Документ";
+  if (message.sticker) return "Стикер";
+  if (message.animation) return "GIF/анимация";
+  if (message.audio) return "Аудио";
+  if (message.voice) return "Голосовое сообщение";
+  return null;
+}
+
+async function sendSupportOwnerMessage(message: NonNullable<TelegramUpdate["message"]>, destination: { chatId: string; messageThreadId: number | null }, caption: string) {
+  const common = {
+    chat_id: destination.chatId,
+    ...(destination.messageThreadId ? { message_thread_id: destination.messageThreadId } : {}),
+  };
+  if (message.photo?.length) return telegramCall<{ message_id: number }>("sendPhoto", { ...common, photo: message.photo[message.photo.length - 1].file_id, caption });
+  if (message.video) return telegramCall<{ message_id: number }>("sendVideo", { ...common, video: message.video.file_id, caption });
+  if (message.document) return telegramCall<{ message_id: number }>("sendDocument", { ...common, document: message.document.file_id, caption });
+  if (message.sticker) return telegramCall<{ message_id: number }>("sendSticker", { ...common, sticker: message.sticker.file_id });
+  if (message.animation) return telegramCall<{ message_id: number }>("sendAnimation", { ...common, animation: message.animation.file_id, caption });
+  if (message.audio) return telegramCall<{ message_id: number }>("sendAudio", { ...common, audio: message.audio.file_id, caption });
+  if (message.voice) return telegramCall<{ message_id: number }>("sendVoice", { ...common, voice: message.voice.file_id, caption });
+  return telegramCall<{ message_id: number }>("sendMessage", { ...common, text: caption, disable_web_page_preview: true });
 }
 
 async function handleSupportInbound(message: NonNullable<TelegramUpdate["message"]>) {
   if (activeBotLabel.toLowerCase() !== "@tg_topbot") return false;
   if (message.chat.type !== "private" || !message.from || message.from.is_bot) return false;
   const text = message.text?.trim();
-  if (!text || text.startsWith("/")) return false;
+  const caption = message.caption?.trim();
+  const mediaLabel = supportMediaLabel(message);
+  if ((!text && !mediaLabel) || text?.startsWith("/") || caption?.startsWith("/")) return false;
   const destination = await getTelegramOperationLogDestination("support");
   if (!destination) {
     await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Поддержка временно не подключена. Попробуйте позже." }).catch(() => {});
@@ -276,33 +315,19 @@ async function handleSupportInbound(message: NonNullable<TelegramUpdate["message
   const inboundId = await recordTelegramSupportInbound({
     telegramUserId: String(message.from.id),
     telegramUsername: message.from.username ?? null,
-    text: text.slice(0, 4_000),
+    text: (text ?? `[${mediaLabel}]${caption ? ` ${caption}` : ""}`).slice(0, 4_000),
     telegramMessageId: String(message.message_id),
   });
-  const ownerMessage = await telegramCall<{ message_id: number }>("sendMessage", {
-    chat_id: destination.chatId,
-    ...(destination.messageThreadId ? { message_thread_id: destination.messageThreadId } : {}),
-    text: [
-      "📩 Новое сообщение в поддержку TG TOP",
-      `Пользователь: ${message.from.username ? `@${message.from.username}` : `ID ${message.from.id}`}`,
-      "",
-      text.slice(0, 3_600),
-      "",
-      "Ответьте реплаем на эту карточку — бот отправит ответ пользователю.",
-    ].join("\n"),
-    disable_web_page_preview: true,
-  });
+  const ownerCaption = [
+    "📩 Новое сообщение в поддержку TG TOP",
+    `Пользователь: ${message.from.username ? `@${message.from.username}` : `ID ${message.from.id}`}`,
+    mediaLabel ? `Тип вложения: ${mediaLabel}` : "",
+    caption ? `Подпись: ${caption.slice(0, 3_400)}` : text ? text.slice(0, 3_600) : "",
+    "",
+    "Ответьте реплаем на эту карточку — бот отправит ответ пользователю.",
+  ].filter(Boolean).join("\n");
+  const ownerMessage = await sendSupportOwnerMessage(message, destination, ownerCaption);
   await linkTelegramSupportOwnerNotification(inboundId, String(ownerMessage.message_id));
-  const acknowledgement = await telegramCall<{ message_id: number }>("sendMessage", {
-    chat_id: message.chat.id,
-    text: "Сообщение получено. Ответ придёт сюда от поддержки TG TOP.",
-  });
-  await recordTelegramSupportOutbound({
-    telegramUserId: String(message.from.id),
-    telegramUsername: message.from.username ?? null,
-    text: "Сообщение получено. Ответ придёт сюда от поддержки TG TOP.",
-    telegramMessageId: String(acknowledgement.message_id),
-  });
   return true;
 }
 
