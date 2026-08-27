@@ -186,7 +186,7 @@ export type TelegramStatsSnapshot = typeof telegramStatsSnapshots.$inferSelect;
 
 export const telegramOperationLogDestinations = mysqlTable("telegram_operation_log_destinations", {
   id: int("id").autoincrement().primaryKey(),
-  kind: mysqlEnum("kind", ["top_activity", "finance", "support", "launches"]).notNull(),
+  kind: mysqlEnum("kind", ["top_activity", "finance", "support", "launches", "additions"]).notNull(),
   chatId: varchar("chatId", { length: 64 }).notNull(),
   messageThreadId: int("messageThreadId"),
   chatTitle: varchar("chatTitle", { length: 255 }),

@@ -435,6 +435,13 @@
       "when": 1787846971067,
       "tag": "0061_bumpy_gamora",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "5",
+      "when": 1787860198030,
+      "tag": "0062_powerful_grandmaster",
+      "breakpoints": true
     }
   ]
 }

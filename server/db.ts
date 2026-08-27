@@ -315,7 +315,7 @@ export async function getLatestTelegramStatsSnapshot(targetId: number) {
   return snapshot;
 }
 
-export async function getTelegramOperationLogDestination(kind: "top_activity" | "finance" | "support" | "launches") {
+export async function getTelegramOperationLogDestination(kind: "top_activity" | "finance" | "support" | "launches" | "additions") {
   const db = await getDb();
   if (!db) return undefined;
   const [destination] = await db.select().from(telegramOperationLogDestinations).where(eq(telegramOperationLogDestinations.kind, kind)).limit(1);
@@ -323,7 +323,7 @@ export async function getTelegramOperationLogDestination(kind: "top_activity" | 
 }
 
 export async function saveTelegramOperationLogDestination(input: {
-  kind: "top_activity" | "finance" | "support" | "launches";
+  kind: "top_activity" | "finance" | "support" | "launches" | "additions";
   chatId: string;
   messageThreadId?: number | null;
   chatTitle?: string | null;

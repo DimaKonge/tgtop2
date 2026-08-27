@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { formatFinanceLog, formatLaunchLog, formatTopActivityLog } from "./telegramOperationsLogger";
+import { formatAdditionLog, formatFinanceLog, formatLaunchLog, formatTopActivityLog } from "./telegramOperationsLogger";
 
 describe("private Telegram operations logs", () => {
   it("formats only concise operational information and strips line breaks from user supplied fields", () => {
@@ -8,6 +8,16 @@ describe("private Telegram operations logs", () => {
     expect(message).toContain("TOP spoof");
     expect(message).toContain("Alex Admin · @alex");
     expect(message).not.toContain("\nspoof");
+  });
+
+  it("formats confirmed onboarding events for the additions topic", () => {
+    const message = formatAdditionLog({ groupTitle: "TON\nCommunity", groupId: 77, chatType: "supergroup", actor: { name: "Owner", username: "owner" } });
+    expect(message).toContain("➕ Новое добавление в TG TOP");
+    expect(message).toContain("Тип: Группа");
+    expect(message).toContain("Сообщество: TON Community");
+    expect(message).toContain("Карточка: #77");
+    expect(message).toContain("Владелец: Owner · @owner");
+    expect(message).not.toContain("wallet");
   });
 
   it("separates confirmed financial operation states without wallet-address payloads", () => {

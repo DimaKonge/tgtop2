@@ -90,10 +90,11 @@ try {
     "enum('top_activity','finance')",
     "enum('top_activity','finance','support')",
     "enum('top_activity','finance','support','launches')",
+    "enum('top_activity','finance','support','launches','additions')",
   ]);
   if (!oldKindTypes.has(kindType)) throw new Error("telegram_operation_log_destinations.kind has an unexpected enum; refusing unsafe migration");
-  if (kindType !== "enum('top_activity','finance','support','launches')") {
-    await connection.query("ALTER TABLE `telegram_operation_log_destinations` MODIFY COLUMN `kind` enum('top_activity','finance','support','launches') NOT NULL");
+  if (kindType !== "enum('top_activity','finance','support','launches','additions')") {
+    await connection.query("ALTER TABLE `telegram_operation_log_destinations` MODIFY COLUMN `kind` enum('top_activity','finance','support','launches','additions') NOT NULL");
   }
   const destinationColumns = await getColumnNames("telegram_operation_log_destinations");
   if (!destinationColumns.has("messageThreadId")) {

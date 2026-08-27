@@ -36,7 +36,7 @@ import {
 } from "./db";
 import { notifyCommunityEntryLinkInvalidated, notifyCommunityEntryLinkRevalidated, notifyRankingOutbid } from "./telegramNotifications";
 import { ENV } from "./_core/env";
-import { deliverOperationsLog, formatLaunchLog, formatTopActivityLog } from "./telegramOperationsLogger";
+import { deliverOperationsLog, formatAdditionLog, formatLaunchLog, formatTopActivityLog } from "./telegramOperationsLogger";
 
 type TelegramChat = {
   id: number;
@@ -106,13 +106,14 @@ function isExpectedLogBot(kind: NonNullable<ReturnType<typeof parsePrivateLogDes
   return kind === "support" ? "@tg_topbot" : "@tgtop_robot";
 }
 
-export function parsePrivateLogDestinationCommand(text: string | undefined): "top_activity" | "finance" | "support" | "launches" | null {
+export function parsePrivateLogDestinationCommand(text: string | undefined): "top_activity" | "finance" | "support" | "launches" | "additions" | null {
   const normalized = text?.trim().toLowerCase() ?? "";
   if (/^\/tgtop_log_top(?:@\w+)?$/.test(normalized)) return "top_activity";
   if (/^\/tgtop_log_connections(?:@\w+)?$/.test(normalized)) return "top_activity";
   if (/^\/tgtop_log_finance(?:@\w+)?$/.test(normalized)) return "finance";
   if (/^\/tgtop_support(?:@\w+)?$/.test(normalized)) return "support";
   if (/^\/tgtop_log_launches(?:@\w+)?$/.test(normalized)) return "launches";
+  if (/^\/tgtop_log_additions(?:@\w+)?$/.test(normalized)) return "additions";
   return null;
 }
 
@@ -158,7 +159,7 @@ async function configurePrivateLogDestination(message: NonNullable<TelegramUpdat
     chatTitle: message.chat.title ?? null,
     configuredByOpenId: `telegram:${message.from.id}`,
   });
-  const label = kind === "top_activity" ? "TOP-активность" : kind === "finance" ? "Финансы" : kind === "support" ? "Поддержка" : "Запуски";
+  const label = kind === "top_activity" ? "TOP-активность" : kind === "finance" ? "Финансы" : kind === "support" ? "Поддержка" : kind === "launches" ? "Запуски" : "Добавления";
   await telegramCall<boolean>("sendMessage", {
     chat_id: message.chat.id,
     ...topicReply,
@@ -685,6 +686,13 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   await sendOnboardingConfirmation(from.id, profile, awarded);
   await openMiniApp(chat.id, "TG TOP подключён. Сообщество добавлено в личную папку.");
   if (savedGroup) {
+    const additionLog = formatAdditionLog({
+      groupTitle: savedGroup.title,
+      groupId: savedGroup.id,
+      chatType: chat.type === "channel" ? "channel" : chat.type === "group" ? "group" : "supergroup",
+      actor: { name: from.first_name, username: from.username },
+    });
+    void deliverOperationsLog("additions", additionLog);
     void deliverOperationsLog("top_activity", formatTopActivityLog({
       event: "bot_connected",
       groupTitle: savedGroup.title,

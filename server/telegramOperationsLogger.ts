@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getTelegramOperationLogDestination } from "./db";
 
-export type OperationsLogKind = "top_activity" | "finance" | "launches";
+export type OperationsLogKind = "top_activity" | "finance" | "launches" | "additions";
 
 const botToken = process.env.TELEGRAM_RESERVE_BOT_TOKEN;
 
@@ -23,6 +23,17 @@ export function formatTopActivityLog(input: { event: "bot_connected" | "listed_i
     `Сообщество: ${sanitizeLine(input.groupTitle, 160)}`,
     `Карточка: #${input.groupId}`,
     ...(input.actor ? [`Пользователь: ${displayUser(input.actor)}`] : []),
+  ].join("\n");
+}
+
+export function formatAdditionLog(input: { groupTitle: string; groupId: number; chatType: "group" | "supergroup" | "channel"; actor?: { name?: string | null; username?: string | null } }) {
+  return [
+    "➕ Новое добавление в TG TOP",
+    "",
+    `Тип: ${input.chatType === "channel" ? "Канал" : "Группа"}`,
+    `Сообщество: ${sanitizeLine(input.groupTitle, 160)}`,
+    `Карточка: #${input.groupId}`,
+    ...(input.actor ? [`Владелец: ${displayUser(input.actor)}`] : []),
   ].join("\n");
 }
 
