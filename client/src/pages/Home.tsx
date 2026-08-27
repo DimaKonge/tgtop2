@@ -3357,25 +3357,30 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </div>
             )}
             {!targetSlot && mine.length > 0 && (
-              <Input
-                value={myGroupsSearchQuery}
-                onChange={event => setMyGroupsSearchQuery(event.target.value)}
-                aria-label={tx("Поиск в моих группах", "Search my groups")}
-                placeholder={tx("Поиск по названию или @username", "Search by name or @username")}
-                className="h-8 rounded-lg border-white/10 bg-[#111720] px-3 text-[11px] text-slate-200 placeholder:text-slate-600"
-              />
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <Input
+                  value={myGroupsSearchQuery}
+                  onChange={event => setMyGroupsSearchQuery(event.target.value)}
+                  aria-label={tx("Поиск в моих группах", "Search my groups")}
+                  placeholder={tx("Поиск по названию или @username", "Search by name or @username")}
+                  className="h-12 rounded-xl border-0 bg-[#1b2836] pl-10 pr-3 text-sm text-slate-100 placeholder:text-slate-500 shadow-none"
+                />
+              </div>
             )}
-            <button type="button" onClick={() => setMyGroupsAddOpen(true)} className="flex h-14 w-full items-center justify-between rounded-2xl border border-dashed border-[#3f8cff]/45 bg-[#3f8cff]/[0.055] px-4 text-left transition-colors hover:bg-[#3f8cff]/[0.1] active:scale-[0.99]">
-              <span><b className="block text-sm text-[#b8d1ff]">{tx("Добавить сообщество", "Add community")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{tx("Канал или чат с ботом-администратором", "Channel or chat with an administrator bot")}</small></span>
-              <span className="grid h-8 w-8 place-items-center rounded-xl border border-[#72a8ff]/35 bg-[#3f8cff]/12 text-[#a6c8ff]"><Plus className="h-4 w-4" /></span>
+            <button type="button" onClick={() => setMyGroupsAddOpen(true)} className="flex h-14 w-full items-center gap-3 rounded-xl border-0 bg-[#1b2836] px-4 text-left transition-colors hover:bg-[#223447] active:scale-[0.99]">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#3f8cff]/15 text-[#72b2ff]"><Plus className="h-5 w-5" /></span>
+              <span><b className="block text-sm font-semibold text-[#72b2ff]">{tx("Добавить группу или канал", "Add group or channel")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{tx("Подключить @TG_TOPBOT администратором", "Connect @TG_TOPBOT as administrator")}</small></span>
+              <ChevronRight className="ml-auto h-4 w-4 text-slate-600" />
             </button>
             {!targetSlot && mine.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 px-0.5">
-                <button type="button" onClick={() => { setMyGroupsViewMode(mode => mode === "list" ? "grid" : "list"); exitMyGroupsSelection(); }} aria-label={myGroupsViewMode === "grid" ? tx("Показать список", "Show list") : tx("Показать сетку", "Show grid")} className="inline-flex h-6 items-center gap-1.5 rounded-full border border-[#3f8cff]/45 bg-[#3f8cff]/12 px-2.5 text-[9px] font-semibold text-[#b8d1ff] transition-colors hover:bg-[#3f8cff]/20">
-                  {myGroupsViewMode === "grid" ? <LayoutGrid className="h-3 w-3" /> : <List className="h-3 w-3" />}
-                  {myGroupsViewMode === "grid" ? tx("Сетка", "Grid") : tx("Список", "List")}
-                </button>
-                <button type="button" onClick={() => myGroupsSelectionMode ? exitMyGroupsSelection() : setMyGroupsSelectionMode(true)} className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-[9px] font-semibold transition-colors ${myGroupsSelectionMode ? "border-[#72a8ff]/55 bg-[#3f8cff]/16 text-[#b8d1ff]" : "border-white/10 bg-white/[0.025] text-slate-500 hover:border-white/20 hover:text-slate-200"}`}><Check className="h-3 w-3" />{myGroupsSelectionMode ? tx("Готово", "Done") : tx("Выбрать", "Select")}</button>
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-[#1b2836] p-1">
+                <div className="flex min-w-0 items-center gap-1">
+                  <button type="button" onClick={() => { setMyGroupsViewMode("list"); exitMyGroupsSelection(); }} aria-label={tx("Показать список", "Show list")} aria-pressed={myGroupsViewMode === "list"} className={`grid h-9 w-10 place-items-center rounded-lg transition-colors ${myGroupsViewMode === "list" ? "bg-white/10 text-[#8fc1ff]" : "text-slate-500 hover:text-slate-200"}`}><List className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => { setMyGroupsViewMode("grid"); exitMyGroupsSelection(); }} aria-label={tx("Показать сетку", "Show grid")} aria-pressed={myGroupsViewMode === "grid"} className={`grid h-9 w-10 place-items-center rounded-lg transition-colors ${myGroupsViewMode === "grid" ? "bg-white/10 text-[#8fc1ff]" : "text-slate-500 hover:text-slate-200"}`}><LayoutGrid className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => myGroupsSelectionMode ? exitMyGroupsSelection() : setMyGroupsSelectionMode(true)} aria-label={tx("Выбрать группы", "Select groups")} className={`grid h-9 w-10 place-items-center rounded-lg transition-colors ${myGroupsSelectionMode ? "bg-[#3f8cff]/16 text-[#8fc1ff]" : "text-slate-500 hover:text-slate-200"}`}><Check className="h-4 w-4" /></button>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 text-[10px] text-slate-500"><span>{n(visibleMyGroups.length, language)}</span><span>•</span><span>{tx("групп", "groups")}</span></div>
               </div>
             )}
             {!targetSlot && mine.length > 0 && (

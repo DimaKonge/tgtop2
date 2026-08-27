@@ -363,7 +363,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('activationConstraint: { delay: 320, tolerance: 10 }');
     expect(source).toContain('myGroupsStatusFilter');
     expect(source).toContain('const [myGroupsSelectionMode, setMyGroupsSelectionMode] = useState(false)');
-    expect(source).toContain('tx("Выбрать", "Select")');
+    expect(source).toContain('tx("Выбрать группы", "Select groups")');
     expect(source).toContain('beginMyGroupsSelectionHold(group.id)');
     expect(source).toContain('const [myGroupsSearchQuery, setMyGroupsSearchQuery] = useState("")');
     expect(source).toContain('const isMyGroupsSearchActive = normalizedMyGroupsSearch.length > 0');
