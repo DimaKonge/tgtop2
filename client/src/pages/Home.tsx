@@ -4177,7 +4177,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         {page === "profile" && (
           <section className="space-y-4">
             <h1 className="px-1 text-sm font-semibold text-slate-300">{tx("Личный кабинет", "Account")}</h1>
-            <div className="rounded-2xl border border-white/8 bg-[#111720] p-5">
+            <div className="tg-clean-surface rounded-2xl border border-white/8 bg-[#111720] p-5 shadow-[0_10px_28px_rgba(2,8,16,0.14)]">
               <div className="flex items-center gap-3">
                 <span className="grid h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold">
                   {(user?.avatarUrl ?? telegramAvatar) ? (
@@ -4268,7 +4268,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
               </div>
             </div>
-            <section className="rounded-2xl border border-white/8 bg-[#111720] p-4">
+            <section className="tg-clean-surface rounded-2xl border border-white/8 bg-[#111720] p-4 shadow-[0_10px_28px_rgba(2,8,16,0.14)]">
               <button type="button" onClick={() => setFinancialHistoryOpen(true)} className="block w-full text-left transition-opacity hover:opacity-90 active:opacity-75" aria-label={tx("Открыть полную статистику операций", "Open full transaction statistics")}>
                 <div className="flex items-start justify-between gap-3">
                   <span>
