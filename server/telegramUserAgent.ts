@@ -90,6 +90,8 @@ function getErrorCode(error: unknown) {
 }
 
 type HistoryPoint = { at: number; value: number };
+type HistorySeries = { key: string; label: string; points: HistoryPoint[] };
+type HistoryGraph = { series: HistorySeries[] };
 
 function toDateFromUnixSeconds(value: unknown) {
   const seconds = Number(value);
@@ -101,27 +103,32 @@ function currentValue(value: { current: number } | undefined) {
   return Number.isFinite(current) ? Math.round(current) : null;
 }
 
-async function readStatsGraph(client: TelegramClient, graph: Api.TypeStatsGraph): Promise<HistoryPoint[]> {
+async function readStatsGraph(client: TelegramClient, graph: Api.TypeStatsGraph, pointLimit = 120): Promise<HistoryGraph> {
   let resolved = graph;
   if (resolved instanceof Api.StatsGraphAsync) resolved = await client.invoke(new Api.stats.LoadAsyncGraph({ token: resolved.token }));
-  if (!(resolved instanceof Api.StatsGraph)) return [];
+  if (!(resolved instanceof Api.StatsGraph)) return { series: [] };
   try {
-    const parsed = JSON.parse(resolved.json.data) as { columns?: unknown };
-    if (!Array.isArray(parsed.columns)) return [];
+    const parsed = JSON.parse(resolved.json.data) as { columns?: unknown; names?: unknown };
+    if (!Array.isArray(parsed.columns)) return { series: [] };
     const columns = parsed.columns.filter((column): column is [string, ...unknown[]] => Array.isArray(column) && typeof column[0] === "string");
     const x = columns.find(column => column[0] === "x");
-    const y = columns.find(column => column[0] !== "x");
-    if (!x || !y) return [];
-    const points: HistoryPoint[] = [];
-    const total = Math.min(x.length, y.length) - 1;
-    for (let index = 1; index <= total && points.length < 400; index += 1) {
-      const at = Number(x[index]);
-      const value = Number(y[index]);
-      if (Number.isSafeInteger(at) && Number.isFinite(value)) points.push({ at: at * 1_000, value: Math.round(value) });
-    }
-    return points;
+    if (!x) return { series: [] };
+    const names: Record<string, unknown> = parsed.names && typeof parsed.names === "object" ? parsed.names as Record<string, unknown> : {};
+    const series = columns.filter(column => column[0] !== "x").slice(0, 8).map(column => {
+      const rawLabel = names[column[0]];
+      const label = typeof rawLabel === "string" ? rawLabel : column[0];
+      const points: HistoryPoint[] = [];
+      const total = Math.min(x.length, column.length) - 1;
+      for (let index = 1; index <= total && points.length < pointLimit; index += 1) {
+        const at = Number(x[index]);
+        const value = Number(column[index]);
+        if (Number.isSafeInteger(at) && Number.isFinite(value)) points.push({ at: at * 1_000, value: Math.round(value) });
+      }
+      return { key: column[0], label, points };
+    }).filter(series => series.points.length > 0);
+    return { series };
   } catch {
-    return [];
+    return { series: [] };
   }
 }
 
@@ -157,12 +164,46 @@ export async function refreshTelegramHistoricalStats(actorOpenId: string, rawUse
     const viewsPerPost = isChannel ? currentValue(stats.viewsPerPost) : currentValue(stats.viewers);
     const sharesPerPost = isChannel ? currentValue(stats.sharesPerPost) : null;
     const reactionsPerPost = isChannel ? currentValue(stats.reactionsPerPost) : null;
-    const memberHistory = await readStatsGraph(client, isChannel ? stats.followersGraph : stats.membersGraph);
-    const activityHistory = await readStatsGraph(client, isChannel ? stats.interactionsGraph : stats.messagesGraph);
-    await saveTelegramStatsSnapshot({ targetId: target.id, periodStart: toDateFromUnixSeconds(stats.period.minDate), periodEnd: toDateFromUnixSeconds(stats.period.maxDate), memberCount, viewsPerPost, sharesPerPost, reactionsPerPost, historyJson: JSON.stringify({ memberHistory, activityHistory }) });
+    const graphs = isChannel
+      ? {
+          growth: await readStatsGraph(client, stats.growthGraph),
+          subscriptions: await readStatsGraph(client, stats.followersGraph),
+          notifications: await readStatsGraph(client, stats.muteGraph, 60),
+          activeHours: await readStatsGraph(client, stats.topHoursGraph, 48),
+          reach: await readStatsGraph(client, stats.interactionsGraph),
+          viewsBySource: await readStatsGraph(client, stats.viewsBySourceGraph, 60),
+          followersBySource: await readStatsGraph(client, stats.newFollowersBySourceGraph, 60),
+          languages: await readStatsGraph(client, stats.languagesGraph, 60),
+          reactions: await readStatsGraph(client, stats.reactionsByEmotionGraph, 60),
+        }
+      : {
+          growth: await readStatsGraph(client, stats.growthGraph),
+          subscriptions: await readStatsGraph(client, stats.membersGraph),
+          activeHours: await readStatsGraph(client, stats.topHoursGraph, 48),
+          reach: await readStatsGraph(client, stats.messagesGraph),
+          followersBySource: await readStatsGraph(client, stats.newMembersBySourceGraph, 60),
+          languages: await readStatsGraph(client, stats.languagesGraph, 60),
+          activity: await readStatsGraph(client, stats.actionsGraph),
+          weekdays: await readStatsGraph(client, stats.weekdaysGraph, 48),
+        };
+    const history = {
+      version: 2,
+      graphs,
+      summary: isChannel ? {
+        notificationsEnabled: { part: Number(stats.enabledNotifications.part), total: Number(stats.enabledNotifications.total) },
+        viewsPerPost: { current: currentValue(stats.viewsPerPost), previous: currentValue({ current: Number(stats.viewsPerPost.previous) }) },
+        sharesPerPost: { current: currentValue(stats.sharesPerPost), previous: currentValue({ current: Number(stats.sharesPerPost.previous) }) },
+        reactionsPerPost: { current: currentValue(stats.reactionsPerPost), previous: currentValue({ current: Number(stats.reactionsPerPost.previous) }) },
+      } : {
+        messages: { current: currentValue(stats.messages), previous: currentValue({ current: Number(stats.messages.previous) }) },
+        viewers: { current: currentValue(stats.viewers), previous: currentValue({ current: Number(stats.viewers.previous) }) },
+        posters: { current: currentValue(stats.posters), previous: currentValue({ current: Number(stats.posters.previous) }) },
+      },
+    };
+    await saveTelegramStatsSnapshot({ targetId: target.id, periodStart: toDateFromUnixSeconds(stats.period.minDate), periodEnd: toDateFromUnixSeconds(stats.period.maxDate), memberCount, viewsPerPost, sharesPerPost, reactionsPerPost, historyJson: JSON.stringify(history) });
     await persistConnectedTelegramUserAgentClientSession(client);
-    await recordTelegramUserAgentAuditEvent({ action: "stats_refreshed", actorOpenId, details: `username=@${username};series=${memberHistory.length}/${activityHistory.length}` });
-    return { username, title: target.title, kind: target.kind, memberCount, viewsPerPost, sharesPerPost, reactionsPerPost, memberHistory, activityHistory, periodStart: toDateFromUnixSeconds(stats.period.minDate), periodEnd: toDateFromUnixSeconds(stats.period.maxDate), availability: "ready" as const };
+    await recordTelegramUserAgentAuditEvent({ action: "stats_refreshed", actorOpenId, details: `username=@${username};graphs=${Object.keys(graphs).length}` });
+    return { username, title: target.title, kind: target.kind, memberCount, viewsPerPost, sharesPerPost, reactionsPerPost, history, periodStart: toDateFromUnixSeconds(stats.period.minDate), periodEnd: toDateFromUnixSeconds(stats.period.maxDate), availability: "ready" as const };
   } catch {
     await markTelegramStatsTargetUnavailable({ targetId: target.id, reason: "Telegram statistics unavailable or access changed" });
     await recordTelegramUserAgentAuditEvent({ action: "stats_unavailable", actorOpenId, details: `username=@${username}` });
@@ -176,7 +217,7 @@ export async function getTelegramHistoricalStatsOverview() {
   const targets = await listTelegramStatsTargets();
   return await Promise.all(targets.map(async target => {
     const latest = await getLatestTelegramStatsSnapshot(target.id);
-    return { id: target.id, username: target.username, title: target.title, kind: target.kind, lastRefreshedAt: target.lastRefreshedAt, availability: target.lastAvailability, snapshot: latest ? { collectedAt: latest.collectedAt, periodStart: latest.periodStart, periodEnd: latest.periodEnd, memberCount: latest.memberCount, viewsPerPost: latest.viewsPerPost, sharesPerPost: latest.sharesPerPost, reactionsPerPost: latest.reactionsPerPost, history: JSON.parse(latest.historyJson) as { memberHistory: HistoryPoint[]; activityHistory: HistoryPoint[] } } : null };
+    return { id: target.id, username: target.username, title: target.title, kind: target.kind, lastRefreshedAt: target.lastRefreshedAt, availability: target.lastAvailability, snapshot: latest ? { collectedAt: latest.collectedAt, periodStart: latest.periodStart, periodEnd: latest.periodEnd, memberCount: latest.memberCount, viewsPerPost: latest.viewsPerPost, sharesPerPost: latest.sharesPerPost, reactionsPerPost: latest.reactionsPerPost, history: JSON.parse(latest.historyJson) as { version?: number; graphs?: Record<string, HistoryGraph>; summary?: Record<string, unknown>; memberHistory?: HistoryPoint[]; activityHistory?: HistoryPoint[] } } : null };
   }));
 }
 
