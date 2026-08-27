@@ -9,6 +9,7 @@ import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramR
 import { assignRankingEntriesToSlots, getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
 import { canEnterTopRanking } from "./rankingListingPolicy";
 import { getModeratedGroupLifecycle } from "./moderationApprovalPolicy";
+import { canPublishNftListing } from "./nftOwnershipPublicationPolicy";
 import { planVacantRankingAssignments } from "./autoPlacementPolicy";
 import { formatTonAmount } from "./tonFormatting";
 import { canCreateRewardPersonalInviteLink, DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
@@ -2729,7 +2730,8 @@ export async function getNftUsernames(ownerOpenId?: string) {
   if (ownerOpenId) {
     return await db.select().from(nftUsernames).where(eq(nftUsernames.ownerOpenId, ownerOpenId)).orderBy(desc(nftUsernames.createdAt));
   }
-  return await db.select().from(nftUsernames).orderBy(desc(nftUsernames.createdAt));
+  const rows = await db.select().from(nftUsernames).where(eq(nftUsernames.status, "available")).orderBy(desc(nftUsernames.createdAt));
+  return rows.filter(nft => canPublishNftListing({ assetClass: nft.assetClass, ownershipVerifiedAt: nft.ownershipVerifiedAt }));
 }
 
 export async function createNftListing(data: InsertNftUsername) {
@@ -2766,18 +2768,6 @@ export async function setNftShowcaseTarget(nftId: number, ownerOpenId: string, i
     eq(nftUsernames.id, nftId),
     eq(nftUsernames.ownerOpenId, ownerOpenId)
   ));
-}
-
-export async function rentNft(nftId: number, renterOpenId: string, rentalDays: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const expiresAt = new Date(Date.now() + rentalDays * 24 * 60 * 60 * 1000);
-  
-  await db.update(nftUsernames).set({
-    status: "rented",
-    currentRenterOpenId: renterOpenId,
-    rentalExpiresAt: expiresAt
-  }).where(eq(nftUsernames.id, nftId));
 }
 
 export async function resolveNftTransferRecipient(recipientInput: string) {
@@ -2833,48 +2823,6 @@ export async function prepareNftTransfer(nftId: number, senderOpenId: string, re
   const [transfer] = await db.select().from(nftTransfers).where(eq(nftTransfers.transferReference, reference)).limit(1);
   if (!transfer) throw new Error("Не удалось создать передачу NFT");
   return { transfer, nft, recipient, requirements };
-}
-
-export async function completeOffchainNftTransfer(transferId: number, senderOpenId: string) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const now = new Date();
-
-  await db.transaction(async tx => {
-    const [transfer] = await tx.select().from(nftTransfers).where(and(
-      eq(nftTransfers.id, transferId),
-      eq(nftTransfers.senderOpenId, senderOpenId)
-    )).limit(1);
-    if (!transfer) throw new Error("Передача NFT не найдена");
-    if (transfer.assetClass !== "offchain" || transfer.status !== "draft") {
-      throw new Error("Эту передачу нельзя подтвердить как Off-chain NFT");
-    }
-
-    const [nft] = await tx.select().from(nftUsernames).where(and(
-      eq(nftUsernames.id, transfer.nftId),
-      eq(nftUsernames.ownerOpenId, senderOpenId),
-      eq(nftUsernames.assetClass, "offchain"),
-      eq(nftUsernames.status, "available")
-    )).limit(1);
-    if (!nft) throw new Error("NFT больше недоступен для передачи");
-
-    const [recipient] = await tx.select({
-      name: users.name,
-      telegramUsername: users.telegramUsername,
-    }).from(users).where(eq(users.openId, transfer.recipientOpenId)).limit(1);
-    if (!recipient) throw new Error("Получатель больше недоступен в TG TOP");
-
-    await tx.update(nftUsernames).set({
-      ownerOpenId: transfer.recipientOpenId,
-      ownerUsername: recipient.telegramUsername ?? recipient.name ?? transfer.recipientOpenId.slice(0, 12),
-      showcaseGroupId: null,
-      currentRenterOpenId: null,
-      rentalExpiresAt: null,
-    }).where(eq(nftUsernames.id, nft.id));
-    await tx.update(nftTransfers).set({ status: "completed", confirmedAt: now }).where(eq(nftTransfers.id, transfer.id));
-  });
-
-  return { success: true, platformFeePercent: 0 };
 }
 
 export async function getNftTransferHistory(openId: string) {

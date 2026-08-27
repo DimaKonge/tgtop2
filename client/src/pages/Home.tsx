@@ -2146,20 +2146,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     },
     onError: error => toast.error(error.message),
   });
-  const completeOffchainNftTransferMutation = trpc.tgTop.completeOffchainNftTransfer.useMutation({
-    onSuccess: () => {
-      toast.success(tx("Передача Off-chain NFT подтверждена. Комиссия TG TOP · 0%", "Off-chain NFT transfer confirmed. TG TOP fee · 0%."));
-      setNftTransferOpen(false);
-      setPreparedNftTransfer(null);
-      setSelectedNftId(null);
-      setRecipientInput("");
-      setNftTransferStep("select");
-      void utils.tgTop.myNfts.invalidate();
-      void utils.tgTop.getNfts.invalidate();
-      void utils.tgTop.myNftTransfers.invalidate();
-    },
-    onError: error => toast.error(language === "en" ? "Could not confirm the off-chain transfer. Please try again." : error.message),
-  });
 
   const matchesAudience = (group: Group | null) => {
     if (!group || audience === "all") return true;
@@ -3037,10 +3023,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     }
     prepareNftTransferMutation.mutate({ nftId: selectedNft.id, recipientInput });
   };
-  const completePreparedOffchainNftTransfer = () => {
-    if (!preparedNftTransfer || preparedNftTransfer.transfer.assetClass !== "offchain") return;
-    completeOffchainNftTransferMutation.mutate({ transferId: preparedNftTransfer.transfer.id });
-  };
 
   return (
     <div className="tg-shell min-h-screen bg-[#0b0f14] text-slate-100">
@@ -3232,7 +3214,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   </span>
                   {isAuthenticated && (
                     <button onClick={openNftTransfer} className="rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 py-1.5 text-[10px] font-semibold text-[#a6c8ff]">
-                      {tx("Передать NFT", "Send NFT")}
+                      {tx("Заявка на передачу", "Transfer request")}
                     </button>
                   )}
                 </div>
@@ -5415,7 +5397,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div className="rounded-xl border border-dashed border-white/12 bg-[#0b0f14] p-5 text-center text-xs leading-5 text-slate-500">{tx("В вашем профиле пока нет NFT, доступных для передачи.", "There are no NFTs available to transfer in your profile yet.")}</div>
                 )}
               </div>
-              <p className="rounded-xl border border-white/8 bg-white/[0.025] p-3 text-[11px] leading-5 text-slate-500">{tx("Off-chain NFT передается внутри защищенного учета TG TOP. On-chain NFT требует проверки обоих кошельков и подписи транзакции в GRAM.", "Off-chain NFTs move through TG TOP’s protected ledger. On-chain NFTs require both wallets to be verified and a GRAM transaction signature.")}</p>
+              <p className="rounded-xl border border-white/8 bg-white/[0.025] p-3 text-[11px] leading-5 text-slate-500">{tx("TG TOP фиксирует заявку, но не передает NFT автоматически. Назначение подтверждается только через официальный Telegram/Fragment-процесс. On-chain листинг появится после независимой проверки владения.", "TG TOP records a request but never transfers an NFT automatically. Assignment is confirmed only through the official Telegram/Fragment process. On-chain listings appear after independent ownership verification.")}</p>
             </div>
           )}
 
@@ -5450,7 +5432,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="rounded-2xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 p-4 text-center">
                 <Check className="mx-auto h-7 w-7 text-[#72a8ff]" />
                 <b className="mt-2 block text-base text-slate-100">{preparedNftTransfer.transfer.assetClass === "offchain" ? tx("Подтвердите передачу", "Confirm transfer") : tx("Проверка кошельков требуется", "Wallet verification required")}</b>
-                <p className="mt-1 text-xs leading-5 text-slate-500">{preparedNftTransfer.transfer.assetClass === "offchain" ? tx("После подтверждения NFT перейдет получателю внутри TG TOP. Комиссия платформы — 0%.", "After confirmation, the NFT will move to the recipient inside TG TOP. Platform fee — 0%.") : tx("Этот On-chain NFT останется в безопасности до завершения проверки адресов и подготовки подписи в GRAM Connect.", "This on-chain NFT remains safe until address verification and GRAM Connect signing are ready.")}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{preparedNftTransfer.transfer.assetClass === "offchain" ? tx("TG TOP зафиксировал запрос. Передача не выполняется автоматически: назначение нужно подтвердить через официальный Telegram/Fragment-процесс.", "TG TOP recorded the request. No transfer is automatic: confirm assignment through the official Telegram/Fragment process.") : tx("Этот On-chain NFT останется в безопасности до завершения проверки адресов и подготовки подписи в GRAM Connect.", "This on-chain NFT remains safe until address verification and GRAM Connect signing are ready.")}</p>
               </div>
             </div>
           )}
@@ -5466,7 +5448,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             </>}
             {nftTransferStep === "prepared" && <>
               <Button variant="outline" onClick={() => setNftTransferOpen(false)} className="border-white/10 text-slate-300">{tx("Закрыть", "Close")}</Button>
-              {preparedNftTransfer?.transfer.assetClass === "offchain" && <Button onClick={completePreparedOffchainNftTransfer} disabled={completeOffchainNftTransferMutation.isPending} className="bg-[#3f8cff] text-white">{completeOffchainNftTransferMutation.isPending ? ui.loading : tx("Подтвердить передачу", "Confirm transfer")}</Button>}
             </>}
           </SheetFooter>
         </SheetContent>

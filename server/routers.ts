@@ -10,6 +10,7 @@ import { formatTonAmount } from "./tonFormatting";
 import { getWalletNfts } from "./tonNft";
 import { getSafeTonDepositError } from "./tonDepositErrorPolicy";
 import { getSafeTonWithdrawalError } from "./tonWithdrawalErrorPolicy";
+import { canCreateNftListing } from "./nftOwnershipPublicationPolicy";
 import * as telegramUserAgent from "./telegramUserAgent";
 import { requireTelegramUserAgentOwner } from "./telegramUserAgentAccess";
 import { deliverOperationsLog, formatFinanceLog, formatTopActivityLog } from "./telegramOperationsLogger";
@@ -695,12 +696,6 @@ export const appRouter = router({
         return await db.prepareNftTransfer(input.nftId, ctx.user.openId, input.recipientInput);
       }),
 
-    completeOffchainNftTransfer: protectedProcedure
-      .input(z.object({ transferId: z.number().int().positive() }))
-      .mutation(async ({ ctx, input }) => {
-        return await db.completeOffchainNftTransfer(input.transferId, ctx.user.openId);
-      }),
-
     setNftShowcaseGroup: protectedProcedure
       .input(z.object({ nftId: z.number(), groupId: z.number().nullable() }))
       .mutation(async ({ ctx, input }) => {
@@ -734,6 +729,9 @@ export const appRouter = router({
         }
       }))
       .mutation(async ({ ctx, input }) => {
+        if (!canCreateNftListing(input.assetClass)) {
+          throw new Error("Публикация On-chain NFT появится только после подключения независимой проверки владения");
+        }
         await db.createNftListing({
           ...input,
           ownerOpenId: ctx.user.openId,
@@ -745,12 +743,6 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    rentNft: protectedProcedure
-      .input(z.object({ nftId: z.number(), rentalDays: z.number() }))
-      .mutation(async ({ ctx, input }) => {
-        await db.rentNft(input.nftId, ctx.user.openId, input.rentalDays);
-        return { success: true };
-      }),
     createNftRentalDeal: protectedProcedure
       .input(z.object({ nftId: z.number().int().positive(), rentalDays: z.number().int().positive() }))
       .mutation(async ({ ctx, input }) => db.createNftRentalDeal(input.nftId, ctx.user.openId, input.rentalDays)),

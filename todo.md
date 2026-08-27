@@ -988,9 +988,11 @@
 - [x] Закрыть найденный TOP/listing status defect: successful paid ranking bid должен atomically переводить выбранное сообщество в `listed` с датой размещения и согласованными listing fields.
 - [x] Закрыть найденный duplicate listing-announcement defect: повторное сохранение уже размещённой группы не должно автоматически публиковать объявление в Telegram.
 - [x] Закрыть найденный moderation approval defect: manual approve активного listing должен сохранять `listed`/`listedAt` и TOP slot, а approve review-held группы — возвращать её в owner-controlled pending state.
-- [ ] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.
-- [ ] Закрыть найденный payout flag mismatch: создание и manual approval вывода должны требовать тот же explicit broadcast flag, что и payout worker, иначе request не создаётся/не переводится в queue.
+- [x] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.
+- [x] Закрыть найденный payout flag mismatch: создание и manual approval вывода должны требовать тот же explicit broadcast flag, что и payout worker, иначе request не создаётся/не переводится в queue.
 - [ ] Построчно проверить NFT, deals, rewards, bot catalog и Telegram analytics как второстепенные workflows на broken states и data boundaries.
+- [ ] Закрыть критический legacy NFT rental defect: удалить direct rent endpoint/state update, который мог пометить NFT арендованным без protected deal, escrow и external assignment verification.
+- [ ] Закрыть critical NFT ownership truthfulness defects: не публиковать on-chain NFT до независимой проверки владения и не менять ownership off-chain NFT в каталоге без внешнего доказательства назначения.
 - [ ] Разбить Home.tsx, routers.ts и db.ts на изолированные domain modules, сохраняя API contracts и добавляя регрессионные тесты на каждый перенос.
 - [ ] Провести mobile-first review ключевых экранов и реальные Telegram E2E-проверки: вход, добавление бота, выбор группы, листинг, снятие, переход, модерация.
 - [ ] Выпустить release candidate только после полного deterministic gate, mobile verification, VPS preflight и явного списка известных ограничений.
