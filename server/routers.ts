@@ -11,19 +11,14 @@ import { getWalletNfts } from "./tonNft";
 import { getSafeTonDepositError } from "./tonDepositErrorPolicy";
 import { getSafeTonWithdrawalError } from "./tonWithdrawalErrorPolicy";
 import { canCreateNftListing } from "./nftOwnershipPublicationPolicy";
-import * as telegramUserAgent from "./telegramUserAgent";
-import { requireTelegramUserAgentOwner } from "./telegramUserAgentAccess";
 import { deliverOperationsLog, formatFinanceLog, formatTopActivityLog } from "./telegramOperationsLogger";
 import { canResolveVerifiedEntryLink } from "./entryLinkAccess";
 import { requireFinanceReviewer } from "./financeReviewAccess";
 import { countSuccessfulTelegramAnnouncements } from "./listingAnnouncementPolicy";
+import { telegramUserAgentRouter } from "./routers/telegramUserAgentRouter";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
-const ownerOnly = async (openId: string) => {
-  const access = await db.getModerationAccess(openId);
-  requireTelegramUserAgentOwner(access);
-};
 const groupListingInput = z.object({
   salePriceTon: gramAmount.nullable().optional(),
   country: z.string().trim().min(2).max(64).optional(),
@@ -55,44 +50,7 @@ export const appRouter = router({
     }),
   }),
 
-  telegramUserAgent: router({
-    status: protectedProcedure.query(async ({ ctx }) => {
-      await ownerOnly(ctx.user.openId);
-      return await telegramUserAgent.getTelegramUserAgentStatus();
-    }),
-    requestCode: protectedProcedure.input(z.object({ phone: z.string().trim().min(8).max(32) })).mutation(async ({ ctx, input }) => {
-      await ownerOnly(ctx.user.openId);
-      return await telegramUserAgent.beginTelegramUserAgentLogin(ctx.user.openId, input.phone);
-    }),
-    confirmCode: protectedProcedure.input(z.object({ code: z.string().trim().min(4).max(8) })).mutation(async ({ ctx, input }) => {
-      await ownerOnly(ctx.user.openId);
-      return await telegramUserAgent.confirmTelegramUserAgentCode(ctx.user.openId, input.code);
-    }),
-    confirmPassword: protectedProcedure.input(z.object({ password: z.string().min(1).max(256) })).mutation(async ({ ctx, input }) => {
-      await ownerOnly(ctx.user.openId);
-      return await telegramUserAgent.confirmTelegramUserAgentPassword(ctx.user.openId, input.password);
-    }),
-    disconnect: protectedProcedure.mutation(async ({ ctx }) => {
-      await ownerOnly(ctx.user.openId);
-      return await telegramUserAgent.disconnectTelegramUserAgent(ctx.user.openId);
-    }),
-    bootstrapOwnerDm: protectedProcedure.input(z.object({ username: z.string().trim().min(5).max(33) })).mutation(async ({ ctx, input }) => {
-      await ownerOnly(ctx.user.openId);
-      return await telegramUserAgent.bootstrapTelegramOwnerDmGreeting(ctx.user.openId, input.username);
-    }),
-    getHistoricalStats: protectedProcedure.query(async ({ ctx }) => {
-      await ownerOnly(ctx.user.openId);
-      return await telegramUserAgent.getTelegramHistoricalStatsOverview();
-    }),
-    allowHistoricalStatsTarget: protectedProcedure.input(z.object({ username: z.string().trim().min(5).max(33) })).mutation(async ({ ctx, input }) => {
-      await ownerOnly(ctx.user.openId);
-      return await telegramUserAgent.addTelegramHistoricalStatsTarget(ctx.user.openId, input.username);
-    }),
-    refreshHistoricalStats: protectedProcedure.input(z.object({ username: z.string().trim().min(5).max(33) })).mutation(async ({ ctx, input }) => {
-      await ownerOnly(ctx.user.openId);
-      return await telegramUserAgent.refreshTelegramHistoricalStats(ctx.user.openId, input.username);
-    }),
-  }),
+  telegramUserAgent: telegramUserAgentRouter,
 
   tgTop: router({
     getSlots: publicProcedure

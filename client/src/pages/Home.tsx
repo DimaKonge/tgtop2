@@ -5,6 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startTelegramLogin } from "@/lib/telegramLogin";
 import { trpc } from "@/lib/trpc";
+import { formatCatalogDate as date, formatCatalogDateTime as dateTime, formatCatalogNumber as n, formatGram, normalizeRankingBid, parseGramInput } from "@/lib/catalog-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,42 +73,6 @@ type DetailStatsPeriod = "day" | "month" | "all";
 type WorkspaceSection = "communities" | "bots" | "nft";
 type WalletNftFilter = "all" | "gifts" | "usernames" | "anonymous_numbers" | "domains" | "other";
 const getRussianLanguage = (): Language => "ru";
-const n = (value: number, language: Language = "ru") =>
-  new Intl.NumberFormat(language === "en" ? "en-US" : "ru-RU").format(value);
-const date = (value?: Date | null, language: Language = "ru") =>
-  value
-    ? new Date(value).toLocaleDateString(language === "en" ? "en-US" : "ru-RU", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : "—";
-const dateTime = (value?: Date | null, language: Language = "ru") =>
-  value
-    ? new Intl.DateTimeFormat(language === "en" ? "en-US" : "ru-RU", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }).format(new Date(value))
-    : "—";
-const formatGram = (units: number | null | undefined) => {
-  const amount = Math.max(0, Number(units ?? 0)) / 100;
-  return amount.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
-};
-const parseGramInput = (value: string): number | undefined => {
-  const normalized = value.trim().replace(",", ".");
-  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return undefined;
-  const units = Math.round(Number(normalized) * 100);
-  return Number.isSafeInteger(units) ? units : undefined;
-};
-const normalizeRankingBid = (value: number): number | undefined => {
-  if (!Number.isFinite(value)) return undefined;
-  const rounded = Math.round((value + Number.EPSILON) * 10) / 10;
-  return Math.abs(value - rounded) <= 1e-8 ? rounded : undefined;
-};
 
 type AudienceSnapshot = {
   membersCount: number;

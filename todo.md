@@ -990,9 +990,11 @@
 - [x] Закрыть найденный moderation approval defect: manual approve активного listing должен сохранять `listed`/`listedAt` и TOP slot, а approve review-held группы — возвращать её в owner-controlled pending state.
 - [x] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.
 - [x] Закрыть найденный payout flag mismatch: создание и manual approval вывода должны требовать тот же explicit broadcast flag, что и payout worker, иначе request не создаётся/не переводится в queue.
-- [ ] Построчно проверить NFT, deals, rewards, bot catalog и Telegram analytics как второстепенные workflows на broken states и data boundaries.
-- [ ] Закрыть критический legacy NFT rental defect: удалить direct rent endpoint/state update, который мог пометить NFT арендованным без protected deal, escrow и external assignment verification.
-- [ ] Закрыть critical NFT ownership truthfulness defects: не публиковать on-chain NFT до независимой проверки владения и не менять ownership off-chain NFT в каталоге без внешнего доказательства назначения.
+- [x] Построчно проверить NFT, deals, rewards, bot catalog и Telegram analytics как второстепенные workflows на broken states и data boundaries.
+- [x] Закрыть критический legacy NFT rental defect: удалить direct rent endpoint/state update, который мог пометить NFT арендованным без protected deal, escrow и external assignment verification.
+- [x] Закрыть critical NFT ownership truthfulness defects: не публиковать on-chain NFT до независимой проверки владения и не менять ownership off-chain NFT в каталоге без внешнего доказательства назначения.
 - [ ] Разбить Home.tsx, routers.ts и db.ts на изолированные domain modules, сохраняя API contracts и добавляя регрессионные тесты на каждый перенос.
+- [ ] Без изменения API извлечь owner-only `telegramUserAgent` endpoints из central `routers.ts` в отдельный domain router with the same server-side owner gate.
+- [ ] Без изменения UI behavior извлечь pure format/parse helpers из `Home.tsx` в shared client module as the first safe page-monolith reduction.
 - [ ] Провести mobile-first review ключевых экранов и реальные Telegram E2E-проверки: вход, добавление бота, выбор группы, листинг, снятие, переход, модерация.
 - [ ] Выпустить release candidate только после полного deterministic gate, mobile verification, VPS preflight и явного списка известных ограничений.

@@ -60,7 +60,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('submitTonWithdrawal');
     expect(source).toContain('tonWithdrawalSubmitInFlight.current');
     expect(source).toContain('createTonWithdrawalMutation.isPending');
-    expect(source).toContain('const normalizeRankingBid = (value: number): number | undefined => {');
+    expect(source).toContain('normalizeRankingBid, parseGramInput } from "@/lib/catalog-format"');
     expect(source).toContain('const value = normalizeRankingBid(Number(amount));');
     expect(source).toContain('Укажите бюджет и награду за подписчика');
     expect(source).toContain('onError: () => undefined');
@@ -116,7 +116,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('https://tonviewer.com/transaction/${transactionHash}');
     expect(source).toContain('item.type === "withdrawal" && item.status === "confirmed"');
     expect(source).toContain('Открыть в Tonviewer');
-    expect(source).toContain('const dateTime =');
+    expect(source).toContain('formatCatalogDateTime as dateTime');
     expect(source).toContain('dateTime(item.createdAt, language)');
     expect(source).not.toContain('label: "+10%"');
     expect(source).not.toContain('label: "+30%"');
