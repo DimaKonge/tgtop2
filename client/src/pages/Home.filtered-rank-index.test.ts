@@ -10,4 +10,13 @@ describe("filtered ranking detail index", () => {
     expect(source).toContain("const detailDisplayedSlotNumber = detailBoardScope?.displayPosition ?? selectedSlot?.slotNumber");
     expect(source).toContain("selectedSlot ? `#${detailDisplayedSlotNumber}` : `Прогноз #${detailDisplayedSlotNumber}`");
   });
+
+  it("fills a free category TOP slot from the matching catalog list before showing an empty cell", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain("const fallbackRankedGroups = useMemo");
+    expect(source).toContain("return visibleGroups.filter(group => !rankedIds.has(group.id));");
+    expect(source).toContain("const fallbackGroup = fallbackRankedGroups[fallbackIndex];");
+    expect(source).toContain("group: fallbackGroup");
+  });
 });

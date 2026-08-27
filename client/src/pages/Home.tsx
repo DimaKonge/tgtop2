@@ -2002,12 +2002,28 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     () => slots.filter(slot => slot.group && matchesAudience(slot.group)),
     [slots, audience]
   );
+  const fallbackRankedGroups = useMemo(() => {
+    const rankedIds = new Set(compactRankedSlots.flatMap(slot => slot.group ? [slot.group.id] : []));
+    return visibleGroups.filter(group => !rankedIds.has(group.id));
+  }, [compactRankedSlots, visibleGroups]);
   const board = useMemo(() => {
     const vacantSlots = slots.filter(slot => !slot.isOccupied).sort((left, right) => left.slotNumber - right.slotNumber);
+    let fallbackIndex = 0;
     return Array.from({ length: 7 }, (_, index) => {
       const occupiedSlot = compactRankedSlots[index];
       if (occupiedSlot) return { ...occupiedSlot, slotNumber: index + 1 };
       const vacantSlot = vacantSlots[index - compactRankedSlots.length];
+      const fallbackGroup = fallbackRankedGroups[fallbackIndex];
+      if (fallbackGroup) {
+        fallbackIndex += 1;
+        return {
+          id: vacantSlot?.id ?? -(index + 1),
+          slotNumber: index + 1,
+          bidAmount: 0,
+          isOccupied: false,
+          group: fallbackGroup,
+        };
+      }
       return {
         id: vacantSlot?.id ?? -(index + 1),
         slotNumber: index + 1,
@@ -2016,7 +2032,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         group: null,
       };
     });
-  }, [compactRankedSlots, slots]);
+  }, [compactRankedSlots, fallbackRankedGroups, slots]);
   const rankingContinuation = compactRankedSlots.slice(7);
   const rankedGroups = [...board, ...rankingContinuation].flatMap(slot => slot.group ? [slot.group] : []);
   const rankedGroupIds = new Set(rankedGroups.map(group => group.id));
