@@ -271,3 +271,44 @@ html[data-theme="light"] .tg-bottom-nav-active {
 @media (prefers-reduced-motion: reduce) {
   .tg-launch-cube, .tg-launch-progress span, .ranking-slot-enter { animation: none; opacity: 1; transform: none; width: 100%; }
 }
+
+/* Light Telegram Clean refinement: calm navy-tinted materials instead of stark white blocks. */
+html[data-theme="light"] .tg-shell {
+  background: #edf3f9 !important;
+  color: #172338 !important;
+}
+html[data-theme="light"] .tg-shell header {
+  background: rgba(237, 243, 249, 0.96) !important;
+  border-color: rgba(38, 61, 88, 0.14) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.72), 0 8px 22px rgba(50, 78, 112, 0.05);
+}
+html[data-theme="light"] .tg-shell .bg-\[\#0b0f14\] { background-color: #edf3f9 !important; }
+html[data-theme="light"] .tg-shell .bg-\[\#111720\] { background-color: #f7faff !important; }
+html[data-theme="light"] .tg-shell .bg-\[\#141c27\] { background-color: #e6eef7 !important; }
+html[data-theme="light"] .tg-shell .bg-\[\#10161f\],
+html[data-theme="light"] .tg-shell .bg-\[\#1b2430\] { background-color: #eaf1f8 !important; }
+html[data-theme="light"] .tg-shell .text-slate-100,
+html[data-theme="light"] .tg-shell .text-slate-200,
+html[data-theme="light"] .tg-shell .text-slate-300 { color: #223047 !important; }
+html[data-theme="light"] .tg-shell .text-slate-400 { color: #53657b !important; }
+html[data-theme="light"] .tg-shell .text-slate-500,
+html[data-theme="light"] .tg-shell .text-slate-600 { color: #64778e !important; }
+html[data-theme="light"] .tg-shell .text-white { color: #172338 !important; }
+html[data-theme="light"] .tg-shell .bg-white\/5,
+html[data-theme="light"] .tg-shell .bg-white\/8,
+html[data-theme="light"] .tg-shell .bg-white\/10 { background-color: rgba(255, 255, 255, 0.62) !important; }
+html[data-theme="light"] .tg-shell .border-white\/8,
+html[data-theme="light"] .tg-shell .border-white\/10,
+html[data-theme="light"] .tg-shell .border-white\/12,
+html[data-theme="light"] .tg-shell .border-white\/15 { border-color: rgba(38, 61, 88, 0.14) !important; }
+html[data-theme="light"] .tg-bottom-nav {
+  background: linear-gradient(135deg, rgba(231, 240, 249, 0.94), rgba(213, 228, 242, 0.9)) !important;
+  border-color: rgba(37, 99, 235, 0.2) !important;
+  box-shadow: 0 14px 34px rgba(40, 72, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+}
+html[data-theme="light"] .tg-bottom-nav::before {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.5), transparent 36%, transparent 72%, rgba(126, 164, 205, 0.1));
+}
+html[data-theme="light"] .tg-bottom-nav-inactive { color: #60738a !important; }
+html[data-theme="light"] .tg-bottom-nav-active { color: #2169d5 !important; background: rgba(37, 99, 235, 0.14) !important; }

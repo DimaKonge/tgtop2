@@ -17,5 +17,10 @@ describe("TG TOP light theme", () => {
     expect(css).toContain('[data-slot="sheet-content"] .bg-black\\/10');
     expect(css).toContain('[data-slot="sheet-content"] .text-slate-100');
     expect(css).toContain('[data-slot="sheet-content"] .border-white\\/10');
+    expect(css).toContain('html[data-theme="light"] .tg-shell header');
+    expect(css).toContain('background: #edf3f9 !important;');
+    expect(css).toContain('html[data-theme="light"] .tg-bottom-nav::before');
+    expect(css).toContain('background: linear-gradient(135deg, rgba(231, 240, 249, 0.94), rgba(213, 228, 242, 0.9)) !important;');
+    expect(css).toContain('color: #53657b !important;');
   });
 });

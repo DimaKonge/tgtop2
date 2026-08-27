@@ -987,7 +987,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     }
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
   const language = getRussianLanguage();
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
@@ -2885,15 +2884,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               </button>
             )}
             <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              aria-label={tx("Создать канал или чат", "Create a channel or chat")}
-              className="flex h-8 items-center gap-1.5 rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/14 px-2 text-[11px] font-semibold text-[#b9d6ff] shadow-[0_4px_14px_rgba(31,104,224,0.12)] transition-colors hover:border-[#72a8ff]/55 hover:bg-[#3f8cff]/22"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden min-[440px]:inline">{tx("Создать", "Create")}</span>
-            </button>
-            <button
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
               className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-[#111720] text-slate-400"
@@ -3199,13 +3189,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     >
                       <button
                         onClick={() => openGroup(group.id)}
-                        className="group relative flex h-[78px] w-full items-center justify-between gap-3 overflow-hidden rounded-xl border border-white/8 bg-[#111720] px-3.5 py-2 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
+                        className="group relative flex h-[68px] w-full items-center justify-between gap-2.5 overflow-hidden rounded-2xl border border-white/8 bg-[#111720] px-3 py-1.5 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
                       >
                         {group.rewardActive && (group.rewardAmount ?? 0) > 0 && (
                           <span aria-label="Вознаграждение активно" className="absolute right-1.5 top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full border border-amber-100/25 bg-[#202b3a]/90 text-amber-200 shadow-md shadow-black/20"><Star className="h-3 w-3 fill-current" /></span>
                         )}
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl">
+                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                          <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg">
                             <Avatar group={group} />
                           </div>
                           <span className="min-w-0 flex-1">
@@ -3217,7 +3207,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             </small>
                           </span>
                         </div>
-                        <div className="flex shrink-0 items-center gap-2.5 text-right">
+                        <div className="flex shrink-0 items-center gap-2 text-right">
                           {isSale ? (
                             <div className="flex flex-col items-end">
                               <b className="text-xs font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon!)} GRAM</b>
@@ -5415,26 +5405,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
       />
-      <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-        <SheetContent side="bottom" className="max-h-[48dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-[calc(1rem+env(safe-area-inset-bottom))] text-slate-100">
-          <SheetHeader className="border-b border-white/8 px-4 pb-3 text-left">
-            <SheetTitle className="text-base font-semibold tracking-tight text-slate-100">{tx("Создать площадку", "Create a community")}</SheetTitle>
-            <p className="text-[11px] leading-4 text-slate-500">{tx("Выберите тип — Telegram откроет добавление @TG_TOPBOT администратором.", "Choose a type — Telegram will open @TG_TOPBOT administrator setup.")}</p>
-          </SheetHeader>
-          <div className="space-y-2 px-4 pt-3">
-            <button type="button" onClick={() => { setCreateOpen(false); startBotAdminSetup("channel"); }} className="tg-clean-surface flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-[#111720] px-3 py-3 text-left shadow-[0_8px_22px_rgba(2,8,16,0.12)] transition-colors hover:border-[#3f8cff]/40 hover:bg-[#14263b]/55">
-              <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/12 text-[#8fb9ff]"><Send className="h-5 w-5" /></span>
-              <span className="min-w-0 flex-1"><b className="block text-sm text-slate-100">{tx("Канал", "Channel")}</b><small className="mt-0.5 block text-[11px] text-slate-500">{tx("Публикации и подписчики", "Posts and subscribers")}</small></span>
-              <ChevronRight className="h-5 w-5 text-slate-500" />
-            </button>
-            <button type="button" onClick={() => { setCreateOpen(false); startBotAdminSetup("group"); }} className="tg-clean-surface flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-[#111720] px-3 py-3 text-left shadow-[0_8px_22px_rgba(2,8,16,0.12)] transition-colors hover:border-[#3f8cff]/40 hover:bg-[#14263b]/55">
-              <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/12 text-[#8fb9ff]"><MessageSquare className="h-5 w-5" /></span>
-              <span className="min-w-0 flex-1"><b className="block text-sm text-slate-100">{tx("Чат", "Chat")}</b><small className="mt-0.5 block text-[11px] text-slate-500">{tx("Сообщество и обсуждения", "Community and discussions")}</small></span>
-              <ChevronRight className="h-5 w-5 text-slate-500" />
-            </button>
-          </div>
-        </SheetContent>
-      </Sheet>
       <Sheet open={Boolean(adminGuideKind)} onOpenChange={open => !open && setAdminGuideKind(null)}>
         <SheetContent side="bottom" className="!bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[52dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-[calc(1rem+env(safe-area-inset-bottom))] text-slate-100">
           <SheetHeader className="px-4 pb-2">

@@ -10,15 +10,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('startgroup=tgtop_admin&admin=${groupAdminRights}');
     expect(source).toContain('delete_messages+invite_users+pin_messages+manage_chat');
     expect(source).toContain('setAdminGuideKind(kind)');
-    expect(source).toContain('setCreateOpen(true)');
-    expect(source).toContain('tx("Создать площадку", "Create a community")');
+    expect(source).not.toContain('createOpen');
+    expect(source).not.toContain('tx("Создать площадку", "Create a community")');
+    expect(source).toContain('setAdminGuideKind(kind)');
     expect(source).toContain('startBotAdminSetup("channel")');
     expect(source).toContain('startBotAdminSetup("group")');
-    const createSheet = source.slice(source.indexOf('<Sheet open={createOpen}'), source.indexOf('<Sheet open={Boolean(adminGuideKind)}'));
-    expect(createSheet).toContain('tx("Канал", "Channel")');
-    expect(createSheet).toContain('tx("Чат", "Chat")');
-    expect(createSheet.match(/startBotAdminSetup\("(?:channel|group)"\)/g)).toHaveLength(2);
-    expect(createSheet).not.toContain('tx("Группа", "Group")');
+    expect(source).not.toContain('aria-label={tx("Создать канал или чат", "Create a channel or chat")}');
     expect(source).toContain('tx("Подтвердите права администратора", "Confirm administrator rights")');
     expect(source).toContain('Telegram should show Add as administrator, not Add as member.');
     expect(source).not.toContain("GiftsLabBot");
@@ -337,7 +334,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "")');
     expect(source).toContain('subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined');
     expect(source).toContain('h-[68px] border-white/8 bg-[#111720] px-3 py-2');
-    expect(source).toContain('group relative flex h-[78px] w-full items-center justify-between gap-3 overflow-hidden rounded-xl');
+    expect(source).toContain('group relative flex h-[68px] w-full items-center justify-between gap-2.5 overflow-hidden rounded-2xl');
+    expect(source).toContain('<div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg">');
     expect(source).toContain('grid h-8 w-full place-items-center rounded-lg border border-dashed');
     expect(source).toContain('className="relative overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2 h-[64px]"');
     expect(source).toContain('absolute right-3 top-1/2 z-10 grid h-5 w-5 -translate-y-1/2');
@@ -422,7 +420,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('rewardPerSubscription: isChatRewardCampaign ? 0 : joinRewardUnits');
     expect(source).toContain('rewardPerInvite: isChatRewardCampaign ? 0 : joinRewardUnits');
     expect(source).toContain('rewardPerManualAdd: isChatRewardCampaign ? joinRewardUnits : 0');
-    expect(source).toContain('className="group relative flex h-[78px] w-full items-center justify-between gap-3 overflow-hidden rounded-xl');
+    expect(source).toContain('className="group relative flex h-[68px] w-full items-center justify-between gap-2.5 overflow-hidden rounded-2xl');
     expect(source).toContain('tx("Цена в GRAM", "Price in GRAM")');
     expect(source).not.toContain('Telegram поддерживает платный вход Stars только для каналов.');
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
