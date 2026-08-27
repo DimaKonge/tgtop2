@@ -6,6 +6,7 @@ import {
   getGroupByChatId,
   getRewardInviteBeneficiary,
   attributeTelegramReferral,
+  getTelegramOwnerDmBinding,
   grantGroupConnectionBonus,
   recordGroupActivity,
   recordGroupMembership,
@@ -17,6 +18,7 @@ import {
   flagGroupForModeration,
   getRankedEntryLinkTargets,
   getTelegramReferralReferrer,
+  getTelegramOperationsOwnerBinding,
   recordMiniAppLaunch,
   recordTelegramSupportInbound,
   recordTelegramSupportOutbound,
@@ -26,6 +28,7 @@ import {
   recordVerifiedPublicUsername,
   saveTelegramOperationLogDestination,
   settleStarsRankingPayment,
+  saveTelegramOperationsOwnerBinding,
   upsertTelegramGroup,
   upsertUser,
 } from "./db";
@@ -88,6 +91,7 @@ export function isValidTelegramMemberCount(value: unknown): value is number { re
 function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { return chat.type === "channel" ? "Каналы" : "Чаты"; }
 function catalogChatId(chatId: number): string { return String(chatId); }
 function publicGroupUrl(chat: TelegramChat): string | undefined { return chat.username ? `https://t.me/${chat.username}` : undefined; }
+const OPERATIONS_BOOTSTRAP_OWNER_USERNAME = "dimij";
 function isExpectedLogBot(kind: NonNullable<ReturnType<typeof parsePrivateLogDestinationCommand>>) {
   return kind === "support" ? "@tg_topbot" : "@tgtop_robot";
 }
@@ -106,12 +110,27 @@ async function configurePrivateLogDestination(message: NonNullable<TelegramUpdat
   const kind = parsePrivateLogDestinationCommand(message.text);
   if (!kind) return false;
   if (activeBotLabel.toLowerCase() !== isExpectedLogBot(kind)) return false;
-  if (!message.from || !ENV.ownerOpenId || ENV.ownerOpenId !== `telegram:${message.from.id}`) {
-    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Эту закрытую log-группу может подключить только владелец TG TOP." }).catch(() => {});
-    return true;
-  }
   if (message.chat.type !== "group" && message.chat.type !== "supergroup" && message.chat.type !== "channel") {
     await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Подключите закрытую группу или канал, а не личный чат." }).catch(() => {});
+    return true;
+  }
+  if (message.message_thread_id === undefined) {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Откройте нужный topic и отправьте команду внутри него." }).catch(() => {});
+    return true;
+  }
+  const topicReply = { message_thread_id: message.message_thread_id };
+  if (!message.from || message.from.is_bot || !(await isAuthorizedOperationsOwner(message))) {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, ...topicReply, text: "Эту закрытую log-группу может подключить только владелец TG TOP." }).catch(() => {});
+    return true;
+  }
+  try {
+    await saveTelegramOperationsOwnerBinding({
+      chatId: catalogChatId(message.chat.id),
+      ownerTelegramId: String(message.from.id),
+      ownerUsername: message.from.username ?? null,
+    });
+  } catch {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, ...topicReply, text: "Эта private log-группа уже привязана к другому владельцу." }).catch(() => {});
     return true;
   }
   await saveTelegramOperationLogDestination({
@@ -119,11 +138,12 @@ async function configurePrivateLogDestination(message: NonNullable<TelegramUpdat
     chatId: catalogChatId(message.chat.id),
     messageThreadId: message.message_thread_id ?? null,
     chatTitle: message.chat.title ?? null,
-    configuredByOpenId: ENV.ownerOpenId,
+    configuredByOpenId: `telegram:${message.from.id}`,
   });
   const label = kind === "top_activity" ? "TOP-активность" : kind === "finance" ? "Финансы" : kind === "support" ? "Поддержка" : "Запуски";
   await telegramCall<boolean>("sendMessage", {
     chat_id: message.chat.id,
+    ...topicReply,
     text: `✅ Private log «${label}» подключён. Сюда будут приходить только подтверждённые события TG TOP. Никаких команд управления деньгами этот журнал не выполняет.`,
   }).catch(() => {});
   return true;
@@ -148,10 +168,28 @@ function ownerTelegramChatId(): string | null {
   return match?.[1] ?? null;
 }
 
+async function isAuthorizedOwnerTelegramUser(telegramUserId: number) {
+  const candidate = String(telegramUserId);
+  if (ownerTelegramChatId() === candidate) return true;
+  const ownerBinding = await getTelegramOwnerDmBinding();
+  return ownerBinding?.ownerTelegramId === candidate;
+}
+
+async function isAuthorizedOperationsOwner(message: NonNullable<TelegramUpdate["message"]>) {
+  if (!message.from) return false;
+  const chatId = catalogChatId(message.chat.id);
+  const ownerBinding = await getTelegramOperationsOwnerBinding();
+  if (ownerBinding) return ownerBinding.chatId === chatId && ownerBinding.ownerTelegramId === String(message.from.id);
+  if (await isAuthorizedOwnerTelegramUser(message.from.id)) return true;
+  if (message.from.username?.toLowerCase() !== OPERATIONS_BOOTSTRAP_OWNER_USERNAME) return false;
+  const membership = await telegramCall<ChatMember>("getChatMember", { chat_id: message.chat.id, user_id: message.from.id }).catch(() => null);
+  return Boolean(membership && isChatOwner(membership.status));
+}
+
 async function handleSupportReply(message: NonNullable<TelegramUpdate["message"]>) {
   if (activeBotLabel.toLowerCase() !== "@tg_topbot") return false;
   if (message.chat.type !== "group" && message.chat.type !== "supergroup") return false;
-  if (!message.from || message.from.is_bot || message.from.id.toString() !== ownerTelegramChatId()) return false;
+  if (!message.from || message.from.is_bot || !(await isAuthorizedOperationsOwner(message))) return false;
   const replyId = message.reply_to_message?.message_id;
   const text = message.text?.trim();
   if (!replyId || !text || text.startsWith("/")) return false;

@@ -101,6 +101,26 @@ try {
   }
   await ensureExpectedColumns("telegram_operation_log_destinations", ["id", "kind", "chatId", "messageThreadId", "chatTitle", "configuredByOpenId", "updatedAt"]);
 
+  if (!(await hasTable("telegram_operations_owner_bindings"))) {
+    await connection.query(`CREATE TABLE \`telegram_operations_owner_bindings\` (
+      \`scope\` varchar(32) NOT NULL,
+      \`chatId\` varchar(64) NOT NULL,
+      \`ownerTelegramId\` varchar(64) NOT NULL,
+      \`ownerUsername\` varchar(128),
+      \`boundAt\` timestamp NOT NULL DEFAULT (now()),
+      CONSTRAINT \`telegram_operations_owner_bindings_scope\` PRIMARY KEY(\`scope\`),
+      CONSTRAINT \`telegram_operations_owner_chat_unique\` UNIQUE(\`chatId\`),
+      CONSTRAINT \`telegram_operations_owner_telegram_unique\` UNIQUE(\`ownerTelegramId\`)
+    )`);
+  }
+  await ensureExpectedColumns("telegram_operations_owner_bindings", ["scope", "chatId", "ownerTelegramId", "ownerUsername", "boundAt"]);
+  if (!(await hasIndex("telegram_operations_owner_bindings", "telegram_operations_owner_chat_unique"))) {
+    throw new Error("telegram_operations_owner_bindings is missing its chat uniqueness guard");
+  }
+  if (!(await hasIndex("telegram_operations_owner_bindings", "telegram_operations_owner_telegram_unique"))) {
+    throw new Error("telegram_operations_owner_bindings is missing its owner uniqueness guard");
+  }
+
   console.log("operations_topic_schema=ok");
 } finally {
   await connection.end();

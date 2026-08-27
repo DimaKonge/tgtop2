@@ -10,7 +10,7 @@
 | Упаковка | В архив входят `dist`, manifest, lockfile, required patches и runtime dependency probe. | Локальный pnpm layout не переносится на другую машину. |
 | Staging | Архив и его SHA-256 сверяются; project-local pnpm выполняет `--frozen-lockfile --ignore-scripts` прямо на VPS. | Runtime получает точный lockfile tree, включая server-required Vite dependency. |
 | Smoke | Новый `dist` запускается на отдельном localhost-порту и отвечает `/healthz` до активации. | Несовместимые dependencies или server-start ошибки не доходят до public traffic. |
-| Схема | После smoke применяются только заранее просмотренные **reviewed additive migrations** для новых изолированных объектов. | Новый код не активируется, если migration не прошла; legacy Drizzle migrations не переигрываются поверх уже работающей production-схемы. |
+| Схема | После smoke применяются только заранее просмотренные **reviewed additive migrations** для новых изолированных объектов, включая immutable owner bindings private log-группы. | Новый код не активируется, если migration не прошла; legacy Drizzle migrations не переигрываются поверх уже работающей production-схемы. |
 | Активация | Старая связка переименовывается в `previous`, новая переносится целиком. | Откат возвращает код и зависимости вместе. |
 | Проверка | Проверяются `tgtop.service`, два bot-сервиса, payout worker (если он установлен) и `GET /healthz`. | Неактивный или нездоровый релиз не остаётся рабочим. |
 

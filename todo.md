@@ -1025,4 +1025,12 @@
 - [x] В Finance-topic карточках подтверждённых TON deposit/withdrawal передавать настоящий network hash в Tonviewer; для requested/sent статусов hash не показывать.
 - [x] Подготовить code-path одной закрытой forum-группы: @TG_TOPBOT настраивает/ведёт поддержку, @TGTOP_robot настраивает/ведёт служебные launch/TOP/finance topics; reserve bot не захватывает support reply до глобальной дедупликации.
 - [x] В launch log передавать только реального владельца успешно применённого рефкода; direct start не содержит строки «Пришёл от».
-- [ ] Исправить staged VPS release: до переключения code, требующего новую Drizzle schema, применять проверенные аддитивные migrations и проверять migration health без ручного доступа к production БД.
+- [x] Исправить staged VPS release: до переключения code, требующего новую Drizzle schema, применять проверенные аддитивные migrations и проверять migration health без ручного доступа к production БД.
+- [ ] Исправить owner identity mapping для setup-команд закрытой forum-группы: принимать только фактического владельца TG TOP, не ослабляя проверку для других участников.
+- [ ] Поддержать безопасную однократную настройку private forum topics при включённой anonymous роли владельца Telegram; не считать sender_chat доказательством личности и не открывать setup-команды другим админам.
+- [ ] Убрать зависимость setup-команд forum-группы от несовместимого `OWNER_OPEN_ID=telegram:<id>` и заменить её на проверяемую привязку именно закрытой owner-группы без доступа для посторонних администраторов.
+- [ ] Для однократной bootstrap-привязки setup-группы проверить exact handle `@dimij` и Telegram status `creator/owner`; после привязки принимать команды только от сохранённого Telegram ID.
+- [ ] Исправить setup acknowledgement: success и owner-denied ответы должны возвращаться в тот же forum topic через `message_thread_id`, а не попадать в General.
+- [ ] Исправить setup acknowledgement: success и owner-denied ответы должны возвращаться в тот же forum topic через `message_thread_id`, а не попадать в General.
+- [x] Подготовить code-path immutable owner binding: до первой привязки допускается только `@dimij` со статусом Telegram `creator/owner`; далее команды и support replies сверяются с сохранёнными chat ID и Telegram ID.
+- [x] Подготовить topic-aware setup replies: success и owner-denied используют исходный `message_thread_id`; сообщения из General получают отдельное требование открыть нужный topic.

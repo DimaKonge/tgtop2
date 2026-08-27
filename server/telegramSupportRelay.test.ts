@@ -16,7 +16,8 @@ describe("Telegram support relay contract", () => {
   });
 
   it("requires owner identity before sending a reply from the closed chat", () => {
-    expect(botSource).toContain("message.from.id.toString() !== ownerTelegramChatId()");
+    expect(botSource).toContain("isAuthorizedOwnerTelegramUser(message.from.id)");
+    expect(botSource).toContain("getTelegramOwnerDmBinding");
     expect(botSource).toContain("message.reply_to_message?.message_id");
     expect(botSource).toContain('telegramCall<{ message_id: number }>("sendMessage"');
   });

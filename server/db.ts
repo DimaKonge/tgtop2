@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, miniAppLaunchEvents, telegramSupportMessages, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, telegramOperationsOwnerBindings, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, miniAppLaunchEvents, telegramSupportMessages, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -339,6 +339,25 @@ export async function saveTelegramOperationLogDestination(input: {
       configuredByOpenId: input.configuredByOpenId,
     },
   });
+}
+
+export async function getTelegramOperationsOwnerBinding() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [binding] = await db.select().from(telegramOperationsOwnerBindings).where(eq(telegramOperationsOwnerBindings.scope, "primary")).limit(1);
+  return binding;
+}
+
+export async function saveTelegramOperationsOwnerBinding(input: { chatId: string; ownerTelegramId: string; ownerUsername?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-привязки private-логов временно недоступно");
+  const existing = await getTelegramOperationsOwnerBinding();
+  if (existing && (existing.chatId !== input.chatId || existing.ownerTelegramId !== input.ownerTelegramId)) {
+    throw new Error("Private log-группа уже привязана к другому владельцу. Изменение требует отдельного безопасного сброса.");
+  }
+  if (existing) return existing;
+  await db.insert(telegramOperationsOwnerBindings).values({ scope: "primary", ...input });
+  return await getTelegramOperationsOwnerBinding();
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {

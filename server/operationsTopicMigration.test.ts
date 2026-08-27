@@ -8,6 +8,8 @@ describe("operations topic production migration", () => {
     expect(source).toContain('hasTable("mini_app_launch_events")');
     expect(source).toContain('hasTable("telegram_support_messages")');
     expect(source).toContain('telegram_operation_log_destinations');
+    expect(source).toContain('hasTable("telegram_operations_owner_bindings")');
+    expect(source).toContain("telegram_operations_owner_chat_unique");
     expect(source).toContain("messageThreadId");
     expect(source).toContain("operations_topic_schema=ok");
   });

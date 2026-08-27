@@ -196,6 +196,19 @@ export const telegramOperationLogDestinations = mysqlTable("telegram_operation_l
 
 export type TelegramOperationLogDestination = typeof telegramOperationLogDestinations.$inferSelect;
 
+export const telegramOperationsOwnerBindings = mysqlTable("telegram_operations_owner_bindings", {
+  scope: varchar("scope", { length: 32 }).primaryKey(),
+  chatId: varchar("chatId", { length: 64 }).notNull(),
+  ownerTelegramId: varchar("ownerTelegramId", { length: 64 }).notNull(),
+  ownerUsername: varchar("ownerUsername", { length: 128 }),
+  boundAt: timestamp("boundAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("telegram_operations_owner_chat_unique").on(table.chatId),
+  uniqueIndex("telegram_operations_owner_telegram_unique").on(table.ownerTelegramId),
+]);
+
+export type TelegramOperationsOwnerBinding = typeof telegramOperationsOwnerBindings.$inferSelect;
+
 export const catalogCountries = mysqlTable("catalog_countries", {
   id: int("id").autoincrement().primaryKey(),
   code: varchar("code", { length: 64 }).notNull(),

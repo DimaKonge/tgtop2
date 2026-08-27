@@ -18,4 +18,22 @@ describe("private log destination commands", () => {
     expect(source).toContain("activeBotLabel.toLowerCase() !== isExpectedLogBot(kind)");
     expect(source).toContain("messageThreadId: message.message_thread_id ?? null");
   });
+
+  it("uses the verified owner Telegram binding as a fallback and never treats an anonymous sender chat as owner proof", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    expect(source).toContain("getTelegramOwnerDmBinding");
+    expect(source).toContain("ownerBinding?.ownerTelegramId === candidate");
+    expect(source).toContain("message.from.is_bot");
+    expect(source).not.toContain("message.sender_chat");
+  });
+
+  it("returns configuration responses to the source topic and only bootstraps the declared creator handle once", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    expect(source).toContain('const OPERATIONS_BOOTSTRAP_OWNER_USERNAME = "dimij"');
+    expect(source).toContain('telegramCall<ChatMember>("getChatMember"');
+    expect(source).toContain("isChatOwner(membership.status)");
+    expect(source).toContain("const topicReply = { message_thread_id: message.message_thread_id }");
+    expect(source).toContain("...topicReply");
+    expect(source).toContain("saveTelegramOperationsOwnerBinding");
+  });
 });
