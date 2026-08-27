@@ -51,6 +51,19 @@ describe("community listing announcements", () => {
     expect(source).toContain("Открыть в TG TOP");
   });
 
+  it("keeps listing-result delivery count tied to Telegram-confirmed sends", () => {
+    const routerSource = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
+    expect(routerSource).toContain("countSuccessfulTelegramAnnouncements(deliveries)");
+    expect(routerSource).not.toContain("return { success: true, announced: groups.length };");
+  });
+
+  it("uses the canonical domain as the safe fallback for Telegram Mini App actions", () => {
+    const notificationSource = readFileSync(new URL("./telegramNotifications.ts", import.meta.url), "utf8");
+    const botSource = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    expect(notificationSource).toContain('process.env.MINI_APP_URL ?? "https://tgtop.me"');
+    expect(botSource).toContain('process.env.MINI_APP_URL ?? "https://tgtop.me"');
+  });
+
   it("notifies an owner with the moderator's reason after a manual removal", () => {
     const source = readFileSync(new URL("./telegramNotifications.ts", import.meta.url), "utf8");
     expect(source).toContain("notifyCommunityRemovedFromTop");

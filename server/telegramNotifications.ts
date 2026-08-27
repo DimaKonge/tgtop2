@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
-const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.xyz";
+const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.me";
 
 export function getTelegramChatIdFromOpenId(openId: string): number | null {
   const match = openId.match(/^telegram:(\d+)$/);

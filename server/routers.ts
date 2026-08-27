@@ -15,6 +15,7 @@ import { requireTelegramUserAgentOwner } from "./telegramUserAgentAccess";
 import { deliverOperationsLog, formatFinanceLog, formatTopActivityLog } from "./telegramOperationsLogger";
 import { canResolveVerifiedEntryLink } from "./entryLinkAccess";
 import { requireFinanceReviewer } from "./financeReviewAccess";
+import { countSuccessfulTelegramAnnouncements } from "./listingAnnouncementPolicy";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -562,28 +563,28 @@ export const appRouter = router({
       .input(z.object({ groupId: z.number() }).merge(groupListingInput))
       .mutation(async ({ ctx, input }) => {
         const groups = await db.listGroupWithCredits(ctx.user.openId, input.groupId, input);
-        await Promise.all(groups.filter(group => group.listingAnnouncementEnabled).map(group => notifyCommunityListed({
+        const deliveries = await Promise.all(groups.filter(group => group.listingAnnouncementEnabled).map(group => notifyCommunityListed({
           chatId: group.chatId,
           groupId: group.id,
           groupTitle: group.title,
           listingType: group.listingType,
           salePriceTon: group.salePriceTon,
         })));
-        return { success: true, announced: groups.length };
+        return { success: true, announced: countSuccessfulTelegramAnnouncements(deliveries) };
       }),
 
     listGroupsWithCredits: protectedProcedure
       .input(z.object({ groupIds: z.array(z.number()).min(1).max(50) }).merge(groupListingInput))
       .mutation(async ({ ctx, input }) => {
         const groups = await db.listGroupsWithCredits(ctx.user.openId, input.groupIds, input);
-        await Promise.all(groups.filter(group => group.listingAnnouncementEnabled).map(group => notifyCommunityListed({
+        const deliveries = await Promise.all(groups.filter(group => group.listingAnnouncementEnabled).map(group => notifyCommunityListed({
           chatId: group.chatId,
           groupId: group.id,
           groupTitle: group.title,
           listingType: group.listingType,
           salePriceTon: group.salePriceTon,
         })));
-        return { success: true, announced: groups.length };
+        return { success: true, announced: countSuccessfulTelegramAnnouncements(deliveries) };
       }),
 
     createMonthlyEntryLink: protectedProcedure

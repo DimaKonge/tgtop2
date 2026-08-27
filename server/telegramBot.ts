@@ -68,7 +68,7 @@ type TelegramUpdate = {
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const reserveBotToken = process.env.TELEGRAM_RESERVE_BOT_TOKEN;
-const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.xyz";
+const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.me";
 const pollTimeoutSeconds = 30;
 
 function isBotAdmin(status: string): boolean { return status === "administrator" || status === "creator"; }

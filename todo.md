@@ -979,7 +979,9 @@
 - [x] Закрыть найденный listing/GRAM race: bulk listing должен проверять и списывать баланс в одной transaction с условием достаточного остатка.
 - [ ] Построчно проверить основной и резервный Telegram bot flows: ownership, admin rights, idempotent events, entry-link validation и понятные пользовательские ошибки.
 - [x] Закрыть найденный Telegram onboarding data-integrity defect: при ошибке member-count API не создавать новую карточку с искусственным `0` участников; вернуть владельцу понятную retry-инструкцию.
-- [ ] Закрыть найденный Telegram ownership defect: принимать onboarding/перепривязку сообщества только от Telegram creator/owner, не от произвольного администратора, чтобы исключить захват карточки через re-add бота.
+- [x] Закрыть найденный Telegram ownership defect: принимать onboarding/перепривязку сообщества только от Telegram creator/owner, не от произвольного администратора, чтобы исключить захват карточки через re-add бота.
+- [ ] Закрыть найденный onboarding-link defect: fallback Mini App URL в bot/notifications должен использовать canonical `https://tgtop.me`, не legacy `tgtop.xyz`.
+- [ ] Закрыть найденный listing-notification truthfulness defect: возвращать фактическое число успешных Telegram announcements, а не число всех размещённых групп.
 - [ ] Построчно проверить listing, TOP ranking, GRAM ledger и moderation flows с фокусом на согласованность статусов и reload-safe UI.
 - [ ] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.
 - [ ] Построчно проверить NFT, deals, rewards, bot catalog и Telegram analytics как второстепенные workflows на broken states и data boundaries.
