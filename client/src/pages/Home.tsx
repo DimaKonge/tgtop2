@@ -1402,6 +1402,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     retry: false,
   });
   const telegramUserAgentStatus = telegramUserAgentStatusQuery.data as { status: "disconnected" | "code_pending" | "password_pending" | "connected" | "error"; accountTelegramId: string | null; accountUsername: string | null; expiresAt: Date | null; ownerDm?: { username: string; active: boolean } | null } | undefined;
+  const telegramHistoricalStatsQuery = trpc.telegramUserAgent.getHistoricalStats.useQuery(undefined, {
+    enabled: Boolean(isAuthenticated && page === "admin" && moderationAccess?.role === "admin" && telegramUserAgentStatus?.status === "connected"),
+    retry: false,
+  });
+  const telegramHistoricalStats = (telegramHistoricalStatsQuery.data ?? []) as Array<{
+    id: number; username: string; title: string; kind: "channel" | "supergroup"; lastRefreshedAt: Date | null; availability: "pending" | "ready" | "unavailable";
+    snapshot: null | { memberCount: number | null; viewsPerPost: number | null; history: { memberHistory: Array<{ at: number; value: number }>; activityHistory: Array<{ at: number; value: number }> } };
+  }>;
   const catalogTaxonomyQuery = trpc.tgTop.getCatalogTaxonomy.useQuery();
   const catalogTaxonomy = catalogTaxonomyQuery.data as {
     countries: Array<{ id: number; code: string; label: string; sortOrder: number }>;
@@ -1491,6 +1499,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [telegramUserAgentCode, setTelegramUserAgentCode] = useState("");
   const [telegramUserAgentPassword, setTelegramUserAgentPassword] = useState("");
   const [telegramOwnerDmUsername, setTelegramOwnerDmUsername] = useState("");
+  const [telegramStatsUsername, setTelegramStatsUsername] = useState("TGTOP_Community");
   const [moderationTab, setModerationTab] = useState<"communities" | "bots">("communities");
   const [botModerationFilter, setBotModerationFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [botCategorySheetOpen, setBotCategorySheetOpen] = useState(false);
@@ -1588,6 +1597,21 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setTelegramOwnerDmUsername(result.username);
       toast.success(`TG TOP Assistant написал @${result.username}`);
       void utils.telegramUserAgent.status.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const allowTelegramHistoricalStats = trpc.telegramUserAgent.allowHistoricalStatsTarget.useMutation({
+    onSuccess: result => {
+      setTelegramStatsUsername(result.username);
+      toast.success(`@${result.username} добавлен в read-only статистику`);
+      void utils.telegramUserAgent.getHistoricalStats.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const refreshTelegramHistoricalStats = trpc.telegramUserAgent.refreshHistoricalStats.useMutation({
+    onSuccess: result => {
+      toast.success(`История @${result.username} обновлена`);
+      void utils.telegramUserAgent.getHistoricalStats.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -4116,6 +4140,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </> : <>
                         <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/[0.07] p-3"><b className="block text-xs text-emerald-100">Read-only контур активен</b><p className="mt-1 text-[11px] leading-4 text-slate-400">{telegramUserAgentStatus.accountUsername ? `@${telegramUserAgentStatus.accountUsername}` : telegramUserAgentStatus.accountTelegramId ? `Telegram ID ${telegramUserAgentStatus.accountTelegramId}` : "Рабочий аккаунт"}. Любое действие записи будет требовать отдельного подтверждения.</p></div>
                         {telegramUserAgentStatus.ownerDm?.active ? <div className="rounded-xl border border-[#72a8ff]/20 bg-[#3f8cff]/[0.07] p-3 text-[11px] leading-4 text-[#c8ddff]">Личный канал TG TOP Assistant закреплён за @{telegramUserAgentStatus.ownerDm.username}. Другие личные сообщения не будут иметь доступа.</div> : <div className="space-y-2 rounded-xl border border-white/8 bg-white/[0.035] p-3"><p className="text-[11px] leading-4 text-slate-400">Одно стартовое приветствие будет отправлено только указанному owner-аккаунту. Username сразу закрепится как постоянный Telegram ID.</p><Input value={telegramOwnerDmUsername} onChange={event => setTelegramOwnerDmUsername(event.target.value)} autoComplete="off" placeholder="@username владельца" className="h-10 border-white/10 bg-[#17212b] text-sm text-slate-100" /><Button onClick={() => bootstrapTelegramOwnerDm.mutate({ username: telegramOwnerDmUsername })} disabled={bootstrapTelegramOwnerDm.isPending || telegramOwnerDmUsername.trim().length < 5} className="h-10 w-full bg-[#3f8cff] text-sm text-white">{bootstrapTelegramOwnerDm.isPending ? ui.loading : "Отправить стартовое приветствие"}</Button></div>}
+                        <div className="space-y-2 rounded-xl border border-violet-300/15 bg-violet-400/[0.045] p-3"><div><b className="block text-xs text-violet-100">История статистики</b><p className="mt-1 text-[10px] leading-4 text-slate-400">Только разрешённые каналы и агрегаты Telegram: подписчики, охват, реакции и репосты. Текст постов и лички не читаются.</p></div><div className="flex gap-2"><Input value={telegramStatsUsername} onChange={event => setTelegramStatsUsername(event.target.value)} autoComplete="off" placeholder="@username канала" className="h-10 border-white/10 bg-[#17212b] text-sm text-slate-100" /><Button onClick={() => allowTelegramHistoricalStats.mutate({ username: telegramStatsUsername })} disabled={allowTelegramHistoricalStats.isPending || telegramStatsUsername.trim().length < 5} className="h-10 shrink-0 bg-violet-500/85 px-3 text-xs text-white">{allowTelegramHistoricalStats.isPending ? ui.loading : "Разрешить"}</Button></div>{telegramHistoricalStats.map(target => <div key={target.id} className="rounded-lg border border-white/8 bg-black/10 p-2.5"><div className="flex items-center justify-between gap-2"><span className="min-w-0"><b className="block truncate text-[11px] text-slate-100">{target.title}</b><small className="block text-[10px] text-slate-500">@{target.username} · {target.kind === "channel" ? "канал" : "группа"}</small></span><Button variant="outline" onClick={() => refreshTelegramHistoricalStats.mutate({ username: target.username })} disabled={refreshTelegramHistoricalStats.isPending} className="h-8 shrink-0 border-violet-200/20 px-2 text-[10px] text-violet-100">Обновить</Button></div>{target.snapshot ? <p className="mt-2 text-[10px] leading-4 text-slate-400">{target.snapshot.memberCount ?? "—"} подписчиков · охват {target.snapshot.viewsPerPost ?? "—"} · история: {target.snapshot.history.memberHistory.length} точек</p> : <p className="mt-2 text-[10px] leading-4 text-slate-500">{target.availability === "unavailable" ? "Telegram пока не отдал статистику этому аккаунту." : "Канал разрешён. Нажми «Обновить», чтобы получить историю."}</p>}</div>)}</div>
                         <Button variant="outline" onClick={() => disconnectTelegramUserAgent.mutate()} disabled={disconnectTelegramUserAgent.isPending} className="h-11 w-full border-red-300/25 text-red-100">{disconnectTelegramUserAgent.isPending ? ui.loading : "Отключить рабочий аккаунт"}</Button>
                       </>}
                     </div>

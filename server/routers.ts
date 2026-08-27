@@ -76,6 +76,18 @@ export const appRouter = router({
       await ownerOnly(ctx.user.openId);
       return await telegramUserAgent.bootstrapTelegramOwnerDmGreeting(ctx.user.openId, input.username);
     }),
+    getHistoricalStats: protectedProcedure.query(async ({ ctx }) => {
+      await ownerOnly(ctx.user.openId);
+      return await telegramUserAgent.getTelegramHistoricalStatsOverview();
+    }),
+    allowHistoricalStatsTarget: protectedProcedure.input(z.object({ username: z.string().trim().min(5).max(33) })).mutation(async ({ ctx, input }) => {
+      await ownerOnly(ctx.user.openId);
+      return await telegramUserAgent.addTelegramHistoricalStatsTarget(ctx.user.openId, input.username);
+    }),
+    refreshHistoricalStats: protectedProcedure.input(z.object({ username: z.string().trim().min(5).max(33) })).mutation(async ({ ctx, input }) => {
+      await ownerOnly(ctx.user.openId);
+      return await telegramUserAgent.refreshTelegramHistoricalStats(ctx.user.openId, input.username);
+    }),
   }),
 
   tgTop: router({

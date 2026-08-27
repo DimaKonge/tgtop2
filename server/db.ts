@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramOperationLogDestinations, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -268,6 +268,48 @@ export async function restartTelegramOwnerDmJobForMissingTask(input: { id: numbe
   if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
   await db.update(telegramOwnerDmJobs).set({ status: "queued", availableAt: new Date(), manusTaskId: null, dispatchedAt: null, leaseToken: null, leaseExpiresAt: null, lastError: input.reason.slice(0, 255) })
     .where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "waiting_agent")));
+}
+
+export async function getTelegramStatsTargetByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [target] = await db.select().from(telegramStatsTargets).where(eq(telegramStatsTargets.username, username)).limit(1);
+  return target;
+}
+
+export async function listTelegramStatsTargets() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(telegramStatsTargets).where(eq(telegramStatsTargets.enabled, true)).orderBy(asc(telegramStatsTargets.title));
+}
+
+export async function saveTelegramStatsTarget(input: { username: string; chatId: string; title: string; kind: "channel" | "supergroup"; addedByOpenId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище статистики временно недоступно");
+  await db.insert(telegramStatsTargets).values({ ...input, enabled: true, lastAvailability: "pending", lastError: null }).onDuplicateKeyUpdate({
+    set: { chatId: input.chatId, title: input.title, kind: input.kind, addedByOpenId: input.addedByOpenId, enabled: true, lastAvailability: "pending", lastError: null },
+  });
+  return await getTelegramStatsTargetByUsername(input.username);
+}
+
+export async function saveTelegramStatsSnapshot(input: { targetId: number; periodStart: Date | null; periodEnd: Date | null; memberCount: number | null; viewsPerPost: number | null; sharesPerPost: number | null; reactionsPerPost: number | null; historyJson: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище статистики временно недоступно");
+  await db.insert(telegramStatsSnapshots).values(input);
+  await db.update(telegramStatsTargets).set({ lastRefreshedAt: new Date(), lastAvailability: "ready", lastError: null }).where(eq(telegramStatsTargets.id, input.targetId));
+}
+
+export async function markTelegramStatsTargetUnavailable(input: { targetId: number; reason: string }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(telegramStatsTargets).set({ lastRefreshedAt: new Date(), lastAvailability: "unavailable", lastError: input.reason.slice(0, 255) }).where(eq(telegramStatsTargets.id, input.targetId));
+}
+
+export async function getLatestTelegramStatsSnapshot(targetId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [snapshot] = await db.select().from(telegramStatsSnapshots).where(eq(telegramStatsSnapshots.targetId, targetId)).orderBy(desc(telegramStatsSnapshots.collectedAt)).limit(1);
+  return snapshot;
 }
 
 export async function getTelegramOperationLogDestination(kind: "top_activity" | "finance") {

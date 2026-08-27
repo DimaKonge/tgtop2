@@ -119,6 +119,38 @@ export const telegramOwnerDmJobs = mysqlTable("telegram_owner_dm_jobs", {
 
 export type TelegramOwnerDmJob = typeof telegramOwnerDmJobs.$inferSelect;
 
+export const telegramStatsTargets = mysqlTable("telegram_stats_targets", {
+  id: int("id").autoincrement().primaryKey(),
+  username: varchar("username", { length: 128 }).notNull(),
+  chatId: varchar("chatId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  kind: mysqlEnum("kind", ["channel", "supergroup"]).notNull(),
+  addedByOpenId: varchar("addedByOpenId", { length: 64 }).notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  lastRefreshedAt: timestamp("lastRefreshedAt"),
+  lastAvailability: mysqlEnum("lastAvailability", ["pending", "ready", "unavailable"]).default("pending").notNull(),
+  lastError: varchar("lastError", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("telegram_stats_targets_username_unique").on(table.username), uniqueIndex("telegram_stats_targets_chat_unique").on(table.chatId)]);
+
+export type TelegramStatsTarget = typeof telegramStatsTargets.$inferSelect;
+
+export const telegramStatsSnapshots = mysqlTable("telegram_stats_snapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  targetId: int("targetId").notNull(),
+  collectedAt: timestamp("collectedAt").defaultNow().notNull(),
+  periodStart: timestamp("periodStart"),
+  periodEnd: timestamp("periodEnd"),
+  memberCount: int("memberCount"),
+  viewsPerPost: int("viewsPerPost"),
+  sharesPerPost: int("sharesPerPost"),
+  reactionsPerPost: int("reactionsPerPost"),
+  historyJson: text("historyJson").notNull(),
+}, table => [index("telegram_stats_snapshots_target_collected_idx").on(table.targetId, table.collectedAt)]);
+
+export type TelegramStatsSnapshot = typeof telegramStatsSnapshots.$inferSelect;
+
 export const telegramOperationLogDestinations = mysqlTable("telegram_operation_log_destinations", {
   id: int("id").autoincrement().primaryKey(),
   kind: mysqlEnum("kind", ["top_activity", "finance"]).notNull(),

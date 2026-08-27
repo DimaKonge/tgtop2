@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { Api, TelegramClient } from "teleproto";
 import { StringSession } from "teleproto/sessions/index.js";
-import { getTelegramOwnerDmBinding, getTelegramUserAgentSession, recordTelegramUserAgentAuditEvent, saveTelegramOwnerDmBinding, saveTelegramUserAgentSession } from "./db";
+import { getLatestTelegramStatsSnapshot, getTelegramOwnerDmBinding, getTelegramStatsTargetByUsername, getTelegramUserAgentSession, listTelegramStatsTargets, markTelegramStatsTargetUnavailable, recordTelegramUserAgentAuditEvent, saveTelegramOwnerDmBinding, saveTelegramStatsSnapshot, saveTelegramStatsTarget, saveTelegramUserAgentSession } from "./db";
 
 const LOGIN_TTL_MS = 10 * 60_000;
 
@@ -76,11 +76,108 @@ function normalizeOwnerUsername(username: string) {
   return normalized;
 }
 
+function normalizeStatsUsername(username: string) {
+  const normalized = username.trim().replace(/^@/, "").toLowerCase();
+  if (!/^[a-z][a-z0-9_]{4,31}$/.test(normalized)) throw new Error("Укажите корректный публичный @username канала или группы");
+  return normalized;
+}
+
 function getErrorCode(error: unknown) {
   if (typeof error === "object" && error && "errorMessage" in error && typeof error.errorMessage === "string") {
     return error.errorMessage;
   }
   return error instanceof Error ? error.message : "Telegram authorization failed";
+}
+
+type HistoryPoint = { at: number; value: number };
+
+function toDateFromUnixSeconds(value: unknown) {
+  const seconds = Number(value);
+  return Number.isSafeInteger(seconds) && seconds > 0 ? new Date(seconds * 1_000) : null;
+}
+
+function currentValue(value: { current: number } | undefined) {
+  const current = Number(value?.current);
+  return Number.isFinite(current) ? Math.round(current) : null;
+}
+
+async function readStatsGraph(client: TelegramClient, graph: Api.TypeStatsGraph): Promise<HistoryPoint[]> {
+  let resolved = graph;
+  if (resolved instanceof Api.StatsGraphAsync) resolved = await client.invoke(new Api.stats.LoadAsyncGraph({ token: resolved.token }));
+  if (!(resolved instanceof Api.StatsGraph)) return [];
+  try {
+    const parsed = JSON.parse(resolved.json.data) as { columns?: unknown };
+    if (!Array.isArray(parsed.columns)) return [];
+    const columns = parsed.columns.filter((column): column is [string, ...unknown[]] => Array.isArray(column) && typeof column[0] === "string");
+    const x = columns.find(column => column[0] === "x");
+    const y = columns.find(column => column[0] !== "x");
+    if (!x || !y) return [];
+    const points: HistoryPoint[] = [];
+    const total = Math.min(x.length, y.length) - 1;
+    for (let index = 1; index <= total && points.length < 400; index += 1) {
+      const at = Number(x[index]);
+      const value = Number(y[index]);
+      if (Number.isSafeInteger(at) && Number.isFinite(value)) points.push({ at: at * 1_000, value: Math.round(value) });
+    }
+    return points;
+  } catch {
+    return [];
+  }
+}
+
+export async function addTelegramHistoricalStatsTarget(actorOpenId: string, rawUsername: string) {
+  const username = normalizeStatsUsername(rawUsername);
+  const { client } = await openConnectedTelegramUserAgentClientForWorker();
+  try {
+    const entity = await client.getEntity(`@${username}`);
+    if (!(entity instanceof Api.Channel) || entity.left) throw new Error("Рабочий аккаунт не имеет доступа к этому каналу или группе");
+    const kind = entity.broadcast ? "channel" as const : "supergroup" as const;
+    const target = await saveTelegramStatsTarget({ username, chatId: String(entity.id), title: entity.title, kind, addedByOpenId: actorOpenId });
+    await persistConnectedTelegramUserAgentClientSession(client);
+    await recordTelegramUserAgentAuditEvent({ action: "stats_target_allowed", actorOpenId, details: `username=@${username};kind=${kind}` });
+    return { id: target?.id ?? null, username, title: entity.title, kind };
+  } finally {
+    await client.disconnect();
+  }
+}
+
+export async function refreshTelegramHistoricalStats(actorOpenId: string, rawUsername: string) {
+  const username = normalizeStatsUsername(rawUsername);
+  const target = await getTelegramStatsTargetByUsername(username);
+  if (!target?.enabled) throw new Error("Сначала добавьте этот канал в allowlist статистики");
+  const { client } = await openConnectedTelegramUserAgentClientForWorker();
+  try {
+    const entity = await client.getEntity(`@${username}`);
+    if (!(entity instanceof Api.Channel) || String(entity.id) !== target.chatId || entity.left) throw new Error("Идентичность или доступ к разрешённому каналу изменились; обновление остановлено");
+    const stats = entity.broadcast
+      ? await client.invoke(new Api.stats.GetBroadcastStats({ channel: entity, dark: true }))
+      : await client.invoke(new Api.stats.GetMegagroupStats({ channel: entity, dark: true }));
+    const isChannel = stats instanceof Api.stats.BroadcastStats;
+    const memberCount = currentValue(isChannel ? stats.followers : stats.members);
+    const viewsPerPost = isChannel ? currentValue(stats.viewsPerPost) : currentValue(stats.viewers);
+    const sharesPerPost = isChannel ? currentValue(stats.sharesPerPost) : null;
+    const reactionsPerPost = isChannel ? currentValue(stats.reactionsPerPost) : null;
+    const memberHistory = await readStatsGraph(client, isChannel ? stats.followersGraph : stats.membersGraph);
+    const activityHistory = await readStatsGraph(client, isChannel ? stats.interactionsGraph : stats.messagesGraph);
+    await saveTelegramStatsSnapshot({ targetId: target.id, periodStart: toDateFromUnixSeconds(stats.period.minDate), periodEnd: toDateFromUnixSeconds(stats.period.maxDate), memberCount, viewsPerPost, sharesPerPost, reactionsPerPost, historyJson: JSON.stringify({ memberHistory, activityHistory }) });
+    await persistConnectedTelegramUserAgentClientSession(client);
+    await recordTelegramUserAgentAuditEvent({ action: "stats_refreshed", actorOpenId, details: `username=@${username};series=${memberHistory.length}/${activityHistory.length}` });
+    return { username, title: target.title, kind: target.kind, memberCount, viewsPerPost, sharesPerPost, reactionsPerPost, memberHistory, activityHistory, periodStart: toDateFromUnixSeconds(stats.period.minDate), periodEnd: toDateFromUnixSeconds(stats.period.maxDate), availability: "ready" as const };
+  } catch {
+    await markTelegramStatsTargetUnavailable({ targetId: target.id, reason: "Telegram statistics unavailable or access changed" });
+    await recordTelegramUserAgentAuditEvent({ action: "stats_unavailable", actorOpenId, details: `username=@${username}` });
+    throw new Error("Telegram пока не отдал статистику этому рабочему аккаунту. Проверьте доступ администратора и повторите позже.");
+  } finally {
+    await client.disconnect();
+  }
+}
+
+export async function getTelegramHistoricalStatsOverview() {
+  const targets = await listTelegramStatsTargets();
+  return await Promise.all(targets.map(async target => {
+    const latest = await getLatestTelegramStatsSnapshot(target.id);
+    return { id: target.id, username: target.username, title: target.title, kind: target.kind, lastRefreshedAt: target.lastRefreshedAt, availability: target.lastAvailability, snapshot: latest ? { collectedAt: latest.collectedAt, periodStart: latest.periodStart, periodEnd: latest.periodEnd, memberCount: latest.memberCount, viewsPerPost: latest.viewsPerPost, sharesPerPost: latest.sharesPerPost, reactionsPerPost: latest.reactionsPerPost, history: JSON.parse(latest.historyJson) as { memberHistory: HistoryPoint[]; activityHistory: HistoryPoint[] } } : null };
+  }));
 }
 
 export async function getTelegramUserAgentStatus() {
@@ -235,4 +332,4 @@ export async function disconnectTelegramUserAgent(actorOpenId: string) {
   return { status: "disconnected" as const };
 }
 
-export const __private__ = { decrypt, encrypt, getErrorCode, normalizeOwnerUsername, normalizePhone, normalizeCode, safeStatus };
+export const __private__ = { decrypt, encrypt, getErrorCode, normalizeOwnerUsername, normalizeStatsUsername, normalizePhone, normalizeCode, safeStatus };

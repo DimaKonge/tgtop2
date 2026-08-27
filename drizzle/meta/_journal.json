@@ -393,6 +393,13 @@
       "when": 1787772784637,
       "tag": "0055_typical_vanisher",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "5",
+      "when": 1787810574028,
+      "tag": "0056_luxuriant_sunspot",
+      "breakpoints": true
     }
   ]
 }
