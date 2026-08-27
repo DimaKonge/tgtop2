@@ -91,6 +91,12 @@ button:active { transform: scale(0.98); }
 }
 
 html[data-theme="light"] .tg-shell { background: #f5f7fb !important; color: #152033 !important; }
+[data-slot="sheet-overlay"] { background: rgba(2, 8, 16, 0.62) !important; backdrop-filter: blur(3px); }
+[data-slot="sheet-content"] { border-color: rgba(188, 213, 240, 0.12) !important; box-shadow: 0 -18px 55px rgba(0, 0, 0, 0.28); }
+[data-slot="sheet-content"][class*="rounded-t-"] { background: rgba(16, 26, 39, 0.97) !important; backdrop-filter: blur(22px) saturate(135%); }
+html[data-style="clean"] [data-slot="sheet-content"][class*="rounded-t-"] { background: rgba(23, 36, 51, 0.97) !important; }
+html[data-theme="light"] [data-slot="sheet-overlay"] { background: rgba(15, 23, 42, 0.28) !important; }
+html[data-theme="light"] [data-slot="sheet-content"][class*="rounded-t-"] { background: rgba(248, 250, 252, 0.97) !important; border-color: rgba(30, 41, 59, 0.13) !important; box-shadow: 0 -14px 40px rgba(15, 23, 42, 0.12); }
 html[data-theme="light"] .tg-shell header,
 html[data-theme="light"] .tg-shell nav { background: rgba(248, 250, 252, 0.96) !important; border-color: rgba(30, 41, 59, 0.12) !important; }
 html[data-theme="light"] .tg-shell .bg-\[\#0b0f14\],
