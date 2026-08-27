@@ -1905,6 +1905,22 @@ export async function getMiniAppLaunches(limit = 100) {
     .limit(limit);
 }
 
+export async function getUniqueMiniAppLaunchMembers() {
+  const db = await getDb();
+  if (!db) return [];
+  const launches = await db.select({
+    userOpenId: miniAppLaunchEvents.userOpenId,
+    telegramUsername: users.telegramUsername,
+  }).from(miniAppLaunchEvents)
+    .leftJoin(users, eq(users.openId, miniAppLaunchEvents.userOpenId))
+    .orderBy(desc(miniAppLaunchEvents.createdAt));
+  const uniqueMembers = new Map<string, { userOpenId: string; telegramUsername: string | null }>();
+  for (const launch of launches) {
+    if (!uniqueMembers.has(launch.userOpenId)) uniqueMembers.set(launch.userOpenId, launch);
+  }
+  return Array.from(uniqueMembers.values());
+}
+
 export async function recordTelegramSupportInbound(input: { telegramUserId: string; telegramUsername?: string | null; text: string; telegramMessageId: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

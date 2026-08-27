@@ -19,6 +19,7 @@ import {
   getRankedEntryLinkTargets,
   getTelegramReferralReferrer,
   getTelegramOperationsOwnerBinding,
+  getUniqueMiniAppLaunchMembers,
   recordMiniAppLaunch,
   recordTelegramSupportInbound,
   recordTelegramSupportOutbound,
@@ -106,6 +107,10 @@ export function parsePrivateLogDestinationCommand(text: string | undefined): "to
   return null;
 }
 
+function isAllMembersCommand(text: string | undefined) {
+  return /^\/allmembers(?:@tgtop_robot)?$/i.test(text?.trim() ?? "");
+}
+
 async function configurePrivateLogDestination(message: NonNullable<TelegramUpdate["message"]>) {
   const kind = parsePrivateLogDestinationCommand(message.text);
   if (!kind) return false;
@@ -154,6 +159,7 @@ async function shouldBypassGlobalEventClaim(update: TelegramUpdate) {
   if (!message) return false;
   const command = parsePrivateLogDestinationCommand(message.text);
   if (command && activeBotLabel.toLowerCase() !== isExpectedLogBot(command)) return true;
+  if (isAllMembersCommand(message.text) && activeBotLabel.toLowerCase() !== "@tgtop_robot") return true;
   if (activeBotLabel.toLowerCase() !== "@tgtop_robot" || !message.reply_to_message?.message_id) return false;
   const destination = await getTelegramOperationLogDestination("support");
   return Boolean(
@@ -161,6 +167,50 @@ async function shouldBypassGlobalEventClaim(update: TelegramUpdate) {
       && destination.chatId === catalogChatId(message.chat.id)
       && (destination.messageThreadId === null || destination.messageThreadId === message.message_thread_id),
   );
+}
+
+function formatAllMembersText(members: Array<{ userOpenId: string; telegramUsername: string | null }>) {
+  return members.map(member => {
+    if (member.telegramUsername) return `@${member.telegramUsername}`;
+    const telegramId = member.userOpenId.match(/^telegram:(\d+)$/)?.[1];
+    return telegramId ? `ID ${telegramId}` : member.userOpenId;
+  }).join("\n");
+}
+
+async function sendTextDocument(input: { chatId: number; messageThreadId: number; fileName: string; text: string }) {
+  const form = new FormData();
+  form.append("chat_id", String(input.chatId));
+  form.append("message_thread_id", String(input.messageThreadId));
+  form.append("document", new Blob([input.text], { type: "text/plain;charset=utf-8" }), input.fileName);
+  const response = await axios.post<{ ok: boolean; description?: string }>(getApiUrl("sendDocument"), form, { timeout: 40_000 });
+  if (!response.data.ok) throw new Error(response.data.description ?? "Telegram API sendDocument failed");
+}
+
+async function handleAllMembersExport(message: NonNullable<TelegramUpdate["message"]>) {
+  if (!isAllMembersCommand(message.text) || activeBotLabel.toLowerCase() !== "@tgtop_robot") return false;
+  if ((message.chat.type !== "group" && message.chat.type !== "supergroup") || message.message_thread_id === undefined) return false;
+  const topicReply = { message_thread_id: message.message_thread_id };
+  if (!message.from || message.from.is_bot || !(await isAuthorizedOperationsOwner(message))) {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, ...topicReply, text: "Выгрузка доступна только владельцу TG TOP в теме «Запуски»." }).catch(() => {});
+    return true;
+  }
+  const destination = await getTelegramOperationLogDestination("launches");
+  if (!destination || destination.chatId !== catalogChatId(message.chat.id) || destination.messageThreadId !== message.message_thread_id) {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, ...topicReply, text: "Сначала подключите этот topic командой /tgtop_log_launches@TGTOP_robot." }).catch(() => {});
+    return true;
+  }
+  const members = await getUniqueMiniAppLaunchMembers();
+  if (!members.length) {
+    await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, ...topicReply, text: "Подтверждённых запусков пока нет." }).catch(() => {});
+    return true;
+  }
+  await sendTextDocument({
+    chatId: message.chat.id,
+    messageThreadId: message.message_thread_id,
+    fileName: "tgtop_allmembers.txt",
+    text: formatAllMembersText(members),
+  });
+  return true;
 }
 
 function ownerTelegramChatId(): string | null {
@@ -674,6 +724,7 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
   }
   if (update.my_chat_member) { await saveAdminChat(update); return; }
   if (update.message && await configurePrivateLogDestination(update.message)) return;
+  if (update.message && await handleAllMembersExport(update.message)) return;
   if (update.chat_member) {
     const membership = update.chat_member;
     if (!isChatOwner(membership.old_chat_member.status) && isChatOwner(membership.new_chat_member.status)) {

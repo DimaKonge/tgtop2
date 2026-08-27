@@ -1034,3 +1034,4 @@
 - [ ] Исправить setup acknowledgement: success и owner-denied ответы должны возвращаться в тот же forum topic через `message_thread_id`, а не попадать в General.
 - [x] Подготовить code-path immutable owner binding: до первой привязки допускается только `@dimij` со статусом Telegram `creator/owner`; далее команды и support replies сверяются с сохранёнными chat ID и Telegram ID.
 - [x] Подготовить topic-aware setup replies: success и owner-denied используют исходный `message_thread_id`; сообщения из General получают отдельное требование открыть нужный topic.
+- [x] Добавить owner-only `/allmembers` в теме «Запуски`: отправлять UTF-8 `.txt` с уникальными аккаунтами, которые запускали бота, по последнему launch от новых к старым, без времени, рефереров, балансов и иных лишних данных.

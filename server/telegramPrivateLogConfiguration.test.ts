@@ -36,4 +36,14 @@ describe("private log destination commands", () => {
     expect(source).toContain("...topicReply");
     expect(source).toContain("saveTelegramOperationsOwnerBinding");
   });
+
+  it("keeps the allmembers TXT export owner-only in the configured launches topic and bypasses only the reserve bot pre-claim", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    expect(source).toContain("function isAllMembersCommand");
+    expect(source).toContain('activeBotLabel.toLowerCase() !== "@tgtop_robot"');
+    expect(source).toContain('getTelegramOperationLogDestination("launches")');
+    expect(source).toContain("destination.messageThreadId !== message.message_thread_id");
+    expect(source).toContain('fileName: "tgtop_allmembers.txt"');
+    expect(source).toContain('getUniqueMiniAppLaunchMembers');
+  });
 });
