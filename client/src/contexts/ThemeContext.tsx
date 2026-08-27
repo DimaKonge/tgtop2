@@ -32,7 +32,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return stored === "light" || stored === "system" ? stored : "dark";
   });
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(getSystemTheme);
-  const [style, setStyle] = useState<ThemeStyle>(() => localStorage.getItem(STYLE_STORAGE_KEY) === "clean" ? "clean" : "original");
+  const [style, setStyle] = useState<ThemeStyle>(() => localStorage.getItem(STYLE_STORAGE_KEY) === "original" ? "original" : "clean");
   const [accent, setAccent] = useState<ThemeAccent>(() => {
     const stored = localStorage.getItem(ACCENT_STORAGE_KEY);
     return ["blue", "purple", "rose", "gold", "green", "turquoise"].includes(stored ?? "") ? stored as ThemeAccent : "blue";
