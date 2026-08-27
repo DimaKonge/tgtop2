@@ -1071,3 +1071,5 @@
 - [ ] Выпустить проверенный category TOP fallback на production VPS через staged release и подтвердить health без финансовых действий.
 - [ ] В том же staged release выкатить Telegram Clean тему: navy surfaces, SettingsSheet, outline icons, Gift-палитру и Liquid Glass нижнюю панель.
 - [x] Добавить в верхнюю навигацию TG TOP кнопку «Создать» с выбором только «Канал» или «Чат» и переходом в существующий onboarding @TG_TOPBOT.
+- [ ] Выполнить staged production release после подтверждения SSH-доступа: Create control, Telegram Clean UI, category TOP fallback и additions logging; проверить health и systemd-сервисы без финансовых действий.
+
