@@ -43,4 +43,18 @@ describe("Telegram support relay contract", () => {
     expect(botSource).toContain("destination.messageThreadId !== message.message_thread_id");
     expect(botSource).toContain("message_thread_id: destination.messageThreadId");
   });
+
+  it("keeps global deduplication for normal updates but makes the reserve bot skip a matching support reply before claim", () => {
+    expect(botSource).toContain("shouldBypassGlobalEventClaim");
+    expect(botSource).toContain('activeBotLabel.toLowerCase() !== "@tgtop_robot" || !message.reply_to_message?.message_id');
+    expect(botSource).toContain('getTelegramOperationLogDestination("support")');
+    expect(botSource).toContain("!(await shouldBypassGlobalEventClaim(update)) && !(await claimTelegramEvent(eventKey, botLabel))");
+  });
+
+  it("resolves the actual referral-code owner only after a successful attribution", () => {
+    expect(botSource).toContain("const referrer = attributed ? await getTelegramReferralReferrer(message.from.id) : null;");
+    expect(botSource).toContain("referrer,");
+    expect(dbSource).toContain("getTelegramReferralReferrer");
+    expect(dbSource).toContain("eq(users.referralCode, referredUser.referredBy)");
+  });
 });

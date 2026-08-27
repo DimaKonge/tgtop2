@@ -494,11 +494,11 @@ export async function verifyTonDeposit(input: { userOpenId: string; depositId: n
   if (!db) throw new Error("Database not available");
   const deposit = (await db.select().from(tonDeposits).where(and(eq(tonDeposits.id, input.depositId), eq(tonDeposits.userOpenId, input.userOpenId))).limit(1))[0];
   if (!deposit) throw new Error("Пополнение не найдено");
-  if (deposit.status === "confirmed") return { status: "confirmed" as const, newlyConfirmed: false, amountTon: deposit.creditedAmountTon ?? "0" };
-  if (deposit.status === "expired" || deposit.status === "rejected") return { status: deposit.status, newlyConfirmed: false, amountTon: "0" };
+  if (deposit.status === "confirmed") return { status: "confirmed" as const, newlyConfirmed: false, amountTon: deposit.creditedAmountTon ?? "0", transactionHash: deposit.transactionHash };
+  if (deposit.status === "expired" || deposit.status === "rejected") return { status: deposit.status, newlyConfirmed: false, amountTon: "0", transactionHash: null };
   if (deposit.expiresAt.getTime() <= Date.now()) {
     await db.update(tonDeposits).set({ status: "expired", failureReason: "Срок подтверждения истёк" }).where(eq(tonDeposits.id, deposit.id));
-    return { status: "expired" as const, newlyConfirmed: false, amountTon: "0" };
+    return { status: "expired" as const, newlyConfirmed: false, amountTon: "0", transactionHash: null };
   }
 
   const transactions = await getRecentTonDepositTransactions(deposit.recipientWalletAddress);
@@ -523,10 +523,10 @@ export async function verifyTonDeposit(input: { userOpenId: string; depositId: n
         transactionLt: rejection.transactionLt,
         failureReason: rejection.reason,
       }).where(and(eq(tonDeposits.id, deposit.id), inArray(tonDeposits.status, ["created", "submitted"])));
-      return { status: "rejected" as const, newlyConfirmed: false, amountTon: "0" };
+      return { status: "rejected" as const, newlyConfirmed: false, amountTon: "0", transactionHash: null };
     }
     await db.update(tonDeposits).set({ status: "submitted", submittedAt: deposit.submittedAt ?? new Date() }).where(and(eq(tonDeposits.id, deposit.id), eq(tonDeposits.status, "created")));
-    return { status: "submitted" as const, newlyConfirmed: false, amountTon: "0" };
+    return { status: "submitted" as const, newlyConfirmed: false, amountTon: "0", transactionHash: null };
   }
 
   const creditedAmountTon = formatNanoTon(match.receivedNano);
@@ -547,7 +547,7 @@ export async function verifyTonDeposit(input: { userOpenId: string; depositId: n
       await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${creditedAmountTon}` }).where(eq(users.openId, input.userOpenId));
       newlyConfirmed = true;
     });
-    return { status: "confirmed" as const, newlyConfirmed, amountTon: creditedAmountTon };
+    return { status: "confirmed" as const, newlyConfirmed, amountTon: creditedAmountTon, transactionHash: match.transactionHash };
   } catch (error) {
     if (isDuplicateTelegramEventError(error)) throw new Error("Эта TON-транзакция уже была зачислена");
     throw error;
@@ -1052,6 +1052,16 @@ export async function attributeTelegramReferral(telegramUserId: number, referral
   if (!referrer[0] || !referredUser || referredUser.referredBy || referrer[0].openId === referredOpenId) return false;
   await db.update(users).set({ referredBy: cleanCode }).where(eq(users.openId, referredOpenId));
   return true;
+}
+
+export async function getTelegramReferralReferrer(telegramUserId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const referredOpenId = `telegram:${telegramUserId}`;
+  const [referredUser] = await db.select({ referredBy: users.referredBy }).from(users).where(eq(users.openId, referredOpenId)).limit(1);
+  if (!referredUser?.referredBy) return null;
+  const [referrer] = await db.select({ name: users.name, username: users.telegramUsername }).from(users).where(eq(users.referralCode, referredUser.referredBy)).limit(1);
+  return referrer ?? null;
 }
 
 const RANKING_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;

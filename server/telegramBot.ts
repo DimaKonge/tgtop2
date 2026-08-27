@@ -16,6 +16,7 @@ import {
   claimTelegramEvent,
   flagGroupForModeration,
   getRankedEntryLinkTargets,
+  getTelegramReferralReferrer,
   recordMiniAppLaunch,
   recordTelegramSupportInbound,
   recordTelegramSupportOutbound,
@@ -87,6 +88,9 @@ export function isValidTelegramMemberCount(value: unknown): value is number { re
 function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { return chat.type === "channel" ? "Каналы" : "Чаты"; }
 function catalogChatId(chatId: number): string { return String(chatId); }
 function publicGroupUrl(chat: TelegramChat): string | undefined { return chat.username ? `https://t.me/${chat.username}` : undefined; }
+function isExpectedLogBot(kind: NonNullable<ReturnType<typeof parsePrivateLogDestinationCommand>>) {
+  return kind === "support" ? "@tg_topbot" : "@tgtop_robot";
+}
 
 export function parsePrivateLogDestinationCommand(text: string | undefined): "top_activity" | "finance" | "support" | "launches" | null {
   const normalized = text?.trim().toLowerCase() ?? "";
@@ -101,6 +105,7 @@ export function parsePrivateLogDestinationCommand(text: string | undefined): "to
 async function configurePrivateLogDestination(message: NonNullable<TelegramUpdate["message"]>) {
   const kind = parsePrivateLogDestinationCommand(message.text);
   if (!kind) return false;
+  if (activeBotLabel.toLowerCase() !== isExpectedLogBot(kind)) return false;
   if (!message.from || !ENV.ownerOpenId || ENV.ownerOpenId !== `telegram:${message.from.id}`) {
     await telegramCall<boolean>("sendMessage", { chat_id: message.chat.id, text: "Эту закрытую log-группу может подключить только владелец TG TOP." }).catch(() => {});
     return true;
@@ -122,6 +127,20 @@ async function configurePrivateLogDestination(message: NonNullable<TelegramUpdat
     text: `✅ Private log «${label}» подключён. Сюда будут приходить только подтверждённые события TG TOP. Никаких команд управления деньгами этот журнал не выполняет.`,
   }).catch(() => {});
   return true;
+}
+
+async function shouldBypassGlobalEventClaim(update: TelegramUpdate) {
+  const message = update.message;
+  if (!message) return false;
+  const command = parsePrivateLogDestinationCommand(message.text);
+  if (command && activeBotLabel.toLowerCase() !== isExpectedLogBot(command)) return true;
+  if (activeBotLabel.toLowerCase() !== "@tgtop_robot" || !message.reply_to_message?.message_id) return false;
+  const destination = await getTelegramOperationLogDestination("support");
+  return Boolean(
+    destination
+      && destination.chatId === catalogChatId(message.chat.id)
+      && (destination.messageThreadId === null || destination.messageThreadId === message.message_thread_id),
+  );
 }
 
 function ownerTelegramChatId(): string | null {
@@ -695,6 +714,7 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     await upsertUser({ openId, name: message.from.username ?? message.from.first_name ?? "Telegram user", telegramUsername: message.from.username ?? null, loginMethod: "telegram-bot", lastSignedIn: new Date() });
     const referralCode = getReferralCodeFromStartText(message.text);
     const attributed = referralCode ? await attributeTelegramReferral(message.from.id, referralCode) : false;
+    const referrer = attributed ? await getTelegramReferralReferrer(message.from.id) : null;
     const launch = await recordMiniAppLaunch({
       userOpenId: openId,
       source: attributed ? "referral" : "direct",
@@ -706,6 +726,7 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
         username: message.from.username ?? null,
         userId: String(message.from.id),
         source: attributed ? "referral" : "direct",
+        referrer,
       }));
     }
     await openMiniApp(message.chat.id, attributed
@@ -760,7 +781,7 @@ export async function runTelegramBot(botLabel = "@TG_TOPBOT"): Promise<void> {
         offset = update.update_id + 1;
         try {
           const eventKey = getTelegramEventKey(update);
-          if (eventKey && !(await claimTelegramEvent(eventKey, botLabel))) {
+          if (eventKey && !(await shouldBypassGlobalEventClaim(update)) && !(await claimTelegramEvent(eventKey, botLabel))) {
             console.info(`[Telegram] Duplicate event skipped by ${botLabel}: ${eventKey}`);
             continue;
           }

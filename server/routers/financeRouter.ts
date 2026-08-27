@@ -65,6 +65,7 @@ export const financeProcedures = {
             amount: `${result.amountTon} GRAM`,
             actor: { name: ctx.user.name, username: ctx.user.telegramUsername },
             reference: `deposit-${input.depositId}`,
+            transactionHash: result.transactionHash,
           }));
         }
         return result;

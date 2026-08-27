@@ -163,6 +163,7 @@ async function processReconciliationJob(job: NonNullable<Awaited<ReturnType<type
         amount: `${formatNanoTon(BigInt(withdrawal.netAmountNano))} GRAM`,
         actor: { name: user?.name, username: user?.telegramUsername },
         reference: withdrawal.reference,
+        transactionHash: withdrawal.transactionHash,
       }));
     }
   }

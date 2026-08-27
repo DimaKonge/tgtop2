@@ -26,7 +26,7 @@ export function formatTopActivityLog(input: { event: "bot_connected" | "listed_i
   ].join("\n");
 }
 
-export function formatFinanceLog(input: { event: "deposit_confirmed" | "withdrawal_requested" | "withdrawal_sent" | "withdrawal_confirmed"; amount: string; actor?: { name?: string | null; username?: string | null }; reference: string }) {
+export function formatFinanceLog(input: { event: "deposit_confirmed" | "withdrawal_requested" | "withdrawal_sent" | "withdrawal_confirmed"; amount: string; actor?: { name?: string | null; username?: string | null }; reference: string; transactionHash?: string | null }) {
   const headlines: Record<typeof input.event, string> = {
     deposit_confirmed: "✅ Подтверждено пополнение TG TOP",
     withdrawal_requested: "📝 Создана заявка на вывод",
@@ -39,15 +39,16 @@ export function formatFinanceLog(input: { event: "deposit_confirmed" | "withdraw
     `Сумма: ${sanitizeLine(input.amount, 48)}`,
     ...(input.actor ? [`Пользователь: ${displayUser(input.actor)}`] : []),
     `Операция: ${sanitizeLine(input.reference, 80)}`,
+    ...(input.transactionHash ? [`Транзакция: https://tonviewer.com/transaction/${sanitizeLine(input.transactionHash, 128)}`] : []),
   ].join("\n");
 }
 
-export function formatLaunchLog(input: { username?: string | null; userId: string; source: "direct" | "referral"; referrerUsername?: string | null; createdAt?: Date }) {
+export function formatLaunchLog(input: { username?: string | null; userId: string; source: "direct" | "referral"; referrer?: { name?: string | null; username?: string | null } | null; createdAt?: Date }) {
   return [
     "🚀 Новый запуск TG TOP",
     "",
     `Пользователь: ${input.username ? `@${sanitizeLine(input.username.replace(/^@/, ""), 64)}` : `ID ${sanitizeLine(input.userId, 48)}`}`,
-    ...(input.source === "referral" && input.referrerUsername ? [`Пришёл от: @${sanitizeLine(input.referrerUsername.replace(/^@/, ""), 64)}`] : []),
+    ...(input.source === "referral" && (input.referrer?.username || input.referrer?.name) ? [`Пришёл от: ${displayUser(input.referrer)}`] : []),
     `Время: ${(input.createdAt ?? new Date()).toISOString()}`,
   ].join("\n");
 }
