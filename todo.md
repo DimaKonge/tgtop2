@@ -1026,21 +1026,21 @@
 - [x] Подготовить code-path одной закрытой forum-группы: @TG_TOPBOT настраивает/ведёт поддержку, @TGTOP_robot настраивает/ведёт служебные launch/TOP/finance topics; reserve bot не захватывает support reply до глобальной дедупликации.
 - [x] В launch log передавать только реального владельца успешно применённого рефкода; direct start не содержит строки «Пришёл от».
 - [x] Исправить staged VPS release: до переключения code, требующего новую Drizzle schema, применять проверенные аддитивные migrations и проверять migration health без ручного доступа к production БД.
-- [ ] Исправить owner identity mapping для setup-команд закрытой forum-группы: принимать только фактического владельца TG TOP, не ослабляя проверку для других участников.
-- [ ] Поддержать безопасную однократную настройку private forum topics при включённой anonymous роли владельца Telegram; не считать sender_chat доказательством личности и не открывать setup-команды другим админам.
-- [ ] Убрать зависимость setup-команд forum-группы от несовместимого `OWNER_OPEN_ID=telegram:<id>` и заменить её на проверяемую привязку именно закрытой owner-группы без доступа для посторонних администраторов.
-- [ ] Для однократной bootstrap-привязки setup-группы проверить exact handle `@dimij` и Telegram status `creator/owner`; после привязки принимать команды только от сохранённого Telegram ID.
-- [ ] Исправить setup acknowledgement: success и owner-denied ответы должны возвращаться в тот же forum topic через `message_thread_id`, а не попадать в General.
-- [ ] Исправить setup acknowledgement: success и owner-denied ответы должны возвращаться в тот же forum topic через `message_thread_id`, а не попадать в General.
+- [x] Исправить owner identity mapping для setup-команд закрытой forum-группы: принимать только фактического владельца TG TOP, не ослабляя проверку для других участников.
+- [x] Поддержать безопасную однократную настройку private forum topics при включённой anonymous роли владельца Telegram; не считать sender_chat доказательством личности и не открывать setup-команды другим админам.
+- [x] Убрать зависимость setup-команд forum-группы от несовместимого `OWNER_OPEN_ID=telegram:<id>` и заменить её на проверяемую привязку именно закрытой owner-группы без доступа для посторонних администраторов.
+- [x] Для однократной bootstrap-привязки setup-группы проверить exact handle `@dimij` и Telegram status `creator/owner`; после привязки принимать команды только от сохранённого Telegram ID.
+- [x] Исправить setup acknowledgement: success и owner-denied ответы должны возвращаться в тот же forum topic через `message_thread_id`, а не попадать в General.
+- [x] Исправить setup acknowledgement: success и owner-denied ответы должны возвращаться в тот же forum topic через `message_thread_id`, а не попадать в General.
 - [x] Подготовить code-path immutable owner binding: до первой привязки допускается только `@dimij` со статусом Telegram `creator/owner`; далее команды и support replies сверяются с сохранёнными chat ID и Telegram ID.
 - [x] Подготовить topic-aware setup replies: success и owner-denied используют исходный `message_thread_id`; сообщения из General получают отдельное требование открыть нужный topic.
 - [x] Добавить owner-only `/allmembers` в теме «Запуски`: отправлять UTF-8 `.txt` с уникальными аккаунтами, которые запускали бота, по последнему launch от новых к старым, без времени, рефереров, балансов и иных лишних данных.
 - [x] Расширить `/allmembers` до объединённого списка historical known Telegram accounts TG TOP и новых confirmed `/start`; не выдавать исторические profiles за точные bot-start events и сортировать по последней известной активности.
-- [ ] Добавить публичную страницу Privacy Policy на `tgtop.me` для ссылки BotFather; описать Mini App, Telegram account data, support relay, launch audit, storage, retention, security and contact route.
-- [ ] Подготовить и проверить TG TOP description photo 640×360 и отдельный animated avatar asset для BotFather.
+- [x] Добавить публичную страницу Privacy Policy на `tgtop.me` для ссылки BotFather; описать Mini App, Telegram account data, support relay, launch audit, storage, retention, security and contact route.
+- [x] Подготовить и проверить TG TOP description photo 640×360 и отдельный animated avatar asset для BotFather.
 - [x] Создать и подключить frontend route `/privacy-policy` с русской Privacy Policy для TG TOP; TypeScript, build и safe tests прошли.
 - [ ] Отдельно перевести Telegram Login Redirect URI и Trusted Origin с `tgtop.xyz` на `tgtop.me`, обновив code contract, BotFather/Telegram Login settings и проверив вход до удаления старого домена.
-- [ ] Сгенерировать минималистичный статичный логотип TG TOP: узнаваемый силуэт TOP-пирамиды из геометрических ячеек, без текста, читаемый в круглом Telegram-аватаре.
+- [x] Сгенерировать минималистичный статичный логотип TG TOP: узнаваемый силуэт TOP-пирамиды из геометрических ячеек, без текста, читаемый в круглом Telegram-аватаре.
 - [x] Доработать существующий splash keyframe с силуэтом пирамиды ячеек в чистый минималистичный квадратный логотип TG TOP для Telegram-аватара; не использовать несвязанные новые варианты.
 - [x] Согласовать static и animated TG TOP avatars: одна геометрия splash-пирамиды с длинной нижней ячейкой-фундаментом, без расхождения знака между версиями.
 - [x] Убрать пользовательское промежуточное сообщение `Сообщение получено. Ответ придёт сюда от поддержки TG TOP.` из inbound support relay; сохранить доставку карточки в topic «Поддержка» и ответ owner через основной бот.
