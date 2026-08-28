@@ -1135,3 +1135,4 @@
 - [x] Подготовить TOP-only CSS/SVG animated pyramid avatar с `prefers-reduced-motion` fallback; не показывать фирменный avatar случайным группам и не включать тяжёлое видео по всему каталогу.
 - [ ] Добавить защищённую owner/server-side настройку `topPyramidAvatar` для конкретной верифицированной площадки в занятом TOP-slot; до этого prepared avatar должен оставаться выключенным и не показываться случайным группам.
 - [x] После полностью проверенного anti-Sybil release вынести compact 68px catalog row из `Home.tsx` в отдельный presentation-компонент, сохранив плотность, данные, статичные preview и все open/settings handlers.
+- [x] Немедленно завершить прерванный staged release checkpoint `a5ba0f61`, проверить live bundle и дать пользователю конкретный сценарий просмотра; до этого не начинать новые архитектурные блоки.
