@@ -152,9 +152,10 @@ async function startServer() {
       res.status(204).end();
     }
   );
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // The public API exchanges compact JSON. Large media is uploaded directly to storage,
+  // not buffered in the Node process.
+  app.use(express.json({ limit: "256kb", strict: true }));
+  app.use(express.urlencoded({ limit: "64kb", extended: false }));
   registerStorageProxy(app);
   registerTelegramMediaRoutes(app);
   registerTelegramLoginRoutes(app);

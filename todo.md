@@ -1126,3 +1126,6 @@
 - [ ] Провести security-аудит TG TOP: DDoS/rate-limit и queue strategy для сайта и обоих ботов, строгая server-side validation, проверка ORM/SQL-injection границ, XSS/URL/upload ограничения, безопасные error logs и regression coverage для критических API и финансовых маршрутов.
 - [ ] Проверить и устранить конфуз доменов `tgtop.me` и `tgtop.xyz`: canonical redirects, Telegram Login callback/origin, bot/Mini App links и privacy URL не должны вести на неверный домен или запускать лишнюю авторизацию.
 - [x] Устранить расхождение в Telegram Login: login start и callback должны использовать один canonical origin `https://tgtop.me`, совпадающий с nginx redirect и зарегистрированным Telegram URI; сохранить PKCE/state и safe returnTo проверки.
+- [x] Security quick wins: уменьшить общий request body limit, ввести точные route limits и bounded positive/negative cache для Telegram avatar/storage путей; добавить boundary/regression tests без изменения каталогов, Telegram onboarding и балансов.
+- [x] Разгрузить `Home.tsx` через первый независимый UI-модуль TOP/ранжирования без изменения верхней 1+2+4 сетки, нижних компактных строк или работающих action handlers.
+- [ ] Подготовить staged nginx/systemd hardening и off-host encrypted DB backup/restore drill как отдельные проверяемые изменения без изменения DNS, BotFather, балансов или финансовых операций.

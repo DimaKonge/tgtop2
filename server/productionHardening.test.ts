@@ -13,6 +13,12 @@ describe("production HTTP hardening", () => {
     expect(source).toContain('"/api/trpc",');
   });
 
+  it("keeps unauthenticated request bodies small before routing to application code", () => {
+    expect(source).toContain('app.use(express.json({ limit: "256kb", strict: true }))');
+    expect(source).toContain('app.use(express.urlencoded({ limit: "64kb", extended: false }))');
+    expect(source).not.toContain('express.json({ limit: "50mb" })');
+  });
+
   it("provides a database-backed readiness endpoint without exposing internals", () => {
     expect(source).toContain('app.get("/healthz", async (_req, res) => {');
     expect(source).toContain('await db.execute(sql`SELECT 1`)');

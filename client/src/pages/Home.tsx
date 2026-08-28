@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { AudienceGrowthChart, GramBalanceChart, Metric, TelegramAnalyticsChart, telegramNotificationPercent, type AudienceSnapshot, type TelegramAnalyticsGraph, type TelegramAnalyticsSummary } from "@/components/analytics/ChartPanels";
 import { TgTopPyramidIcon } from "@/components/TgTopPyramidIcon";
+import { TopRankingCard } from "@/components/TopRankingCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -478,37 +479,7 @@ function SortableMyGroupTile({
 
 type GroupCardVariant = "lead" | "secondary" | "compact" | "list";
 
-function GroupCard({
-  group,
-  variant = "list",
-  onClick,
-  language = "ru",
-  bidAmount = 0,
-}: {
-  group?: Group | null;
-  variant?: GroupCardVariant;
-  onClick: () => void;
-  language?: Language;
-  bidAmount?: number;
-}) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const lead = variant === "lead";
-  const secondary = variant === "secondary";
-  const compact = variant === "compact";
-  const rankingPlacement = variant !== "list";
-  const cardStyle = lead
-    ? "h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5 sm:h-[46vh] sm:p-6"
-    : variant === "secondary"
-      ? "h-[136px] border-white/10 bg-[#111720] p-3 sm:h-[168px] sm:p-4"
-      : compact
-        ? "h-[88px] border-white/8 bg-[#111720] p-2 sm:h-[124px]"
-        : "h-[68px] border-white/8 bg-[#111720] px-3 py-2";
-  const shellStyle = compact
-    ? "flex h-full flex-col items-center justify-center gap-2 text-center"
-    : "flex h-full items-center gap-3";
-  const avatarSrc = group ? getTelegramAvatarSrc(group) : null;
-  const animatedAvatarSrc = group?.animatedAvatarUrl ?? null;
-  const groupUrl = group?.inviteLink ?? (group?.username ? `https://t.me/${group.username}` : null);
+function GroupCard({ group, onClick, language = "ru" }: { group?: Group | null; onClick: () => void; language?: Language }) {
   return (
     <div
       role="button"
@@ -521,61 +492,22 @@ function GroupCard({
         }
       }}
       aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
-      className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
+      className="relative min-w-0 h-[68px] w-full overflow-hidden rounded-2xl border border-white/8 bg-[#111720] px-3 py-2 text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99]"
     >
       {group?.rewardActive && (group.rewardAmount ?? 0) > 0 && (
-        <span aria-label={language === "en" ? "Rewards available" : "Вознаграждение активно"} className={`absolute right-1.5 top-1.5 z-10 grid place-items-center rounded-full border border-amber-100/25 bg-[#202b3a]/90 text-amber-200 shadow-md shadow-black/20 ${lead ? "h-7 w-7" : compact ? "h-4 w-4" : "h-5 w-5"}`}>
-          <Star className={lead ? "h-4 w-4 fill-current" : compact ? "h-2.5 w-2.5 fill-current" : "h-3 w-3 fill-current"} />
-        </span>
+        <span aria-label={language === "en" ? "Rewards available" : "Вознаграждение активно"} className="absolute right-1.5 top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full border border-amber-100/25 bg-[#202b3a]/90 text-amber-200 shadow-md shadow-black/20"><Star className="h-3 w-3 fill-current" /></span>
       )}
-      {group && rankingPlacement ? (
-        <>
-          <>
-            {animatedAvatarSrc && !imageFailed ? (
-              <video key={animatedAvatarSrc} src={animatedAvatarSrc} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="pointer-events-none absolute inset-0 h-full w-full object-cover" onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }} onError={() => setImageFailed(true)} />
-            ) : avatarSrc && !imageFailed ? (
-              <img
-                src={avatarSrc}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-                onError={() => setImageFailed(true)}
-              />
-            ) : (
-              <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_30%_22%,#28496f,#111720_62%)] text-4xl font-semibold text-slate-200">
-                {group.title.slice(0, 1).toUpperCase()}
-              </span>
-            )}
-          </>
-          <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,15,0.06)_8%,rgba(7,10,15,0.82)_100%)]" />
-          <span className={`absolute inset-x-0 bottom-0 min-w-0 ${compact ? "p-2" : lead ? "p-5 sm:p-6" : "p-3 sm:p-4"}`}>
-            <b
-              className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} block max-w-full truncate font-semibold text-white`}
-            >
-              {group.title}
-            </b>
-            <small
-              className={`mt-1 block max-w-full truncate text-slate-200/80 ${compact ? "text-[8px]" : "text-xs"}`}
-            >
-              {lead && <>{groupUrl ? <a href={groupUrl} onClick={event => { event.preventDefault(); event.stopPropagation(); openTelegramCommunityLink(groupUrl); }} className="no-underline hover:text-white">{getCommunityAccessLabel(group, language)}</a> : getCommunityAccessLabel(group, language)} ·{" "}</>}
-              {n(group.membersCount, language)} {language === "en" ? "members" : "участников"} · +{n(group.joinedCount, language)}
-            </small>
-          </span>
-        </>
-      ) : group ? (
-        <span className={rankingPlacement ? shellStyle : "flex h-full w-full items-center justify-between gap-3"}>
+      {group ? (
+        <span className="flex h-full w-full items-center justify-between gap-3">
           <span className="flex min-w-0 flex-1 items-center gap-3">
             <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
-              <Avatar group={group} large={lead} compact={compact} />
+              <Avatar group={group} />
             </span>
             <span className="min-w-0 flex-1">
-              <b
-                className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-xs"} block truncate font-medium text-white`}
-              >
+              <b className="block truncate text-xs font-medium text-white">
                 {group.title}
               </b>
-              <small
-                className={`block truncate text-[11px] text-slate-500 ${compact ? "hidden" : ""}`}
-              >
+              <small className="block truncate text-[11px] text-slate-500">
                 {getCommunityAccessLabel(group, language)} ·{" "}
                 {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
               </small>
@@ -591,23 +523,8 @@ function GroupCard({
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
           </span>
         </span>
-      ) : rankingPlacement ? (
-        <span className="absolute inset-0 grid place-items-center">
-          <span className="flex max-w-full flex-col items-center gap-2 px-2 text-center">
-            <span
-              className={`${lead ? "h-16 w-16" : compact ? "h-9 w-9" : "h-11 w-11"} grid place-items-center rounded-xl border border-dashed border-white/20 text-slate-500`}
-            >
-              <Plus className="h-4 w-4" />
-            </span>
-            <small
-              className={`max-w-full truncate font-light tracking-wide text-slate-500 ${compact ? "text-[9px]" : "text-[11px]"}`}
-            >
-              {language === "en" ? "Available" : "Свободно"}
-            </small>
-          </span>
-        </span>
       ) : (
-        <span className={shellStyle}>
+        <span className="flex h-full items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-dashed border-white/20 text-slate-500">
             <Plus className="h-4 w-4" />
           </span>
@@ -3115,11 +3032,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <div className="w-full space-y-2">
               {!topSearchQuery.trim() && <div key={rankingMotionKey} className="w-full space-y-2" aria-live="polite">
               <div className="ranking-slot-enter ranking-slot-lead w-full" style={{ animationDelay: "0ms" }}>
-                <GroupCard
+                <TopRankingCard
                   group={leadSlot.group}
                   variant="lead"
                   language={language}
-                  bidAmount={leadSlot.bidAmount}
+                  avatarSrc={leadSlot.group ? getTelegramAvatarSrc(leadSlot.group) : null}
+                  onOpenCommunity={openTelegramCommunityLink}
                   onClick={() =>
                     leadSlot.group
                       ? openGroup(leadSlot.group.id, activeRankingBoardScope)
@@ -3130,11 +3048,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="grid w-full grid-cols-2 gap-2">
                 {secondTier.map((slot, index) => (
                   <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-secondary" style={{ animationDelay: `${90 + index * 45}ms` }}>
-                    <GroupCard
+                    <TopRankingCard
                       group={slot.group}
                       variant="secondary"
                       language={language}
-                      bidAmount={slot.bidAmount}
+                      avatarSrc={slot.group ? getTelegramAvatarSrc(slot.group) : null}
+                      onOpenCommunity={openTelegramCommunityLink}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)
                       }
@@ -3145,11 +3064,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="grid w-full grid-cols-4 gap-2">
                 {thirdTier.map((slot, index) => (
                   <div key={slot.slotNumber} className="ranking-slot-enter ranking-slot-compact" style={{ animationDelay: `${185 + index * 34}ms` }}>
-                    <GroupCard
+                    <TopRankingCard
                       group={slot.group}
                       variant="compact"
                       language={language}
-                      bidAmount={slot.bidAmount}
+                      avatarSrc={slot.group ? getTelegramAvatarSrc(slot.group) : null}
+                      onOpenCommunity={openTelegramCommunityLink}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)
                       }
@@ -3174,9 +3094,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div key={`ranking-continuation-${slot.id}`} className="relative w-full animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${index * 35}ms` }}>
                     <GroupCard
                       group={slot.group}
-                      variant="list"
                       language={language}
-                      bidAmount={slot.bidAmount}
                       onClick={() => slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)}
                     />
                   </div>
@@ -3977,7 +3895,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
                 <section className="space-y-2">
                   <h2 className="px-1 text-sm font-semibold">{tx("Площадки владельца", "Owner communities")}</h2>
-                  {publicOwner.groups.map(group => <GroupCard key={group.id} group={group} variant="list" language={language} onClick={() => openGroup(group.id)} />)}
+                  {publicOwner.groups.map(group => <GroupCard key={group.id} group={group} language={language} onClick={() => openGroup(group.id)} />)}
                 </section>
                 <NftShowcase nfts={publicOwner.nfts} language={language} title={tx("NFT-витрина владельца", "Owner NFT showcase")} />
               </>
