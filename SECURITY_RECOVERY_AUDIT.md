@@ -85,3 +85,13 @@
 Выполнены безопасные code-level quick wins. Общий JSON limit снижен с 50 MB до 256 KB, urlencoded limit — до 64 KB, при этом медиа по-прежнему идут прямым storage flow, а не через buffer Node-процесса. Для `/api/telegram-avatar/:chatId` добавлены bounded 192-entry TTL-cache, 60-секундный negative cache, request coalescing на одинаковый cache miss, ограничение размера upstream media до 1.5 MB, более короткие timeouts и allow-list image content types. Для `/manus-storage/*key` добавлены ограничение и validation key, bounded 1024-entry 30-секундный presign cache и request coalescing; полные ответы внешнего storage API больше не попадают в server log.
 
 Первый UI extraction вынес верхнюю TOP-card presentation в `client/src/components/TopRankingCard.tsx`. Она сохраняет 1+2+4 варианты и прежние action callbacks; нижние каталожные строки остаются отдельным лёгким renderer в `Home.tsx`. Прогнаны 266 локальных tests (3 skipped), TypeScript и production build. Внешний TonAPI credential test один раз достиг timeout во время полного запуска, после чего прошёл отдельным повтором без изменения финансового кода.
+
+## 10. Staged VPS hardening rollout — completed
+
+Nginx limits были применены только после snapshot прежних файлов, `nginx -t` и reload. Первая попытка была автоматически отменена из-за синтаксиса некавыченного regex; production nginx тогда не перезагружался, а конфигурация была восстановлена. Шаблон исправлен, протестирован и применён повторно. Live-проверка подтвердила: `/healthz` = 200, malformed Telegram avatar = 400, path traversal в storage = 400, JSON payload 270 KB к tRPC = 413.
+
+Web service и оба Telegram bot services затем получили systemd drop-in по одному, с отдельными backup directories и rollback при fail readiness. Первый web stage не прошёл слишком короткий two-second readiness window и был автоматически восстановлен; журнал не показал process crash. Повтор с 30-second readiness window прошёл. На итоговой проверке nginx и три TG TOP services active, а `systemd-analyze security` показывает overall exposure level **3.7 (OK)** для web, primary bot и reserve bot.
+
+## 11. Remaining recovery prerequisite
+
+Off-host encrypted backup и restore drill **не активированы**. Нельзя считать recovery готовым до выбора отдельного versioned destination и публичного encryption key; then a fresh-database restore drill must be performed and recorded. No financial reconciliation, database restore, DNS/WAF change or wallet action was performed during this hardening rollout.

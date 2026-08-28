@@ -1129,3 +1129,5 @@
 - [x] Security quick wins: уменьшить общий request body limit, ввести точные route limits и bounded positive/negative cache для Telegram avatar/storage путей; добавить boundary/regression tests без изменения каталогов, Telegram onboarding и балансов.
 - [x] Разгрузить `Home.tsx` через первый независимый UI-модуль TOP/ранжирования без изменения верхней 1+2+4 сетки, нижних компактных строк или работающих action handlers.
 - [ ] Подготовить staged nginx/systemd hardening и off-host encrypted DB backup/restore drill как отдельные проверяемые изменения без изменения DNS, BotFather, балансов или финансовых операций.
+- [x] Применить и проверить staged nginx/systemd hardening: узкие limits для media/storage/login/CSP/tRPC, global 256 KB edge body cap и отдельные least-privilege systemd drop-ins для web, primary bot и reserve bot с rollback snapshots.
+- [ ] Выбрать off-host versioned encrypted backup destination и public encryption key, затем выполнить restore drill в новой тестовой БД с checksum, schema/ledger integrity и `/healthz` проверками.
