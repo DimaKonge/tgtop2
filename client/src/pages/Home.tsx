@@ -14,6 +14,7 @@ import { AudienceGrowthChart, GramBalanceChart, Metric, TelegramAnalyticsChart, 
 import { TgTopPyramidIcon } from "@/components/TgTopPyramidIcon";
 import { TopRankingCard } from "@/components/TopRankingCard";
 import { CommunityAvatar as Avatar, FullBleedCommunityArtwork as FullBleedGroupArtwork, getTelegramAvatarSrc } from "@/components/CommunityArtwork";
+import { CompactCommunityRow } from "@/components/CompactCommunityRow";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -420,68 +421,6 @@ function SortableMyGroupTile({
         </>
       )}
     </article>
-  );
-}
-
-type GroupCardVariant = "lead" | "secondary" | "compact" | "list";
-
-function GroupCard({ group, onClick, language = "ru" }: { group?: Group | null; onClick: () => void; language?: Language }) {
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={event => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onClick();
-        }
-      }}
-      aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
-      className="relative min-w-0 h-[68px] w-full overflow-hidden rounded-2xl border border-white/8 bg-[#111720] px-3 py-2 text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99]"
-    >
-      {group?.rewardActive && (group.rewardAmount ?? 0) > 0 && (
-        <span aria-label={language === "en" ? "Rewards available" : "Вознаграждение активно"} className="absolute right-1.5 top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full border border-amber-100/25 bg-[#202b3a]/90 text-amber-200 shadow-md shadow-black/20"><Star className="h-3 w-3 fill-current" /></span>
-      )}
-      {group ? (
-        <span className="flex h-full w-full items-center justify-between gap-3">
-          <span className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
-              <Avatar group={group} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <b className="block truncate text-xs font-medium text-white">
-                {group.title}
-              </b>
-              <small className="block truncate text-[11px] text-slate-500">
-                {getCommunityAccessLabel(group, language)} ·{" "}
-                {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
-              </small>
-            </span>
-          </span>
-          <span className="flex shrink-0 items-center gap-3 text-right">
-            {group.salePriceTon && group.listingType === "sale" ? (
-              <div className="flex flex-col items-end">
-                <b className="text-sm font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon)} GRAM</b>
-                <small className="text-[10px] text-slate-400">{language === "en" ? "For sale" : "Продажа"}</small>
-              </div>
-            ) : null}
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600" />
-          </span>
-        </span>
-      ) : (
-        <span className="flex h-full items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-dashed border-white/20 text-slate-500">
-            <Plus className="h-4 w-4" />
-          </span>
-          <span>
-            <b className="block text-sm font-light text-slate-300">
-              {language === "en" ? "Add group" : "Добавить группу"}
-            </b>
-          </span>
-        </span>
-      )}
-    </div>
   );
 }
 
@@ -3050,10 +2989,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="space-y-2">
                 {!topSearchQuery.trim() && rankingContinuation.map((slot, index) => (
                   <div key={`ranking-continuation-${slot.id}`} className="relative w-full animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${index * 35}ms` }}>
-                    <GroupCard
+                    <CompactCommunityRow
                       group={slot.group}
                       language={language}
-                      onClick={() => slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)}
+                      accessLabel={slot.group ? getCommunityAccessLabel(slot.group, language) : undefined}
+                      salePrice={slot.group?.listingType === "sale" && slot.group.salePriceTon ? formatTon(slot.group.salePriceTon) : undefined}
+                      onOpen={() => slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)}
                     />
                   </div>
                 ))}
@@ -3065,36 +3006,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       style={{ animationDelay: `${index * 35}ms` }}
                       className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300"
                     >
-                      <button
-                        onClick={() => openGroup(group.id)}
-                        className="group relative flex h-[68px] w-full items-center justify-between gap-2.5 overflow-hidden rounded-2xl border border-white/8 bg-[#111720] px-3 py-1.5 text-left transition-all duration-200 ease-out hover:border-[#3f8cff]/40 hover:bg-[#151e2b] active:scale-[0.99]"
-                      >
-                        {group.rewardActive && (group.rewardAmount ?? 0) > 0 && (
-                          <span aria-label="Вознаграждение активно" className="absolute right-1.5 top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full border border-amber-100/25 bg-[#202b3a]/90 text-amber-200 shadow-md shadow-black/20"><Star className="h-3 w-3 fill-current" /></span>
-                        )}
-                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                          <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg">
-                            <Avatar group={group} />
-                          </div>
-                          <span className="min-w-0 flex-1">
-                            <b className="block truncate text-xs font-medium text-white transition-colors group-hover:text-[#a6c8ff]">
-                              {group.title}
-                            </b>
-                            <small className="block truncate text-[11px] text-slate-500">
-                              {getCommunityAccessLabel(group, language)} · {n(group.membersCount, language)} {language === "en" ? "members" : "участников"}
-                            </small>
-                          </span>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2 text-right">
-                          {isSale ? (
-                            <div className="flex flex-col items-end">
-                              <b className="text-xs font-semibold text-[#72a8ff]">{formatTon(group.salePriceTon!)} GRAM</b>
-                              <small className="text-[9px] text-slate-400">{language === "en" ? "For sale" : "Продажа"}</small>
-                            </div>
-                          ) : null}
-                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600 transition-transform group-hover:translate-x-0.5 group-hover:text-[#3f8cff]" />
-                        </div>
-                      </button>
+                      <CompactCommunityRow
+                        group={group}
+                        language={language}
+                        accessLabel={getCommunityAccessLabel(group, language)}
+                        salePrice={isSale ? formatTon(group.salePriceTon!) : undefined}
+                        onOpen={() => openGroup(group.id)}
+                      />
                     </div>
                   );
                 })}
@@ -3853,7 +3771,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 </div>
                 <section className="space-y-2">
                   <h2 className="px-1 text-sm font-semibold">{tx("Площадки владельца", "Owner communities")}</h2>
-                  {publicOwner.groups.map(group => <GroupCard key={group.id} group={group} language={language} onClick={() => openGroup(group.id)} />)}
+                  {publicOwner.groups.map(group => <CompactCommunityRow key={group.id} group={group} language={language} accessLabel={getCommunityAccessLabel(group, language)} salePrice={group.listingType === "sale" && group.salePriceTon ? formatTon(group.salePriceTon) : undefined} onOpen={() => openGroup(group.id)} />)}
                 </section>
                 <NftShowcase nfts={publicOwner.nfts} language={language} title={tx("NFT-витрина владельца", "Owner NFT showcase")} />
               </>

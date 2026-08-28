@@ -1134,4 +1134,4 @@
 - [x] Вынести из `Home.tsx` shared community artwork и компактную list-card presentation, сохранив fallback avatar, image-error поведение, 68px catalog rows и все существующие handlers.
 - [x] Подготовить TOP-only CSS/SVG animated pyramid avatar с `prefers-reduced-motion` fallback; не показывать фирменный avatar случайным группам и не включать тяжёлое видео по всему каталогу.
 - [ ] Добавить защищённую owner/server-side настройку `topPyramidAvatar` для конкретной верифицированной площадки в занятом TOP-slot; до этого prepared avatar должен оставаться выключенным и не показываться случайным группам.
-- [ ] После полностью проверенного anti-Sybil release вынести compact 68px catalog row из `Home.tsx` в отдельный presentation-компонент, сохранив плотность, данные, статичные preview и все open/settings handlers.
+- [x] После полностью проверенного anti-Sybil release вынести compact 68px catalog row из `Home.tsx` в отдельный presentation-компонент, сохранив плотность, данные, статичные preview и все open/settings handlers.

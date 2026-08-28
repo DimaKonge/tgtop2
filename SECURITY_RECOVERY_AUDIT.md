@@ -111,3 +111,9 @@ Off-host encrypted backup и restore drill **не активированы**. Н
 Primary `@TG_TOPBOT` теперь создаёт площадку и connection bonus только после совпадения `my_chat_member.from.id`, типа group/channel, active intent и Telegram owner status. Intent погашается после успешного чтения профиля/аудитории, но до `upsertTelegramGroup` и bonus. Недоверенные `my_chat_member` events не создают event receipts; warnings агрегируются не чаще одного раза в минуту. Group deep-link `/start@bot <token>` не получает ответа в сообщество. Existing memberships/activity для уже подключённых площадок не менялись.
 
 Schema change только additive: `telegram_onboarding_intents` с unique owner/kind и token, status/expiry index. Добавлен fail-closed idempotent production migration runner до service activation. Полный gate: 283 tests passed, 3 skipped; TypeScript, production build, migration syntax и release script syntax прошли.
+
+## 15. Compact catalog row extraction
+
+Две inline реализации 68px community row и прежний local `GroupCard` удалены из `Home.tsx` и заменены одним `CompactCommunityRow`. Компонент presentation-only: получает готовый `onOpen`, access label и optional sale price, использует shared static `CommunityAvatar`, поддерживает reward badge и empty slot. Верхняя 1+2+4 сетка, ranking continuation, общий каталог и owner profile сохраняют прежние handlers. `Home.tsx` больше не содержит дублированную compact-row разметку.
+
+Проверены viewport 390×844 и 1280×720: верхняя композиция, control density и отсутствие горизонтального overflow сохранены. Полный gate: 285 tests passed, 3 skipped; TypeScript и production build прошли. Frontend bundle сократился приблизительно на 3.4 KB minified относительно предыдущего milestone; крупный bundle/lottie code-splitting остаётся отдельной задачей.

@@ -29,7 +29,8 @@ describe("TG TOP production bot links", () => {
     const home = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const topCard = readFileSync(new URL("../components/TopRankingCard.tsx", import.meta.url), "utf8");
     const artwork = readFileSync(new URL("../components/CommunityArtwork.tsx", import.meta.url), "utf8");
-    const source = `${home}\n${topCard}\n${artwork}`;
+    const compactRow = readFileSync(new URL("../components/CompactCommunityRow.tsx", import.meta.url), "utf8");
+    const source = `${home}\n${topCard}\n${artwork}\n${compactRow}`;
     const styles = readFileSync(new URL("../index.css", import.meta.url), "utf8");
     const chartPanelsSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
 
@@ -47,7 +48,7 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('max-w-[92px]');
     expect(source).not.toContain('title={subcategory === "Все" ? tx("Рубрики", "Topics") : getSubcategoryLabel(subcategory, language)}');
     expect(source).toContain('lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"');
-    expect(source).toMatch(/<GroupCard\s+key=\{group\.id\}\s+group=\{group\}\s+language=\{language\}/);
+    expect(source).toMatch(/<CompactCommunityRow\s+key=\{group\.id\}\s+group=\{group\}\s+language=\{language\}/);
     expect(source).toContain('В TG TOP пока нет площадок');
     expect(source).toContain('https://t.me/i/userpic/320/${group.username}.jpg');
     expect(source).toContain('className="absolute inset-0 grid place-items-center"');
@@ -340,9 +341,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Снять с каталога", "Remove from catalog")');
     expect(source).toContain('setListingSubcategory(selectedGroupsShareCategory ? firstGroup?.subcategory ?? "General" : "")');
     expect(source).toContain('subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined');
-    expect(source).toContain('relative min-w-0 h-[68px] w-full overflow-hidden rounded-2xl border border-white/8 bg-[#111720] px-3 py-2');
-    expect(source).toContain('group relative flex h-[68px] w-full items-center justify-between gap-2.5 overflow-hidden rounded-2xl');
-    expect(source).toContain('<div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg">');
+    expect(source).toContain('group relative flex h-[68px] w-full min-w-0 items-center justify-between gap-2.5 overflow-hidden rounded-2xl');
+    expect(source).toContain('<CommunityAvatar group={group} compact />');
+    expect(compactRow).not.toContain('allowAnimatedMedia');
     expect(source).toContain('grid h-8 w-full place-items-center rounded-lg border border-dashed');
     expect(source).toContain('className="relative overflow-hidden rounded-xl border border-white/8 bg-[#111720] p-2 h-[64px]"');
     expect(source).toContain('absolute right-3 top-1/2 z-10 grid h-5 w-5 -translate-y-1/2');
@@ -427,7 +428,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('rewardPerSubscription: isChatRewardCampaign ? 0 : joinRewardUnits');
     expect(source).toContain('rewardPerInvite: isChatRewardCampaign ? 0 : joinRewardUnits');
     expect(source).toContain('rewardPerManualAdd: isChatRewardCampaign ? joinRewardUnits : 0');
-    expect(source).toContain('className="group relative flex h-[68px] w-full items-center justify-between gap-2.5 overflow-hidden rounded-2xl');
+    expect(source).toContain('className="group relative flex h-[68px] w-full min-w-0 items-center justify-between gap-2.5 overflow-hidden rounded-2xl');
     expect(source).toContain('tx("Цена в GRAM", "Price in GRAM")');
     expect(source).not.toContain('Telegram поддерживает платный вход Stars только для каналов.');
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
