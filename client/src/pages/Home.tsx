@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { AudienceGrowthChart, GramBalanceChart, Metric, TelegramAnalyticsChart, telegramNotificationPercent, type AudienceSnapshot, type TelegramAnalyticsGraph, type TelegramAnalyticsSummary } from "@/components/analytics/ChartPanels";
 import { TgTopPyramidIcon } from "@/components/TgTopPyramidIcon";
 import { TopRankingCard } from "@/components/TopRankingCard";
+import { CommunityAvatar as Avatar, FullBleedCommunityArtwork as FullBleedGroupArtwork, getTelegramAvatarSrc } from "@/components/CommunityArtwork";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -139,6 +140,7 @@ type Group = {
   description: string | null;
   avatarFileId: string | null;
   animatedAvatarUrl?: string | null;
+  topPyramidAvatar?: boolean;
   membersCount: number;
   ownerOpenId: string;
   category: "Каналы" | "Чаты";
@@ -259,12 +261,6 @@ type PreparedNftTransfer = {
     platformFeePercent: number;
   };
 };
-const getTelegramAvatarSrc = (group: Group) =>
-  group.avatarFileId
-    ? `/api/telegram-avatar/${group.chatId}`
-    : group.username
-      ? `https://t.me/i/userpic/320/${group.username}.jpg`
-      : null;
 const formatTon = (value: number | string | null | undefined) => {
   const amount = typeof value === "number" ? value : Number(value);
   return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
@@ -351,56 +347,6 @@ const getCountryLabel = (country: string, language: Language) =>
   COUNTRY_LABELS[country]?.[language] ?? country;
 const getCityLabel = (country: string, city: string, language: Language) =>
   CITY_OPTIONS[country]?.find(item => item.value === city)?.[language] ?? city;
-function Avatar({
-  group,
-  large = false,
-  hero = false,
-  compact = false,
-}: {
-  group: Group;
-  large?: boolean;
-  hero?: boolean;
-  compact?: boolean;
-}) {
-  const [failed, setFailed] = useState(false);
-  const size = hero ? "h-32 w-32" : large ? "h-16 w-16" : compact ? "h-9 w-9" : "h-11 w-11";
-  const avatarSrc = getTelegramAvatarSrc(group);
-  return (
-    <span
-      className={`${size} grid shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#1b2430] text-sm font-semibold text-slate-200`}
-    >
-      {group.animatedAvatarUrl && !failed ? (
-        <video key={group.animatedAvatarUrl} src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="h-full w-full object-cover" onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }} onError={() => setFailed(true)} />
-      ) : avatarSrc && !failed ? (
-        <img
-          src={avatarSrc}
-          alt=""
-          className="h-full w-full object-cover"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        group.title.slice(0, 1).toUpperCase()
-      )}
-    </span>
-  );
-}
-
-function FullBleedGroupArtwork({ group }: { group: Group }) {
-  const [failed, setFailed] = useState(false);
-  const avatarSrc = getTelegramAvatarSrc(group);
-  return (
-    <span className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_20%,#253a58_0%,#111720_68%)]">
-      {group.animatedAvatarUrl && !failed ? (
-        <video key={group.animatedAvatarUrl} src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="auto" disablePictureInPicture className="pointer-events-none h-full w-full select-none object-cover transition-transform duration-300 group-hover:scale-105 [-webkit-touch-callout:none]" onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }} onError={() => setFailed(true)} />
-      ) : avatarSrc && !failed ? (
-        <img src={avatarSrc} alt="" draggable={false} className="pointer-events-none h-full w-full select-none object-cover transition-transform duration-300 group-hover:scale-105 [-webkit-touch-callout:none]" onError={() => setFailed(true)} />
-      ) : (
-        <span className="grid h-full w-full place-items-center text-4xl font-semibold text-white/28">{group.title.slice(0, 1).toUpperCase()}</span>
-      )}
-    </span>
-  );
-}
-
 function SortableMyGroupTile({
   group,
   language,
@@ -3037,6 +2983,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   variant="lead"
                   language={language}
                   avatarSrc={leadSlot.group ? getTelegramAvatarSrc(leadSlot.group) : null}
+                  showTgTopPyramidAvatar={Boolean(leadSlot.group?.topPyramidAvatar)}
                   onOpenCommunity={openTelegramCommunityLink}
                   onClick={() =>
                     leadSlot.group
@@ -3053,6 +3000,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       variant="secondary"
                       language={language}
                       avatarSrc={slot.group ? getTelegramAvatarSrc(slot.group) : null}
+                      showTgTopPyramidAvatar={Boolean(slot.group?.topPyramidAvatar)}
                       onOpenCommunity={openTelegramCommunityLink}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)
@@ -3069,6 +3017,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       variant="compact"
                       language={language}
                       avatarSrc={slot.group ? getTelegramAvatarSrc(slot.group) : null}
+                      showTgTopPyramidAvatar={Boolean(slot.group?.topPyramidAvatar)}
                       onOpenCommunity={openTelegramCommunityLink}
                       onClick={() =>
                         slot.group ? openGroup(slot.group.id, activeRankingBoardScope) : openMine(slot.isOccupied ? automaticPlacementSlot ?? undefined : slot)

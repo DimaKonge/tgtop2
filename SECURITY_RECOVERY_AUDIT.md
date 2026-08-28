@@ -95,3 +95,11 @@ Web service и оба Telegram bot services затем получили systemd 
 ## 11. Remaining recovery prerequisite
 
 Off-host encrypted backup и restore drill **не активированы**. Нельзя считать recovery готовым до выбора отдельного versioned destination и публичного encryption key; then a fresh-database restore drill must be performed and recorded. No financial reconciliation, database restore, DNS/WAF change or wallet action was performed during this hardening rollout.
+
+## 12. Artwork extraction visual baseline
+
+После переноса `CommunityArtwork` проверены локальные TOP views 390×844 и 1280×720. Сохранены верхняя 1+2+4 сетка, размеры пустых slots, порядок секций и Liquid Glass нижняя навигация. Вынесенный generic artwork default-но показывает static preview; animated media включается только явным `allowAnimatedMedia` и сейчас не включён ни в одном обычном catalog/detail/workspace renderer. Верхний TOP renderer остаётся отдельным контекстом для следующего opt-in animated pyramid этапа.
+
+## 13. TOP-only pyramid avatar preparation
+
+Добавлен `TgTopAnimatedPyramidAvatar`: CSS/SVG, без видео и сетевого media fetch, с точным 1–2–4 силуэтом из семи ячеек. `TopRankingCard` поддерживает его только через `showTgTopPyramidAvatar`, значение по умолчанию — `false`; generic `CommunityArtwork` также требует явный opt-in для любого animated media. Поэтому бренд-аватар пока намеренно не появляется ни у одной реальной площадки. Для включения потребуется следующая отдельная owner-only/server-verified настройка конкретной карточки в занятом TOP-slot.

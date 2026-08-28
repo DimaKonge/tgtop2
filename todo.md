@@ -1131,3 +1131,6 @@
 - [ ] Подготовить staged nginx/systemd hardening и off-host encrypted DB backup/restore drill как отдельные проверяемые изменения без изменения DNS, BotFather, балансов или финансовых операций.
 - [x] Применить и проверить staged nginx/systemd hardening: узкие limits для media/storage/login/CSP/tRPC, global 256 KB edge body cap и отдельные least-privilege systemd drop-ins для web, primary bot и reserve bot с rollback snapshots.
 - [ ] Выбрать off-host versioned encrypted backup destination и public encryption key, затем выполнить restore drill в новой тестовой БД с checksum, schema/ledger integrity и `/healthz` проверками.
+- [x] Вынести из `Home.tsx` shared community artwork и компактную list-card presentation, сохранив fallback avatar, image-error поведение, 68px catalog rows и все существующие handlers.
+- [x] Подготовить TOP-only CSS/SVG animated pyramid avatar с `prefers-reduced-motion` fallback; не показывать фирменный avatar случайным группам и не включать тяжёлое видео по всему каталогу.
+- [ ] Добавить защищённую owner/server-side настройку `topPyramidAvatar` для конкретной верифицированной площадки в занятом TOP-slot; до этого prepared avatar должен оставаться выключенным и не показываться случайным группам.

@@ -26,7 +26,8 @@ describe("TG TOP production bot links", () => {
   it("uses the shared GroupCard component for ranked and general catalog placements", () => {
     const home = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const topCard = readFileSync(new URL("../components/TopRankingCard.tsx", import.meta.url), "utf8");
-    const source = `${home}\n${topCard}`;
+    const artwork = readFileSync(new URL("../components/CommunityArtwork.tsx", import.meta.url), "utf8");
+    const source = `${home}\n${topCard}\n${artwork}`;
     const styles = readFileSync(new URL("../index.css", import.meta.url), "utf8");
     const chartPanelsSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
 

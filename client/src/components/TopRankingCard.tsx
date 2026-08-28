@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Star } from "lucide-react";
 import { formatCatalogNumber } from "@/lib/catalog-format";
+import { TgTopAnimatedPyramidAvatar } from "@/components/TgTopAnimatedPyramidAvatar";
 
 export type TopRankingCardVariant = "lead" | "secondary" | "compact";
 
@@ -14,6 +15,8 @@ export type TopRankingCardGroup = {
   joinedCount: number;
   rewardActive?: boolean;
   rewardAmount?: number;
+  /** Set only by the verified server-side TOP identity configuration. */
+  topPyramidAvatar?: boolean;
 };
 
 type TopRankingCardProps = {
@@ -21,6 +24,7 @@ type TopRankingCardProps = {
   variant: TopRankingCardVariant;
   language: "ru" | "en";
   avatarSrc?: string | null;
+  showTgTopPyramidAvatar?: boolean;
   onClick: () => void;
   onOpenCommunity?: (url: string) => void;
 };
@@ -29,7 +33,7 @@ type TopRankingCardProps = {
  * Presentation-only TOP card. It is deliberately limited to the upper 1+2+4
  * ranking grid: catalog rows keep their lightweight list renderer in Home.
  */
-export function TopRankingCard({ group, variant, language, avatarSrc, onClick, onOpenCommunity }: TopRankingCardProps) {
+export function TopRankingCard({ group, variant, language, avatarSrc, showTgTopPyramidAvatar = false, onClick, onOpenCommunity }: TopRankingCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const lead = variant === "lead";
   const compact = variant === "compact";
@@ -62,7 +66,11 @@ export function TopRankingCard({ group, variant, language, avatarSrc, onClick, o
       )}
       {group ? (
         <>
-          {group.animatedAvatarUrl && !imageFailed ? (
+          {showTgTopPyramidAvatar ? (
+            <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_35%_22%,#254e7a_0%,#111720_70%)] p-[16%]">
+              <TgTopAnimatedPyramidAvatar className="h-full w-full" title="TG TOP" />
+            </span>
+          ) : group.animatedAvatarUrl && !imageFailed ? (
             <video key={group.animatedAvatarUrl} src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="metadata" disablePictureInPicture className="pointer-events-none absolute inset-0 h-full w-full object-cover" onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }} onError={() => setImageFailed(true)} />
           ) : avatarSrc && !imageFailed ? (
             <img src={avatarSrc} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setImageFailed(true)} />

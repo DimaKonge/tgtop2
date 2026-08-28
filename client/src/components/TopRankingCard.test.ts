@@ -17,4 +17,10 @@ describe("TopRankingCard", () => {
     expect(source).toContain('onError={() => setImageFailed(true)}');
     expect(source).toContain('group.title.slice(0, 1).toUpperCase()');
   });
+
+  it("renders the TG TOP animated pyramid only after an explicit TOP identity opt-in", () => {
+    expect(source).toContain("showTgTopPyramidAvatar = false");
+    expect(source).toContain("showTgTopPyramidAvatar ? (");
+    expect(source).toContain("<TgTopAnimatedPyramidAvatar");
+  });
 });
