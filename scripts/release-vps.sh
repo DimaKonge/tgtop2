@@ -127,6 +127,7 @@ trap rollback ERR
 # replays the full legacy Drizzle migration history against production.
 node "$STAGE/scripts/apply-entry-link-audit-migration.mjs" >/tmp/tgtop-${RELEASE}-migration.log
 node "$STAGE/scripts/apply-operations-topic-migrations.mjs" >>/tmp/tgtop-${RELEASE}-migration.log
+node "$STAGE/scripts/apply-onboarding-intent-migration.mjs" >>/tmp/tgtop-${RELEASE}-migration.log
 
 for item in "${ITEMS[@]}"; do mv "$BASE/$item" "$PREVIOUS/$item"; done
 for item in "${ITEMS[@]}"; do mv "$STAGE/$item" "$BASE/$item"; done

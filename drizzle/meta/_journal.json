@@ -442,6 +442,13 @@
       "when": 1787860198030,
       "tag": "0062_powerful_grandmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "5",
+      "when": 1787910184204,
+      "tag": "0063_huge_thor",
+      "breakpoints": true
     }
   ]
 }

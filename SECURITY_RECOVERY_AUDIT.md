@@ -103,3 +103,11 @@ Off-host encrypted backup и restore drill **не активированы**. Н
 ## 13. TOP-only pyramid avatar preparation
 
 Добавлен `TgTopAnimatedPyramidAvatar`: CSS/SVG, без видео и сетевого media fetch, с точным 1–2–4 силуэтом из семи ячеек. `TopRankingCard` поддерживает его только через `showTgTopPyramidAvatar`, значение по умолчанию — `false`; generic `CommunityArtwork` также требует явный opt-in для любого animated media. Поэтому бренд-аватар пока намеренно не появляется ни у одной реальной площадки. Для включения потребуется следующая отдельная owner-only/server-verified настройка конкретной карточки в занятом TOP-slot.
+
+## 14. Anti-Sybil bot-added onboarding
+
+Добавлен одноразовый intent, создаваемый существующей кнопкой «Добавить бота» через protected tRPC и уже проверенный Telegram Mini App/Login identity. В intent нельзя передать чужой Telegram ID с клиента. Он живёт 10 минут, один на owner/kind, переиспользуется при двойном тапе и ограничен тремя выдачами за 24 часа. Создание защищено transaction row lock; погашение — условным atomic update.
+
+Primary `@TG_TOPBOT` теперь создаёт площадку и connection bonus только после совпадения `my_chat_member.from.id`, типа group/channel, active intent и Telegram owner status. Intent погашается после успешного чтения профиля/аудитории, но до `upsertTelegramGroup` и bonus. Недоверенные `my_chat_member` events не создают event receipts; warnings агрегируются не чаще одного раза в минуту. Group deep-link `/start@bot <token>` не получает ответа в сообщество. Existing memberships/activity для уже подключённых площадок не менялись.
+
+Schema change только additive: `telegram_onboarding_intents` с unique owner/kind и token, status/expiry index. Добавлен fail-closed idempotent production migration runner до service activation. Полный gate: 283 tests passed, 3 skipped; TypeScript, production build, migration syntax и release script syntax прошли.

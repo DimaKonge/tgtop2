@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, like, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, telegramOperationsOwnerBindings, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, miniAppLaunchEvents, telegramSupportMessages, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramOnboardingIntents, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, telegramOperationsOwnerBindings, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, miniAppLaunchEvents, telegramSupportMessages, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -23,6 +23,7 @@ import { getConfiguredTonPayoutWalletAddress } from "./tonPayoutConfig";
 import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, getTonWithdrawalRiskLabel, quoteTonWithdrawal as getTonWithdrawalQuote, TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS, TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO } from "./tonWithdrawalPolicy";
 import { canCancelNftRental, canConfirmNftRental, rentalTotalUnits, validateRentalDays, NFT_RENTAL_MAX_DAYS as POLICY_NFT_RENTAL_MAX_DAYS } from "./nftRentalPolicy";
 import { normalizeTelegramBotLink } from "./botListingPolicy";
+import { canIssueOnboardingIntent, getOnboardingIntentWindow, isPendingOnboardingIntent, ONBOARDING_INTENT_TTL_MS, ONBOARDING_INTENT_WINDOW_MS, type TelegramOnboardingKind } from "./onboardingIntentPolicy";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -108,6 +109,100 @@ export async function claimTelegramEvent(eventKey: string, firstBot: string) {
     if (isDuplicateTelegramEventError(error)) return false;
     throw error;
   }
+}
+
+type OnboardingIntentResult =
+  | { status: "ready"; token: string; expiresAt: Date }
+  | { status: "rate_limited"; retryAt: Date };
+
+function makeOnboardingIntentToken() {
+  return randomBytes(18).toString("base64url");
+}
+
+export async function getActiveTelegramOnboardingIntent(input: {
+  ownerTelegramId: string;
+  kind: TelegramOnboardingKind;
+  now?: Date;
+}) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const now = input.now ?? new Date();
+  const [intent] = await db.select().from(telegramOnboardingIntents).where(and(
+    eq(telegramOnboardingIntents.ownerTelegramId, input.ownerTelegramId),
+    eq(telegramOnboardingIntents.kind, input.kind),
+  )).limit(1);
+  return intent && isPendingOnboardingIntent({ status: intent.status, expiresAt: intent.expiresAt, now }) ? intent : undefined;
+}
+
+export async function createTelegramOnboardingIntent(input: {
+  ownerTelegramId: string;
+  kind: TelegramOnboardingKind;
+  now?: Date;
+}): Promise<OnboardingIntentResult> {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище onboarding временно недоступно");
+  const now = input.now ?? new Date();
+  try {
+    return await db.transaction(async tx => {
+      const [previous] = await tx.select().from(telegramOnboardingIntents).where(and(
+        eq(telegramOnboardingIntents.ownerTelegramId, input.ownerTelegramId),
+        eq(telegramOnboardingIntents.kind, input.kind),
+      )).limit(1).for("update");
+      if (previous && isPendingOnboardingIntent({ status: previous.status, expiresAt: previous.expiresAt, now })) {
+        return { status: "ready", token: previous.token, expiresAt: previous.expiresAt };
+      }
+
+      const window = getOnboardingIntentWindow({ now, windowStartedAt: previous?.windowStartedAt, issuedInWindow: previous?.issuedInWindow });
+      if (!canIssueOnboardingIntent({ now, windowStartedAt: window.windowStartedAt, issuedInWindow: window.issuedInWindow })) {
+        return { status: "rate_limited", retryAt: new Date(window.windowStartedAt.getTime() + ONBOARDING_INTENT_WINDOW_MS) };
+      }
+
+      const token = makeOnboardingIntentToken();
+      const expiresAt = new Date(now.getTime() + ONBOARDING_INTENT_TTL_MS);
+      const nextValues = {
+        token,
+        status: "pending" as const,
+        expiresAt,
+        windowStartedAt: window.windowStartedAt,
+        issuedInWindow: window.issuedInWindow + 1,
+        consumedChatId: null,
+        consumedAt: null,
+      };
+      if (previous) {
+        await tx.update(telegramOnboardingIntents).set(nextValues).where(eq(telegramOnboardingIntents.id, previous.id));
+      } else {
+        await tx.insert(telegramOnboardingIntents).values({ ownerTelegramId: input.ownerTelegramId, kind: input.kind, ...nextValues });
+      }
+      return { status: "ready", token, expiresAt };
+    });
+  } catch (error) {
+    if (!isDuplicateTelegramEventError(error)) throw error;
+    const racedIntent = await getActiveTelegramOnboardingIntent({ ...input, now });
+    if (racedIntent) return { status: "ready", token: racedIntent.token, expiresAt: racedIntent.expiresAt };
+    throw error;
+  }
+}
+
+export async function consumeTelegramOnboardingIntent(input: {
+  ownerTelegramId: string;
+  kind: TelegramOnboardingKind;
+  chatId: string;
+  now?: Date;
+}): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const now = input.now ?? new Date();
+  const result = await db.update(telegramOnboardingIntents).set({
+    status: "consumed",
+    consumedChatId: input.chatId,
+    consumedAt: now,
+  }).where(and(
+    eq(telegramOnboardingIntents.ownerTelegramId, input.ownerTelegramId),
+    eq(telegramOnboardingIntents.kind, input.kind),
+    eq(telegramOnboardingIntents.status, "pending"),
+    gt(telegramOnboardingIntents.expiresAt, now),
+  ));
+  return Number(result[0]?.affectedRows ?? 0) === 1;
 }
 
 export async function getTelegramUserAgentSession() {

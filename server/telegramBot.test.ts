@@ -17,6 +17,44 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(__private__.isChatOwner("member")).toBe(false);
   });
 
+  it("requires and consumes a short-lived owner intent before any catalog or bonus side effect", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    const handler = source.slice(source.indexOf("async function saveAdminChat"), source.indexOf("async function awardMembershipReward"));
+    const intentRead = handler.indexOf("getActiveTelegramOnboardingIntent");
+    const ownerVerification = handler.indexOf('telegramCall<ChatMember>("getChatMember"');
+    const profileRead = handler.indexOf("getChatProfile");
+    const intentConsume = handler.indexOf("consumeTelegramOnboardingIntent");
+    const groupWrite = handler.indexOf("upsertTelegramGroup");
+    const bonusWrite = handler.indexOf("grantGroupConnectionBonus");
+
+    expect(handler).toContain('activeBotLabel.toLowerCase() !== "@tg_topbot"');
+    expect(handler).toContain('recordIgnoredOnboardingUpdate(`missing ${intentKind} intent`)');
+    expect(intentRead).toBeGreaterThan(-1);
+    expect(ownerVerification).toBeGreaterThan(intentRead);
+    expect(profileRead).toBeGreaterThan(ownerVerification);
+    expect(intentConsume).toBeGreaterThan(profileRead);
+    expect(groupWrite).toBeGreaterThan(intentConsume);
+    expect(bonusWrite).toBeGreaterThan(groupWrite);
+  });
+
+  it("never answers a startgroup command inside the selected community", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    const startHandler = source.slice(source.indexOf('if (!message?.text?.startsWith("/start")) return;'), source.indexOf("async function getTelegramPollingErrorSummary"));
+    expect(startHandler).toContain('if (message.chat.type !== "private") return;');
+    expect(startHandler.indexOf('message.chat.type !== "private"')).toBeLessThan(startHandler.indexOf("upsertUser"));
+    expect(startHandler.indexOf('message.chat.type !== "private"')).toBeLessThan(startHandler.indexOf("openMiniApp"));
+  });
+
+  it("does not persist event receipts or one log line per untrusted bot-added update", () => {
+    const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
+    const bypass = source.slice(source.indexOf("async function shouldBypassGlobalEventClaim"), source.indexOf("function formatAllMembersText"));
+    expect(bypass).toContain("update.my_chat_member");
+    expect(bypass).toContain("getActiveTelegramOnboardingIntent");
+    expect(source).toContain("ignoredOnboardingUpdates += 1");
+    expect(source).toContain("nextIgnoredOnboardingLogAt = now + 60_000");
+    expect(source).not.toContain("Ignored bot-added event without onboarding intent for");
+  });
+
   it("distinguishes active membership states for verified growth tracking", () => {
     expect(__private__.isActiveMember("member")).toBe(true);
     expect(__private__.isActiveMember("administrator")).toBe(true);

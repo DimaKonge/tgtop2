@@ -57,6 +57,31 @@ export const telegramEventReceipts = mysqlTable("telegram_event_receipts", {
 
 export type TelegramEventReceipt = typeof telegramEventReceipts.$inferSelect;
 
+/**
+ * One bounded record per verified Telegram owner and community kind. This is
+ * deliberately not an event log: it prevents bot-added updates from creating
+ * unbounded catalog or reward side effects without an explicit owner action.
+ */
+export const telegramOnboardingIntents = mysqlTable("telegram_onboarding_intents", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerTelegramId: varchar("ownerTelegramId", { length: 64 }).notNull(),
+  kind: mysqlEnum("kind", ["group", "channel"]).notNull(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  status: mysqlEnum("status", ["pending", "consumed", "expired", "rate_limited"]).default("pending").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  windowStartedAt: timestamp("windowStartedAt").notNull(),
+  issuedInWindow: int("issuedInWindow").default(1).notNull(),
+  consumedChatId: varchar("consumedChatId", { length: 64 }),
+  consumedAt: timestamp("consumedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("telegram_onboarding_intents_owner_kind_unique").on(table.ownerTelegramId, table.kind),
+  index("telegram_onboarding_intents_pending_expires_idx").on(table.status, table.expiresAt),
+]);
+
+export type TelegramOnboardingIntent = typeof telegramOnboardingIntents.$inferSelect;
+
 export const telegramSupportMessages = mysqlTable("telegram_support_messages", {
   id: int("id").autoincrement().primaryKey(),
   telegramUserId: varchar("telegramUserId", { length: 64 }).notNull(),

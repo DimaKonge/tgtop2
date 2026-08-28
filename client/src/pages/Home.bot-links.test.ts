@@ -7,7 +7,9 @@ describe("TG TOP production bot links", () => {
 
     expect(source).toContain("https://t.me/TG_TOPBOT?");
     expect(source).toContain('startchannel&admin=${channelAdminRights}');
-    expect(source).toContain('startgroup=tgtop_admin&admin=${groupAdminRights}');
+    expect(source).toContain('const addBot = async (kind: "channel" | "group") => {');
+    expect(source).toContain("createCommunityOnboardingIntent.mutateAsync({ kind })");
+    expect(source).toContain('startgroup=${intent.token}&admin=${groupAdminRights}');
     expect(source).toContain('delete_messages+invite_users+pin_messages+manage_chat');
     expect(source).toContain('openTelegramCommunityLink(`https://t.me/TG_TOPBOT?${query}`)');
     expect(source).not.toContain('window.open(`https://t.me/TG_TOPBOT?${query}`, "_blank")');

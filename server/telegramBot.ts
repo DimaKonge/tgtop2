@@ -15,7 +15,9 @@ import {
   observeProtectedGroupTransfer,
   approveStarsRankingPayment,
   claimTelegramEvent,
+  consumeTelegramOnboardingIntent,
   flagGroupForModeration,
+  getActiveTelegramOnboardingIntent,
   getRankedEntryLinkTargets,
   getTelegramReferralReferrer,
   getTelegramOperationsOwnerBinding,
@@ -93,6 +95,8 @@ const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.me";
 const pollTimeoutSeconds = 30;
 const welcomeStickerFileId = "CAACAgQAAxkBAAM7apCKivp2Zo4HRaVZkvKXmfrdXZIAAtYjAALqAohQfiIRNuroIOM9BA";
 let activeBotLabel = "@TG_TOPBOT";
+let ignoredOnboardingUpdates = 0;
+let nextIgnoredOnboardingLogAt = 0;
 
 function isBotAdmin(status: string): boolean { return status === "administrator" || status === "creator"; }
 function isChatOwner(status: string): boolean { return status === "creator" || status === "owner"; }
@@ -101,6 +105,14 @@ export function isValidTelegramMemberCount(value: unknown): value is number { re
 function catalogCategory(chat: TelegramChat): "Каналы" | "Чаты" { return chat.type === "channel" ? "Каналы" : "Чаты"; }
 function catalogChatId(chatId: number): string { return String(chatId); }
 function publicGroupUrl(chat: TelegramChat): string | undefined { return chat.username ? `https://t.me/${chat.username}` : undefined; }
+function recordIgnoredOnboardingUpdate(reason: string) {
+  ignoredOnboardingUpdates += 1;
+  const now = Date.now();
+  if (now < nextIgnoredOnboardingLogAt) return;
+  console.warn(`[Telegram] Ignored ${ignoredOnboardingUpdates} onboarding update(s): ${reason}`);
+  ignoredOnboardingUpdates = 0;
+  nextIgnoredOnboardingLogAt = now + 60_000;
+}
 const OPERATIONS_BOOTSTRAP_OWNER_USERNAME = "dimij";
 function isExpectedLogBot(kind: NonNullable<ReturnType<typeof parsePrivateLogDestinationCommand>>) {
   return kind === "support" ? "@tg_topbot" : "@tgtop_robot";
@@ -169,6 +181,14 @@ async function configurePrivateLogDestination(message: NonNullable<TelegramUpdat
 }
 
 async function shouldBypassGlobalEventClaim(update: TelegramUpdate) {
+  if (update.my_chat_member) {
+    const membership = update.my_chat_member;
+    const supportedChat = membership.chat.type === "group" || membership.chat.type === "supergroup" || membership.chat.type === "channel";
+    const botWasActivated = isBotAdmin(membership.new_chat_member.status) && !isBotAdmin(membership.old_chat_member.status);
+    if (activeBotLabel.toLowerCase() !== "@tg_topbot" || !supportedChat || !botWasActivated) return true;
+    const kind = membership.chat.type === "channel" ? "channel" as const : "group" as const;
+    return !(await getActiveTelegramOnboardingIntent({ ownerTelegramId: String(membership.from.id), kind }));
+  }
   const message = update.message;
   if (!message) return false;
   const command = parsePrivateLogDestinationCommand(message.text);
@@ -636,6 +656,15 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   const { chat, from, old_chat_member: previous, new_chat_member: current } = membership;
   if (chat.type !== "group" && chat.type !== "supergroup" && chat.type !== "channel") return;
   if (!isBotAdmin(current.status) || isBotAdmin(previous.status)) return;
+  if (activeBotLabel.toLowerCase() !== "@tg_topbot") return;
+
+  const intentKind = chat.type === "channel" ? "channel" as const : "group" as const;
+  const ownerTelegramId = String(from.id);
+  const intent = await getActiveTelegramOnboardingIntent({ ownerTelegramId, kind: intentKind });
+  if (!intent) {
+    recordIgnoredOnboardingUpdate(`missing ${intentKind} intent`);
+    return;
+  }
 
   let actorMembership: ChatMember;
   try {
@@ -665,6 +694,15 @@ async function saveAdminChat(update: TelegramUpdate): Promise<void> {
   const membersCount = await getMemberCount(chat.id);
   if (membersCount === undefined) {
     await sendOnboardingReadFailure(from.id);
+    return;
+  }
+  const consumed = await consumeTelegramOnboardingIntent({
+    ownerTelegramId,
+    kind: intentKind,
+    chatId: catalogChatId(chat.id),
+  });
+  if (!consumed) {
+    recordIgnoredOnboardingUpdate(`consumed ${intentKind} intent`);
     return;
   }
   const inviteLink = await getChatInviteLink(chat.id);
@@ -866,6 +904,7 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
     return;
   }
   if (!message?.text?.startsWith("/start")) return;
+  if (message.chat.type !== "private") return;
   if (message.from) {
     const openId = `telegram:${message.from.id}`;
     await upsertUser({ openId, name: message.from.username ?? message.from.first_name ?? "Telegram user", telegramUsername: message.from.username ?? null, loginMethod: "telegram-bot", lastSignedIn: new Date() });

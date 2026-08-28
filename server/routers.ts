@@ -15,6 +15,7 @@ import { countSuccessfulTelegramAnnouncements } from "./listingAnnouncementPolic
 import { telegramUserAgentRouter } from "./routers/telegramUserAgentRouter";
 import { financeProcedures } from "./routers/financeRouter";
 import { supportRouter } from "./routers/supportRouter";
+import { getTelegramIdFromOpenId } from "./onboardingIntentPolicy";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -54,6 +55,18 @@ export const appRouter = router({
 
   tgTop: router({
     ...financeProcedures,
+    createCommunityOnboardingIntent: protectedProcedure
+      .input(z.object({ kind: z.enum(["group", "channel"]) }))
+      .mutation(async ({ ctx, input }) => {
+        const ownerTelegramId = getTelegramIdFromOpenId(ctx.user.openId);
+        if (!ownerTelegramId) throw new Error("Войдите через Telegram, чтобы добавить сообщество");
+        const intent = await db.createTelegramOnboardingIntent({ ownerTelegramId, kind: input.kind });
+        if (intent.status === "rate_limited") {
+          throw new Error("Лимит новых подключений достигнут. Попробуйте позже.");
+        }
+        return { token: intent.token, expiresAt: intent.expiresAt };
+      }),
+
     getSlots: publicProcedure
       .input(z.object({ category: z.string().optional(), country: z.string().optional(), subcategory: z.string().optional(), city: z.string().optional() }).optional())
       .query(async ({ input }) => {

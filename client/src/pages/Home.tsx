@@ -1706,6 +1706,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     },
     onError: error => toast.error(error.message),
   });
+  const createCommunityOnboardingIntent = trpc.tgTop.createCommunityOnboardingIntent.useMutation();
   const unlistGroups = trpc.tgTop.unlistGroups.useMutation({
     onSuccess: () => {
       toast.success(tx("Группы сняты с листинга", "Communities removed from listings."));
@@ -2602,13 +2603,21 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       toast.error(tx("Не удалось скопировать ссылку. Скопируйте ее вручную.", "Could not copy the link. Please copy it manually."));
     }
   };
-  const addBot = (kind: "channel" | "group") => {
+  const addBot = async (kind: "channel" | "group") => {
+    if (createCommunityOnboardingIntent.isPending) return;
     const groupAdminRights = "change_info+delete_messages+invite_users+pin_messages+manage_chat";
     const channelAdminRights = "change_info+post_messages+edit_messages+delete_messages+invite_users+manage_chat";
-    const query = kind === "channel"
-      ? `startchannel&admin=${channelAdminRights}`
-      : `startgroup=tgtop_admin&admin=${groupAdminRights}`;
-    openTelegramCommunityLink(`https://t.me/TG_TOPBOT?${query}`);
+    try {
+      const intent = await createCommunityOnboardingIntent.mutateAsync({ kind });
+      const query = kind === "channel"
+        ? `startchannel&admin=${channelAdminRights}`
+        : `startgroup=${intent.token}&admin=${groupAdminRights}`;
+      if (!openTelegramCommunityLink(`https://t.me/TG_TOPBOT?${query}`)) {
+        toast.error(tx("Не удалось открыть выбор сообщества. Попробуйте снова.", "Could not open the community picker. Please try again."));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : tx("Не удалось подготовить безопасное подключение.", "Could not prepare a secure connection."));
+    }
   };
   const startBotAdminSetup = (kind: "channel" | "group") => {
     setAdminGuideKind(kind);
