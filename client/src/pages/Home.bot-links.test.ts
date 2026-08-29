@@ -25,6 +25,17 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain("GiftsLabBot");
   });
 
+  it("exposes full listing controls from owned detail publication settings", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    expect(source).toContain("Цена, место, категория и гео");
+    expect(source).toContain("Открыть полный листинг: от 0.1 GRAM с прогнозом позиции");
+    expect(source).toContain("onClick={() => openListing([detail.group.id])}");
+    expect(source).toContain('min={0.1}');
+    expect(source).toContain("Предпросмотр позиции");
+    expect(source).toContain("Категория определяется типом Telegram-площадки; подкатегорию можно изменить ниже.");
+    expect(source).toContain("Страна / регион в каталоге");
+  });
+
   it("uses the shared GroupCard component for ranked and general catalog placements", () => {
     const home = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const topCard = readFileSync(new URL("../components/TopRankingCard.tsx", import.meta.url), "utf8");

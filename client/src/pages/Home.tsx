@@ -3589,6 +3589,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </button>
                       {inlineListingOpen && (
                         <div className="mt-1.5 space-y-1.5 border-t border-white/8 pt-1.5">
+                          <button type="button" onClick={() => openListing([detail.group.id])} className="flex w-full items-center justify-between gap-3 rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/[0.08] px-2.5 py-2 text-left transition-colors hover:bg-[#3f8cff]/[0.13] active:scale-[0.99]">
+                            <span><b className="block text-[11px] text-[#c7dcff]">{tx("Цена, место, категория и гео", "Price, placement, category and geo")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("Открыть полный листинг: от 0.1 GRAM с прогнозом позиции", "Open full listing: from 0.1 GRAM with placement preview")}</small></span><ChevronRight className="h-4 w-4 shrink-0 text-[#8fb9ff]" />
+                          </button>
                           <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5">
                             <span><b className="block text-[11px] text-slate-200">{detailVisibility === "public" ? tx("Публичная публикация", "Public publication") : tx("Анонимная публикация", "Anonymous publication")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detailVisibility === "public" ? tx("Другие смогут перейти в ваш профиль", "Others can open your profile") : tx("Владелец не показывается в карточке", "The owner stays hidden in the card")}</small></span>
                             <button type="button" role="switch" aria-checked={detailVisibility === "public"} onClick={() => setDetailVisibility(value => { const next = value === "public" ? "anonymous" : "public"; if (next === "public") setShowOwnerContact(true); return next; })} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${detailVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detailVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></button>
@@ -4710,6 +4713,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             </p>
           </SheetHeader>
           <div className="space-y-5 px-4 pb-4">
+            <section>
+              <p className="mb-2 text-xs text-slate-400">{tx("Категория", "Category")}</p>
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0b0f14] px-3 py-3">
+                <span className="text-sm font-medium text-slate-200">{listingCategory || tx("Не определена", "Not determined")}</span>
+                <span className="text-[10px] text-slate-500">{tx("Тип площадки", "Community type")}</span>
+              </div>
+              <small className="mt-1.5 block text-[10px] leading-4 text-slate-500">{tx("Категория определяется типом Telegram-площадки; подкатегорию можно изменить ниже.", "Category follows the Telegram community type; you can change the subcategory below.")}</small>
+            </section>
             <section>
               <p className="mb-2 text-xs text-slate-400">{tx("Страна / регион в каталоге", "Catalog country / region")}</p>
               <Select value={listingCountry} onValueChange={value => { setListingCountry(value); setListingCity("Все"); }}>
