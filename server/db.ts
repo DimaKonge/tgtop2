@@ -1246,7 +1246,7 @@ export async function getAuctionSlots(category?: string, country?: string, subca
     const group = slot.groupId ? groupMap.get(slot.groupId) ?? null : null;
     return group
       ? { ...slot, isOccupied: true, group }
-      : { ...slot, bidAmount: 0, currentBid: "0 GRAM", leaderUsername: "-", leaderUserId: null, groupId: null, title: "Свободное место", subtitle: "Ждет листинга", isOccupied, group: null };
+      : { ...slot, bidAmount: 0, currentBid: "0 GRAM", leaderUsername: "-", leaderUserId: null, groupId: null, title: "Свободное место", subtitle: "Ждет листинга", isOccupied: false, group: null };
   });
 }
 

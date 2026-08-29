@@ -1140,6 +1140,7 @@
 - [ ] В настройках листинга явно показать минимальную ставку `0.1 GRAM`, валидировать её на client и server и не позволять сохранить меньшую сумму.
 - [ ] Добавить в настройки листинга компактный slider/preview ставки, который по текущему выбранному board scope показывает прогнозируемое место для выбранной цены без изменения реального размещения до подтверждения.
 - [ ] Вернуть в настройки листинга optional category и geo controls: категория/подкатегория, страна и город должны настраиваться по необходимости и входить в тот же проверяемый listing payload.
-- [ ] Исправить avatar proxy: принимать Telegram CDN `application/octet-stream` только после проверки безопасной image signature/расширения и сохранить size limit, allow-list и bounded cache; проверить реальные карточки production.
+- [x] Исправить avatar proxy: принимать Telegram CDN `application/octet-stream` только после проверки безопасной image signature/расширения и сохранить size limit, allow-list и bounded cache; проверить реальные карточки production.
 - [ ] После avatar hotfix обновить listing settings: минимум 0.1 GRAM, preview позиции по цене, optional category и geo controls с server validation.
 - [ ] После hotfix проверить mobile/web, сохранить checkpoint и выкатить только подтверждённые изменения.
+- [ ] Исправить неполную загрузку верхних TOP-ячеек: для category/geo board корректно обрабатывать loading/error/empty, не терять занятые слоты и не подменять реальный контент дефисом; проверить 1+2+4 на mobile и web.

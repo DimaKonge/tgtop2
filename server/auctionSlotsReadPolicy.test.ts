@@ -11,5 +11,6 @@ describe("public TOP board reads", () => {
     expect(getSlotsBlock).not.toContain("planVacantRankingAssignments(");
     expect(getSlotsBlock).not.toContain("await db.transaction(");
     expect(getSlotsBlock).not.toContain(".update(auctionSlots)");
+    expect(getSlotsBlock).toContain("isOccupied: false, group: null");
   });
 });

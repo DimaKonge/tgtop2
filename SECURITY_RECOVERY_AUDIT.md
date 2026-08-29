@@ -117,3 +117,13 @@ Schema change только additive: `telegram_onboarding_intents` с unique own
 Две inline реализации 68px community row и прежний local `GroupCard` удалены из `Home.tsx` и заменены одним `CompactCommunityRow`. Компонент presentation-only: получает готовый `onOpen`, access label и optional sale price, использует shared static `CommunityAvatar`, поддерживает reward badge и empty slot. Верхняя 1+2+4 сетка, ranking continuation, общий каталог и owner profile сохраняют прежние handlers. `Home.tsx` больше не содержит дублированную compact-row разметку.
 
 Проверены viewport 390×844 и 1280×720: верхняя композиция, control density и отсутствие горизонтального overflow сохранены. Полный gate: 285 tests passed, 3 skipped; TypeScript и production build прошли. Frontend bundle сократился приблизительно на 3.4 KB minified относительно предыдущего milestone; крупный bundle/lottie code-splitting остаётся отдельной задачей.
+
+## 16. Avatar proxy hotfix
+
+Production-диагностика показала, что reserve bot корректно скачивал сохранённые Telegram `file_id`, но Telegram CDN возвращал `Content-Type: application/octet-stream`. Предыдущая проверка принимала только `image/*`, поэтому backend отдавал 404, хотя bytes были валидной JPEG-картинкой.
+
+Hotfix теперь распознаёт JPEG, PNG, GIF, WebP и AVIF по magic bytes, а не доверяет одному MIME-заголовку или расширению. Размер ограничен 1.5 MB, chat ID и upstream timeouts сохранены, произвольный payload отклоняется. После staged release production routes для Market, channel 1 и Amber WIN вернули HTTP 200 `image/jpeg` (3527, 3980 и 4912 bytes); `/healthz` обоих доменов и три systemd-сервиса также проверены. Listing settings в этот hotfix не входили.
+
+## 16. TOP slot filter visual check
+
+После изменения `getAuctionSlots` скрытая фильтром группа больше не возвращает `isOccupied: true` при `group: null`; это позволяет frontend fallback корректно заполнить слот только данными текущего category/geo board. Focused regression и TypeScript прошли. Mobile 390×844 и desktop 1280×720 рендерят одинаковую 1+2+4 структуру без overflow; пустые ячейки показывают явное «Свободно»/плюс, а не занятый невидимый слот. В локальном preview без авторизации board пустой, поэтому живые карточки требуют повторной Telegram-проверки.
