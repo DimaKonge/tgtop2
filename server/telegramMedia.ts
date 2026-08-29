@@ -26,6 +26,27 @@ export function isSafeTelegramAvatarContentType(contentType: unknown): contentTy
   return typeof contentType === "string" && /^image\/(?:avif|gif|jpeg|png|webp)$/i.test(contentType);
 }
 
+function hasBytesAt(body: Buffer, offset: number, bytes: number[]): boolean {
+  return bytes.every((byte, index) => body[offset + index] === byte);
+}
+
+export function detectSafeTelegramAvatarContentType(body: Buffer, upstreamContentType: unknown, filePath: unknown): string | null {
+  if (body.length < 12 || body.length > MAX_TELEGRAM_AVATAR_BYTES) return null;
+  const declared = typeof upstreamContentType === "string" ? upstreamContentType.toLowerCase().split(";", 1)[0].trim() : "";
+  const path = typeof filePath === "string" ? filePath.toLowerCase() : "";
+
+  if (hasBytesAt(body, 0, [0xff, 0xd8, 0xff])) return "image/jpeg";
+  if (hasBytesAt(body, 0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
+  if (body.subarray(0, 4).toString("ascii") === "GIF8") return "image/gif";
+  if (body.subarray(0, 4).toString("ascii") === "RIFF" && body.subarray(8, 12).toString("ascii") === "WEBP") return "image/webp";
+  if (body.subarray(4, 8).toString("ascii") === "ftyp" && /(?:avif|avis|heic|heix|mif1)/.test(body.subarray(8, 24).toString("ascii"))) return "image/avif";
+
+  // Never trust a MIME type or extension without a matching image signature.
+  void declared;
+  void path;
+  return null;
+}
+
 async function loadTelegramAvatar(chatId: string): Promise<TelegramAvatarResult> {
   const cached = avatarCache.get(chatId);
   if (cached) return cached;
@@ -49,8 +70,8 @@ async function loadTelegramAvatar(chatId: string): Promise<TelegramAvatarResult>
           responseType: "arraybuffer", timeout: 12_000, maxContentLength: MAX_TELEGRAM_AVATAR_BYTES, maxBodyLength: MAX_TELEGRAM_AVATAR_BYTES,
         });
         const body = Buffer.from(image.data);
-        const contentType = image.headers["content-type"];
-        if (body.length === 0 || body.length > MAX_TELEGRAM_AVATAR_BYTES || !isSafeTelegramAvatarContentType(contentType)) continue;
+        const contentType = detectSafeTelegramAvatarContentType(body, image.headers["content-type"], fileResult.data.result.file_path);
+        if (!contentType) continue;
         const result = { kind: "image", body, contentType } as const;
         avatarCache.set(chatId, result, AVATAR_CACHE_TTL_MS);
         return result;

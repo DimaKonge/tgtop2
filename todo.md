@@ -1136,3 +1136,10 @@
 - [ ] Добавить защищённую owner/server-side настройку `topPyramidAvatar` для конкретной верифицированной площадки в занятом TOP-slot; до этого prepared avatar должен оставаться выключенным и не показываться случайным группам.
 - [x] После полностью проверенного anti-Sybil release вынести compact 68px catalog row из `Home.tsx` в отдельный presentation-компонент, сохранив плотность, данные, статичные preview и все open/settings handlers.
 - [x] Немедленно завершить прерванный staged release checkpoint `a5ba0f61`, проверить live bundle и дать пользователю конкретный сценарий просмотра; до этого не начинать новые архитектурные блоки.
+- [ ] Исправить production avatar flow: карточки и detail должны получать актуальный Telegram avatar либо надёжный статичный fallback; не оставлять дефис/букву из-за отсутствующего `avatarFileId`, stale negative cache или некорректного username URL.
+- [ ] В настройках листинга явно показать минимальную ставку `0.1 GRAM`, валидировать её на client и server и не позволять сохранить меньшую сумму.
+- [ ] Добавить в настройки листинга компактный slider/preview ставки, который по текущему выбранному board scope показывает прогнозируемое место для выбранной цены без изменения реального размещения до подтверждения.
+- [ ] Вернуть в настройки листинга optional category и geo controls: категория/подкатегория, страна и город должны настраиваться по необходимости и входить в тот же проверяемый listing payload.
+- [ ] Исправить avatar proxy: принимать Telegram CDN `application/octet-stream` только после проверки безопасной image signature/расширения и сохранить size limit, allow-list и bounded cache; проверить реальные карточки production.
+- [ ] После avatar hotfix обновить listing settings: минимум 0.1 GRAM, preview позиции по цене, optional category и geo controls с server validation.
+- [ ] После hotfix проверить mobile/web, сохранить checkpoint и выкатить только подтверждённые изменения.
