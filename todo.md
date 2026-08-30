@@ -1146,3 +1146,7 @@
 - [x] Исправить неполную загрузку верхних TOP-ячеек: для category/geo board корректно обрабатывать loading/error/empty, не терять занятые слоты и не подменять реальный контент дефисом; проверить 1+2+4 на mobile и web.
 - [x] Исправить регрессию: avatar канала в TOP-карточке не должен показывать дефис при наличии доступного Telegram avatar; проверить полный channel-specific proxy/request/response pipeline и fallback.
 - [x] После исправления avatar прогнать focused/full tests, проверить live и синхронизировать весь актуальный код проекта в выбранный приватный GitHub-репозиторий.
+- [ ] Диагностировать конкретный канал @F_I_N_E_G_O_L_D: сверить Telegram getChat identity, production chatId, title и avatarFileId; устранить расхождение в TOP/detail.
+- [ ] После repair @F_I_N_E_G_O_L_D проверить live карточку и detail, прогнать regression/full gate, сохранить checkpoint и синхронизировать GitHub.
+- [x] Сделать image-first avatar rendering в TOP/detail: MP4 не должен блокировать картинку, а при недоступности обоих источников показывать непустой branded fallback вместо пустого блока или дефиса.
+- [x] Добавить regression tests для channel video avatar fallback и проверить мобильную карточку перед release.

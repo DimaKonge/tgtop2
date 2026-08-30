@@ -34,6 +34,7 @@ type TopRankingCardProps = {
  * ranking grid: catalog rows keep their lightweight list renderer in Home.
  */
 export function TopRankingCard({ group, variant, language, avatarSrc, showTgTopPyramidAvatar = false, onClick, onOpenCommunity }: TopRankingCardProps) {
+  const [videoFailed, setVideoFailed] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const lead = variant === "lead";
   const compact = variant === "compact";
@@ -70,14 +71,12 @@ export function TopRankingCard({ group, variant, language, avatarSrc, showTgTopP
             <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_35%_22%,#254e7a_0%,#111720_70%)] p-[16%]">
               <TgTopAnimatedPyramidAvatar className="h-full w-full" title="TG TOP" />
             </span>
-          ) : group.animatedAvatarUrl && !imageFailed ? (
-            <video key={group.animatedAvatarUrl} src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="metadata" disablePictureInPicture className="pointer-events-none absolute inset-0 h-full w-full object-cover" onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }} onError={() => setImageFailed(true)} />
+          ) : group.animatedAvatarUrl && !videoFailed ? (
+            <video key={group.animatedAvatarUrl} src={group.animatedAvatarUrl} poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="metadata" disablePictureInPicture className="pointer-events-none absolute inset-0 h-full w-full object-cover" onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }} onError={() => setVideoFailed(true)} />
           ) : avatarSrc && !imageFailed ? (
             <img src={avatarSrc} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setImageFailed(true)} />
           ) : (
-            <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_30%_22%,#28496f,#111720_62%)] text-4xl font-semibold text-slate-200">
-              {group.title.slice(0, 1).toUpperCase()}
-            </span>
+            <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_35%_22%,#254e7a_0%,#111720_70%)] p-[24%]"><TgTopAnimatedPyramidAvatar className="h-full w-full" title="TG TOP" /></span>
           )}
           <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,15,0.06)_8%,rgba(7,10,15,0.82)_100%)]" />
           <span className={`absolute inset-x-0 bottom-0 min-w-0 ${compact ? "p-2" : lead ? "p-5 sm:p-6" : "p-3 sm:p-4"}`}>

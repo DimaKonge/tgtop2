@@ -158,9 +158,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('min-h-[38px] w-[76px]');
     expect(source).toContain('managerAvatarUrl?: string | null;');
     expect(source).toContain('animatedAvatarUrl?: string | null;');
-    expect(source).toContain('group.animatedAvatarUrl && !imageFailed');
+    expect(source).toContain('group.animatedAvatarUrl && !videoFailed');
     expect(source).toContain('poster={avatarSrc ?? undefined} muted loop autoPlay playsInline preload="metadata"');
     expect(source).toContain('onLoadedData={event => { void event.currentTarget.play().catch(() => undefined); }}');
+    expect(source).toContain('onError={() => setVideoFailed(true)}');
     expect(source).toContain('onError={() => setImageFailed(true)}');
     expect(source).toContain('detail.group.managerAvatarUrl');
     expect(source).toContain('<AudienceGrowthChart snapshots={detail.snapshots} language={language} embedded />');

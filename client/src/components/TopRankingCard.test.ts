@@ -14,8 +14,9 @@ describe("TopRankingCard", () => {
 
   it("keeps lightweight media behaviour with a static fallback", () => {
     expect(source).toContain('preload="metadata"');
+    expect(source).toContain('onError={() => setVideoFailed(true)}');
     expect(source).toContain('onError={() => setImageFailed(true)}');
-    expect(source).toContain('group.title.slice(0, 1).toUpperCase()');
+    expect(source).toContain('<TgTopAnimatedPyramidAvatar');
   });
 
   it("renders the TG TOP animated pyramid only after an explicit TOP identity opt-in", () => {
