@@ -1144,3 +1144,5 @@
 - [x] После avatar hotfix обновить listing settings: минимум 0.1 GRAM, preview позиции по цене, optional category и geo controls с server validation.
 - [ ] После hotfix проверить mobile/web, сохранить checkpoint и выкатить только подтверждённые изменения.
 - [x] Исправить неполную загрузку верхних TOP-ячеек: для category/geo board корректно обрабатывать loading/error/empty, не терять занятые слоты и не подменять реальный контент дефисом; проверить 1+2+4 на mobile и web.
+- [x] Исправить регрессию: avatar канала в TOP-карточке не должен показывать дефис при наличии доступного Telegram avatar; проверить полный channel-specific proxy/request/response pipeline и fallback.
+- [ ] После исправления avatar прогнать focused/full tests, проверить live и синхронизировать весь актуальный код проекта в выбранный приватный GitHub-репозиторий.

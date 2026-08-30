@@ -54,7 +54,7 @@ async function loadTelegramAvatar(chatId: string): Promise<TelegramAvatarResult>
     const secondCached = avatarCache.get(chatId);
     if (secondCached) return secondCached;
     const group = await getGroupByChatId(chatId);
-    if (!group?.avatarFileId) {
+    if (!group) {
       const missing = { kind: "not-found" } as const;
       avatarCache.set(chatId, missing, AVATAR_NOT_FOUND_CACHE_TTL_MS);
       return missing;
@@ -62,8 +62,19 @@ async function loadTelegramAvatar(chatId: string): Promise<TelegramAvatarResult>
     const tokens = getTelegramAvatarTokens(process.env.TELEGRAM_BOT_TOKEN, process.env.TELEGRAM_RESERVE_BOT_TOKEN);
     for (const token of tokens) {
       try {
+        // Existing catalog rows may predate avatar persistence or may have been
+        // updated with a null photo. Recover the current channel photo directly
+        // from Telegram before declaring the avatar unavailable.
+        let fileId = group.avatarFileId;
+        if (!fileId) {
+          const chatResult = await axios.get<{ ok: boolean; result?: { photo?: { small_file_id?: string } } }>(`https://api.telegram.org/bot${token}/getChat`, {
+            params: { chat_id: chatId }, timeout: 8_000, maxContentLength: 64_000, maxBodyLength: 64_000,
+          });
+          fileId = chatResult.data.ok ? chatResult.data.result?.photo?.small_file_id ?? null : null;
+        }
+        if (!fileId) continue;
         const fileResult = await axios.get<{ ok: boolean; result: { file_path: string } }>(`https://api.telegram.org/bot${token}/getFile`, {
-          params: { file_id: group.avatarFileId }, timeout: 8_000, maxContentLength: 64_000, maxBodyLength: 64_000,
+          params: { file_id: fileId }, timeout: 8_000, maxContentLength: 64_000, maxBodyLength: 64_000,
         });
         if (!fileResult.data.ok || !fileResult.data.result.file_path) continue;
         const image = await axios.get<ArrayBuffer>(`https://api.telegram.org/file/bot${token}/${fileResult.data.result.file_path}`, {

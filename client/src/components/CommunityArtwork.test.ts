@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { getTelegramAvatarSrc } from "./CommunityArtwork";
 
 describe("CommunityArtwork", () => {
   const source = readFileSync(new URL("./CommunityArtwork.tsx", import.meta.url), "utf8");
@@ -10,9 +11,10 @@ describe("CommunityArtwork", () => {
     expect(source).toContain('preload="metadata"');
   });
 
-  it("uses the protected local avatar route before public Telegram fallback", () => {
+  it("uses the local proxy even when the stored Telegram file id is missing", () => {
+    expect(getTelegramAvatarSrc({ chatId: "-100123", title: "Channel", username: "channel", avatarFileId: null })).toBe("/api/telegram-avatar/-100123");
     expect(source).toContain('`/api/telegram-avatar/${group.chatId}`');
-    expect(source).toContain('`https://t.me/i/userpic/320/${group.username}.jpg`');
+    expect(source).not.toContain('https://t.me/i/userpic/320/');
     expect(source).toContain("group.title.slice(0, 1).toUpperCase()");
   });
 });

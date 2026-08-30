@@ -61,7 +61,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"');
     expect(source).toMatch(/<CompactCommunityRow\s+key=\{group\.id\}\s+group=\{group\}\s+language=\{language\}/);
     expect(source).toContain('В TG TOP пока нет площадок');
-    expect(source).toContain('https://t.me/i/userpic/320/${group.username}.jpg');
+    expect(source).toContain('getTelegramAvatarSrc(group)');
     expect(source).toContain('className="absolute inset-0 grid place-items-center"');
     expect(source).toContain('className="absolute inset-0 h-full w-full object-cover"');
     expect(source).toContain('https://t.me/${group.username}');

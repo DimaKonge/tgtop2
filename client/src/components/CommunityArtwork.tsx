@@ -9,11 +9,9 @@ export type CommunityArtworkGroup = {
 };
 
 export const getTelegramAvatarSrc = (group: CommunityArtworkGroup) =>
-  group.avatarFileId
-    ? `/api/telegram-avatar/${group.chatId}`
-    : group.username
-      ? `https://t.me/i/userpic/320/${group.username}.jpg`
-      : null;
+  // The server can refresh a missing/stale file id via getChat. Always use the
+  // bounded local proxy for Telegram media instead of a browser-side t.me URL.
+  group.chatId ? `/api/telegram-avatar/${group.chatId}` : null;
 
 export function CommunityAvatar({
   group,
