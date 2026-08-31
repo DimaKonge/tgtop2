@@ -1158,3 +1158,5 @@
 - [x] Убрать native number-input spinners у GRAM цены и привести поле к текущему Liquid Glass дизайну.
 - [x] Полностью удалить «Показать контакт владельца» из listing UI/state/payload и вернуть согласованный блок выбора менеджера.
 - [x] Добавить regression tests для сортировки, верхних category/geo controls, цены и manager block; проверить mobile layout и сохранить checkpoint.
+
+- [x] Подготовить временный SSH-доступ для staged VPS release с ограниченным ключом и удалить доступ после завершения rollout.
