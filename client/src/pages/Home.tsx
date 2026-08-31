@@ -2541,6 +2541,14 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       toast.error(tx("Не удалось скопировать ссылку. Скопируйте ее вручную.", "Could not copy the link. Please copy it manually."));
     }
   };
+  const copyPrivateEntryLink = async (inviteLink: string) => {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast.success(tx("Закрытая ссылка скопирована", "Private link copied."));
+    } catch {
+      toast.error(tx("Не удалось скопировать ссылку. Скопируйте её вручную.", "Could not copy the link. Please copy it manually."));
+    }
+  };
   const addBot = async (kind: "channel" | "group") => {
     if (createCommunityOnboardingIntent.isPending) return;
     const groupAdminRights = "change_info+delete_messages+invite_users+pin_messages+manage_chat";
@@ -4864,16 +4872,26 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
             {privateEntryEligibleGroup && (
               <section className="rounded-xl border border-[#3f8cff]/20 bg-[#3f8cff]/[0.045] p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="text-xs">
-                    <b className="block text-slate-200">{tx("Закрытая ссылка для входа", "Private entry link")}</b>
-                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Бот создаст новую ссылку Telegram и закрепит её как главный вход в карточке сообщества.", "The bot will create a new Telegram link and use it as the community’s main entry.")}</small>
-                  </span>
-                  <button type="button" onClick={() => createPrivateEntryLink.mutate({ groupId: privateEntryEligibleGroup.id })} disabled={createPrivateEntryLink.isPending} className="shrink-0 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/12 px-3 py-2 text-[10px] font-semibold text-[#a6c8ff] disabled:opacity-45">
-                    {createPrivateEntryLink.isPending ? ui.loading : tx("Создать", "Create")}
-                  </button>
+                <b className="block text-sm text-slate-200">{tx("Закрытая ссылка для входа", "Private entry link")}</b>
+                <p className="mt-1 text-[11px] leading-4 text-slate-500">{tx("Нужна для приватного сообщества без @username. Бот создаёт ссылку, которую можно поставить главным входом в карточке.", "For a private community without @username. The bot creates a link that can be used as the main entry in the card.")}</p>
+                <div className="mt-3 rounded-lg border border-white/8 bg-[#0b0f14] px-3 py-2 text-[11px] leading-4 text-slate-400">
+                  <p><b className="text-[#a6c8ff]">1.</b> {tx("Нажмите «Создать ссылку».", "Press Create link.")}</p>
+                  <p className="mt-1"><b className="text-[#a6c8ff]">2.</b> {tx("Бот создаст приглашение Telegram и сохранит его в карточке.", "The bot creates a Telegram invite and saves it to the card.")}</p>
+                  <p className="mt-1"><b className="text-[#a6c8ff]">3.</b> {tx("Откройте ссылку для проверки или скопируйте её.", "Open the link to check it or copy it.")}</p>
                 </div>
-                {privateEntryEligibleGroup.inviteLink && <button type="button" onClick={() => openTelegramCommunityLink(privateEntryEligibleGroup.inviteLink!)} className="mt-2 block max-w-full truncate text-left text-[10px] font-medium text-[#9cc3ff] hover:text-white">{tx("Открыть текущую закрытую ссылку", "Open current private link")}</button>}
+                {!privateEntryEligibleGroup.inviteLink ? (
+                  <button type="button" onClick={() => createPrivateEntryLink.mutate({ groupId: privateEntryEligibleGroup.id })} disabled={createPrivateEntryLink.isPending} className="mt-3 flex w-full items-center justify-center rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/12 px-3 py-2.5 text-xs font-semibold text-[#a6c8ff] disabled:opacity-45">
+                    {createPrivateEntryLink.isPending ? ui.loading : tx("Создать ссылку", "Create link")}
+                  </button>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    <code className="block truncate rounded-lg border border-white/8 bg-[#0b0f14] px-3 py-2 text-[10px] text-[#a6c8ff]">{privateEntryEligibleGroup.inviteLink}</code>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => openTelegramCommunityLink(privateEntryEligibleGroup.inviteLink!)} className="rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/12 px-2 py-2 text-[10px] font-semibold text-[#a6c8ff]">{tx("Открыть", "Open")}</button>
+                      <button type="button" onClick={() => void copyPrivateEntryLink(privateEntryEligibleGroup.inviteLink!)} className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[10px] font-semibold text-slate-300">{tx("Скопировать", "Copy")}</button>
+                    </div>
+                  </div>
+                )}
               </section>
             )}
 

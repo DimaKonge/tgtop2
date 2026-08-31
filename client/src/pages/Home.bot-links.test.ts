@@ -681,6 +681,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('tx("Все рубрики", "All topics")');
     expect(source).toContain('<SelectItem value="General"');
     expect(source).toContain('listingSubcategoryOptions.filter(item => item !== "General")');
+    expect(source).toContain('const copyPrivateEntryLink = async (inviteLink: string) =>');
+    expect(source).toContain('tx("Создать ссылку", "Create link")');
+    expect(source).toContain('tx("Скопировать", "Copy")');
     expect(source).toContain('const compatible = lotGroupCandidates.some(candidate => candidate.id === group.id);');
     expect(source).toContain('{selectedLotGroup && <div className="mt-2 grid grid-cols-2 gap-2">');
     expect(source).toContain('{selectedLotGroup && <div aria-disabled={lotSettingsLocked}');
