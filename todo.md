@@ -1150,9 +1150,9 @@
 - [ ] После repair @F_I_N_E_G_O_L_D проверить live карточку и detail, прогнать regression/full gate, сохранить checkpoint и синхронизировать GitHub.
 - [x] Сделать image-first avatar rendering в TOP/detail: MP4 не должен блокировать картинку, а при недоступности обоих источников показывать непустой branded fallback вместо пустого блока или дефиса.
 - [x] Добавить regression tests для channel video avatar fallback и проверить мобильную карточку перед release.
-- [ ] Исправить lot flow: кнопка «+» в «Обновить лот» должна открывать выбор группы/добавление группы и показывать выбранную группу вместо пустой ячейки.
-- [ ] Проверить и стабилизировать параметры публикации лота: visibility, announcement, manager, Google, sale и rewards должны быть привязаны к выбранному lot/group и корректно сохраняться.
-- [ ] Добавить regression tests для lot group picker и publication settings, проверить мобильный сценарий, сохранить checkpoint и выпустить только после полного gate.
+- [x] Исправить lot flow: кнопка «+» в «Обновить лот» должна открывать выбор группы/добавление группы и показывать выбранную группу вместо пустой ячейки.
+- [x] Проверить и стабилизировать параметры публикации лота: visibility, announcement, manager, Google, sale и rewards должны быть привязаны к выбранному lot/group и корректно сохраняться.
+- [x] Добавить regression tests для lot group picker и publication settings, проверить мобильный сценарий, сохранить checkpoint и выпустить только после полного gate.
 - [x] Исправить сортировку строкового каталога: новые группы должны попадать в предусмотренную позицию по listing/listedAt и active board rules, а не всегда в конец из-за неправильного client/server order.
 - [x] Вынести быстрый выбор категории и гео наверх Global и сохранить полноценные варианты category/subcategory/country/city в фильтр-панели.
 - [x] Убрать native number-input spinners у GRAM цены и привести поле к текущему Liquid Glass дизайну.
