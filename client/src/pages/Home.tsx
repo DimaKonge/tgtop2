@@ -4785,7 +4785,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
-                    {listingSubcategoryOptions.map(item => <SelectItem key={item} value={item} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{listingCategory ? getManagedTopicLabel(listingCategory, item) : item}</SelectItem>)}
+                    <SelectItem value="General" className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{tx("Все рубрики", "All topics")}</SelectItem>
+                    {listingSubcategoryOptions.filter(item => item !== "General").map(item => <SelectItem key={item} value={item} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{listingCategory ? getManagedTopicLabel(listingCategory, item) : item}</SelectItem>)}
                   </SelectContent>
                 </Select>
               ) : null}
