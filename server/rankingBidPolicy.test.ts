@@ -45,6 +45,15 @@ describe("TG TOP paid ranking policy", () => {
     expect(ranked.map(entry => entry.groupId)).toEqual([2, 3, 1]);
   });
 
+  it("always places 0.2 GRAM above every 0.1 GRAM listing", () => {
+    const ranked = sortRankingEntriesByBid([
+      { groupId: 10, bidAmount: 100, heldSince: new Date("2026-08-19T10:05:00Z") },
+      { groupId: 11, bidAmount: 200, heldSince: new Date("2026-08-19T09:00:00Z") },
+      { groupId: 12, bidAmount: 100, heldSince: new Date("2026-08-19T10:06:00Z") },
+    ]);
+    expect(ranked.map(entry => entry.groupId)).toEqual([11, 12, 10]);
+  });
+
   it("puts a fresh 0.1 GRAM listing into the highest available equal-price position", () => {
     const assigned = assignRankingEntriesToSlots([
       { groupId: 1, bidAmount: 300, heldSince: new Date("2026-08-19T10:00:00Z") },
