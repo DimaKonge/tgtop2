@@ -1165,3 +1165,9 @@
 - [x] Исправить ranking order: большая ставка выше; при одинаковой ставке 0.1 GRAM новая публикация выше старой, без вставки нового TG TOP чата в середину.
 - [x] Добавить явный вариант «Все» в каждом category/subcategory control, включая channel/chat filters и category sheets.
 - [x] Добавить regression tests для desktop add flow, ranking tie-break и всех «Все» controls; проверить desktop/mobile и выпустить только после полного gate.
+
+- [x] Полностью пересобрать окно параметров публикации: компактный порядок type/category → subcategory → country/region → city → ranking place, явный «Все» в каждом применимом выборе.
+- [x] Переделать price control под Liquid Glass с −/+ без native spinner и сохранить корректный preview/submit state.
+- [x] Покрыть новый listing flow regression-тестами, проверить мобильный экран и не выпускать до staged gate.
+
+- [x] Перестроить порядок listing form: убрать синюю action-кнопку из промежуточного блока и оставить её только после всех полей и preview в самом низу.

@@ -686,6 +686,16 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('{selectedLotGroup && <div aria-disabled={lotSettingsLocked}');
   });
 
+  it("keeps the primary ranking action after all listing settings", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    const rankingSection = source.indexOf('tx("Цена места в рейтинге"');
+    const settingsNote = source.indexOf('tx("Новая публикация использует", "A new publication uses")');
+    const primaryAction = source.indexOf('tx("Залистить", "List community")');
+    expect(rankingSection).toBeGreaterThanOrEqual(0);
+    expect(settingsNote).toBeGreaterThan(rankingSection);
+    expect(primaryAction).toBeGreaterThan(settingsNote);
+  });
+
   it("uses the TOP pyramid for bots and a long plus button before choosing a group for an outbid", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 
