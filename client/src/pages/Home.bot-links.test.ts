@@ -430,8 +430,12 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Настроить выдачу');
     expect(source).toContain('const CITY_OPTIONS');
     expect(source).toContain('setCity("Все")');
+    expect(source).toContain('Все города');
+    expect(source).toContain('managedCities.filter(item => country === "Все" || item.countryCode === country)');
     expect(source).not.toContain('tx("Анонимное размещение", "Anonymous listing")');
-    expect(source).toContain('Показать контакт владельца');
+    expect(source).not.toContain('Показать контакт владельца');
+    expect(source).toContain('Менеджер площадки');
+    expect(source).toContain('setManagerSheetOpen(true)');
     expect(source).toContain('setPublicProfile.mutate({ publicProfile: !account?.user?.publicProfile })');
     expect(source).toContain('Вы появитесь в списке, только если сделаете профиль публичным.');
     expect(source).toContain('tx("Вознаграждения", "Rewards")');
@@ -442,6 +446,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('rewardPerManualAdd: isChatRewardCampaign ? joinRewardUnits : 0');
     expect(source).toContain('className="group relative flex h-[68px] w-full min-w-0 items-center justify-between gap-2.5 overflow-hidden rounded-2xl');
     expect(source).toContain('tx("Цена в GRAM", "Price in GRAM")');
+    expect(source).toContain('appearance-none');
     expect(source).not.toContain('Telegram поддерживает платный вход Stars только для каналов.');
     expect(source).toContain('formatPositionDuration(selectedSlot.updatedAt, positionClock)');
     expect(source).toContain('const placementSlot = selectedSlot ?? (ownsDetail ? detailSlots.find(slot => !slot.group) : undefined);');
@@ -485,7 +490,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Подтверждённые участники:');
     expect(source).toContain('При снятии лота ставка за место не возвращается.');
     expect(source).toContain('setLotGroupId(group.id);');
-    expect(source).toContain('setShowOwnerContact(true);');
+    expect(source).toContain('setSelectedManagerTelegramUserId(group.managerTelegramUserId ?? null);');
+    expect(source).toContain('setManagerSheetOpen(true);');
     expect(source).toContain('overflow-y-auto rounded-t-[26px]');
     expect(source).toContain('Итого к списанию');
     expect(source).not.toContain('const midpoint = Math.round(((minimum + maximum) / 2) * 10) / 10;');
@@ -668,7 +674,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? null;');
     expect(source).toContain('Добавить канал');
     expect(source).toContain('Добавить чат');
-    expect(source).toContain('lotGroupCandidates.map(group =>');
+    expect(source).toContain('lotGroupPickerCandidates.map(group =>');
+    expect(source).toContain('const compatible = lotGroupCandidates.some(candidate => candidate.id === group.id);');
     expect(source).toContain('{selectedLotGroup && <div className="mt-2 grid grid-cols-2 gap-2">');
     expect(source).toContain('{selectedLotGroup && <div aria-disabled={lotSettingsLocked}');
   });

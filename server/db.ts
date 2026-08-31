@@ -1586,7 +1586,7 @@ export async function getGroupsCatalog(category?: string, country?: string, subc
   }).from(groupsCatalog)
     .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
     .where(and(...conditions))
-    .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
+    .orderBy(desc(groupsCatalog.listedAt), desc(groupsCatalog.createdAt));
   return groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl, ownerPublicProfile }) => {
     const publicGroup = toPublicGroup(group);
     return {

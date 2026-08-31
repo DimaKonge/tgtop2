@@ -828,7 +828,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [listingSubcategory, setListingSubcategory] = useState("General");
   const [salePriceTon, setSalePriceTon] = useState("");
   const [isListingForSale, setIsListingForSale] = useState(false);
-  const [showOwnerContact, setShowOwnerContact] = useState(false);
+  const [showOwnerContact, setShowOwnerContact] = useState(false); // legacy compatibility for existing detail/outbid payloads; no listing control
   const [managerPublic, setManagerPublic] = useState(true);
   const [listingAnnouncementEnabled, setListingAnnouncementEnabled] = useState(true);
   const [searchIndexable, setSearchIndexable] = useState(false);
@@ -2114,12 +2114,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         && (targetSlot.subcategory === "Все" || targetSlot.subcategory === group.subcategory)
       )
     : [];
+  const lotGroupPickerCandidates = mine;
   const lotGroupCandidates = placementSlot
-    ? mine.filter(group =>
+    ? lotGroupPickerCandidates.filter(group =>
         (placementSlot.category === "Все" || placementSlot.category === group.category)
         && (placementSlot.subcategory === "Все" || placementSlot.subcategory === group.subcategory)
       )
-    : [];
+    : lotGroupPickerCandidates;
   const selectedLotGroup = lotGroupCandidates.find(group => group.id === lotGroupId) ?? null;
   const existingRewardBudgetUnits = selectedLotGroup && hasConfiguredRewardCampaign(selectedLotGroup)
     ? Number(selectedLotGroup.rewardBudget ?? 0)
@@ -2398,7 +2399,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setListingRankingBid("0.1");
     setSalePriceTon(firstGroup?.salePriceTon ? formatTon(firstGroup.salePriceTon) : "");
     setIsListingForSale(firstGroup?.listingType === "sale" && Boolean(firstGroup.salePriceTon));
-    setShowOwnerContact(Boolean(firstGroup?.showOwnerContact));
     setManagerPublic(firstGroup?.managerPublic !== false);
     setListingAnnouncementEnabled(firstGroup?.listingAnnouncementEnabled ?? true);
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
@@ -2441,7 +2441,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       city: listingCity === "Все" ? undefined : listingCity,
       subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined,
       salePriceTon: normalizedSalePrice ?? undefined,
-      showOwnerContact: selectedListingGroups.length ? showOwnerContact : undefined,
       managerPublic,
       listingAnnouncementEnabled,
       searchIndexable: selectedListingGroups.length === 1 ? searchIndexable : undefined,
@@ -2779,6 +2778,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                                   {country === item.code && <Check className="h-3 w-3" />}
                                 </button>
                               ))}
+                              <div className="mt-2 border-t border-white/8 pt-2">
+                                <small className="mb-1 block px-2.5 text-[10px] uppercase tracking-wide text-slate-500">{tx("Город", "City")}</small>
+                                <button type="button" onClick={() => setCity("Все")} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${city === "Все" ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
+                                  <span>{tx("Все города", "All cities")}</span>
+                                  {city === "Все" && <Check className="h-3 w-3" />}
+                                </button>
+                                {managedCities.filter(item => country === "Все" || item.countryCode === country).map(item => (
+                                  <button key={`${item.countryCode}:${item.code}`} type="button" onClick={() => { setCountry(item.countryCode); setCity(item.code); }} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${city === item.code && country === item.countryCode ? "bg-[#3f8cff] text-white font-medium" : "text-slate-300 hover:bg-white/5"}`}>
+                                    <span>{item.label}</span>
+                                    {city === item.code && country === item.countryCode && <Check className="h-3 w-3" />}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </PopoverContent>
@@ -3594,11 +3606,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           </button>
                           <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5">
                             <span><b className="block text-[11px] text-slate-200">{detailVisibility === "public" ? tx("Публичная публикация", "Public publication") : tx("Анонимная публикация", "Anonymous publication")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detailVisibility === "public" ? tx("Другие смогут перейти в ваш профиль", "Others can open your profile") : tx("Владелец не показывается в карточке", "The owner stays hidden in the card")}</small></span>
-                            <button type="button" role="switch" aria-checked={detailVisibility === "public"} onClick={() => setDetailVisibility(value => { const next = value === "public" ? "anonymous" : "public"; if (next === "public") setShowOwnerContact(true); return next; })} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${detailVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detailVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></button>
+                            <button type="button" role="switch" aria-checked={detailVisibility === "public"} onClick={() => setDetailVisibility(value => value === "public" ? "anonymous" : "public")} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${detailVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detailVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></button>
                           </div>
                           <div className="grid grid-cols-2 gap-1.5">
                             <button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button>
-                            <button type="button" onClick={() => setShowOwnerContact(value => !value)} className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${showOwnerContact ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Контакт", "Contact")}</b><small className={`mt-0.5 block text-[10px] ${showOwnerContact ? "text-[#8fb9ff]" : "text-slate-500"}`}>{showOwnerContact ? tx("Показывать @username", "Show @username") : tx("Скрыт", "Hidden")}</small></button>
+                            <button type="button" onClick={() => { setLotGroupId(detail.group.id); setSelectedManagerTelegramUserId(detail.group.managerTelegramUserId ?? null); setManagerPublic(detail.group.managerPublic !== false); setManagerSheetOpen(true); }} className="rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/[0.08] px-2 py-1.5 text-left transition-colors hover:bg-[#3f8cff]/[0.13]"><b className="block text-[11px] text-slate-200">{tx("Менеджер", "Manager")}</b><small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">{detail.group.managerName ?? tx("Выбрать администратора", "Choose administrator")}</small></button>
                           </div>
                           {detail.group.managerName && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5"><span><b className="block text-[11px] text-slate-200">{tx("Показывать менеджера", "Show manager")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{managerPublic ? tx("Гости увидят профиль менеджера", "Guests can open the manager profile") : tx("Скрыт из публичной карточки", "Hidden from public details")}</small></span><button type="button" role="switch" aria-checked={managerPublic} onClick={() => setManagerPublic(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${managerPublic ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${managerPublic ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
                           {detail.group.username && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5"><span><b className="block text-[11px] text-slate-200">Показывать в Google</b><small className="mt-0.5 block text-[10px] text-slate-500">Создаст публичную страницу tgtop.me/c/{detail.group.username}</small></span><button type="button" role="switch" aria-checked={searchIndexable} onClick={() => setSearchIndexable(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${searchIndexable ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${searchIndexable ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
@@ -3741,7 +3753,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       {selectedLotGroup && detailRankingPreviewSlotNumber && <div className="mt-2 rounded-xl border border-[#3390ec]/45 bg-[#18314d] p-2.5 text-center"><small className="block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8fc4ff]">Ваша группа займёт</small><div className="mt-2 grid grid-cols-2 gap-2"><div className="rounded-lg bg-[#17212b] px-2 py-1.5"><small className="block text-[9px] text-slate-400">Общий ТОП</small><b className="text-lg leading-none text-white">#{detailRankingPreviewSlotNumber}</b></div><div className="rounded-lg bg-[#17212b] px-2 py-1.5"><small className="block text-[9px] text-slate-400">ТОП {selectedLotGroup.category === "Каналы" ? "каналов" : "чатов"}</small><b className="text-lg leading-none text-[#63f5b1]">#{detailTypeRankingPreviewPosition ?? "—"}</b></div></div></div>}
                       <p className={`mt-2 text-center text-[10px] ${detailWillDrop ? "font-medium text-rose-300" : "text-slate-500"}`}>{detailWillDrop ? `Ваша цена ниже текущей ставки. Лот переместится на место #${detailRankingPreviewSlotNumber}` : ownsDetail ? `Минимальная ставка: ${formatTon(detailMinimumBid)} GRAM` : `Перебить можно от ${formatTon(detailMinimumBid)} GRAM`}</p>
                       <div className="mt-2 rounded-xl border border-[#63f5b1]/30 bg-[#16342f] px-3 py-2"><div className="flex items-center justify-between gap-3"><span className="text-[10px] font-medium text-[#b6e8d1]">Итого размещение</span><b className="text-sm text-[#63f5b1]">{detailPlacementTotalUnits === undefined ? "Укажите бюджет" : `${formatGram(detailPlacementTotalUnits)} GRAM`}</b></div>{detailPlacementTotalUnits !== undefined && detailBalanceChangeUnits !== undefined && <small className="mt-1 block text-[9px] text-[#8fcbb0]">Ставка {formatTon(detailRankingBidAmount)}{rewardCampaignEnabled ? ` + бюджет вознаграждений ${formatGram(detailRewardBudgetUnits)} GRAM` : " · вознаграждения выключены"}. {detailBalanceChangeUnits >= 0 ? `Сейчас спишется ${formatGram(detailBalanceChangeUnits)} GRAM` : `Вернётся ${formatGram(Math.abs(detailBalanceChangeUnits))} GRAM`}</small>}</div>
-                      <button type="button" onClick={() => { if (!selectedLotGroup) return setLotGroupPickerOpen(true); const value = normalizeRankingBid(detailRankingBidAmount); const minimum = detailMinimumBid ?? 0.1; const normalizedSalePrice = getSalePriceForSave(); if (normalizedSalePrice === undefined) return; if (value === undefined || value < minimum) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Укажите бюджет и награду за подписчика"); placeBid.mutate({ slotId: placementSlot.id, groupId: selectedLotGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, showOwnerContact: detailVisibility === "public", anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, country: listingCountry === "Global" ? undefined : listingCountry, city: listingCity === "Все" ? undefined : listingCity, subcategory: listingSubcategory, salePriceTon: normalizedSalePrice, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: selectedLotGroup.category === "Чаты" ? detailRewardPerSubscriptionUnits : 0 }); }} disabled={Boolean(selectedLotGroup && (!detailRankingPreviewSlotNumber || placeBid.isPending)) || (!ownsDetail && !isAuthenticated)} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{placeBid.isPending ? "Оплата…" : !selectedLotGroup ? "Выбрать свою группу" : !selectedSlot ? "Вывести в ТОП" : ownsDetail ? "Обновить ставку" : "Перебить ставку"}</span></button>
+                      <button type="button" onClick={() => { if (!selectedLotGroup) return setLotGroupPickerOpen(true); const value = normalizeRankingBid(detailRankingBidAmount); const minimum = detailMinimumBid ?? 0.1; const normalizedSalePrice = getSalePriceForSave(); if (normalizedSalePrice === undefined) return; if (value === undefined || value < minimum) return toast.error(`Минимальная ставка: ${formatTon(minimum)} GRAM с шагом 0.1`); const detailRewardPerSubscriptionUnits = rewardCampaignEnabled ? parseGramInput(rewardPerSubscription) : 0; if (rewardCampaignEnabled && (detailRewardBudgetUnits === undefined || detailRewardPerSubscriptionUnits === undefined)) return toast.error("Укажите бюджет и награду за подписчика"); placeBid.mutate({ slotId: placementSlot.id, groupId: selectedLotGroup.id, bidAmount: value, currentBid: `${formatTon(value)} GRAM`, anonymousListing: detailVisibility === "anonymous", managerPublic, listingAnnouncementEnabled, country: listingCountry === "Global" ? undefined : listingCountry, city: listingCity === "Все" ? undefined : listingCity, subcategory: listingSubcategory, salePriceTon: normalizedSalePrice, rewardActive: rewardCampaignEnabled, rewardBudget: detailRewardBudgetUnits, rewardPerSubscription: detailRewardPerSubscriptionUnits, rewardPerManualAdd: selectedLotGroup.category === "Чаты" ? detailRewardPerSubscriptionUnits : 0 }); }} disabled={Boolean(selectedLotGroup && (!detailRankingPreviewSlotNumber || placeBid.isPending)) || (!ownsDetail && !isAuthenticated)} className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#3390ec] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4199ee] active:scale-[0.985] disabled:opacity-45"><span>{placeBid.isPending ? "Оплата…" : !selectedLotGroup ? "Выбрать свою группу" : !selectedSlot ? "Вывести в ТОП" : ownsDetail ? "Обновить ставку" : "Перебить ставку"}</span></button>
                     </section>
                   )}
                 </div>
@@ -4474,11 +4486,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <p className="text-xs leading-5 text-slate-500">Выберите одну из уже подключённых групп для обновления этого лота.</p>
           </SheetHeader>
           <div className="space-y-2 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">
-            {lotGroupCandidates.length ? lotGroupCandidates.map(group => {
+            {lotGroupPickerCandidates.length ? lotGroupPickerCandidates.map(group => {
+              const compatible = lotGroupCandidates.some(candidate => candidate.id === group.id);
               const selected = group.id === selectedLotGroup?.id;
-              return <button key={group.id} type="button" onClick={() => { applyLotGroupSettings(group); setLotGroupPickerOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-colors ${selected ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+              return <button key={group.id} type="button" disabled={!compatible} onClick={() => { if (!compatible) return; applyLotGroupSettings(group); setLotGroupPickerOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${selected ? "border-[#3f8cff]/65 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
                 <Avatar group={group} compact />
-                <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : "Подключена к TG TOP"}</small></span>
+                <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{group.title}</b><small className="mt-0.5 block truncate text-[10px] text-slate-500">{group.username ? `@${group.username}` : "Подключена к TG TOP"}{!compatible && placementSlot ? ` · слот только ${placementSlot.category === "Каналы" ? "для каналов" : placementSlot.category === "Чаты" ? "для чатов" : "другой рубрики"}` : ""}</small></span>
                 <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${selected ? "bg-[#3390ec] text-white" : "border border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
               </button>;
             }) : <div className="space-y-2">
@@ -4641,7 +4654,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <section className="order-3 rounded-2xl border border-white/8 bg-white/[0.025] p-3">
                   <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/10 text-[#8fb9ff]"><Settings2 className="h-4 w-4" /></span><span><b className="block text-xs text-slate-100">{tx("Настройки размещения", "Placement settings")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{tx("Объявление, менеджер, продажа и вознаграждения", "Announcement, manager, sale, and rewards")}</small></span></div>
                   <div className="mt-3 flex flex-col gap-2 border-t border-white/8 pt-2">
-                    <div className="order-1 grid grid-cols-2 gap-2"><button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button><button type="button" onClick={() => { setLotGroupId(starsPaymentGroup.id); setShowOwnerContact(true); setSelectedManagerTelegramUserId(starsPaymentGroup.managerTelegramUserId ?? null); setManagerSheetOpen(true); }} className="rounded-lg border border-white/8 bg-black/15 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.055]"><b className="block text-[11px] text-slate-200">{tx("Контакт", "Contact")}</b><small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">{starsPaymentGroup.managerName ?? tx("Выбрать администратора", "Choose administrator")}</small></button></div>
+                    <div className="order-1 grid grid-cols-2 gap-2"><button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button><button type="button" onClick={() => { setLotGroupId(starsPaymentGroup.id); setSelectedManagerTelegramUserId(starsPaymentGroup.managerTelegramUserId ?? null); setManagerPublic(starsPaymentGroup.managerPublic !== false); setManagerSheetOpen(true); }} className="rounded-lg border border-white/8 bg-black/15 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.055]"><b className="block text-[11px] text-slate-200">{tx("Менеджер", "Manager")}</b><small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">{starsPaymentGroup.managerName ?? tx("Выбрать администратора", "Choose administrator")}</small></button></div>
                     {starsPaymentGroup.managerName && <div className="order-2 flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{tx("Показывать менеджера", "Show manager")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{managerPublic ? tx("Гости увидят менеджера", "Guests will see the manager") : tx("Скрыт из карточки", "Hidden from details")}</small></span><button type="button" role="switch" aria-checked={managerPublic} onClick={() => setManagerPublic(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${managerPublic ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${managerPublic ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
                     <div className="order-3 flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{tx("Выставить на продажу", "Offer for sale")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{isListingForSale ? tx("Цена будет видна покупателям", "Buyers will see the price") : tx("Без продажи", "Not for sale")}</small></span><button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} /></button></div>
                     {isListingForSale && <div className="order-3 relative"><Input value={salePriceTon} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }} placeholder={tx("Цена продажи", "Sale price")} className="h-9 border-white/10 bg-black/15 pr-10 text-[11px] placeholder:text-[11px]" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-medium text-slate-500">GRAM</span></div>}
@@ -4829,7 +4842,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }}
                     onBlur={() => setSalePriceTon(salePriceTon ? formatTon(salePriceTon) : "")}
                     placeholder={tx("Например, 250", "For example, 250")}
-                    className="h-11 border-white/10 bg-[#0b0f14] pr-12 text-sm"
+                    className="h-11 appearance-none border-white/10 bg-[#0b0f14] pr-12 text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">GRAM</span>
                 </div>
@@ -4935,19 +4948,20 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
 
 
-            {selectedListingGroups.length > 0 && (
-              <section className="rounded-xl border border-white/8 bg-white/[0.035] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs">
-                    <b className="block text-slate-200">{tx("Показать контакт владельца", "Show owner contact")}</b>
-                    <small className="mt-0.5 block text-[11px] leading-4 text-slate-500">{tx("Показывает только @username в деталях площадки, даже если сам профиль скрыт.", "Shows only the @username in community details even when the profile stays hidden.")}</small>
-                  </span>
-                  <button type="button" role="switch" aria-checked={showOwnerContact} aria-label={tx("Переключить контакт владельца", "Toggle owner contact")} onClick={() => setShowOwnerContact(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${showOwnerContact ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}>
-                    <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${showOwnerContact ? "translate-x-6" : "translate-x-0"}`} />
-                  </button>
-                </div>
-              </section>
-            )}
+            {selectedListingGroups.length === 1 && (() => {
+              const managerGroup = selectedListingGroups[0];
+              return (
+                <section className="rounded-xl border border-[#3f8cff]/20 bg-[#3f8cff]/[0.045] p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 text-xs">
+                      <b className="block text-slate-200">{tx("Менеджер площадки", "Community manager")}</b>
+                      <small className="mt-0.5 block truncate text-[11px] text-slate-500">{managerGroup.managerName ? `${managerGroup.managerName}${managerPublic ? " · виден в карточке" : " · скрыт"}` : tx("Выберите администратора из Telegram", "Choose an administrator from Telegram")}</small>
+                    </span>
+                    <button type="button" onClick={() => { setLotGroupId(managerGroup.id); setSelectedManagerTelegramUserId(managerGroup.managerTelegramUserId ?? null); setManagerPublic(managerGroup.managerPublic !== false); setManagerSheetOpen(true); }} className="shrink-0 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/12 px-3 py-2 text-[10px] font-semibold text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/20">{managerGroup.managerName ? tx("Изменить", "Change") : tx("Выбрать", "Choose")}</button>
+                  </div>
+                </section>
+              );
+            })()}
 
             <div className="rounded-xl border border-[#3f8cff]/18 bg-[#3f8cff]/8 p-3 text-[11px] leading-4 text-slate-400">
               {tx("Новая публикация использует", "A new publication uses")} <b className="font-medium text-[#a6c8ff]">0.1 GRAM</b> {tx("за группу. Повторное редактирование уже опубликованного листинга не списывает бонусы. Оплата GRAM и передача прав пока не запускаются автоматически.", "per community. Editing an existing listing does not spend more bonuses. GRAM payments and ownership transfers do not start automatically yet.")}
