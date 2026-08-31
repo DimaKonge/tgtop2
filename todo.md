@@ -1164,10 +1164,17 @@
 - [x] Исправить desktop Add Channel/Add Group: кнопка должна открывать Telegram WebApp-aware bot setup и показывать понятную ошибку, если Telegram bridge недоступен.
 - [x] Исправить ranking order: большая ставка выше; при одинаковой ставке 0.1 GRAM новая публикация выше старой, без вставки нового TG TOP чата в середину.
 - [x] Добавить явный вариант «Все» в каждом category/subcategory control, включая channel/chat filters и category sheets.
-- [x] Добавить regression tests для desktop add flow, ranking tie-break и всех «Все» controls; проверить desktop/mobile и выпустить только после полного gate.
+- [x] Добавить regression tests для desktop add flow, ranking tie-break и всех «Все» controls; проверить desktop/mobile и выпустить только после полного gate. Live rollout подтверждён 2026-08-31.
 
 - [x] Полностью пересобрать окно параметров публикации: компактный порядок type/category → subcategory → country/region → city → ranking place, явный «Все» в каждом применимом выборе.
 - [x] Переделать price control под Liquid Glass с −/+ без native spinner и сохранить корректный preview/submit state.
-- [x] Покрыть новый listing flow regression-тестами, проверить мобильный экран и не выпускать до staged gate.
+- [x] Покрыть новый listing flow regression-тестами, проверить мобильный экран и не выпускать до staged gate. Live rollout подтверждён 2026-08-31.
 
 - [x] Перестроить порядок listing form: убрать синюю action-кнопку из промежуточного блока и оставить её только после всех полей и preview в самом низу.
+
+- [ ] Упростить финальные listing actions: не показывать две конкурирующие синие основные кнопки, явно разделить «сохранить настройки» и «разместить в рейтинге».
+- [ ] Переработать блок закрытой ссылки в понятный flow: объяснить назначение, показать шаги создания, состояние готовой ссылки и действия открыть/скопировать.
+- [ ] Добавить regression tests для финальных actions/link states и проверить мобильный экран до checkpoint.
+
+- [ ] Уточнить и закрепить ranking rule во всех путях: цена лота DESC — главный критерий; свежесть DESC используется только при одинаковой цене, например 0.2 всегда выше 0.1, новый 0.1 выше старого 0.1.
+- [ ] Добавить regression test с ценами 0.2 и 0.1 и тестом одинаковых ставок, затем проверить production preview до rollout.
