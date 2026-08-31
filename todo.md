@@ -1160,3 +1160,8 @@
 - [x] Добавить regression tests для сортировки, верхних category/geo controls, цены и manager block; проверить mobile layout и сохранить checkpoint.
 
 - [x] Подготовить временный SSH-доступ для staged VPS release с ограниченным ключом и удалить доступ после завершения rollout.
+
+- [x] Исправить desktop Add Channel/Add Group: кнопка должна открывать Telegram WebApp-aware bot setup и показывать понятную ошибку, если Telegram bridge недоступен.
+- [x] Исправить ranking order: большая ставка выше; при одинаковой ставке 0.1 GRAM новая публикация выше старой, без вставки нового TG TOP чата в середину.
+- [x] Добавить явный вариант «Все» в каждом category/subcategory control, включая channel/chat filters и category sheets.
+- [x] Добавить regression tests для desktop add flow, ranking tie-break и всех «Все» controls; проверить desktop/mobile и выпустить только после полного gate.

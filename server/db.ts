@@ -2818,20 +2818,44 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       eq(auctionSlots.category, "Все"),
       eq(auctionSlots.country, "Global")
     )).orderBy(asc(auctionSlots.slotNumber));
-    const assignments = planVacantRankingAssignments(board, groupsNeedingListing.map(group => group.id));
-    for (const assignment of assignments) {
-      const group = groups.find(item => item.id === assignment.groupId);
-      if (!group) continue;
-      await tx.update(auctionSlots).set({
-        groupId: group.id,
-        title: group.title,
-        subtitle: group.username ? `@${group.username}` : group.category,
-        leaderUsername: group.username ?? group.title,
-        leaderUserId: group.ownerOpenId,
-        bidAmount: 100,
-        currentBid: "0.1 GRAM",
-        updatedAt: new Date(),
-      }).where(and(eq(auctionSlots.id, assignment.slotId), sql`${auctionSlots.groupId} IS NULL`));
+    const now = new Date();
+    const incomingEntries = groupsNeedingListing.map(group => ({
+      groupId: group.id,
+      bidAmount: 100,
+      currentBid: "0.1 GRAM",
+      leaderUsername: group.username ?? group.title,
+      leaderUserId: group.ownerOpenId,
+      title: group.title,
+      subtitle: group.username ? `@${group.username}` : group.category,
+      heldSince: now,
+    }));
+    const rankedEntries = assignRankingEntriesToSlots([
+      ...board.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt })),
+      ...incomingEntries,
+    ], board);
+    for (let index = 0; index < board.length; index += 1) {
+      const slot = board[index];
+      const source = rankedEntries[index];
+      if (!source && slot.groupId === null) continue;
+      await tx.update(auctionSlots).set(source ? {
+        groupId: source.groupId,
+        title: source.title,
+        subtitle: source.subtitle,
+        leaderUsername: source.leaderUsername,
+        leaderUserId: source.leaderUserId,
+        bidAmount: source.bidAmount,
+        currentBid: source.currentBid,
+        updatedAt: slot.groupId !== source.groupId ? now : slot.updatedAt,
+      } : {
+        groupId: null,
+        title: "Свободное место",
+        subtitle: "Ждет листинга",
+        leaderUsername: "-",
+        leaderUserId: null,
+        bidAmount: 0,
+        currentBid: "0 GRAM",
+        updatedAt: now,
+      }).where(eq(auctionSlots.id, slot.id));
     }
   });
   return targetGroupsForAnnouncement.map(group => ({

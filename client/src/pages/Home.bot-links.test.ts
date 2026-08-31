@@ -11,7 +11,10 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain("createCommunityOnboardingIntent.mutateAsync({ kind })");
     expect(source).toContain('startgroup=${intent.token}&admin=${groupAdminRights}');
     expect(source).toContain('delete_messages+invite_users+pin_messages+manage_chat');
-    expect(source).toContain('openTelegramCommunityLink(`https://t.me/TG_TOPBOT?${query}`)');
+    expect(source).toContain('const target = `https://t.me/TG_TOPBOT?${query}`;');
+    expect(source).toContain('openTelegramCommunityLink(target)');
+    expect(source).toContain('const desktopTab = webApp?.initData ? null : window.open("about:blank", "_blank");');
+    expect(source).toContain('desktopTab.location.href = target;');
     expect(source).not.toContain('window.open(`https://t.me/TG_TOPBOT?${query}`, "_blank")');
     expect(source).toContain('setAdminGuideKind(kind)');
     expect(source).not.toContain('createOpen');
@@ -675,6 +678,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Добавить канал');
     expect(source).toContain('Добавить чат');
     expect(source).toContain('lotGroupPickerCandidates.map(group =>');
+    expect(source).toContain('tx("Все рубрики", "All topics")');
     expect(source).toContain('const compatible = lotGroupCandidates.some(candidate => candidate.id === group.id);');
     expect(source).toContain('{selectedLotGroup && <div className="mt-2 grid grid-cols-2 gap-2">');
     expect(source).toContain('{selectedLotGroup && <div aria-disabled={lotSettingsLocked}');

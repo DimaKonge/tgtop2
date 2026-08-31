@@ -2545,15 +2545,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     if (createCommunityOnboardingIntent.isPending) return;
     const groupAdminRights = "change_info+delete_messages+invite_users+pin_messages+manage_chat";
     const channelAdminRights = "change_info+post_messages+edit_messages+delete_messages+invite_users+manage_chat";
+    const webApp = window.Telegram?.WebApp as unknown as { initData?: string } | undefined;
+    const desktopTab = webApp?.initData ? null : window.open("about:blank", "_blank");
+    if (desktopTab) desktopTab.opener = null;
     try {
       const intent = await createCommunityOnboardingIntent.mutateAsync({ kind });
       const query = kind === "channel"
         ? `startchannel&admin=${channelAdminRights}`
         : `startgroup=${intent.token}&admin=${groupAdminRights}`;
-      if (!openTelegramCommunityLink(`https://t.me/TG_TOPBOT?${query}`)) {
-        toast.error(tx("Не удалось открыть выбор сообщества. Попробуйте снова.", "Could not open the community picker. Please try again."));
+      const target = `https://t.me/TG_TOPBOT?${query}`;
+      if (desktopTab && !desktopTab.closed) {
+        desktopTab.location.href = target;
+        return;
+      }
+      if (!openTelegramCommunityLink(target)) {
+        toast.error(tx("Не удалось открыть выбор сообщества. Разрешите всплывающие окна и попробуйте снова.", "Could not open the community picker. Allow pop-ups and try again."));
       }
     } catch (error) {
+      if (desktopTab && !desktopTab.closed) desktopTab.close();
       toast.error(error instanceof Error ? error.message : tx("Не удалось подготовить безопасное подключение.", "Could not prepare a secure connection."));
     }
   };
@@ -4530,7 +4539,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <p className="text-[11px] leading-4 text-slate-500">Рубрика задаёт, в каком разделе рейтинга будет показано сообщество.</p>
           </SheetHeader>
           <div className="space-y-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1">
-            {managedTopics.filter(topic => topic.category === (selectedLotGroup?.category ?? "Каналы")).map(topic => {
+            <button type="button" onClick={() => { setListingSubcategory("General"); setListingSubcategorySheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${listingSubcategory === "General" ? "border-[#3f8cff]/60 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+              <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{tx("Все рубрики", "All topics")}</b></span>
+              <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${listingSubcategory === "General" ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+            </button>
+            {managedTopics.filter(topic => topic.category === (selectedLotGroup?.category ?? "Каналы") && topic.code !== "General").map(topic => {
               const selected = topic.code === listingSubcategory;
               return <button key={topic.id} type="button" onClick={() => { setListingSubcategory(topic.code); setListingSubcategorySheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${selected ? "border-[#3f8cff]/60 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
                 <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{topic.label}</b></span>

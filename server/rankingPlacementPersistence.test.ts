@@ -25,6 +25,14 @@ describe("ranking placement persistence", () => {
     expect(source).toContain("managerPublic: options.managerPublic");
   });
 
+  it("places a fresh 0.1 GRAM listing above older equal-price entries in the automatic listing path", () => {
+    const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+    expect(source).toContain("const incomingEntries = groupsNeedingListing.map(group => ({");
+    expect(source).toContain("const rankedEntries = assignRankingEntriesToSlots([");
+    expect(source).toContain("...board.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt }))");
+    expect(source).toContain("heldSince: now,");
+  });
+
   it("serializes competing paid bids on the canonical board before debiting the balance", () => {
     const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
     expect(source).toContain("A no-op update deliberately takes an exclusive lock for every canonical board row.");
