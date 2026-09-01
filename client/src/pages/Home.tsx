@@ -2614,7 +2614,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                                     {city === item.code && country === item.countryCode && <Check className="h-3 w-3" />}
                                   </button>
                                 ))}
-                                <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/c/4358714855/2")} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2.5 py-2 text-xs font-medium text-[#a9caff] hover:bg-[#3f8cff]/15">
+                                <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/TGTOP_Owner/2")} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2.5 py-2 text-xs font-medium text-[#a9caff] hover:bg-[#3f8cff]/15">
                                   <span>{tx("＋ Предложить страну", "＋ Suggest a country")}</span>
                                   <ChevronRight className="h-3.5 w-3.5" />
                                 </button>
@@ -4351,7 +4351,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
               </button>;
             })}
-            <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/c/4358714855/2")} className="flex w-full items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-3 text-left text-sm font-medium text-[#a9caff] hover:bg-[#3f8cff]/15">
+            <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/TGTOP_Owner/2")} className="flex w-full items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-3 text-left text-sm font-medium text-[#a9caff] hover:bg-[#3f8cff]/15">
               <span>＋ Предложить страну</span><ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -4376,7 +4376,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
               </button>;
             })}
-            <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/c/4358714855/2")} className="flex w-full items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-3 text-left text-sm font-medium text-[#a9caff] hover:bg-[#3f8cff]/15">
+            <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/TGTOP_Owner/2")} className="flex w-full items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-3 text-left text-sm font-medium text-[#a9caff] hover:bg-[#3f8cff]/15">
               <span>＋ Предложить категорию</span><ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -4610,6 +4610,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 {!listingCategory && <span className="text-[10px] text-amber-100/70">{tx("Выберите группы одного типа", "Select one community type")}</span>}
               </div>
               {listingCategory ? (
+                <>
                 <Select value={listingSubcategory} onValueChange={setListingSubcategory}>
                   <SelectTrigger className="h-11 w-full rounded-xl border-white/10 bg-[#0b0f14] text-sm text-slate-200">
                     <SelectValue />
@@ -4619,6 +4620,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     {listingSubcategoryOptions.filter(item => item !== "General").map(item => <SelectItem key={item} value={item} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{listingCategory ? getManagedTopicLabel(listingCategory, item) : item}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/TGTOP_Owner/2")} className="mt-2 flex w-full items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-2.5 text-left text-xs font-medium text-[#a9caff] transition-colors hover:bg-[#3f8cff]/15 active:scale-[0.99]">
+                  <span>{tx("＋ Добавить категорию", "＋ Suggest a category")}</span>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                </button>
+                <p className="mt-1.5 text-[10px] leading-4 text-slate-500">{tx("Откроется тема предложений. Если чат закрытый, сначала вступите в него.", "Opens the suggestions topic. If the chat is private, join it first.")}</p>
+                </>
               ) : null}
             </section>
 
