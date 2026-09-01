@@ -2614,6 +2614,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                                     {city === item.code && country === item.countryCode && <Check className="h-3 w-3" />}
                                   </button>
                                 ))}
+                                <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/c/4358714855/2")} className="mt-2 flex w-full items-center justify-between rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-2.5 py-2 text-xs font-medium text-[#a9caff] hover:bg-[#3f8cff]/15">
+                                  <span>{tx("＋ Предложить страну", "＋ Suggest a country")}</span>
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -4336,13 +4340,20 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <p className="text-[11px] leading-4 text-slate-500">Выберите страну или оставьте размещение доступным по всему миру.</p>
           </SheetHeader>
           <div className="space-y-1 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-1">
-            {managedCountries.map(country => {
+            <button type="button" onClick={() => { setListingCountry("Все"); setListingCity("Все"); setListingCountrySheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${listingCountry === "Все" || listingCountry === "Global" ? "border-[#3f8cff]/60 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
+              <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">Весь мир</b></span>
+              <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${listingCountry === "Все" || listingCountry === "Global" ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+            </button>
+            {managedCountries.filter(country => country.code !== "Global" && country.code !== "Все").map(country => {
               const selected = country.code === listingCountry;
               return <button key={country.id} type="button" onClick={() => { setListingCountry(country.code); setListingCity("Все"); setListingCountrySheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${selected ? "border-[#3f8cff]/60 bg-[#3f8cff]/12" : "border-white/8 bg-white/[0.025] hover:bg-white/[0.055]"}`}>
                 <span className="min-w-0 flex-1"><b className="block truncate text-sm text-slate-100">{country.label}</b></span>
                 <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
               </button>;
             })}
+            <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/c/4358714855/2")} className="flex w-full items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-3 text-left text-sm font-medium text-[#a9caff] hover:bg-[#3f8cff]/15">
+              <span>＋ Предложить страну</span><ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </SheetContent>
       </Sheet>
@@ -4365,6 +4376,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${selected ? "border-[#3f8cff] bg-[#3f8cff] text-white" : "border-white/20 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
               </button>;
             })}
+            <button type="button" onClick={() => openTelegramInNewBrowserTab("https://t.me/c/4358714855/2")} className="flex w-full items-center justify-between rounded-xl border border-[#3f8cff]/25 bg-[#3f8cff]/8 px-3 py-3 text-left text-sm font-medium text-[#a9caff] hover:bg-[#3f8cff]/15">
+              <span>＋ Предложить категорию</span><ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </SheetContent>
       </Sheet>
@@ -4568,9 +4582,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <SelectTrigger className="h-11 w-full rounded-xl border-white/10 bg-[#0b0f14] text-sm text-slate-200">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
-                  {managedCountries.map(item => <SelectItem key={item.id} value={item.code} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{item.label}</SelectItem>)}
-                </SelectContent>
+                  <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
+                    <SelectItem value="Все" className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">Весь мир</SelectItem>
+                    {managedCountries.filter(item => item.code !== "Global" && item.code !== "Все").map(item => <SelectItem key={item.id} value={item.code} className="text-sm text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{item.label}</SelectItem>)}
+                  </SelectContent>
               </Select>
             </section>
 
