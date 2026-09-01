@@ -1211,3 +1211,4 @@
 
 - [ ] Декомпозиция Home.tsx: вынести чистые owner-workspace/profile/admin секции в отдельные компоненты без изменения поведения и контрактов.
 - [x] Декомпозиция Home.tsx, подшаг: вынести чистый NftShowcase в `client/src/components/tgtop/NftShowcase.tsx`; сохранить вызовы в detail/profile без изменения поведения; targeted Vitest 3 passed, TypeScript passed.
+- [x] Декомпозиция Home.tsx, подшаг: вынести чистый NftCard в отдельный компонент без изменения NFT rental flow. Added `client/src/components/tgtop/NftCard.tsx` and regression test; targeted Vitest 4 passed, TypeScript passed.
