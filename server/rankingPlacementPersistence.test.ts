@@ -27,9 +27,11 @@ describe("ranking placement persistence", () => {
 
   it("places a fresh 0.1 GRAM listing above older equal-price entries in the automatic listing path", () => {
     const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
-    expect(source).toContain("const incomingEntries = groupsNeedingListing.map(group => ({");
+    expect(source).toContain("const incomingIds = new Set(groups.map(group => group.id));");
+    expect(source).toContain("const incomingEntries = groups.map(group => ({");
     expect(source).toContain("const rankedEntries = assignRankingEntriesToSlots([");
-    expect(source).toContain("...board.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt }))");
+    expect(source).toContain("const boardEntries = board.filter(slot => slot.groupId !== null).map(slot => {");
+    expect(source).toContain("heldSince: slot.groupId !== null && incomingIds.has(slot.groupId) ? now : slot.updatedAt");
     expect(source).toContain("heldSince: now,");
   });
 

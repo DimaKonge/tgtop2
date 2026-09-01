@@ -2819,7 +2819,25 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       eq(auctionSlots.country, "Global")
     )).orderBy(asc(auctionSlots.slotNumber));
     const now = new Date();
-    const incomingEntries = groupsNeedingListing.map(group => ({
+    // Saving listing settings is also a fresh placement event for the selected groups.
+    // Otherwise an already-listed group keeps its old slot timestamp and remains in the middle.
+    const incomingIds = new Set(groups.map(group => group.id));
+    const groupById = new Map(groups.map(group => [group.id, group]));
+    const boardEntries = board.filter(slot => slot.groupId !== null).map(slot => {
+      const group = slot.groupId ? groupById.get(slot.groupId) : undefined;
+      return {
+        ...slot,
+        groupId: slot.groupId,
+        bidAmount: slot.bidAmount || 100,
+        currentBid: slot.currentBid || "0.1 GRAM",
+        leaderUsername: slot.leaderUsername || group?.username || group?.title || "-",
+        leaderUserId: slot.leaderUserId || group?.ownerOpenId || null,
+        title: slot.title || group?.title || "Сообщество",
+        subtitle: slot.subtitle || (group?.username ? `@${group.username}` : group?.category || "Сообщество"),
+        heldSince: slot.groupId !== null && incomingIds.has(slot.groupId) ? now : slot.updatedAt,
+      };
+    });
+    const incomingEntries = groups.map(group => ({
       groupId: group.id,
       bidAmount: 100,
       currentBid: "0.1 GRAM",
@@ -2829,10 +2847,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       subtitle: group.username ? `@${group.username}` : group.category,
       heldSince: now,
     }));
-    const rankedEntries = assignRankingEntriesToSlots([
-      ...board.filter(slot => slot.groupId !== null).map(slot => ({ ...slot, heldSince: slot.updatedAt })),
-      ...incomingEntries,
-    ], board);
+    const rankedEntries = assignRankingEntriesToSlots([...boardEntries, ...incomingEntries], board);
     for (let index = 0; index < board.length; index += 1) {
       const slot = board[index];
       const source = rankedEntries[index];
