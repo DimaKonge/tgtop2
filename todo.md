@@ -1204,3 +1204,10 @@
 - [x] Вернуть «＋ Добавить категорию» в нижнюю часть каждого category Select и показать ясное сообщение для приватной topic-ссылки, если пользователь не состоит в чате.
 
 - [x] Заменить proposal link во всех Geo/category кнопках на https://t.me/TGTOP_Owner/2, проверить отсутствие старой приватной ссылки и исправить JSX regression. Live rollout confirmed 2026-09-01.
+
+- [ ] Медиа-пакет: генерация сторис 01 launch — `/manus-storage/tgtop-story-01-launch_10d71957.png`.
+- [ ] Медиа-пакет: генерация сторис 02 listing — `/manus-storage/tgtop-story-02-listing_29771868.png`.
+- [ ] Медиа-пакет: генерация сторис 03 feedback — `/manus-storage/tgtop-story-03-feedback_93b5e591.png`.
+
+- [ ] Декомпозиция Home.tsx: вынести чистые owner-workspace/profile/admin секции в отдельные компоненты без изменения поведения и контрактов.
+- [x] Декомпозиция Home.tsx, подшаг: вынести чистый NftShowcase в `client/src/components/tgtop/NftShowcase.tsx`; сохранить вызовы в detail/profile без изменения поведения; targeted Vitest 3 passed, TypeScript passed.
