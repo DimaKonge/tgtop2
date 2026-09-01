@@ -1435,7 +1435,8 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
     }
     await tx.update(groupsCatalog).set({
       status: "listed",
-      listedAt: group.listedAt ?? now,
+      // A paid placement is a fresh listing event; keep the catalog order aligned with the ranking reorder.
+      listedAt: now,
       ...(options?.anonymousListing !== undefined ? { anonymousListing: options.anonymousListing } : {}),
       ...(options?.showOwnerContact !== undefined ? { showOwnerContact: options.showOwnerContact } : {}),
       ...(options?.managerPublic !== undefined ? { managerPublic: options.managerPublic } : {}),

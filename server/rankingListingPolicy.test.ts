@@ -15,7 +15,7 @@ describe("TOP ranking listing consistency", () => {
     const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
     expect(source).toContain("if (!canEnterTopRanking(group.status))");
     expect(source).toContain('status: "listed",');
-    expect(source).toContain("listedAt: group.listedAt ?? now");
+    expect(source).toContain("listedAt: now,");
     expect(source).toContain("const targetGroupsForAnnouncement = groupsNeedingListing;");
   });
 });
