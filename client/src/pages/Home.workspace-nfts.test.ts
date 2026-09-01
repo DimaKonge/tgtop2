@@ -4,8 +4,9 @@ import { describe, expect, it } from "vitest";
 describe("TG TOP workspace wallet NFT view", () => {
   it("keeps communities, bots and wallet NFTs as distinct workspace sections", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    const domainSource = readFileSync(new URL("../lib/tgTop-domain.ts", import.meta.url), "utf8");
 
-    expect(source).toContain('type WorkspaceSection = "communities" | "bots" | "nft"');
+    expect(domainSource).toContain('export type WorkspaceSection = "communities" | "bots" | "nft"');
     expect(source).toContain('["communities", tx("Сообщества", "Communities"), Users]');
     expect(source).toContain('["bots", tx("Боты", "Bots"), Bot]');
     expect(source).toContain('["nft", "NFT", Gift]');
