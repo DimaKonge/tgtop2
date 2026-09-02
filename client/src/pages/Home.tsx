@@ -209,7 +209,7 @@ function SortableMyGroupTile({
       aria-label={selectionMode ? (isEnglish ? `Select ${group.title}` : `Выбрать ${group.title}`) : (isEnglish ? `${group.title}. Hold to select or drag the handle to reorder.` : `${group.title}. Удерживайте для выбора или тяните за ручку для изменения порядка.`)}
       className={`group relative aspect-square min-w-0 touch-manipulation overflow-hidden rounded-xl border border-white/8 bg-[#111720] shadow-sm transition-[opacity,transform,border-color,box-shadow] ${selected ? "border-[#72a8ff]/70 ring-2 ring-[#3f8cff]/35" : ""} ${isDragging ? "z-20 scale-[.96] border-[#72a8ff]/60 bg-[#182334] opacity-30" : ""}`}
     >
-      <FullBleedGroupArtwork group={group} />
+      <FullBleedGroupArtwork group={group} allowAnimatedMedia />
       <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,9,15,.05)_18%,rgba(5,9,15,.28)_45%,rgba(5,9,15,.92)_100%)]" />
       <button type="button" onPointerDown={beginSelectionHold} onPointerUp={clearSelectionHold} onPointerCancel={clearSelectionHold} onPointerLeave={clearSelectionHold} onClick={() => { clearSelectionHold(); if (selectionTriggered.current) { selectionTriggered.current = false; return; } if (selectionMode) onSelect(); else onOpen(); }} className="relative z-10 flex h-full w-full flex-col justify-end p-2.5 text-left">
         <span className="min-w-0 w-full">
@@ -3265,7 +3265,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div className="mt-3 flex items-start gap-3">
                     <div className="relative shrink-0">
                       <button type="button" onClick={openRewardAwareEntry} disabled={resolveVerifiedEntryLink.isPending || createRewardInviteLink.isPending} className="rounded-[22px] transition-transform active:scale-[0.98] disabled:cursor-default">
-                        <Avatar group={detail.group} hero />
+                        <Avatar group={detail.group} hero allowAnimatedMedia />
                       </button>
                       <span className={`absolute bottom-1 right-1 inline-flex items-center gap-0.5 whitespace-nowrap text-[8px] font-medium leading-none ${dailyGrowthPct !== null && dailyGrowthPct < 0 ? "text-rose-300/75" : "text-emerald-300/75"}`}>
                         {dailyGrowthPct !== null && dailyGrowthPct < 0 ? <TrendingDown className="h-2 w-2" /> : <TrendingUp className="h-2 w-2" />}{dailyGrowthPct !== null && dailyGrowthPct > 0 ? "+" : ""}{dailyGrowthPct !== null ? `${dailyGrowthPct.toFixed(1)}%` : "0%"}
