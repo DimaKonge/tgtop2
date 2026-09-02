@@ -1253,3 +1253,7 @@
 
 - [x] Подготовить обновлённый прозрачный Telegram video sticker: 512×512, полная золотая пирамида в первом кадре, затем безпаузы loop, WebM VP9 alpha, без аудио. 75,757 bytes, 2 секунды, 30 fps; alpha подтверждён Chromium preview.
 - [x] Подготовить прозрачный Telegram video emoji: ровно 100×100, та же золотая анимация, полная пирамида в первом кадре, WebM VP9 alpha, без аудио. 21,907 bytes, 2 секунды, 30 fps; масштаб и alpha проверены Chromium preview.
+
+- [ ] Readiness-аудит перед тестированием: проверить production smoke для сайта, Telegram Mini App, onboarding через @TGTOP_robot, My Groups и защищённой мутации; записать результаты.
+- [ ] Readiness-аудит: проверить наличие обязательных production auth/config настроек, HTTPS/Mini App origin и отсутствие блокирующих runtime/build ошибок.
+- [x] Readiness-аудит: классифицировать незакрытые задачи как blocker для тестирования, blocker для публичного трафика или post-MVP; исправить только подтверждённые критические дефекты. Результаты записаны в `READINESS_AUDIT_RU.md`; устаревшая проверка NftShowcase исправлена, полный gate восстановлен.
