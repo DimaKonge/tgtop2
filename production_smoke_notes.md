@@ -4,3 +4,7 @@ Production browser smoke on 2026-09-02: https://tgtop.me/ initially showed a bla
 ## 2026-09-02 — public smoke after User API media-sync checkpoint
 
 `tgtop.me` открылся с HTTP 200. Публичный Global отрисовал реальные сообщества и featured/general states; для карточек без animated snapshot виден штатный Telegram-avatar/fallback. В проверке намеренно не запускались Telegram authorization, protected mutations, listing, payment или User API login, поэтому live onboarding и фактическая загрузка profile video остаются отдельным ручным smoke-пунктом.
+
+2026-09-02 live rollout follow-up: VPS accepted deploy key, current frontend was rebuilt locally from GitHub source and static assets copied to /opt/tgtop with a backup. tgtop.service is active; https://tgtop.me/ and tgTop.getSlots return HTTP 200 after restart. Browser smoke shows the upper TG TOP control has aria-label "Открыть главную страницу TG TOP" and is clickable; the real catalog contains Market as the second featured card. The first immediate build attempt failed only because the older VPS checkout lacked shared frontend files, so the complete local dist/public build was used while preserving the existing server/runtime.
+
+Live DOM verification after rollout: the `header button` labeled TG TOP has aria-label `Открыть главную страницу TG TOP`, contains the shared seven-rectangle SVG pyramid, and the bottom navigation still exposes `ТОП` unchanged. This confirms the upper logo/home behavior is live, not only present in local source.

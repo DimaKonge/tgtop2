@@ -239,9 +239,9 @@ function BrandMark() {
   return (
     <span
       aria-label="TG TOP"
-      className="brand-mark grid h-8 w-8 place-items-center rounded-[9px] border border-[#354966] bg-[#17212b] text-[12px] font-bold tracking-[-0.08em] text-slate-100"
+      className="brand-mark grid h-8 w-8 place-items-center rounded-[9px] border border-[#354966] bg-[#17212b] text-amber-300"
     >
-      T
+      <TgTopPyramidIcon className="h-[18px] w-[25px]" />
     </span>
   );
 }
@@ -1804,7 +1804,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     typeof window !== "undefined"
       ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
       : undefined;
-  const displayUserAvatar = telegramAvatar ?? user?.avatarUrl;
+  const telegramAvatarVersion =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.Telegram?.WebApp?.initData ?? "").get("auth_date")
+      : null;
+  const displayUserAvatar = telegramAvatar
+    ? `${telegramAvatar}${telegramAvatar.includes("?") ? "&" : "?"}tgtop_avatar=${encodeURIComponent(telegramAvatarVersion ?? "current")}`
+    : user?.avatarUrl;
   const selectedSlot = detail
     ? detailSlots.find(slot => slot.group?.id === detail.group.id)
     : undefined;

@@ -1283,3 +1283,14 @@
 - [x] Expose owner-scoped group media refresh through tRPC with rate limiting and safe fallback behavior
 - [x] Enable animated video avatar rendering in community cards with static/fallback support
 - [x] Add Vitest coverage for media snapshot eligibility and refresh procedure guards
+
+- [x] Fix visible TG TOP header logo so the actual branded pyramid/asset appears instead of the old letter mark or missing symbol
+- [ ] Fix live Telegram user avatar refresh after re-login or avatar change by invalidating stale cached session data and proving the fresh photo_url path
+
+- [x] Put the TG TOP cube logo directly to the left of the `TG TOP` text in the top header, using the branded pyramid/cube asset at compact header size
+
+- [x] Keep the bottom home/navigation button unchanged; place the branded cube logo only in the upper header immediately before `TG TOP`
+
+- [ ] Show the saved Telegram profile video in the second featured lot (`Market`) with muted loop playback and static/avatar fallback
+
+- [ ] Apply the header/logo, Telegram user-avatar refresh, and Market second-lot video fixes to the live `tgtop.me` deployment that contains the real listed catalog
