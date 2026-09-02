@@ -1,1 +1,6 @@
 Production browser smoke on 2026-09-02: https://tgtop.me/ initially showed a blank loading viewport, then completed loading. Browser extraction showed title `TG TOP — каталог Telegram-групп и каналов`, public Global screen, `Все сообщества · Весь мир 8`, category toggles, search/geo/category controls, multiple real community cards including `TG TOP chat`, `o_a_th`, `TG TOP`, and the Telegram login button. No blocking browser-console error was observed during the check. HTTPS curl checks: tgtop.me, tgtop.xyz, and www.tgtop.xyz all resolved successfully; .xyz variants followed to https://tgtop.me/ with HTTP 200.
+
+
+## 2026-09-02 — public smoke after User API media-sync checkpoint
+
+`tgtop.me` открылся с HTTP 200. Публичный Global отрисовал реальные сообщества и featured/general states; для карточек без animated snapshot виден штатный Telegram-avatar/fallback. В проверке намеренно не запускались Telegram authorization, protected mutations, listing, payment или User API login, поэтому live onboarding и фактическая загрузка profile video остаются отдельным ручным smoke-пунктом.

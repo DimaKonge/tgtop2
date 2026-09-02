@@ -17,7 +17,7 @@ import { telegramUserAgentRouter } from "./routers/telegramUserAgentRouter";
 import { financeProcedures } from "./routers/financeRouter";
 import { supportRouter } from "./routers/supportRouter";
 import { getTelegramIdFromOpenId } from "./onboardingIntentPolicy";
-import { canRefreshGroupMediaSnapshot, shouldPersistAnimatedAvatar } from "./groupMediaSnapshotPolicy";
+import { canRefreshGroupMediaSnapshot, shouldUpdateAnimatedAvatarSnapshot } from "./groupMediaSnapshotPolicy";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -27,7 +27,7 @@ const MEDIA_REFRESH_COOLDOWN_MS = 10 * 60_000;
 async function refreshListedGroupMediaSnapshot(group: { id: number; chatId: string }) {
   try {
     const result = await fetchTelegramGroupProfileMedia(group.chatId, group.id);
-    if (!shouldPersistAnimatedAvatar(result.mediaType, result.reason)) return;
+    if (!shouldUpdateAnimatedAvatarSnapshot(result.mediaType, result.reason)) return;
     await db.updateGroupAnimatedAvatarSnapshot(group.id, {
       animatedAvatarKey: result.animatedAvatarKey,
       animatedAvatarUrl: result.animatedAvatarUrl,
@@ -199,7 +199,7 @@ export const appRouter = router({
         }
         mediaRefreshCooldowns.set(cooldownKey, Date.now());
         const result = await fetchTelegramGroupProfileMedia(group.chatId, group.id);
-        if (!shouldPersistAnimatedAvatar(result.mediaType, result.reason)) return { ...result, refreshed: false };
+        if (!shouldUpdateAnimatedAvatarSnapshot(result.mediaType, result.reason)) return { ...result, refreshed: false };
         const saved = await db.updateGroupAnimatedAvatarSnapshot(group.id, {
           animatedAvatarKey: result.animatedAvatarKey,
           animatedAvatarUrl: result.animatedAvatarUrl,
