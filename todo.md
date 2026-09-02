@@ -1294,3 +1294,7 @@
 - [ ] Show the saved Telegram profile video in the second featured lot (`Market`) with muted loop playback and static/avatar fallback
 
 - [ ] Apply the header/logo, Telegram user-avatar refresh, and Market second-lot video fixes to the live `tgtop.me` deployment that contains the real listed catalog
+
+- [x] Remove the entire Telegram statistics history section from the Worker Telegram Account sheet; keep only connection status, owner DM binding, and disconnect controls
+- [x] Fix reconnect flow so a successful Telegram code/2FA confirmation persists the connected session and keeps the sheet on the Read-only state instead of returning to the connect form
+- [x] Fix light-theme upper TG TOP logo palette so the compact header mark uses the branded warm-gold cubes instead of blue/black blocks

@@ -553,7 +553,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('avatarSrc={leadSlot.group ? getTelegramAvatarSrc(leadSlot.group) : null}');
     expect(source).not.toContain('bidAmount={leadSlot.bidAmount}');
     expect(source).not.toContain('slotNumber={leadSlot.slotNumber}');
-    expect(source).toContain('place-items-center rounded-[9px] border border-[#354966] bg-[#17212b]');
+    expect(source).toContain('text-[#f5b84b] shadow-[0_0_14px_rgba(245,184,75,0.16)]');
+    expect(source).toContain('style={{ color: "#f5b84b" }}');
     expect(domainSource).toContain('export const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const');
     expect(domainSource).toContain('PL: { ru: "Польша", en: "Poland" }');
     expect(domainSource).toContain('DE: { ru: "Германия", en: "Germany" }');

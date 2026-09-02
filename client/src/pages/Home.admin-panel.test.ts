@@ -47,10 +47,8 @@ describe("TG TOP admin panel", () => {
     expect(chartPanelsSource).toContain('if (label === "Left") return "#f26667"');
     expect(chartPanelsSource).toContain("Telegram не отдал этот график за выбранный период.");
     expect(chartPanelsSource).toContain("const bucketGraph =");
-    expect(source).toContain('title="Уведомления"');
-    expect(source).toContain('title="Языки аудитории"');
-    expect(source).toContain('title="Реакции"');
-    expect(source).toContain('title="Источники новых подписчиков"');
-    expect(source).toContain('showLatest={false}');
+    expect(source).not.toContain('История статистики Telegram');
+    expect(source).not.toContain('getHistoricalStats.useQuery');
+    expect(source).not.toContain('allowHistoricalStatsTarget.useMutation');
   });
 });
