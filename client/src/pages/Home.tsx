@@ -739,6 +739,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     enabled: isAuthenticated,
   });
   const mine = (mineQuery.data ?? []) as Group[];
+  const autoMediaRefreshIssuedRef = useRef(false);
+  const refreshMyGroupMediaMutation = trpc.tgTop.refreshMyGroupMedia.useMutation({
+    onSuccess: () => {
+      void mineQuery.refetch();
+    },
+  });
+  useEffect(() => {
+    if (page !== "mine") {
+      autoMediaRefreshIssuedRef.current = false;
+      return;
+    }
+    if (!isAuthenticated || !mineQuery.isFetched || autoMediaRefreshIssuedRef.current) return;
+    autoMediaRefreshIssuedRef.current = true;
+    mine.filter(group => !["listed", "rented"].includes(group.status)).slice(0, 20).forEach(group => {
+      refreshMyGroupMediaMutation.mutate({ groupId: group.id, forceListedRefresh: false });
+    });
+  }, [isAuthenticated, mine, mineQuery.isFetched, page]);
   const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list");
   const [myGroupsLayout, setMyGroupsLayout] = useState<Group[]>([]);
   const [myGroupsStatusFilter, setMyGroupsStatusFilter] = useState<"all" | "listed" | "unlisted">("all");

@@ -1269,3 +1269,17 @@
 - [ ] Исправить верхний аватар TG TOP в Mini App: показывать фирменный брендовый ассет вместо буквенного `T`, сохранить безопасный fallback при недоступности ассета и добавить regression check.
 
 - [x] Исправить синхронизацию пользовательского Telegram-аватара: при каждом валидированном Mini App запуске обновлять `photo_url`, инвалидировать устаревший cache и показывать новый аватар в верхней панели/профиле. Свежий `initDataUnsafe.user.photo_url` теперь имеет приоритет над session avatar; regression test, TypeScript и build прошли.
+
+- [ ] Убрать буквенный `T` из avatar fallback сайта: при отсутствии Telegram-фото показывать фирменную пирамиду TG TOP из кубиков с палитрой текущей темы, а не инициалы пользователя.
+
+- [x] Для подключённых групп и каналов вне листинга обновлять Telegram-аватар при каждом открытии My Groups/приложения; листинговые snapshots и платёжные операции не менять.
+
+- [x] Вернуть отображение динамических видеоаватаров подключённых групп/каналов на платформе: показывать сохранённый MP4 в карточках и деталях с lazy/muted/playsInline playback, не менять listing snapshot без нового листинга, использовать Telegram photo/фирменные кубики как fallback и добавить regression coverage.
+
+- [x] Автоматически получать доступные фото/видеоаватары подключённых групп через существующий User API, сохранять медиа в storage и показывать видео в TG TOP; для listing сохранять snapshot до смены места/повторного листинга, для unlisted обновлять при открытии, добавить лимиты и fallback.
+
+- [x] Add a guarded User API media sync helper for Telegram group/channel profile photo/video
+- [x] Persist animated media snapshots only for unlisted groups or explicit listing refreshes
+- [x] Expose owner-scoped group media refresh through tRPC with rate limiting and safe fallback behavior
+- [x] Enable animated video avatar rendering in community cards with static/fallback support
+- [x] Add Vitest coverage for media snapshot eligibility and refresh procedure guards

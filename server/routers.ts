@@ -6,6 +6,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyCommunityRemovedFromTop, notifyRecordedRankingBid } from "./telegramNotifications";
 import { getTelegramChatGifts, getTelegramGroupAdministrators, getTelegramUserAvatarUrl, resolveVerifiedGroupEntryLink } from "./telegramBot";
+import { fetchTelegramGroupProfileMedia } from "./telegramUserAgent";
 import { formatTonAmount } from "./tonFormatting";
 import { getWalletNfts } from "./tonNft";
 import { canCreateNftListing } from "./nftOwnershipPublicationPolicy";
@@ -16,9 +17,26 @@ import { telegramUserAgentRouter } from "./routers/telegramUserAgentRouter";
 import { financeProcedures } from "./routers/financeRouter";
 import { supportRouter } from "./routers/supportRouter";
 import { getTelegramIdFromOpenId } from "./onboardingIntentPolicy";
+import { canRefreshGroupMediaSnapshot, shouldPersistAnimatedAvatar } from "./groupMediaSnapshotPolicy";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
+const mediaRefreshCooldowns = new Map<string, number>();
+const MEDIA_REFRESH_COOLDOWN_MS = 10 * 60_000;
+
+async function refreshListedGroupMediaSnapshot(group: { id: number; chatId: string }) {
+  try {
+    const result = await fetchTelegramGroupProfileMedia(group.chatId, group.id);
+    if (!shouldPersistAnimatedAvatar(result.mediaType, result.reason)) return;
+    await db.updateGroupAnimatedAvatarSnapshot(group.id, {
+      animatedAvatarKey: result.animatedAvatarKey,
+      animatedAvatarUrl: result.animatedAvatarUrl,
+    });
+  } catch (error) {
+    console.warn(`[Media] Snapshot refresh skipped for group ${group.id}`, error);
+  }
+}
+
 const groupListingInput = z.object({
   salePriceTon: gramAmount.nullable().optional(),
   country: z.string().trim().min(2).max(64).optional(),
@@ -166,6 +184,28 @@ export const appRouter = router({
     myGroups: protectedProcedure.query(async ({ ctx }) => {
       return await db.getMyGroups(ctx.user.openId);
     }),
+    refreshMyGroupMedia: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive(), forceListedRefresh: z.boolean().default(false) }))
+      .mutation(async ({ ctx, input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.ownerOpenId !== ctx.user.openId) throw new Error("Сообщество недоступно для обновления media");
+        if (!canRefreshGroupMediaSnapshot(group.status, input.forceListedRefresh)) {
+          return { groupId: group.id, refreshed: false, skipped: "listed_snapshot" as const };
+        }
+        const cooldownKey = `${ctx.user.openId}:${group.id}`;
+        const lastRefreshAt = mediaRefreshCooldowns.get(cooldownKey) ?? 0;
+        if (!input.forceListedRefresh && Date.now() - lastRefreshAt < MEDIA_REFRESH_COOLDOWN_MS) {
+          return { groupId: group.id, refreshed: false, skipped: "cooldown" as const };
+        }
+        mediaRefreshCooldowns.set(cooldownKey, Date.now());
+        const result = await fetchTelegramGroupProfileMedia(group.chatId, group.id);
+        if (!shouldPersistAnimatedAvatar(result.mediaType, result.reason)) return { ...result, refreshed: false };
+        const saved = await db.updateGroupAnimatedAvatarSnapshot(group.id, {
+          animatedAvatarKey: result.animatedAvatarKey,
+          animatedAvatarUrl: result.animatedAvatarUrl,
+        });
+        return { ...result, refreshed: true, group: saved };
+      }),
     getGroupAdministrators: protectedProcedure
       .input(z.object({ groupId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
@@ -409,6 +449,7 @@ export const appRouter = router({
           listingType: group.listingType,
           salePriceTon: group.salePriceTon,
         })));
+        void Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group))).catch(() => undefined);
         return { success: true, announced: countSuccessfulTelegramAnnouncements(deliveries) };
       }),
 
@@ -423,6 +464,7 @@ export const appRouter = router({
           listingType: group.listingType,
           salePriceTon: group.salePriceTon,
         })));
+        void Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group))).catch(() => undefined);
         return { success: true, announced: countSuccessfulTelegramAnnouncements(deliveries) };
       }),
 
