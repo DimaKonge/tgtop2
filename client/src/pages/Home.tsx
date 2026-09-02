@@ -304,9 +304,9 @@ function BrandMark() {
   return (
     <span
       aria-label="TG TOP"
-      className="brand-mark grid h-8 w-8 place-items-center rounded-[9px] border border-[#354966] bg-[#17212b] text-[12px] font-bold tracking-[-0.08em] text-slate-100"
+      className="brand-mark grid h-8 w-8 place-items-center rounded-[9px] border border-[#354966] bg-[#17212b] text-amber-300"
     >
-      T
+      <TgTopPyramidIcon className="h-[18px] w-[25px]" />
     </span>
   );
 }
@@ -1852,6 +1852,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     typeof window !== "undefined"
       ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
       : undefined;
+  const telegramAvatarVersion =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.Telegram?.WebApp?.initData ?? "").get("auth_date")
+      : null;
+  const displayUserAvatar = telegramAvatar
+    ? `${telegramAvatar}${telegramAvatar.includes("?") ? "&" : "?"}tgtop_avatar=${encodeURIComponent(telegramAvatarVersion ?? "current")}`
+    : user?.avatarUrl;
   const selectedSlot = detail
     ? detailSlots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
@@ -2503,7 +2510,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0b0f14]/95 px-4 py-2.5 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <button
+            type="button"
             onClick={() => setPage("top")}
+            aria-label="Открыть главную страницу TG TOP"
+            title="На главную"
             className="flex shrink-0 items-center gap-2"
           >
             <BrandMark />
@@ -2534,9 +2544,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               >
                 <span className="grid h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold">
                   <>
-                    {(user?.avatarUrl ?? telegramAvatar) ? (
+                    {displayUserAvatar ? (
                       <img
-                        src={user?.avatarUrl ?? telegramAvatar}
+                        src={displayUserAvatar}
                         alt=""
                         className="h-full w-full object-cover"
                       />
@@ -3836,9 +3846,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <div className="tg-clean-surface rounded-2xl border border-white/8 bg-[#111720] p-5 shadow-[0_10px_28px_rgba(2,8,16,0.14)]">
               <div className="flex items-center gap-3">
                 <span className="grid h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold">
-                  {(user?.avatarUrl ?? telegramAvatar) ? (
+                  {displayUserAvatar ? (
                     <img
-                      src={user?.avatarUrl ?? telegramAvatar}
+                      src={displayUserAvatar}
                       alt=""
                       className="h-full w-full object-cover"
                     />

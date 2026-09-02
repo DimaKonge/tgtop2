@@ -18,7 +18,9 @@ export function useAuth(options?: UseAuthOptions) {
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    refetchInterval: typeof window !== "undefined" && window.Telegram?.WebApp?.initData ? 60_000 : false,
+    refetchIntervalInBackground: false,
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({
