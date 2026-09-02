@@ -103,7 +103,7 @@ describe("TG TOP Telegram catalog onboarding", () => {
     const source = readFileSync(new URL("./telegramBot.ts", import.meta.url), "utf8");
     expect(source).not.toContain("Откройте каталог по приглашению");
     expect(source).toContain('source: attributed ? "referral" : "direct"');
-    expect(source).toContain("Добро пожаловать в TG TOP — каталог Telegram-сообществ");
+    expect(source).toContain("Добро пожаловать в TG TOP — рейтинг Telegram-сообществ и других активов");
   });
 
   it("sends the selected TGTOP16 sticker before the welcome text", () => {
@@ -114,7 +114,7 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(source).toContain("includeWelcomeSticker = false");
     expect(stickerIndex).toBeGreaterThan(-1);
     expect(textIndex).toBeGreaterThan(stickerIndex);
-    expect(source).toContain("openMiniApp(message.chat.id, \"Добро пожаловать в TG TOP");
+    expect(source).toContain("openMiniApp(message.chat.id, \"Добро пожаловать в TG TOP — рейтинг Telegram-сообществ и других активов");
   });
 
   it("reduces Telegram polling failures to a safe API summary without request internals", () => {

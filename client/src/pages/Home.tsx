@@ -1787,6 +1787,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     typeof window !== "undefined"
       ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
       : undefined;
+  const displayUserAvatar = telegramAvatar ?? user?.avatarUrl;
   const selectedSlot = detail
     ? detailSlots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
@@ -2469,9 +2470,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               >
                 <span className="grid h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold">
                   <>
-                    {(user?.avatarUrl ?? telegramAvatar) ? (
+                    {displayUserAvatar ? (
                       <img
-                        src={user?.avatarUrl ?? telegramAvatar}
+                        src={displayUserAvatar}
                         alt=""
                         className="h-full w-full object-cover"
                       />
@@ -3771,9 +3772,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <div className="tg-clean-surface rounded-2xl border border-white/8 bg-[#111720] p-5 shadow-[0_10px_28px_rgba(2,8,16,0.14)]">
               <div className="flex items-center gap-3">
                 <span className="grid h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold">
-                  {(user?.avatarUrl ?? telegramAvatar) ? (
+                  {displayUserAvatar ? (
                     <img
-                      src={user?.avatarUrl ?? telegramAvatar}
+                      src={displayUserAvatar}
                       alt=""
                       className="h-full w-full object-cover"
                     />

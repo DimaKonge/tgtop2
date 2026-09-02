@@ -925,10 +925,10 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
         referrer,
       }));
     }
-    await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — каталог Telegram-сообществ. Откройте приложение, чтобы начать.", true);
+    await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — рейтинг Telegram-сообществ и других активов. Откройте приложение, чтобы начать.", true);
     return;
   }
-  await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — каталог Telegram-сообществ. Откройте приложение, чтобы начать.");
+  await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — рейтинг Telegram-сообществ и других активов. Откройте приложение, чтобы начать.");
 }
 
 function getTelegramPollingErrorSummary(error: unknown): string {
