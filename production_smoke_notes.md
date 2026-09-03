@@ -16,3 +16,5 @@ Live DOM verification after rollout: the `header button` labeled TG TOP has aria
 - Uploaded snapshot: `/manus-storage/telegram/group-media/8-1788401052778.mp4`; only `animatedAvatarKey`, `animatedAvatarUrl`, and `animatedAvatarUpdatedAt` were changed for that group.
 - Live frontend bundle contains `animatedAvatarUrl`, muted/loop/playsInline video playback, and fallback handlers. Temporary diagnostic/sync scripts were removed from the VPS after completion.
 - Remaining live verification is visual confirmation from the user's Telegram client after reopening Global; no placeholder or unrelated media was substituted.
+
+Live browser verification on 2026-09-03: the Market featured card contains a `<video>` element with source `/manus-storage/telegram/group-media/8-1788401052778.mp4`, `readyState=4`, and `paused=false`. The live DOM therefore confirms that the real Market profile video is loaded and playing in the second featured lot. Poster fallback remains the Telegram avatar endpoint.
