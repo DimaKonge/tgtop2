@@ -1306,3 +1306,5 @@
 
 - [x] Add a dedicated read-only GitHub deploy key for VPS access without deleting or resetting the existing `/opt/tgtop` checkout
 - [x] Verify VPS can read `DimaKonge/tgtop2` before preparing any staged release
+
+- [x] Keep featured and My Groups media-overlay titles/meta readable in light theme with explicit overlay classes, while preserving the unchanged bottom navigation

@@ -212,9 +212,9 @@ function SortableMyGroupTile({
       <FullBleedGroupArtwork group={group} allowAnimatedMedia />
       <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,9,15,.05)_18%,rgba(5,9,15,.28)_45%,rgba(5,9,15,.92)_100%)]" />
       <button type="button" onPointerDown={beginSelectionHold} onPointerUp={clearSelectionHold} onPointerCancel={clearSelectionHold} onPointerLeave={clearSelectionHold} onClick={() => { clearSelectionHold(); if (selectionTriggered.current) { selectionTriggered.current = false; return; } if (selectionMode) onSelect(); else onOpen(); }} className="relative z-10 flex h-full w-full flex-col justify-end p-2.5 text-left">
-        <span className="min-w-0 w-full">
-          <b className="line-clamp-2 text-[11px] leading-3.5 text-white drop-shadow-sm">{group.title}</b>
-          <small className="mt-0.5 block truncate text-[9px] text-slate-300/80">{getCommunityAccessLabel(group, language)}</small>
+        <span className="tg-media-overlay-content min-w-0 w-full">
+          <b className="tg-media-overlay-title line-clamp-2 text-[11px] leading-3.5 text-white drop-shadow-sm">{group.title}</b>
+          <small className="tg-media-overlay-meta mt-0.5 block truncate text-[9px] text-slate-300/80">{getCommunityAccessLabel(group, language)}</small>
         </span>
       </button>
       {status && <span className={`absolute right-0 top-1 z-10 max-w-[76%] truncate border-b border-l px-2.5 pb-1 pt-1 text-[7px] font-semibold leading-none shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${statusClass}`}>{status}</span>}
