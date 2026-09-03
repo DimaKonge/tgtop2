@@ -1298,3 +1298,8 @@
 - [x] Remove the entire Telegram statistics history section from the Worker Telegram Account sheet; keep only connection status, owner DM binding, and disconnect controls
 - [x] Fix reconnect flow so a successful Telegram code/2FA confirmation persists the connected session and keeps the sheet on the Read-only state instead of returning to the connect form
 - [x] Fix light-theme upper TG TOP logo palette so the compact header mark uses the branded warm-gold cubes instead of blue/black blocks
+
+- [ ] Replace the stale live Telegram bundle/server deployment so the actual `tgtop.me` build removes Worker Account historical stats and renders the Market profile video instead of the old static image
+- [ ] Verify the live Telegram WebApp after cache-busting/restart, including top cube-logo, user avatar refresh, Worker Account sheet, and Market video
+
+- [x] Use the confirmed VPS deploy access to inspect the actual service/build/branch and prepare a safe rollout package for the stale live bundle without changing database or S3 data
