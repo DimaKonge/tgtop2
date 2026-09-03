@@ -1303,3 +1303,6 @@
 - [ ] Verify the live Telegram WebApp after cache-busting/restart, including top cube-logo, user avatar refresh, Worker Account sheet, and Market video
 
 - [x] Use the confirmed VPS deploy access to inspect the actual service/build/branch and prepare a safe rollout package for the stale live bundle without changing database or S3 data
+
+- [x] Add a dedicated read-only GitHub deploy key for VPS access without deleting or resetting the existing `/opt/tgtop` checkout
+- [x] Verify VPS can read `DimaKonge/tgtop2` before preparing any staged release
