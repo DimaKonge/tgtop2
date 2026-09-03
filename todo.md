@@ -1291,7 +1291,7 @@
 
 - [x] Keep the bottom home/navigation button unchanged; place the branded cube logo only in the upper header immediately before `TG TOP`
 
-- [ ] Show the saved Telegram profile video in the second featured lot (`Market`) with muted loop playback and static/avatar fallback
+- [x] Show the saved Telegram profile video in the second featured lot (`Market`) with muted loop playback and static/avatar fallback
 
 - [ ] Apply the header/logo, Telegram user-avatar refresh, and Market second-lot video fixes to the live `tgtop.me` deployment that contains the real listed catalog
 
