@@ -1308,3 +1308,7 @@
 - [x] Verify VPS can read `DimaKonge/tgtop2` before preparing any staged release
 
 - [x] Keep featured and My Groups media-overlay titles/meta readable in light theme with explicit overlay classes, while preserving the unchanged bottom navigation
+
+- [x] Identify the exact active and staging release paths on VPS and document one safe activation step without resetting `/opt/tgtop` or touching DB/S3
+
+- [x] Prepare a reviewed activation helper for `/opt/tgtop/releases/stage-22fdf3e` with backup, atomic file swap, service restart, and rollback checks; do not execute it automatically
