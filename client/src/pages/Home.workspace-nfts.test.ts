@@ -12,7 +12,15 @@ const EXTRACTED_HOME_COMPONENTS = [
   "SettingsSheet",
   "BotAvatar",
   "BotRankingTile",
-].map(name => readFileSync(new URL(`../components/${name}.tsx`, import.meta.url), "utf8")).join("\n");
+].map(name => readFileSync(new URL(`../components/${name}.tsx`, import.meta.url), "utf8")).join("\n")
+  + "\n" + [
+    "../lib/ton-format.ts",
+    "../lib/ranking-utils.ts",
+    "../hooks/useTonWallet.ts",
+    "../hooks/useTopFilters.ts",
+    "../hooks/useMyGroups.ts",
+    "../hooks/useRankingAuction.ts",
+  ].map(path => readFileSync(new URL(path, import.meta.url), "utf8")).join("\n");
 
 
 describe("TG TOP workspace wallet NFT view", () => {

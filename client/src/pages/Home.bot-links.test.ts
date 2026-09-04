@@ -58,7 +58,13 @@ describe("TG TOP production bot links", () => {
     const topCard = readFileSync(new URL("../components/TopRankingCard.tsx", import.meta.url), "utf8");
     const artwork = readFileSync(new URL("../components/CommunityArtwork.tsx", import.meta.url), "utf8");
     const compactRow = readFileSync(new URL("../components/CompactCommunityRow.tsx", import.meta.url), "utf8");
-    const source = `${home}\n${topCard}\n${artwork}\n${compactRow}\n${EXTRACTED_HOME_COMPONENTS}`;
+    const tonFormat = readFileSync(new URL("../lib/ton-format.ts", import.meta.url), "utf8");
+    const rankingUtils = readFileSync(new URL("../lib/ranking-utils.ts", import.meta.url), "utf8");
+    const useTonWalletSource = readFileSync(new URL("../hooks/useTonWallet.ts", import.meta.url), "utf8");
+    const useTopFiltersSource = readFileSync(new URL("../hooks/useTopFilters.ts", import.meta.url), "utf8");
+    const useMyGroupsSource = readFileSync(new URL("../hooks/useMyGroups.ts", import.meta.url), "utf8");
+    const useRankingAuctionSource = readFileSync(new URL("../hooks/useRankingAuction.ts", import.meta.url), "utf8");
+    const source = `${home}\n${topCard}\n${artwork}\n${compactRow}\n${tonFormat}\n${rankingUtils}\n${useTonWalletSource}\n${useTopFiltersSource}\n${useMyGroupsSource}\n${useRankingAuctionSource}\n${EXTRACTED_HOME_COMPONENTS}`;
     const styles = readFileSync(new URL("../index.css", import.meta.url), "utf8");
     const chartPanelsSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
 
