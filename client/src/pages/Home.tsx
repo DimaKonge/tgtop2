@@ -76,58 +76,14 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 import lottie from "lottie-web";
 import { CATEGORY_SUBCATEGORIES, CITY_OPTIONS, COUNTRY_LABELS, COUNTRY_OPTIONS, SUBCATEGORY_LABELS, type Audience, type DetailStatsPeriod, type GlobalDirection, type Group, type Language, type ListingCountry, type ListingType, type MyGroupsViewMode, type Nft, type NftDealCategory, type NftMarketCategory, type Page, type PreparedNftTransfer, type ShowcaseNft, type Slot, type TopSection, type WalletNft, type WalletNftFilter, type WorkspaceSection, getRussianLanguage, hasConfiguredRewardCampaign } from "@/lib/tgTop-domain";
-const formatTon = (value: number | string | null | undefined) => {
-  const amount = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
-};
-const formatFinancialGram = (value: number | string | null | undefined) => {
-  const amount = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
-};
-const formatPositionDuration = (updatedAt: Date | string | null | undefined, now: number) => {
-  const startedAt = updatedAt ? new Date(updatedAt).getTime() : now;
-  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
-  const hours = Math.floor(seconds / 3_600);
-  const minutes = Math.floor((seconds % 3_600) / 60);
-  const remainingSeconds = seconds % 60;
-  return [hours, minutes, remainingSeconds].map(value => String(value).padStart(2, "0")).join(":");
-};
-const getRankingFloorGram = (_slotNumber: number) => 0.1;
-const getMinimumRankingBidGram = (slot: Pick<Slot, "slotNumber" | "bidAmount" | "group">) => {
-  const floor = getRankingFloorGram(slot.slotNumber);
-  if (!slot.group) return floor;
-  return Math.max(floor, Math.round((slot.bidAmount / 1000 + 0.1) * 10) / 10);
-};
-const MAX_RANKING_BID_GRAM = 1_000;
-const MAX_RANKING_SLIDER_GRAM = 100;
-const getSimulatedRankingEntries = (slots: Slot[], candidateGroupId: number, candidateCategory: Group["category"], bidAmountGram: number) => {
-  const candidateBid = Math.round(bidAmountGram * 1000);
-  if (!Number.isSafeInteger(candidateBid) || candidateBid <= 0 || candidateBid > MAX_RANKING_BID_GRAM * 1000) return [];
-  const remaining = slots.reduce<Array<{ groupId: number; category: Group["category"]; bidAmount: number; heldSince: Date }>>((entries, slot) => {
-    if (slot.group && slot.group.id !== candidateGroupId) entries.push({ groupId: slot.group.id, category: slot.group.category, bidAmount: slot.bidAmount, heldSince: new Date(slot.updatedAt ?? 0) });
-    return entries;
-  }, []).concat({ groupId: candidateGroupId, category: candidateCategory, bidAmount: candidateBid, heldSince: new Date() })
-    .sort((left, right) => right.bidAmount - left.bidAmount || left.heldSince.getTime() - right.heldSince.getTime() || left.groupId - right.groupId);
-  const placements: Array<{ slotNumber: number; groupId: number; category: Group["category"] }> = [];
-  for (const slot of [...slots].sort((left, right) => left.slotNumber - right.slotNumber)) {
-    const entryIndex = remaining.findIndex(entry => entry.bidAmount >= getRankingFloorGram(slot.slotNumber) * 1000);
-    const entry = entryIndex >= 0 ? remaining.splice(entryIndex, 1)[0] : undefined;
-    if (entry) placements.push({ slotNumber: slot.slotNumber, groupId: entry.groupId, category: entry.category });
-  }
-  return placements;
-};
-const getSimulatedRankingSlotNumber = (slots: Slot[], candidateGroupId: number, bidAmountGram: number, candidateCategory?: Group["category"]) => {
-  const category = candidateCategory ?? slots.find(slot => slot.group?.id === candidateGroupId)?.group?.category ?? "Каналы";
-  return getSimulatedRankingEntries(slots, candidateGroupId, category, bidAmountGram).find(entry => entry.groupId === candidateGroupId)?.slotNumber ?? null;
-};
-const getSimulatedRankingTypePosition = (slots: Slot[], candidateGroupId: number, candidateCategory: Group["category"], bidAmountGram: number) => {
-  const typeEntries = getSimulatedRankingEntries(slots, candidateGroupId, candidateCategory, bidAmountGram).filter(entry => entry.category === candidateCategory);
-  const index = typeEntries.findIndex(entry => entry.groupId === candidateGroupId);
-  return index >= 0 ? index + 1 : null;
-};
+import { formatFinancialGram, formatPositionDuration, formatTon } from "@/lib/ton-format";
+import { getMinimumRankingBidGram, getRankingFloorGram, getSimulatedRankingEntries, getSimulatedRankingSlotNumber, getSimulatedRankingTypePosition, MAX_RANKING_BID_GRAM, MAX_RANKING_SLIDER_GRAM } from "@/lib/ranking-utils";
+import { useTonWallet } from "@/hooks/useTonWallet";
+import { useTopFilters } from "@/hooks/useTopFilters";
+import { useMyGroups } from "@/hooks/useMyGroups";
+import { useRankingAuction } from "@/hooks/useRankingAuction";
 const getCategoryLabel = (category: Group["category"], language: Language) =>
   language === "en" ? (category === "Каналы" ? "Channels" : "Chats") : category;
 const getCommunityAccessLabel = (group: Pick<Group, "username">, language: Language) =>
@@ -169,109 +125,83 @@ const getCityLabel = (country: string, city: string, language: Language) =>
 export default function Home({ onReady }: { onReady?: () => void }) {
   const { user, isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
-  const [tonConnectUi] = useTonConnectUI();
-  const walletAddress = useTonAddress();
-  const walletConnectionRestored = useIsConnectionRestored();
-  const [safeWalletAddress, setSafeWalletAddress] = useState<string | null>(null);
   const hasSignaledReady = useRef(false);
   const [page, setPage] = useState<Page>("top");
   const [detailStatsPeriod, setDetailStatsPeriod] = useState<DetailStatsPeriod>("day");
-  const [workspaceSection, setWorkspaceSection] = useState<WorkspaceSection>("communities");
-  const [walletNftFilter, setWalletNftFilter] = useState<WalletNftFilter>("all");
-  const [tonDepositOpen, setTonDepositOpen] = useState(false);
-  const [tonDepositAmount, setTonDepositAmount] = useState("1");
-  const [activeTonDepositId, setActiveTonDepositId] = useState<number | null>(null);
-  const [tonWithdrawalOpen, setTonWithdrawalOpen] = useState(false);
-  const [tonWithdrawalAmount, setTonWithdrawalAmount] = useState("0.1");
-  const [tonWithdrawalAddress, setTonWithdrawalAddress] = useState("");
-  const [tonWithdrawalFlow, setTonWithdrawalFlow] = useState<"form" | "processing">("form");
-  const [activeTonWithdrawalId, setActiveTonWithdrawalId] = useState<number | null>(null);
-  const [financialHistoryOpen, setFinancialHistoryOpen] = useState(false);
-  const tonWithdrawalSubmitInFlight = useRef(false);
-  const [category, setCategory] = useState<"Все" | "Каналы" | "Чаты">("Все");
-  const [globalDirection, setGlobalDirection] = useState<GlobalDirection>("Все");
-  const [topSection, setTopSection] = useState<TopSection>("communities");
-  const [subcategory, setSubcategory] = useState("Все");
-  const [country, setCountry] = useState("Все");
-  const [city, setCity] = useState("Все");
-  const [audience, setAudience] = useState<Audience>("all");
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [topSearchQuery, setTopSearchQuery] = useState("");
-  const [topSearchOpen, setTopSearchOpen] = useState(false);
+  const {
+    walletConnectionRestored,
+    safeWalletAddress, setSafeWalletAddress,
+    tonDepositOpen, setTonDepositOpen,
+    tonDepositAmount, setTonDepositAmount,
+    activeTonDepositId, setActiveTonDepositId,
+    tonWithdrawalOpen, setTonWithdrawalOpen,
+    tonWithdrawalAmount, setTonWithdrawalAmount,
+    tonWithdrawalAddress, setTonWithdrawalAddress,
+    tonWithdrawalFlow, setTonWithdrawalFlow,
+    activeTonWithdrawalId, setActiveTonWithdrawalId,
+    financialHistoryOpen, setFinancialHistoryOpen,
+    tonWithdrawalSubmitInFlight,
+    tonWithdrawalDefaultRecipient,
+    tonDeposits,
+    tonWithdrawals,
+    createTonDepositMutation,
+    markTonDepositSubmittedMutation,
+    verifyTonDepositMutation,
+    quoteTonWithdrawalMutation,
+    createTonWithdrawalMutation,
+    reconcileTonWithdrawalMutation,
+    openTonWalletForCurrentUser,
+    disconnectTonWallet,
+    startTonDeposit,
+    prepareTonWithdrawal,
+  } = useTonWallet({ page, user, isAuthenticated, utils });
+  const {
+    category, setCategory,
+    globalDirection, setGlobalDirection,
+    topSection, setTopSection,
+    subcategory, setSubcategory,
+    country, setCountry,
+    city, setCity,
+    audience, setAudience,
+    filtersOpen, setFiltersOpen,
+    topSearchQuery, setTopSearchQuery,
+    topSearchOpen, setTopSearchOpen,
+  } = useTopFilters();
+  const {
+    workspaceSection, setWorkspaceSection,
+    walletNftFilter, setWalletNftFilter,
+    selectedGroupId, setSelectedGroupId,
+    selectedGroupIds, setSelectedGroupIds,
+    myGroupsSelectionMode, setMyGroupsSelectionMode,
+    pendingGroupDeletion, setPendingGroupDeletion,
+    pendingModerationGroup, setPendingModerationGroup,
+  } = useMyGroups();
+  const {
+    targetSlot, setTargetSlot,
+    rankSlotLinkId, setRankSlotLinkId,
+    amount, setAmount,
+    listingRankingBid, setListingRankingBid,
+    outbidOpen, setOutbidOpen,
+    outbidGroupId, setOutbidGroupId,
+    outbidBidInput, setOutbidBidInput,
+    outbidVisibility, setOutbidVisibility,
+    detailVisibility, setDetailVisibility,
+    paymentMethod, setPaymentMethod,
+    detailBoardScope, setDetailBoardScope,
+    detailBidInput, setDetailBidInput,
+  } = useRankingAuction();
   useEffect(() => {
     if (!isAuthenticated && page !== "top" && page !== "details" && page !== "owner") {
       setPage("top");
     }
   }, [isAuthenticated, page]);
-  useEffect(() => {
-    if (!walletConnectionRestored) return;
-    const ownerKey = "tgtop:ton-wallet-owner";
-    const pendingOwnerKey = "tgtop:ton-wallet-pending-owner";
-    if (!isAuthenticated || !user?.openId) {
-      setSafeWalletAddress(null);
-      setTonWithdrawalAddress("");
-      return;
-    }
-    const storedOwner = window.localStorage.getItem(ownerKey);
-    const pendingOwner = window.localStorage.getItem(pendingOwnerKey);
-    if (walletAddress && storedOwner !== user.openId && pendingOwner !== user.openId) {
-      setSafeWalletAddress(null);
-      setTonWithdrawalAddress("");
-      void tonConnectUi.disconnect().catch(() => undefined);
-      window.localStorage.removeItem(ownerKey);
-      window.localStorage.removeItem(pendingOwnerKey);
-      toast.error(getRussianLanguage() === "en" ? "The previous wallet session was disconnected for your safety." : "Предыдущая сессия кошелька отключена для безопасности.");
-      return;
-    }
-    if (walletAddress && (storedOwner === user.openId || pendingOwner === user.openId)) {
-      window.localStorage.setItem(ownerKey, user.openId);
-      window.localStorage.removeItem(pendingOwnerKey);
-      setSafeWalletAddress(walletAddress);
-      return;
-    }
-    setSafeWalletAddress(null);
-    setTonWithdrawalAddress("");
-  }, [isAuthenticated, tonConnectUi, user?.openId, walletAddress, walletConnectionRestored]);
-  const openTonWalletForCurrentUser = () => {
-    if (user?.openId) window.localStorage.setItem("tgtop:ton-wallet-pending-owner", user.openId);
-    tonConnectUi.openModal();
-  };
-  const disconnectTonWallet = async () => {
-    try {
-      await tonConnectUi.disconnect();
-      window.localStorage.removeItem("tgtop:ton-wallet-owner");
-      window.localStorage.removeItem("tgtop:ton-wallet-pending-owner");
-      setSafeWalletAddress(null);
-      setTonWithdrawalAddress("");
-      toast.success(getRussianLanguage() === "en" ? "Wallet disconnected" : "Кошелёк отключён");
-    } catch {
-      toast.error(getRussianLanguage() === "en" ? "Could not disconnect wallet" : "Не удалось отключить кошелёк");
-    }
-  };
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
   const language = getRussianLanguage();
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
-  const [detailBoardScope, setDetailBoardScope] = useState<{ category: "Все" | "Каналы" | "Чаты"; country: string; subcategory: string; city: string; displayPosition?: number } | null>(null);
-  const [detailBidInput, setDetailBidInput] = useState("");
-  const [pendingGroupDeletion, setPendingGroupDeletion] = useState<Group | null>(null);
-  const [pendingModerationGroup, setPendingModerationGroup] = useState<{ id: number; title: string } | null>(null);
   const [selectedOwnerOpenId, setSelectedOwnerOpenId] = useState<string | null>(null);
-  const [targetSlot, setTargetSlot] = useState<Slot | null>(null);
-  const [rankSlotLinkId, setRankSlotLinkId] = useState<number | null>(null);
-  const [amount, setAmount] = useState("0.1");
-  const [listingRankingBid, setListingRankingBid] = useState("0.1");
   const [starsPaymentGroup, setStarsPaymentGroup] = useState<Group | null>(null);
-  const [outbidOpen, setOutbidOpen] = useState(false);
-  const [outbidGroupId, setOutbidGroupId] = useState<number | null>(null);
   const [lotGroupPickerOpen, setLotGroupPickerOpen] = useState(false);
   const [lotGroupId, setLotGroupId] = useState<number | null>(null);
-  const [outbidBidInput, setOutbidBidInput] = useState("0.1");
-  const [outbidVisibility, setOutbidVisibility] = useState<"public" | "anonymous">("anonymous");
-  const [detailVisibility, setDetailVisibility] = useState<"public" | "anonymous">("anonymous");
-  const [paymentMethod, setPaymentMethod] = useState<"gram" | "stars">("gram");
-  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
-  const [myGroupsSelectionMode, setMyGroupsSelectionMode] = useState(false);
   const myGroupsSelectionHoldTimer = useRef<number | null>(null);
   const myGroupsSelectionHoldTriggered = useRef(false);
   const [topListingPickerOpen, setTopListingPickerOpen] = useState(false);
@@ -481,41 +411,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     refetchInterval: 8_000,
     refetchIntervalInBackground: false,
   });
-  const tonWithdrawalDefaultRecipient = safeWalletAddress ?? "";
-  useEffect(() => {
-    setTonWithdrawalAddress(safeWalletAddress ?? "");
-  }, [safeWalletAddress]);
   const accountActivityQuery = trpc.tgTop.getAccountActivity.useQuery(undefined, {
     enabled: isAuthenticated,
     refetchInterval: 8_000,
     refetchIntervalInBackground: false,
   });
-  const tonDepositsQuery = trpc.tgTop.getTonDeposits.useQuery(undefined, {
-    enabled: isAuthenticated && page === "profile",
-    refetchInterval: activeTonDepositId ? 10_000 : false,
-    refetchIntervalInBackground: false,
-  });
-  const tonWithdrawalsQuery = trpc.tgTop.getTonWithdrawals.useQuery(undefined, {
-    enabled: isAuthenticated && page === "profile",
-    refetchInterval: activeTonWithdrawalId ? 10_000 : false,
-    refetchIntervalInBackground: false,
-  });
-  const tonDeposits = (tonDepositsQuery.data ?? []) as Array<{
-    id: number;
-    requestedAmountNano: string;
-    creditedAmountTon: string | null;
-    reference: string;
-    status: "created" | "submitted" | "confirmed" | "expired" | "rejected";
-    failureReason: string | null;
-    expiresAt: Date;
-    confirmedAt: Date | null;
-    createdAt: Date;
-  }>;
-  const tonWithdrawals = (tonWithdrawalsQuery.data ?? []) as Array<{
-    id: number; grossAmountNano: string; feeReserveNano: string; actualFeeNano: string | null; netAmountNano: string;
-    destinationWalletAddress: string; reference: string; status: "queued" | "manual_review" | "broadcast_pending" | "sent" | "confirmed" | "failed_refunded" | "cancelled";
-    riskReasons: string | null; transactionHash: string | null; transactionLt: string | null; failureReason: string | null; createdAt: Date; confirmedAt: Date | null;
-  }>;
   const account = accountQuery.data as
     | {
         user?: { bonusBalance: number; mainBalanceTon: string | number; publicProfile?: boolean; role?: "user" | "moderator" | "admin" };
@@ -734,121 +634,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     },
     onError: error => toast.error(error.message),
   });
-  const createTonDepositMutation = trpc.tgTop.createTonDeposit.useMutation({
-    onError: error => toast.error(error.message.includes("Failed query") ? "Не удалось подготовить пополнение. Попробуйте ещё раз через минуту." : error.message),
-  });
-  const markTonDepositSubmittedMutation = trpc.tgTop.markTonDepositSubmitted.useMutation({
-    onError: error => toast.error(error.message),
-  });
-  const verifyTonDepositMutation = trpc.tgTop.verifyTonDeposit.useMutation({
-    onSuccess: result => {
-      void utils.tgTop.getTonDeposits.invalidate();
-      void utils.tgTop.getAccount.invalidate();
-      void utils.tgTop.getAccountActivity.invalidate();
-      if (result.newlyConfirmed) {
-        toast.success(`Зачислено ${formatFinancialGram(result.amountTon)} GRAM`);
-        setActiveTonDepositId(null);
-        setTonDepositOpen(false);
-      }
-      if (result.status === "rejected") {
-        toast.error("Платёж вернулся в кошелёк. Средства не зачислены.");
-        setActiveTonDepositId(null);
-      }
-    },
-    onError: error => toast.error(error.message),
-  });
-  const quoteTonWithdrawalMutation = trpc.tgTop.quoteTonWithdrawal.useMutation({
-    onError: error => toast.error(error.message),
-  });
-  const createTonWithdrawalMutation = trpc.tgTop.createTonWithdrawal.useMutation({
-    onSuccess: () => {
-      void utils.tgTop.getTonWithdrawals.invalidate();
-      void utils.tgTop.getAccount.invalidate();
-      void utils.tgTop.getAccountActivity.invalidate();
-    },
-    onError: error => toast.error(error.message),
-  });
-  const reconcileTonWithdrawalMutation = trpc.tgTop.reconcileTonWithdrawal.useMutation({
-    onSuccess: result => {
-      void utils.tgTop.getTonWithdrawals.invalidate();
-      void utils.tgTop.getAccount.invalidate();
-      if (result.status === "confirmed") {
-        toast.success("Средства успешно отправлены на ваш кошелёк");
-        setActiveTonWithdrawalId(null);
-        setTonWithdrawalOpen(false);
-        setTonWithdrawalFlow("form");
-      }
-      if (result.status === "cancelled") {
-        setTonWithdrawalFlow("form");
-        setActiveTonWithdrawalId(null);
-        toast.error("Вывод отменён. Средства возвращены на основной баланс.");
-      }
-    },
-    // Сверка работает в фоне и повторяется автоматически; временная ошибка сети не должна спамить toast.
-    onError: () => undefined,
-  });
-  useEffect(() => {
-    if (!activeTonWithdrawalId) return;
-    const active = tonWithdrawals.find(item => item.id === activeTonWithdrawalId);
-    if (!active || (active.status !== "broadcast_pending" && active.status !== "sent")) return;
-    const reconcile = () => {
-      if (!reconcileTonWithdrawalMutation.isPending) {
-        reconcileTonWithdrawalMutation.mutate({ withdrawalId: activeTonWithdrawalId });
-      }
-    };
-    reconcile();
-    const timer = window.setInterval(reconcile, 4_000);
-    return () => window.clearInterval(timer);
-  }, [activeTonWithdrawalId, reconcileTonWithdrawalMutation, tonWithdrawals]);
-  useEffect(() => {
-    if (!activeTonWithdrawalId) return;
-    const active = tonWithdrawals.find(item => item.id === activeTonWithdrawalId);
-    if (!active || active.status !== "cancelled") return;
-    setActiveTonWithdrawalId(null);
-    setTonWithdrawalFlow("form");
-    setTonWithdrawalOpen(false);
-    toast.error("Вывод отменён до отправки. GRAM остались на основном балансе.");
-  }, [activeTonWithdrawalId, tonWithdrawals]);
-  const startTonDeposit = async () => {
-    if (!walletConnectionRestored) return;
-    if (!safeWalletAddress) {
-      openTonWalletForCurrentUser();
-      return;
-    }
-    const deposit = await createTonDepositMutation.mutateAsync({ amountTon: tonDepositAmount, senderWalletAddress: safeWalletAddress });
-    setActiveTonDepositId(deposit.id);
-    try {
-      await tonConnectUi.sendTransaction({
-        validUntil: deposit.validUntil,
-        network: "-239",
-        messages: [{ address: deposit.recipientWalletAddress, amount: deposit.amountNano, payload: deposit.payload }],
-      });
-      await markTonDepositSubmittedMutation.mutateAsync({ depositId: deposit.id });
-      toast.success("Перевод отправлен. Проверяем поступление в сети GRAM.");
-      void verifyTonDepositMutation.mutateAsync({ depositId: deposit.id });
-    } catch (error) {
-      toast.error(error instanceof Error && error.message.includes("USER_REJECTS") ? "Подтверждение в кошельке отменено" : "Перевод не подтверждён. Средства не зачислены.");
-    }
-  };
-  const prepareTonWithdrawal = async () => {
-    if (tonWithdrawalSubmitInFlight.current || quoteTonWithdrawalMutation.isPending || createTonWithdrawalMutation.isPending) return;
-    tonWithdrawalSubmitInFlight.current = true;
-    try {
-      const quote = await quoteTonWithdrawalMutation.mutateAsync({ amountTon: tonWithdrawalAmount, destinationWalletAddress: tonWithdrawalAddress });
-      const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID().replace(/-/g, "")
-        : `${Date.now()}${Math.random().toString(36).slice(2, 18)}`;
-      const withdrawal = await createTonWithdrawalMutation.mutateAsync({
-        amountTon: tonWithdrawalAmount,
-        destinationWalletAddress: quote.destinationWalletAddress,
-        idempotencyKey,
-      });
-      setActiveTonWithdrawalId(withdrawal.id);
-      setTonWithdrawalFlow("processing");
-    } finally {
-      tonWithdrawalSubmitInFlight.current = false;
-    }
-  };
   const moderateGroup = trpc.tgTop.moderateGroup.useMutation({
     onSuccess: () => {
       toast.success("Лот снят с ТОПа. Владельцу отправлена причина.");

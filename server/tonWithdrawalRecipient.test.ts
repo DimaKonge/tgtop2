@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 
 describe("withdrawal recipient autofill", () => {
   it("uses only the current safe TonConnect address and never a stored address from another session", () => {
-    const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
+    const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8")
+      + "\n" + readFileSync(new URL("../client/src/hooks/useTonWallet.ts", import.meta.url), "utf8");
 
     expect(homeSource).toContain('const tonWithdrawalDefaultRecipient = safeWalletAddress ?? "";');
     expect(homeSource).toContain('setTonWithdrawalAddress(safeWalletAddress ?? "");');
