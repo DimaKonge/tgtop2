@@ -17,6 +17,9 @@ describe("TG TOP light theme", () => {
     for (const accent of ["blue", "purple", "rose", "gold", "green", "turquoise"]) {
       expect(css).toContain(`html[data-accent="${accent}"]`);
     }
+    expect(css).toContain('.tg-launch-glow');
+    expect(css).toContain('var(--tg-accent, #3f8cff)');
+    expect(css).toContain('.tg-launch-progress span');
     expect(css).toContain('.tg-shell .bg-white\\/5');
     expect(css).toContain('.tg-shell .text-\\[\\#a6c8ff\\]');
     expect(css).toContain('.tg-shell .bg-\\[\\#3f8cff\\]\\/10');

@@ -434,3 +434,12 @@ html[data-theme="light"] .tg-shell .tg-top-tabs ~ input::placeholder { color: #6
 @media (prefers-reduced-motion: reduce) {
   .tg-launch-cube { animation-duration: 1ms !important; animation-delay: 0ms !important; }
 }
+
+/* The launch screen follows the same accent token as the header pyramid. */
+.tg-launch-glow {
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--tg-accent, #3f8cff) 18%, transparent), transparent 68%);
+}
+.tg-launch-progress span {
+  background: var(--tg-accent, #3f8cff);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tg-accent, #3f8cff) 32%, transparent);
+}
