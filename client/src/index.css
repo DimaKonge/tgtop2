@@ -152,7 +152,6 @@ html[data-theme="light"] [data-slot="sheet-content"] .text-slate-400,
 html[data-theme="light"] [data-slot="sheet-content"] .text-slate-500,
 html[data-theme="light"] [data-slot="sheet-content"] .text-slate-600 { color: #64748b !important; }
 html[data-theme="light"] .brand-mark { border-color: rgba(37, 99, 235, 0.22) !important; box-shadow: 0 6px 16px rgba(63, 140, 255, 0.18) !important; }
-html[data-theme="dark"] .brand-mark-symbol { transform: rotate(180deg); }
 
 .tg-launch {
   position: fixed;
