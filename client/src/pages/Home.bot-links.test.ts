@@ -17,7 +17,7 @@ const EXTRACTED_HOME_COMPONENTS = [
 
 describe("TG TOP production bot links", () => {
   it("uses @TG_TOPBOT for both channel and group admin onboarding", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n") + "\n" + EXTRACTED_HOME_COMPONENTS;
 
     expect(source).toContain("https://t.me/TG_TOPBOT?");
     expect(source).toContain('startchannel&admin=${channelAdminRights}');
@@ -43,7 +43,7 @@ describe("TG TOP production bot links", () => {
   });
 
   it("exposes full listing controls from owned detail publication settings", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n") + "\n" + EXTRACTED_HOME_COMPONENTS;
     expect(source).toContain("Цена, место, категория и гео");
     expect(source).toContain("Открыть полный листинг: от 0.1 GRAM с прогнозом позиции");
     expect(source).toContain("onClick={() => openListing([detail.group.id])}");
@@ -54,7 +54,7 @@ describe("TG TOP production bot links", () => {
   });
 
   it("uses the shared GroupCard component for ranked and general catalog placements", () => {
-    const home = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    const home = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n");
     const topCard = readFileSync(new URL("../components/TopRankingCard.tsx", import.meta.url), "utf8");
     const artwork = readFileSync(new URL("../components/CommunityArtwork.tsx", import.meta.url), "utf8");
     const compactRow = readFileSync(new URL("../components/CompactCommunityRow.tsx", import.meta.url), "utf8");
@@ -712,7 +712,7 @@ describe("TG TOP production bot links", () => {
   });
 
   it("keeps the primary ranking action after all listing settings", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n") + "\n" + EXTRACTED_HOME_COMPONENTS;
     const rankingSection = source.indexOf('tx("Цена места в рейтинге"');
     const settingsNote = source.indexOf('tx("Новая публикация использует", "A new publication uses")');
     const primaryAction = source.indexOf('tx("Залистить", "List community")');
@@ -722,7 +722,7 @@ describe("TG TOP production bot links", () => {
   });
 
   it("uses the TOP pyramid for bots and a long plus button before choosing a group for an outbid", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n") + "\n" + EXTRACTED_HOME_COMPONENTS;
 
     expect(source).toContain('function BotRankingTile');
     expect(source).toContain('variant="lead"');
