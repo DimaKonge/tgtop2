@@ -26,7 +26,7 @@ export function TgTopLaunchScreen({ ready, onComplete }: { ready: boolean; onCom
     <main className="tg-launch" data-ready={showCompletion ? "true" : "false"} aria-label={isEnglish ? "TG TOP is loading" : "TG TOP загружается"} aria-live="polite">
       <div className="tg-launch-glow" />
       <div className="tg-launch-brand">
-        <span className="tg-launch-mark text-amber-300"><TgTopPyramidIcon className="h-[17px] w-[24px]" /></span>
+        <span className="tg-launch-mark"><TgTopPyramidIcon className="h-[17px] w-[24px]" /></span>
         <span>TG TOP</span>
       </div>
       <div className="tg-launch-center">

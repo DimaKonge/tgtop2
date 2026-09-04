@@ -239,8 +239,13 @@ function BrandMark() {
   return (
     <span
       aria-label="TG TOP"
-      className="brand-mark grid h-8 w-8 place-items-center rounded-[9px] border border-amber-300/35 bg-amber-300/10 text-[#f5b84b] shadow-[0_0_14px_rgba(245,184,75,0.16)]"
-      style={{ color: "#f5b84b" }}
+      className="brand-mark brand-mark-symbol grid h-8 w-8 place-items-center rounded-[9px] border bg-transparent"
+      style={{
+        color: "var(--tg-accent)",
+        borderColor: "color-mix(in srgb, var(--tg-accent) 42%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--tg-accent) 12%, transparent)",
+        boxShadow: "0 0 14px color-mix(in srgb, var(--tg-accent) 18%, transparent)",
+      }}
     >
       <TgTopPyramidIcon className="h-[18px] w-[25px]" />
     </span>
@@ -2527,7 +2532,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button type="button" aria-label={tx("Гео фильтр", "Geo filter")} title={tx("Гео", "Geo")} className={`grid h-7 w-7 place-items-center rounded-md border transition-colors ${country !== "Все" ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                          <button type="button" aria-label={tx("Гео фильтр", "Geo filter")} title={tx("Гео", "Geo")} className={`tg-top-control grid h-7 w-7 place-items-center rounded-md border transition-colors ${country !== "Все" ? "tg-top-control-active border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                             <Globe2 className="h-3.5 w-3.5" />
                           </button>
                         </PopoverTrigger>
@@ -2568,7 +2573,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button type="button" aria-label={tx("Рубрики и категории", "Categories & topics")} title={tx("Категории", "Categories")} className={`grid h-7 w-7 place-items-center rounded-md border transition-colors ${subcategory !== "Все" ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                          <button type="button" aria-label={tx("Рубрики и категории", "Categories & topics")} title={tx("Категории", "Categories")} className={`tg-top-control grid h-7 w-7 place-items-center rounded-md border transition-colors ${subcategory !== "Все" ? "tg-top-control-active border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                             <Filter className="h-3.5 w-3.5" />
                           </button>
                         </PopoverTrigger>
@@ -2591,29 +2596,29 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </Popover>
                     </>
                   )}
-                  <button type="button" onClick={() => setTopSearchOpen(current => !current)} aria-label={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Открыть поиск", "Open search")} title={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Поиск", "Search")} className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${topSearchOpen ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                  <button type="button" onClick={() => setTopSearchOpen(current => !current)} aria-label={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Открыть поиск", "Open search")} title={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Поиск", "Search")} className={`tg-top-control grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${topSearchOpen ? "tg-top-control-active border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                     <Search className="h-3.5 w-3.5" />
                   </button>
                   </span>
                 </div>
               </div>
-              <div className="order-1 grid basis-full grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
+              <div className="tg-top-tabs order-1 grid basis-full grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
               {([
                 ["communities", tx("Сообщества", "Communities")],
                 ["nft", "NFT"],
                 ["bots", tx("Боты", "Bots")],
               ] as const).map(([value, label]) => (
-                <button key={value} type="button" onClick={() => selectTopSection(value)} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${topSection === value ? "bg-[#2b4158] text-[#d7e7f6]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                <button key={value} type="button" onClick={() => selectTopSection(value)} className={`tg-top-tab h-8 rounded-lg text-[10px] font-semibold transition-colors ${topSection === value ? "tg-top-tab-active bg-[#2b4158] text-[#d7e7f6]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
             </div>
               {topSearchOpen && <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={topSection === "nft" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={topSection === "nft" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="order-5 h-9 basis-full border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />}
-              {topSection === "communities" && <div className="order-2 grid min-w-0 flex-1 grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
+              {topSection === "communities" && <div className="tg-top-tabs order-2 grid min-w-0 flex-1 grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
               {([
                 ["Все", tx("Все", "All")],
                 ["Каналы", tx("Каналы", "Channels")],
                 ["Чаты", tx("Чаты", "Chats")],
               ] as const).map(([value, label]) => (
-                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`h-7 rounded-md text-[9px] font-semibold transition-colors ${globalDirection === value ? "bg-[#293d52] text-[#d1e2f2]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`tg-top-tab h-7 rounded-md text-[9px] font-semibold transition-colors ${globalDirection === value ? "tg-top-tab-active bg-[#293d52] text-[#d1e2f2]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
               </div>}
             </div>

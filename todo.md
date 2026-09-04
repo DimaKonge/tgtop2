@@ -1312,3 +1312,13 @@
 - [x] Identify the exact active and staging release paths on VPS and document one safe activation step without resetting `/opt/tgtop` or touching DB/S3
 
 - [x] Prepare a reviewed activation helper for `/opt/tgtop/releases/stage-22fdf3e` with backup, atomic file swap, service restart, and rollback checks; do not execute it automatically
+
+- [x] Copy the syntax-checked activation helper into the VPS `stage-22fdf3e` scripts directory without activating the release
+
+- [ ] Rework light-theme brand mark so the TG TOP cubes use the same intentional light-theme accent palette instead of the current blue treatment
+- [ ] Increase light-theme contrast for header balance, filter chips, icon buttons, and active navigation states without changing dark theme or lower-navigation structure
+- [ ] Preserve readable light-theme media-card titles/meta with a tested overlay treatment across featured and Market cards
+
+- [x] Bind the upper TG TOP cube-logo and launch cubes to the selected accent token for blue, purple, rose, gold, green, and turquoise themes while leaving bottom navigation unchanged
+
+- [x] Finalize accent-aware light-theme cube logo and improve contrast for compact top tabs and geo/category/search controls

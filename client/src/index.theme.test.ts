@@ -9,8 +9,14 @@ describe("TG TOP light theme", () => {
     expect(css).toContain('html[data-theme="light"] .tg-shell .tg-media-overlay-title');
     expect(css).toContain('html[data-theme="light"] .tg-shell .tg-media-overlay-meta');
     expect(css).toContain('html[data-theme="light"] .brand-mark');
-    expect(css).toContain('background-image: url("/manus-storage/tgtop-logo-light-header-512_31677d56.png");');
-    expect(css).toContain('color: transparent !important;');
+    expect(css).toContain('background-image: none !important;');
+    expect(css).toContain('color: var(--tg-accent) !important;');
+    expect(css).not.toContain('background-image: url("/manus-storage/tgtop-logo-light-header-512_31677d56.png");');
+    expect(css).toContain('html[data-theme="light"] .tg-shell .tg-top-tabs');
+    expect(css).toContain('html[data-theme="light"] .tg-shell .tg-top-control-active');
+    for (const accent of ["blue", "purple", "rose", "gold", "green", "turquoise"]) {
+      expect(css).toContain(`html[data-accent="${accent}"]`);
+    }
     expect(css).toContain('.tg-shell .bg-white\\/5');
     expect(css).toContain('.tg-shell .text-\\[\\#a6c8ff\\]');
     expect(css).toContain('.tg-shell .bg-\\[\\#3f8cff\\]\\/10');
