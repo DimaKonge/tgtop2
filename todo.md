@@ -1322,3 +1322,5 @@
 - [x] Bind the upper TG TOP cube-logo and launch cubes to the selected accent token for blue, purple, rose, gold, green, and turquoise themes while leaving bottom navigation unchanged
 
 - [x] Finalize accent-aware light-theme cube logo and improve contrast for compact top tabs and geo/category/search controls
+
+- [x] Activate the verified light-theme release `stage-6d8ce547` on the VPS with rollback backup; confirm tgtop.me/www/tgtop.xyz HTTP 200, all four systemd services active, healthz OK, no stale PNG logo or historical-stats UI in the live bundle
