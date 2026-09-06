@@ -1315,9 +1315,9 @@
 
 - [x] Copy the syntax-checked activation helper into the VPS `stage-22fdf3e` scripts directory without activating the release
 
-- [ ] Rework light-theme brand mark so the TG TOP cubes use the same intentional light-theme accent palette instead of the current blue treatment
-- [ ] Increase light-theme contrast for header balance, filter chips, icon buttons, and active navigation states without changing dark theme or lower-navigation structure
-- [ ] Preserve readable light-theme media-card titles/meta with a tested overlay treatment across featured and Market cards
+- [x] Rework light-theme brand mark so the TG TOP cubes use the same intentional light-theme accent palette instead of the current blue treatment
+- [x] Increase light-theme contrast for header balance, filter chips, icon buttons, and active navigation states without changing dark theme or lower-navigation structure
+- [x] Preserve readable light-theme media-card titles/meta with a tested overlay treatment across featured and Market cards
 
 - [x] Bind the upper TG TOP cube-logo and launch cubes to the selected accent token for blue, purple, rose, gold, green, and turquoise themes while leaving bottom navigation unchanged
 
@@ -1327,10 +1327,10 @@
 
 - [x] Bind splash launch glow and progress bar to the selected accent token across all six theme accents
 
-- [ ] Fix dark-theme TG TOP pyramid orientation so the top cube is at the top and the four-cube base is at the bottom
-- [ ] Improve light-theme button and active-state contrast across profile and owner surfaces
-- [ ] Make the light-theme balance chart readable with light surfaces, dark labels, and accent-aware graph colors
-- [ ] Reduce Settings appearance choices to exactly Dark and Light and remove the System option and unnecessary style selector
+- [x] Fix dark-theme TG TOP pyramid orientation so the top cube is at the top and the four-cube base is at the bottom
+- [x] Improve light-theme button and active-state contrast across profile and owner surfaces
+- [x] Make the light-theme balance chart readable with light surfaces, dark labels, and accent-aware graph colors
+- [x] Reduce Settings appearance choices to exactly Dark and Light and remove the System option and unnecessary style selector
 
 - [x] Run read-only VPS preflight for /opt/tgtop, tgtop.service, firewall/DNS, and current release before changing production
 - [x] Synchronize /opt/tgtop with the selected GitHub main branch without overwriting .env, database, S3 metadata, or rollback backups
@@ -1338,3 +1338,6 @@
 - [x] Verify active systemd status, health endpoint, canonical site response, and upright dark-theme BrandMark after rollout
 
 - [x] Fix guest community CTA so a valid stored public Telegram link opens without blocking on owner/admin verification; keep admin verification for protected operations and add regression coverage
+
+- [x] Make the Telegram community CTA open valid public and private entry links reliably inside Telegram WebApp and in a normal browser, with explicit fallback/error handling
+- [x] Ensure a successful new listing captures and persists the current Telegram video avatar snapshot, then renders it in the featured/detail card without requiring a second listing

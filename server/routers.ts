@@ -449,7 +449,7 @@ export const appRouter = router({
           listingType: group.listingType,
           salePriceTon: group.salePriceTon,
         })));
-        void Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group))).catch(() => undefined);
+        await Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group)));
         return { success: true, announced: countSuccessfulTelegramAnnouncements(deliveries) };
       }),
 
@@ -464,7 +464,7 @@ export const appRouter = router({
           listingType: group.listingType,
           salePriceTon: group.salePriceTon,
         })));
-        void Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group))).catch(() => undefined);
+        await Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group)));
         return { success: true, announced: countSuccessfulTelegramAnnouncements(deliveries) };
       }),
 

@@ -1949,10 +1949,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       if (!username) return false;
       return openTelegramCommunityLink(`https://t.me/${username}`);
     };
-    const openVerifiedEntry = () => {
-      if (detail.group.username && openPublicEntry()) return;
-      resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });
-    };
+    // A public username is already the canonical Telegram entry point. Do not
+    // block a guest/new account on reward-link creation or Bot API revalidation.
+    if (detail.group.username) {
+      if (!openPublicEntry()) {
+        toast.error(tx("Не удалось открыть Telegram. Разрешите открытие внешних ссылок и повторите попытку.", "Telegram could not be opened. Allow external links and try again."));
+      }
+      return;
+    }
+    const openVerifiedEntry = () => resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });
     if (!detailRewardActive || !isAuthenticated) {
       openVerifiedEntry();
       return;

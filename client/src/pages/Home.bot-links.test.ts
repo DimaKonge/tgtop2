@@ -105,8 +105,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('const resolveVerifiedEntryLink = trpc.tgTop.resolveVerifiedEntryLink.useMutation');
     expect(source).toContain('const openPublicEntry = () => {');
     expect(source).toContain('const username = detail.group.username?.trim().replace(/^@/, "");');
+    expect(source).toContain('if (detail.group.username) {');
+    expect(source).toContain('Не удалось открыть Telegram. Разрешите открытие внешних ссылок и повторите попытку.');
     expect(source).toContain('return openTelegramCommunityLink(`https://t.me/${username}`);');
-    expect(source).toContain('if (detail.group.username && openPublicEntry()) return;');
     expect(source).toContain('resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });');
     expect(source).toContain('Персональная ссылка пока недоступна — открываем обычный вход без награды.');
     expect(source).toContain('Не удалось открыть ссылку. Разрешите открытие ссылок и повторите попытку.');
