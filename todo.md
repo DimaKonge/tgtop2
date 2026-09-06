@@ -1341,3 +1341,5 @@
 
 - [x] Make the Telegram community CTA open valid public and private entry links reliably inside Telegram WebApp and in a normal browser, with explicit fallback/error handling
 - [x] Ensure a successful new listing captures and persists the current Telegram video avatar snapshot, then renders it in the featured/detail card without requiring a second listing
+
+- [x] Refresh and persist the current Telegram profile video for the TG TOP channel through the guarded User API media flow, then verify the live catalog card renders the saved MP4
