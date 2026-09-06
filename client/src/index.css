@@ -156,7 +156,7 @@ html[data-theme="light"] [data-slot="sheet-content"] .text-slate-400,
 html[data-theme="light"] [data-slot="sheet-content"] .text-slate-500,
 html[data-theme="light"] [data-slot="sheet-content"] .text-slate-600 { color: #64748b !important; }
 html[data-theme="light"] .brand-mark { border-color: color-mix(in srgb, var(--tg-accent) 42%, transparent) !important; background-color: color-mix(in srgb, var(--tg-accent) 12%, transparent) !important; box-shadow: 0 6px 16px color-mix(in srgb, var(--tg-accent) 18%, transparent) !important; }
-html[data-theme="dark"] .brand-mark-symbol { transform: rotate(180deg); }
+html[data-theme="dark"] .brand-mark-symbol { transform: none; }
 
 .tg-launch {
   position: fixed;
@@ -442,4 +442,52 @@ html[data-theme="light"] .tg-shell .tg-top-tabs ~ input::placeholder { color: #6
 .tg-launch-progress span {
   background: var(--tg-accent, #3f8cff);
   box-shadow: 0 0 12px color-mix(in srgb, var(--tg-accent, #3f8cff) 32%, transparent);
+}
+
+/* Profile balance controls and chart use readable light-theme tokens. */
+.tg-gram-balance-chart {
+  --tg-chart-fill: #4b97ff;
+  --tg-chart-stroke: #64b5ff;
+  --tg-chart-dot: #b8d8ff;
+}
+html[data-theme="light"] .tg-shell .tg-profile-balance-action {
+  color: #1e293b !important;
+  border-color: rgba(37, 99, 235, 0.34) !important;
+  background-color: rgba(37, 99, 235, 0.11) !important;
+}
+html[data-theme="light"] .tg-shell .tg-profile-balance-action:hover {
+  background-color: rgba(37, 99, 235, 0.18) !important;
+}
+html[data-theme="light"] .tg-shell .tg-profile-deposit-action b { color: #1d4ed8 !important; }
+html[data-theme="light"] .tg-shell .tg-profile-deposit-action small { color: #2563eb !important; }
+html[data-theme="light"] .tg-shell .tg-profile-withdraw-action {
+  border-color: rgba(4, 120, 87, 0.32) !important;
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+html[data-theme="light"] .tg-shell .tg-profile-withdraw-action:hover { background-color: rgba(16, 185, 129, 0.19) !important; }
+html[data-theme="light"] .tg-shell .tg-profile-withdraw-action b { color: #047857 !important; }
+html[data-theme="light"] .tg-shell .tg-profile-withdraw-action small { color: #059669 !important; }
+html[data-theme="light"] .tg-shell .tg-settings-choice[aria-pressed="true"] {
+  background-color: rgba(37, 99, 235, 0.16) !important;
+  color: #1d4ed8 !important;
+}
+html[data-theme="light"] .tg-shell .tg-settings-choice:not([aria-pressed="true"]) {
+  color: #475569 !important;
+}
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart {
+  --tg-chart-fill: #2563eb;
+  --tg-chart-stroke: #2563eb;
+  --tg-chart-dot: #1d4ed8;
+  border-color: rgba(30, 41, 59, 0.14) !important;
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .text-slate-100 { color: #0f172a !important; }
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .text-slate-500,
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .text-slate-600 { color: #475569 !important; }
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .border-\[\#3f8cff\]\/25 {
+  border-color: rgba(37, 99, 235, 0.34) !important;
+}
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .bg-\[\#3f8cff\]\/10 {
+  background-color: rgba(37, 99, 235, 0.12) !important;
 }

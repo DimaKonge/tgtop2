@@ -360,8 +360,7 @@ function SettingsSheet({
 }) {
   const { appearance, setAppearance, style, setStyle, accent, setAccent } = useTheme();
   const appearanceItems: Array<{ value: Appearance; label: string; icon: typeof Moon }> = [
-    { value: "system", label: "Система", icon: Settings2 },
-    { value: "dark", label: "Темная", icon: Moon },
+    { value: "dark", label: "Тёмная", icon: Moon },
     { value: "light", label: "Светлая", icon: Sun },
   ];
   const styleItems: Array<{ value: ThemeStyle; label: string }> = [
@@ -407,11 +406,11 @@ function SettingsSheet({
               <Sun className="h-4 w-4 text-[#72a8ff]" />
               Тема
             </div>
-            <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
               {appearanceItems.map(item => {
                 const Icon = item.icon;
                 const active = appearance === item.value;
-                return <button key={item.value} onClick={() => setAppearance(item.value)} aria-label={item.label} aria-pressed={active} className={`flex h-8 items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}><Icon className="h-3 w-3" />{item.label}</button>;
+                return <button key={item.value} onClick={() => setAppearance(item.value)} aria-label={item.label} aria-pressed={active} className={`tg-settings-choice flex h-8 items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}><Icon className="h-3 w-3" />{item.label}</button>;
               })}
             </div>
           </section>
@@ -1945,14 +1944,22 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const detailRewardActive = Boolean(detail?.group.rewardActive && detailEntryReward > 0);
   const openRewardAwareEntry = () => {
     if (!detail) return;
-    const openVerifiedEntry = () => resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });
+    const openPublicEntry = () => {
+      const username = detail.group.username?.trim().replace(/^@/, "");
+      if (!username) return false;
+      return openTelegramCommunityLink(`https://t.me/${username}`);
+    };
+    const openVerifiedEntry = () => {
+      if (detail.group.username && openPublicEntry()) return;
+      resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });
+    };
     if (!detailRewardActive || !isAuthenticated) {
       openVerifiedEntry();
       return;
     }
     createRewardInviteLink.mutate({ groupId: detail.group.id }, {
       onError: () => {
-        toast.message(tx("Персональная ссылка пока недоступна — открываем подтверждённый вход без награды.", "Your personal link is unavailable — opening verified entry without a reward."));
+        toast.message(tx("Персональная ссылка пока недоступна — открываем обычный вход без награды.", "Your personal link is unavailable — opening the regular entry without a reward."));
         openVerifiedEntry();
       },
     });
@@ -3814,7 +3821,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" ownerOpenId={user?.openId} address={safeWalletAddress} restored={walletConnectionRestored} onDisconnect={disconnectTonWallet} />
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <Sheet open={tonDepositOpen} onOpenChange={setTonDepositOpen}>
-                    <button type="button" onClick={() => setTonDepositOpen(true)} aria-label={tx("Пополнить баланс GRAM", "Deposit GRAM balance")} className="rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2 text-left transition-colors hover:bg-[#3f8cff]/18"><b className="block text-[11px] text-[#c8ddff]">{tx("Пополнить", "Deposit")}</b><small className="mt-0.5 block text-[9px] text-[#8fb9ff]">GRAM</small></button>
+                    <button type="button" onClick={() => setTonDepositOpen(true)} aria-label={tx("Пополнить баланс GRAM", "Deposit GRAM balance")} className="tg-profile-balance-action tg-profile-deposit-action rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2 text-left transition-colors hover:bg-[#3f8cff]/18"><b className="block text-[11px] text-[#c8ddff]">{tx("Пополнить", "Deposit")}</b><small className="mt-0.5 block text-[9px] text-[#8fb9ff]">GRAM</small></button>
                     <SheetContent side="bottom" onOpenAutoFocus={event => event.preventDefault()} className="max-h-[84dvh] rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">
                       <SheetHeader className="px-4 pb-3 text-left">
                         <SheetTitle className="text-base text-slate-100">{tx("Пополнить баланс GRAM", "Deposit GRAM balance")}</SheetTitle>
@@ -3848,7 +3855,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       }
                     }
                   }}>
-                    <button type="button" onClick={() => setTonWithdrawalOpen(true)} aria-label={tx("Вывести GRAM", "Withdraw GRAM")} className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] px-3 py-2 text-left transition-colors hover:bg-emerald-400/[0.13]"><b className="block text-[11px] text-emerald-100">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-emerald-300/75">GRAM</small></button>
+                    <button type="button" onClick={() => setTonWithdrawalOpen(true)} aria-label={tx("Вывести GRAM", "Withdraw GRAM")} className="tg-profile-balance-action tg-profile-withdraw-action rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] px-3 py-2 text-left transition-colors hover:bg-emerald-400/[0.13]"><b className="block text-[11px] text-emerald-100">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-emerald-300/75">GRAM</small></button>
                     <SheetContent side="bottom" onOpenAutoFocus={event => event.preventDefault()} className="max-h-[76dvh] overflow-y-auto rounded-t-[24px] border-white/10 bg-[#10161f] text-slate-100">
                       <SheetHeader className="px-4 pb-2 text-left">
                         <SheetTitle className="text-base font-semibold text-slate-100">{tx("Вывод GRAM", "Withdraw GRAM")}</SheetTitle>

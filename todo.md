@@ -1326,3 +1326,15 @@
 - [x] Activate the verified light-theme release `stage-6d8ce547` on the VPS with rollback backup; confirm tgtop.me/www/tgtop.xyz HTTP 200, all four systemd services active, healthz OK, no stale PNG logo or historical-stats UI in the live bundle
 
 - [x] Bind splash launch glow and progress bar to the selected accent token across all six theme accents
+
+- [ ] Fix dark-theme TG TOP pyramid orientation so the top cube is at the top and the four-cube base is at the bottom
+- [ ] Improve light-theme button and active-state contrast across profile and owner surfaces
+- [ ] Make the light-theme balance chart readable with light surfaces, dark labels, and accent-aware graph colors
+- [ ] Reduce Settings appearance choices to exactly Dark and Light and remove the System option and unnecessary style selector
+
+- [x] Run read-only VPS preflight for /opt/tgtop, tgtop.service, firewall/DNS, and current release before changing production
+- [x] Synchronize /opt/tgtop with the selected GitHub main branch without overwriting .env, database, S3 metadata, or rollback backups
+- [x] Build the synchronized production checkout on the VPS and restart tgtop.service safely with rollback on failure
+- [x] Verify active systemd status, health endpoint, canonical site response, and upright dark-theme BrandMark after rollout
+
+- [x] Fix guest community CTA so a valid stored public Telegram link opens without blocking on owner/admin verification; keep admin verification for protected operations and add regression coverage
