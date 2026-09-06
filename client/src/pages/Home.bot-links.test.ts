@@ -102,6 +102,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Сначала добавьте бота администратором своей группы.');
     expect(source).toContain('const isTelegramMiniApp = Boolean(webApp?.initData);');
     expect(source).toContain('const openTelegramInNewBrowserTab = (url: string) => {');
+    expect(source).toContain('window.setTimeout(() => {');
+    expect(source).toContain('if (document.visibilityState === "visible") window.location.assign(url);');
+    expect(source).toContain('window.location.assign(url);');
     expect(source).toContain('const resolveVerifiedEntryLink = trpc.tgTop.resolveVerifiedEntryLink.useMutation');
     expect(source).toContain('const openPublicEntry = () => {');
     expect(source).toContain('const username = detail.group.username?.trim().replace(/^@/, "");');

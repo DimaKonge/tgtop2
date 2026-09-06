@@ -132,16 +132,35 @@ const openTelegramCommunityLink = (url: string) => {
   } | undefined;
   const isTelegramMiniApp = Boolean(webApp?.initData);
   if (isTelegramMiniApp && /^https:\/\/t\.me\//i.test(url) && webApp?.openTelegramLink) {
-    webApp.openTelegramLink(url);
-    return true;
+    try {
+      webApp.openTelegramLink(url);
+      // Some Telegram WebView versions silently ignore the API call. If the
+      // view stays visible, navigate the current WebView instead of failing.
+      window.setTimeout(() => {
+        if (document.visibilityState === "visible") window.location.assign(url);
+      }, 350);
+      return true;
+    } catch {
+      window.location.assign(url);
+      return true;
+    }
   }
   if (isTelegramMiniApp && webApp?.openLink) {
-    webApp.openLink(url);
-    return true;
+    try {
+      webApp.openLink(url);
+      return true;
+    } catch {
+      window.location.assign(url);
+      return true;
+    }
   }
   const tab = window.open(url, "_blank", "noopener,noreferrer");
-  if (tab) tab.opener = null;
-  return Boolean(tab);
+  if (tab) {
+    tab.opener = null;
+    return true;
+  }
+  window.location.assign(url);
+  return true;
 };
 const openTonviewerTransaction = (transactionHash: string) => {
   if (!/^[0-9a-f]{64}$/i.test(transactionHash)) return;
