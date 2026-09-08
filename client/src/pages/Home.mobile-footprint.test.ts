@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("TG TOP Global mobile featured board", () => {
   it("uses the requested square geometry for the 1→2→4 featured board", () => {
-    const home = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    const home = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n");
     const card = readFileSync(new URL("../components/TopRankingCard.tsx", import.meta.url), "utf8");
 
     expect(card).toContain('h-[300px] border-[#3f8cff]/35 bg-[#141c27] p-5');
