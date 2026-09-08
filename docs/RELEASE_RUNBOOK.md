@@ -32,6 +32,15 @@ bash scripts/release-vps.sh
 
 Скрипт временно использует `/etc/tgtop/runtime.conf` только для изолированного локального health smoke-test и reviewed additive migrations, но **не печатает, не архивирует и не изменяет** его. Он не выполняет финансовые переводы, выплаты, NFT-передачи или изменения прикладных данных базы.
 
+Скрипт всегда исключает из тест-гейта `server/tonPayoutWallet.credentials.test.ts` и `server/tonApi.credentials.test.ts`. Если выпуск идёт с машины, где недоступны прод-секреты или локально поднятый инстанс, добавьте такие наборы через `TG_TOP_TEST_EXCLUDE` (пути через пробел):
+
+```bash
+TG_TOP_TEST_EXCLUDE='server/telegramUserAgent.test.ts server/telegramUserApi.credentials.test.ts client/src/pages/Home.mobile-rendered.test.ts' \
+  bash scripts/release-vps.sh
+```
+
+Исключайте только suite, которым нужен недоступный ресурс, и фиксируйте список в записи о выпуске. Продуктовые тесты исключать нельзя.
+
 ## Dry-run
 
 Перед новым типом релиза можно проверить упаковку и обязательные файлы без подключения к VPS:
