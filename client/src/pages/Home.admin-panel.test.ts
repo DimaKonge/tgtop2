@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("TG TOP admin panel", () => {
   it("shows a role-gated fourth navigation cell with a live active-listing feed", () => {
-    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n");
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const domainSource = readFileSync(new URL("../lib/tgTop-domain.ts", import.meta.url), "utf8");
 
     expect(domainSource).toContain('export type Page = "top" | "catalog" | "giveaways" | "mine" | "details" | "owner" | "profile" | "admin"');
@@ -36,7 +36,7 @@ describe("TG TOP admin panel", () => {
   });
 
   it("keeps analytics presentation covered while removing historical stats from the worker-account sheet", () => {
-    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n");
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const chartPanelsSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
 
     expect(source).toContain('from "@/components/analytics/ChartPanels"');

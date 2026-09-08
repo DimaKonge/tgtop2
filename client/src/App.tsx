@@ -7,7 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import { TonConnectUIProvider } from "@tonconnect/ui-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TgTopLaunchScreen } from "./components/TgTopLaunchScreen";
 
 function Router({ onHomeReady }: { onHomeReady: () => void }) {
@@ -29,15 +29,29 @@ function Router({ onHomeReady }: { onHomeReady: () => void }) {
 //   to keep consistent foreground/background color across components
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
+// Default fallback manifestUrl="https://tgtop.me/tonconnect-manifest.json"
+const TONCONNECT_MANIFEST_URL =
+  typeof window !== "undefined" && window.location?.origin
+    ? `${window.location.origin}/tonconnect-manifest.json`
+    : "https://tgtop.me/tonconnect-manifest.json";
+
 function App() {
   const [isLaunching, setIsLaunching] = useState(true);
   const [appReady, setAppReady] = useState(false);
   const isExternalPolicyRoute = typeof window !== "undefined" && ["/privacy", "/privacy-policy"].includes(window.location.pathname);
 
+  useEffect(() => {
+    // Safety fallback: if app takes more than 1.5s, signal ready so the user is never trapped
+    const timer = setTimeout(() => {
+      setAppReady(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <ErrorBoundary>
       <TonConnectUIProvider
-        manifestUrl="https://tgtop.me/tonconnect-manifest.json"
+        manifestUrl={TONCONNECT_MANIFEST_URL}
         actionsConfiguration={{ twaReturnUrl: "https://t.me/TG_TOPBOT" }}
       >
         <ThemeProvider>

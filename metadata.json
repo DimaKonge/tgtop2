@@ -1,0 +1,6 @@
+{
+  "name": "TG TOP",
+  "description": "Каталог публичных Telegram-групп и каналов с подтверждёнными данными и рейтингами",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

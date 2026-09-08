@@ -25,7 +25,7 @@ describe("bot catalog moderation contract", () => {
 
   it("assigns bot categories only during moderator approval", () => {
     const dbSource = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
-    const homeSource = ["../client/src/pages/Home.tsx", "../client/src/pages/useHomeController.ts", "../client/src/pages/home-helpers.ts", "../client/src/pages/TopPage.tsx", "../client/src/pages/CatalogPage.tsx", "../client/src/pages/GiveawaysPage.tsx", "../client/src/pages/MinePage.tsx", "../client/src/pages/DetailsPage.tsx", "../client/src/pages/OwnerPage.tsx", "../client/src/pages/AdminPage.tsx", "../client/src/pages/ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n");
+    const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
 
     expect(dbSource).toContain('eq(catalogTopics.category, "Боты")');
     expect(dbSource).toContain("Выберите существующую рубрику для бота");
@@ -38,7 +38,7 @@ describe("bot catalog moderation contract", () => {
   it("keeps the complete bot directory, status filters, and deletion behind moderator access", () => {
     const dbSource = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
     const routerSource = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
-    const homeSource = ["../client/src/pages/Home.tsx", "../client/src/pages/useHomeController.ts", "../client/src/pages/home-helpers.ts", "../client/src/pages/TopPage.tsx", "../client/src/pages/CatalogPage.tsx", "../client/src/pages/GiveawaysPage.tsx", "../client/src/pages/MinePage.tsx", "../client/src/pages/DetailsPage.tsx", "../client/src/pages/OwnerPage.tsx", "../client/src/pages/AdminPage.tsx", "../client/src/pages/ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n");
+    const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
 
     expect(dbSource).toContain("export async function getAllBotListings()");
     expect(dbSource).toContain("export async function deleteBotListing(actorOpenId: string, botListingId: number)");
@@ -55,7 +55,7 @@ describe("bot catalog moderation contract", () => {
   });
 
   it("offers the compact public bot submission sheet", () => {
-    const homeSource = ["../client/src/pages/Home.tsx", "../client/src/pages/useHomeController.ts", "../client/src/pages/home-helpers.ts", "../client/src/pages/TopPage.tsx", "../client/src/pages/CatalogPage.tsx", "../client/src/pages/GiveawaysPage.tsx", "../client/src/pages/MinePage.tsx", "../client/src/pages/DetailsPage.tsx", "../client/src/pages/OwnerPage.tsx", "../client/src/pages/AdminPage.tsx", "../client/src/pages/ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n");
+    const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
     expect(homeSource).toContain("botListingSheetOpen, setBotListingSheetOpen");
     expect(homeSource).toContain("setBotListingSheetOpen(true)");
     expect(homeSource).toContain("submitBotListing.mutate({ telegramLink: botTelegramLinkDraft })");

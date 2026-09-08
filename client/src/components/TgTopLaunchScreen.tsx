@@ -19,7 +19,12 @@ export function TgTopLaunchScreen({ ready, onComplete }: { ready: boolean; onCom
       return;
     }
     const frame = window.requestAnimationFrame(() => setShowCompletion(true));
-    return () => window.cancelAnimationFrame(frame);
+    // Animation fallback: ensure complete() fires even if CSS animationEnd event fails to bubble
+    const timer = setTimeout(complete, 400);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
   }, [ready]);
 
   return (
