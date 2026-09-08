@@ -10,7 +10,7 @@ describe("TG TOP launch readiness", () => {
     expect(app).toContain('<Router onHomeReady={() => setAppReady(true)} />');
     expect(app).toContain('<TgTopLaunchScreen ready={appReady} onComplete={() => setIsLaunching(false)} />');
     expect(app).toContain('manifestUrl="https://tgtop.me/tonconnect-manifest.json"');
-    expect(app).toContain('actionsConfiguration={{ twaReturnUrl: "https://t.me/TG_TOPBOT" }}');
+    expect(app).toContain('actionsConfiguration={{ twaReturnUrl: "https://t.me/TG_TOPBOT?startapp=wallet_connect" }}');
     expect(app).not.toContain('setTimeout(() => setIsLaunching(false)');
     expect(home).toContain('!slotsQuery.isFetched || !groupsQuery.isFetched');
     expect(launch).toContain('data-ready={showCompletion ? "true" : "false"}');

@@ -1343,3 +1343,5 @@
 - [x] Ensure a successful new listing captures and persists the current Telegram video avatar snapshot, then renders it in the featured/detail card without requiring a second listing
 
 - [x] Refresh and persist the current Telegram profile video for the TG TOP channel through the guarded User API media flow, then verify the live catalog card renders the saved MP4
+
+- [ ] Diagnose and fix TON Connect wallet onboarding for a new Telegram account: chooser opens but connection does not complete; verify manifest/origin/callback without signing or sending transactions

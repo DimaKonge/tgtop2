@@ -38,7 +38,7 @@ function App() {
     <ErrorBoundary>
       <TonConnectUIProvider
         manifestUrl="https://tgtop.me/tonconnect-manifest.json"
-        actionsConfiguration={{ twaReturnUrl: "https://t.me/TG_TOPBOT" }}
+        actionsConfiguration={{ twaReturnUrl: "https://t.me/TG_TOPBOT?startapp=wallet_connect" }}
       >
         <ThemeProvider>
           <TooltipProvider>
