@@ -6,7 +6,8 @@ describe("VPS release runbook", () => {
   const runbook = readFileSync(new URL("../docs/RELEASE_RUNBOOK.md", import.meta.url), "utf8");
 
   it("builds dependencies on the VPS from the locked source release, then activates runtime atomically", () => {
-    expect(script).toContain("pnpm vitest run --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --pool=forks --poolOptions.forks.singleFork");
+    expect(script).toContain("TEST_EXCLUDES=(\n  server/tonPayoutWallet.credentials.test.ts\n  server/tonApi.credentials.test.ts\n)");
+    expect(script).toContain('pnpm vitest run "${exclude_args[@]}" --pool=forks --poolOptions.forks.singleFork');
     expect(script).toContain('ITEMS=(dist node_modules package.json pnpm-lock.yaml scripts)');
     expect(script).toContain('dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts');
     expect(script).toContain('install --frozen-lockfile --ignore-scripts');

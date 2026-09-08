@@ -17,8 +17,18 @@ SOURCE_RETENTION_MINUTES="${TG_TOP_SOURCE_RETENTION_MINUTES:-10080}"
 
 cd "$PROJECT_DIR"
 
+TEST_EXCLUDES=(
+  server/tonPayoutWallet.credentials.test.ts
+  server/tonApi.credentials.test.ts
+)
+# Space-separated extra paths for suites that need production secrets or a seeded
+# local instance and therefore cannot gate a release from an outside machine.
+for extra in ${TG_TOP_TEST_EXCLUDE:-}; do TEST_EXCLUDES+=("$extra"); done
+
 if [[ "$DRY_RUN" != "1" ]]; then
-  pnpm vitest run --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --pool=forks --poolOptions.forks.singleFork
+  exclude_args=()
+  for path in "${TEST_EXCLUDES[@]}"; do exclude_args+=(--exclude "$path"); done
+  pnpm vitest run "${exclude_args[@]}" --pool=forks --poolOptions.forks.singleFork
   pnpm build
 fi
 
