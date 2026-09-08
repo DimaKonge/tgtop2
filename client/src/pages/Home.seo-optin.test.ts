@@ -4,7 +4,7 @@ import path from "node:path";
 
 describe("Google publication opt-in", () => {
   it("keeps search publication explicitly controlled by the community owner", () => {
-    const source = fs.readFileSync(path.resolve(import.meta.dirname, "Home.tsx"), "utf8");
+    const source = ["Home.tsx", "useHomeController.ts", "home-helpers.ts", "TopPage.tsx", "CatalogPage.tsx", "GiveawaysPage.tsx", "MinePage.tsx", "DetailsPage.tsx", "OwnerPage.tsx", "AdminPage.tsx", "ProfilePage.tsx"].map(__p => fs.readFileSync(path.resolve(import.meta.dirname, __p), "utf8")).join("\n");
     expect(source).toContain('const [searchIndexable, setSearchIndexable] = useState(false);');
     expect(source).toContain('Показывать в Google');
     expect(source).toContain('searchIndexable,');

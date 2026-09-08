@@ -12,12 +12,20 @@ const EXTRACTED_HOME_COMPONENTS = [
   "SettingsSheet",
   "BotAvatar",
   "BotRankingTile",
-].map(name => readFileSync(new URL(`../components/${name}.tsx`, import.meta.url), "utf8")).join("\n");
+].map(name => readFileSync(new URL(`../components/${name}.tsx`, import.meta.url), "utf8")).join("\n")
+  + "\n" + [
+    "../lib/ton-format.ts",
+    "../lib/ranking-utils.ts",
+    "../hooks/useTonWallet.ts",
+    "../hooks/useTopFilters.ts",
+    "../hooks/useMyGroups.ts",
+    "../hooks/useRankingAuction.ts",
+  ].map(path => readFileSync(new URL(path, import.meta.url), "utf8")).join("\n");
 
 
 describe("TG TOP workspace wallet NFT view", () => {
   it("keeps communities, bots and wallet NFTs as distinct workspace sections", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n") + "\n" + EXTRACTED_HOME_COMPONENTS;
     const domainSource = readFileSync(new URL("../lib/tgTop-domain.ts", import.meta.url), "utf8");
 
     expect(domainSource).toContain('export type WorkspaceSection = "communities" | "bots" | "nft"');
@@ -30,7 +38,7 @@ describe("TG TOP workspace wallet NFT view", () => {
   });
 
   it("loads wallet NFTs only after the TON wallet is connected and supports all requested filters", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n") + "\n" + EXTRACTED_HOME_COMPONENTS;
 
     expect(source).toContain('trpc.tgTop.getWalletNfts.useQuery');
     expect(source).toContain('walletAddress: safeWalletAddress ?? "" },');
@@ -45,7 +53,7 @@ describe("TG TOP workspace wallet NFT view", () => {
   });
 
   it("does not reuse an unowned TON Connect session across Telegram accounts", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n") + "\n" + EXTRACTED_HOME_COMPONENTS;
 
     expect(source).toContain('const ownerKey = "tgtop:ton-wallet-owner"');
     expect(source).toContain('const pendingOwnerKey = "tgtop:ton-wallet-pending-owner"');
@@ -65,7 +73,7 @@ describe("TG TOP workspace wallet NFT view", () => {
   });
 
   it("places the expandable real channel-gifts panel after audience statistics", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n") + "\n" + EXTRACTED_HOME_COMPONENTS;
 
     expect(source).toContain('const rewardCampaignStatsQuery = trpc.tgTop.getRewardCampaignStats.useQuery');
     expect(source).toContain('detailReturnPage === "mine" && ownsDetail && rewardCampaignStats');
@@ -83,7 +91,7 @@ describe("TG TOP workspace wallet NFT view", () => {
   });
 
   it("keeps publication controls visible for a confirmed owner even when their community is pending or under review", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = ["./Home.tsx", "./useHomeController.ts", "./home-helpers.ts", "./TopPage.tsx", "./CatalogPage.tsx", "./GiveawaysPage.tsx", "./MinePage.tsx", "./DetailsPage.tsx", "./OwnerPage.tsx", "./AdminPage.tsx", "./ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n") + "\n" + EXTRACTED_HOME_COMPONENTS;
 
     expect(source).toContain('const ownsDetail = detail?.group.ownerOpenId === user?.openId;');
     expect(source).toContain('{detail && ownsDetail && (\n                    <section className="order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">');

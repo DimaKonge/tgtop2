@@ -5,7 +5,7 @@ describe("catalog directory administration", () => {
   it("lets every assigned panel user manage countries, cities, and topics while protecting values in use", () => {
     const dbSource = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
     const routerSource = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
-    const homeSource = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
+    const homeSource = ["../client/src/pages/Home.tsx", "../client/src/pages/useHomeController.ts", "../client/src/pages/home-helpers.ts", "../client/src/pages/TopPage.tsx", "../client/src/pages/CatalogPage.tsx", "../client/src/pages/GiveawaysPage.tsx", "../client/src/pages/MinePage.tsx", "../client/src/pages/DetailsPage.tsx", "../client/src/pages/OwnerPage.tsx", "../client/src/pages/AdminPage.tsx", "../client/src/pages/ProfilePage.tsx"].map(__p => readFileSync(new URL(__p, import.meta.url), "utf8")).join("\n");
 
     expect(dbSource).toContain("export async function getCatalogTaxonomy()");
     expect(dbSource).toContain("if (!access.canModerate) throw new Error(\"Недостаточно прав для управления справочниками\")");
