@@ -57,22 +57,19 @@ jobs:
         run: |
           pnpm install --no-frozen-lockfile
           pnpm run build
-      - name: Configure SSH
+      - name: Configure password-based SSH
         env:
-          TG_TOP_VPS_KEY: ${{ secrets.SERVER_SSH_KEY }}
           TG_TOP_VPS_HOST: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
           install -d -m 700 ~/.ssh
-          printf '%b\n' "$TG_TOP_VPS_KEY" | tr -d '\r' > ~/.ssh/tgtop_deploy
-          chmod 600 ~/.ssh/tgtop_deploy
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
       - name: Upload and activate staged release
         env:
+          TG_TOP_VPS_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          TG_TOP_VPS_HOST: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}
           RELEASE_NAME: release-${{ github.sha }}
           TG_TOP_STAGE_PORT: 3101
-        run: |
-          export TG_TOP_VPS_KEY="$HOME/.ssh/tgtop_deploy"
-          export TG_TOP_VPS_HOST="${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}"
-          export RELEASE_NAME="release-${{ github.sha }}"
-          export SKIP_LOCAL_VERIFY=1
-          bash scripts/release-vps.sh
+          SKIP_LOCAL_VERIFY: 1
+        run: bash scripts/release-vps.sh

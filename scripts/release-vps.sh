@@ -6,7 +6,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOST="${TG_TOP_VPS_HOST:?Set TG_TOP_VPS_HOST, for example root@your-vps}"
-KEY="${TG_TOP_VPS_KEY:?Set TG_TOP_VPS_KEY to the private release-key path}"
+PASSWORD="${TG_TOP_VPS_PASSWORD:?Set TG_TOP_VPS_PASSWORD from the GitHub SERVER_PASSWORD secret}"
 DRY_RUN="${DRY_RUN:-0}"
 SKIP_LOCAL_VERIFY="${SKIP_LOCAL_VERIFY:-0}"
 RELEASE="${RELEASE_NAME:-release-$(date -u +%Y%m%dT%H%M%SZ)}"
@@ -39,8 +39,9 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
-SSH=(ssh -i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes "$HOST")
-SCP=(scp -i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes)
+export SSHPASS="$PASSWORD"
+SSH=(sshpass -e ssh -o BatchMode=no -o StrictHostKeyChecking=yes "$HOST")
+SCP=(sshpass -e scp -o StrictHostKeyChecking=yes)
 
 "${SSH[@]}" 'mkdir -p /opt/tgtop/releases'
 "${SCP[@]}" "$ARCHIVE" "$HOST:/opt/tgtop/releases/${RELEASE}-source.tgz"
