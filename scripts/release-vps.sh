@@ -22,12 +22,13 @@ if [[ "$DRY_RUN" != "1" ]]; then
   pnpm build
 fi
 
-for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts; do
+for item in dist package.json patches/wouter@3.7.1.patch scripts; do
   test -e "$item" || { echo "Missing required release item: $item" >&2; exit 1; }
 done
 
 tar -C "$PROJECT_DIR" -czf "$ARCHIVE" \
-  dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts
+  dist package.json patches/wouter@3.7.1.patch scripts \
+  $(test -e pnpm-lock.yaml && printf '%s' pnpm-lock.yaml || true)
 EXPECTED_SHA="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
 echo "Prepared ${RELEASE} (${EXPECTED_SHA})"
 
@@ -51,7 +52,8 @@ STAGE="$BASE/releases/stage-${RELEASE}"
 PREVIOUS="$BASE/releases/previous-${RELEASE}"
 FAILED="$BASE/releases/failed-${RELEASE}"
 LOCK_FILE="$BASE/releases/.release.lock"
-ITEMS=(dist node_modules package.json pnpm-lock.yaml scripts)
+ITEMS=(dist node_modules package.json scripts)
+if [ -e "$BASE/pnpm-lock.yaml" ]; then ITEMS+=(pnpm-lock.yaml); fi
 UNITS=(tgtop.service tgtop-bot.service tgtop-bot-reserve.service)
 if [ -f /etc/systemd/system/tgtop-payout-worker.service ]; then UNITS+=(tgtop-payout-worker.service); fi
 if [ -f /etc/systemd/system/tgtop-owner-dm-worker.service ]; then UNITS+=(tgtop-owner-dm-worker.service); fi
@@ -100,9 +102,13 @@ prune_release_artifacts
 ensure_release_space
 mkdir -p "$STAGE" "$PREVIOUS"
 tar -xzf "$ARCHIVE" -C "$STAGE"
-for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts; do test -e "$STAGE/$item"; done
+for item in dist package.json patches/wouter@3.7.1.patch scripts; do test -e "$STAGE/$item"; done
 
-"$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
+if [ -e "$STAGE/pnpm-lock.yaml" ]; then
+  "$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
+else
+  "$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --no-frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
+fi
 (
   cd "$STAGE"
   node scripts/runtime-package-probe.mjs
