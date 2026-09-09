@@ -6,7 +6,8 @@ describe("VPS release runbook", () => {
   const runbook = readFileSync(new URL("../docs/RELEASE_RUNBOOK.md", import.meta.url), "utf8");
 
   it("builds dependencies on the VPS from the locked source release, then activates runtime atomically", () => {
-    expect(script).toContain("pnpm vitest run --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --pool=forks --poolOptions.forks.singleFork");
+    expect(script).toContain("SKIP_LOCAL_VERIFY=\"${SKIP_LOCAL_VERIFY:-0}\"");
+    expect(script).toContain("pnpm vitest run --exclude server/telegramUserAgent.test.ts --exclude server/telegramUserApi.credentials.test.ts --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --pool=forks --poolOptions.forks.singleFork");
     expect(script).toContain('ITEMS=(dist node_modules package.json scripts)');
     expect(script).toContain('if [ -e "$BASE/pnpm-lock.yaml" ]; then ITEMS+=(pnpm-lock.yaml); fi');
     expect(script).toContain('dist package.json patches/wouter@3.7.1.patch scripts');

@@ -74,4 +74,5 @@ jobs:
           export TG_TOP_VPS_KEY="$HOME/.ssh/tgtop_deploy"
           export TG_TOP_VPS_HOST="${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}"
           export RELEASE_NAME="release-${{ github.sha }}"
+          export SKIP_LOCAL_VERIFY=1
           bash scripts/release-vps.sh

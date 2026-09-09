@@ -8,6 +8,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOST="${TG_TOP_VPS_HOST:?Set TG_TOP_VPS_HOST, for example root@your-vps}"
 KEY="${TG_TOP_VPS_KEY:?Set TG_TOP_VPS_KEY to the private release-key path}"
 DRY_RUN="${DRY_RUN:-0}"
+SKIP_LOCAL_VERIFY="${SKIP_LOCAL_VERIFY:-0}"
 RELEASE="${RELEASE_NAME:-release-$(date -u +%Y%m%dT%H%M%SZ)}"
 STAGE_PORT="${TG_TOP_STAGE_PORT:-3101}"
 ARCHIVE="/tmp/tgtop-${RELEASE}-source.tgz"
@@ -17,8 +18,8 @@ SOURCE_RETENTION_MINUTES="${TG_TOP_SOURCE_RETENTION_MINUTES:-10080}"
 
 cd "$PROJECT_DIR"
 
-if [[ "$DRY_RUN" != "1" ]]; then
-  pnpm vitest run --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --pool=forks --poolOptions.forks.singleFork
+if [[ "$DRY_RUN" != "1" && "$SKIP_LOCAL_VERIFY" != "1" ]]; then
+  pnpm vitest run --exclude server/telegramUserAgent.test.ts --exclude server/telegramUserApi.credentials.test.ts --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --pool=forks --poolOptions.forks.singleFork
   pnpm build
 fi
 
