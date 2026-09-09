@@ -63,7 +63,7 @@ jobs:
           TG_TOP_VPS_HOST: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}
         run: |
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$TG_TOP_VPS_KEY" > ~/.ssh/tgtop_deploy
+          printf '%b\n' "$TG_TOP_VPS_KEY" | tr -d '\r' > ~/.ssh/tgtop_deploy
           chmod 600 ~/.ssh/tgtop_deploy
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
       - name: Upload and activate staged release
