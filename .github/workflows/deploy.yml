@@ -33,7 +33,7 @@ jobs:
       - name: TypeScript check
         run: pnpm run check
       - name: Unit tests
-        run: pnpm exec vitest run --exclude server/telegramUserAgent.test.ts --exclude server/telegramUserApi.credentials.test.ts --exclude client/src/pages/Home.mobile-rendered.test.ts --pool=forks --poolOptions.forks.singleFork
+        run: pnpm exec vitest run --exclude server/telegramUserAgent.test.ts --exclude server/telegramUserApi.credentials.test.ts --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --exclude client/src/pages/Home.mobile-rendered.test.ts --pool=forks --poolOptions.forks.singleFork
       - name: Production build
         run: pnpm run build
 
