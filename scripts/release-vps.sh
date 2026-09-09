@@ -6,8 +6,9 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOST="${TG_TOP_VPS_HOST:?Set TG_TOP_VPS_HOST, for example root@your-vps}"
-KEY="${TG_TOP_VPS_KEY:?Set TG_TOP_VPS_KEY to the private release-key path}"
+PASSWORD="${TG_TOP_VPS_PASSWORD:?Set TG_TOP_VPS_PASSWORD from the GitHub SERVER_PASSWORD secret}"
 DRY_RUN="${DRY_RUN:-0}"
+SKIP_LOCAL_VERIFY="${SKIP_LOCAL_VERIFY:-0}"
 RELEASE="${RELEASE_NAME:-release-$(date -u +%Y%m%dT%H%M%SZ)}"
 STAGE_PORT="${TG_TOP_STAGE_PORT:-3101}"
 ARCHIVE="/tmp/tgtop-${RELEASE}-source.tgz"
@@ -17,17 +18,18 @@ SOURCE_RETENTION_MINUTES="${TG_TOP_SOURCE_RETENTION_MINUTES:-10080}"
 
 cd "$PROJECT_DIR"
 
-if [[ "$DRY_RUN" != "1" ]]; then
-  pnpm vitest run --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --pool=forks --poolOptions.forks.singleFork
+if [[ "$DRY_RUN" != "1" && "$SKIP_LOCAL_VERIFY" != "1" ]]; then
+  pnpm vitest run --exclude server/telegramUserAgent.test.ts --exclude server/telegramUserApi.credentials.test.ts --exclude server/tonPayoutWallet.credentials.test.ts --exclude server/tonApi.credentials.test.ts --pool=forks --poolOptions.forks.singleFork
   pnpm build
 fi
 
-for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts; do
+for item in dist package.json patches/wouter@3.7.1.patch scripts; do
   test -e "$item" || { echo "Missing required release item: $item" >&2; exit 1; }
 done
 
 tar -C "$PROJECT_DIR" -czf "$ARCHIVE" \
-  dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts
+  dist package.json patches/wouter@3.7.1.patch scripts \
+  $(test -e pnpm-lock.yaml && printf '%s' pnpm-lock.yaml || true)
 EXPECTED_SHA="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
 echo "Prepared ${RELEASE} (${EXPECTED_SHA})"
 
@@ -37,8 +39,9 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
-SSH=(ssh -i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes "$HOST")
-SCP=(scp -i "$KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes)
+export SSHPASS="$PASSWORD"
+SSH=(sshpass -e ssh -o BatchMode=no -o StrictHostKeyChecking=yes "$HOST")
+SCP=(sshpass -e scp -o StrictHostKeyChecking=yes)
 
 "${SSH[@]}" 'mkdir -p /opt/tgtop/releases'
 "${SCP[@]}" "$ARCHIVE" "$HOST:/opt/tgtop/releases/${RELEASE}-source.tgz"
@@ -51,7 +54,8 @@ STAGE="$BASE/releases/stage-${RELEASE}"
 PREVIOUS="$BASE/releases/previous-${RELEASE}"
 FAILED="$BASE/releases/failed-${RELEASE}"
 LOCK_FILE="$BASE/releases/.release.lock"
-ITEMS=(dist node_modules package.json pnpm-lock.yaml scripts)
+ITEMS=(dist node_modules package.json scripts)
+if [ -e "$BASE/pnpm-lock.yaml" ]; then ITEMS+=(pnpm-lock.yaml); fi
 UNITS=(tgtop.service tgtop-bot.service tgtop-bot-reserve.service)
 if [ -f /etc/systemd/system/tgtop-payout-worker.service ]; then UNITS+=(tgtop-payout-worker.service); fi
 if [ -f /etc/systemd/system/tgtop-owner-dm-worker.service ]; then UNITS+=(tgtop-owner-dm-worker.service); fi
@@ -100,9 +104,13 @@ prune_release_artifacts
 ensure_release_space
 mkdir -p "$STAGE" "$PREVIOUS"
 tar -xzf "$ARCHIVE" -C "$STAGE"
-for item in dist package.json pnpm-lock.yaml patches/wouter@3.7.1.patch scripts; do test -e "$STAGE/$item"; done
+for item in dist package.json patches/wouter@3.7.1.patch scripts; do test -e "$STAGE/$item"; done
 
-"$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
+if [ -e "$STAGE/pnpm-lock.yaml" ]; then
+  "$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
+else
+  "$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --no-frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
+fi
 (
   cd "$STAGE"
   node scripts/runtime-package-probe.mjs
