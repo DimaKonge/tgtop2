@@ -1348,7 +1348,7 @@
 
 - [ ] Inline listing price, predicted placement, category/subcategory, country, and city controls inside the expanded publication-parameters panel and remove the separate price/geo/category window without changing listing validation
 
-- [ ] Configure Google AI Studio automation to edit through a controlled branch/PR and deploy only after build, tests, health checks, and rollback-safe staging; preserve integration access while preventing broken direct production writes
+- [x] Configure Google AI Studio automation to edit through a controlled branch/PR and deploy only after build, tests, health checks, and rollback-safe staging; preserve integration access while preventing broken direct production writes
 
 - [x] Switch GitHub Actions VPS deployment from SERVER_SSH_KEY to password-based SSH using the existing SERVER_HOST, SERVER_USER, and SERVER_PASSWORD secrets, then verify staged deploy and rollback health gates
 
