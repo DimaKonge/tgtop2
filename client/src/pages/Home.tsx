@@ -15,16 +15,6 @@ import { TgTopPyramidIcon } from "@/components/TgTopPyramidIcon";
 import { TopRankingCard } from "@/components/TopRankingCard";
 import { CommunityAvatar as Avatar, FullBleedCommunityArtwork as FullBleedGroupArtwork, getTelegramAvatarSrc } from "@/components/CommunityArtwork";
 import { CompactCommunityRow } from "@/components/CompactCommunityRow";
-import { SortableMyGroupTile } from "@/components/SortableMyGroupTile";
-import { NftCard } from "@/components/NftCard";
-import { NftShowcase } from "@/components/NftShowcase";
-import { BrandMark } from "@/components/BrandMark";
-import { WalletConnectControl } from "@/components/WalletConnectControl";
-import { WalletNftCard } from "@/components/WalletNftCard";
-import { ChannelGiftMediaPreview } from "@/components/ChannelGiftMediaPreview";
-import { SettingsSheet } from "@/components/SettingsSheet";
-import { BotAvatar } from "@/components/BotAvatar";
-import { BotRankingTile, type PublicBotTile } from "@/components/BotRankingTile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -35,12 +25,11 @@ import {
 } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useTheme, type Appearance, type ThemeAccent, type ThemeStyle } from "@/contexts/ThemeContext";
+import { THEME_BACKGROUND_OPTIONS, useTheme, type Appearance, type ThemeAccent, type ThemeStyle } from "@/contexts/ThemeContext";
 import {
   ArrowLeft,
   BarChart3,
   Bot,
-  Calendar,
   Check,
   ChevronRight,
   Filter,
@@ -50,6 +39,7 @@ import {
   GripVertical,
   Hash,
   LayoutGrid,
+  Languages,
    List,
    MessageSquare,
    Minus,
@@ -79,7 +69,9 @@ import {
 import { toast } from "sonner";
 import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 import lottie from "lottie-web";
-import { CATEGORY_SUBCATEGORIES, CITY_OPTIONS, COUNTRY_LABELS, COUNTRY_OPTIONS, SUBCATEGORY_LABELS, type Audience, type DetailStatsPeriod, type GlobalDirection, type Group, type Language, type ListingCountry, type ListingType, type MyGroupsViewMode, type Nft, type NftDealCategory, type NftMarketCategory, type Page, type PreparedNftTransfer, type ShowcaseNft, type Slot, type TopSection, type WalletNft, type WalletNftFilter, type WorkspaceSection, getRussianLanguage, hasConfiguredRewardCampaign } from "@/lib/tgTop-domain";
+import { CATEGORY_SUBCATEGORIES, CITY_OPTIONS, COUNTRY_LABELS, COUNTRY_OPTIONS, SUBCATEGORY_LABELS, type Audience, type DetailStatsPeriod, type GlobalDirection, type Group, type Language, type ListingCountry, type ListingType, type MyGroupsViewMode, type Nft, type NftDealCategory, type NftMarketCategory, type Page, type PreparedNftTransfer, type ShowcaseNft, type Slot, type TopSection, type WalletNft, type WalletNftFilter, type WorkspaceSection, getRussianLanguage, hasConfiguredRewardCampaign, setLanguagePreference } from "@/lib/tgTop-domain";
+import { NftShowcase } from "@/components/tgtop/NftShowcase";
+import { NftCard } from "@/components/tgtop/NftCard";
 const formatTon = (value: number | string | null | undefined) => {
   const amount = typeof value === "number" ? value : Number(value);
   return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
@@ -141,16 +133,35 @@ const openTelegramCommunityLink = (url: string) => {
   } | undefined;
   const isTelegramMiniApp = Boolean(webApp?.initData);
   if (isTelegramMiniApp && /^https:\/\/t\.me\//i.test(url) && webApp?.openTelegramLink) {
-    webApp.openTelegramLink(url);
-    return true;
+    try {
+      webApp.openTelegramLink(url);
+      // Some Telegram WebView versions silently ignore the API call. If the
+      // view stays visible, navigate the current WebView instead of failing.
+      window.setTimeout(() => {
+        if (document.visibilityState === "visible") window.location.assign(url);
+      }, 350);
+      return true;
+    } catch {
+      window.location.assign(url);
+      return true;
+    }
   }
   if (isTelegramMiniApp && webApp?.openLink) {
-    webApp.openLink(url);
-    return true;
+    try {
+      webApp.openLink(url);
+      return true;
+    } catch {
+      window.location.assign(url);
+      return true;
+    }
   }
   const tab = window.open(url, "_blank", "noopener,noreferrer");
-  if (tab) tab.opener = null;
-  return Boolean(tab);
+  if (tab) {
+    tab.opener = null;
+    return true;
+  }
+  window.location.assign(url);
+  return true;
 };
 const openTonviewerTransaction = (transactionHash: string) => {
   if (!/^[0-9a-f]{64}$/i.test(transactionHash)) return;
@@ -166,6 +177,332 @@ const getCountryLabel = (country: string, language: Language) =>
   COUNTRY_LABELS[country]?.[language] ?? country;
 const getCityLabel = (country: string, city: string, language: Language) =>
   CITY_OPTIONS[country]?.find(item => item.value === city)?.[language] ?? city;
+function SortableMyGroupTile({
+  group,
+  language,
+  disabled,
+  onOpen,
+  onTogglePin,
+  onCreateGiveaway,
+  selectionMode,
+  selected,
+  onSelect,
+}: {
+  group: Group;
+  language: Language;
+  disabled?: boolean;
+  onOpen: () => void;
+  onTogglePin: () => void;
+  onCreateGiveaway: () => void;
+  selectionMode: boolean;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: group.id, disabled: disabled || selectionMode });
+  const selectionHoldTimer = useRef<number | null>(null);
+  const selectionTriggered = useRef(false);
+  const isEnglish = language === "en";
+  const isSale = group.status === "listed" && group.listingType === "sale";
+  const status = isSale ? (isEnglish ? "For sale" : "На продаже") : group.status === "listed" ? (isEnglish ? "In catalog" : "В каталоге") : null;
+  const statusClass = isSale
+    ? "border-emerald-200/20 bg-emerald-500/30 text-emerald-50"
+      : "border-blue-200/20 bg-[#3f8cff]/30 text-blue-50";
+  const clearSelectionHold = () => {
+    if (selectionHoldTimer.current !== null) window.clearTimeout(selectionHoldTimer.current);
+    selectionHoldTimer.current = null;
+  };
+  const beginSelectionHold = () => {
+    if (selectionMode) return;
+    clearSelectionHold();
+    selectionHoldTimer.current = window.setTimeout(() => {
+      selectionTriggered.current = true;
+      onSelect();
+      (window.Telegram?.WebApp as unknown as { HapticFeedback?: { impactOccurred: (style: "medium") => void } } | undefined)?.HapticFeedback?.impactOccurred("medium");
+    }, 420);
+  };
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      onContextMenu={event => event.preventDefault()}
+      aria-label={selectionMode ? (isEnglish ? `Select ${group.title}` : `Выбрать ${group.title}`) : (isEnglish ? `${group.title}. Hold to select or drag the handle to reorder.` : `${group.title}. Удерживайте для выбора или тяните за ручку для изменения порядка.`)}
+      className={`group relative aspect-square min-w-0 touch-manipulation overflow-hidden rounded-xl border border-white/8 bg-[#111720] shadow-sm transition-[opacity,transform,border-color,box-shadow] ${selected ? "border-[#72a8ff]/70 ring-2 ring-[#3f8cff]/35" : ""} ${isDragging ? "z-20 scale-[.96] border-[#72a8ff]/60 bg-[#182334] opacity-30" : ""}`}
+    >
+      <FullBleedGroupArtwork group={group} allowAnimatedMedia />
+      <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,9,15,.05)_18%,rgba(5,9,15,.28)_45%,rgba(5,9,15,.92)_100%)]" />
+      <button type="button" onPointerDown={beginSelectionHold} onPointerUp={clearSelectionHold} onPointerCancel={clearSelectionHold} onPointerLeave={clearSelectionHold} onClick={() => { clearSelectionHold(); if (selectionTriggered.current) { selectionTriggered.current = false; return; } if (selectionMode) onSelect(); else onOpen(); }} className="relative z-10 flex h-full w-full flex-col justify-end p-2.5 text-left">
+        <span className="tg-media-overlay-content min-w-0 w-full">
+          <b className="tg-media-overlay-title line-clamp-2 text-[11px] leading-3.5 text-white drop-shadow-sm">{group.title}</b>
+          <small className="tg-media-overlay-meta mt-0.5 block truncate text-[9px] text-slate-300/80">{getCommunityAccessLabel(group, language)}</small>
+        </span>
+      </button>
+      {status && <span className={`absolute right-0 top-1 z-10 max-w-[76%] truncate border-b border-l px-2.5 pb-1 pt-1 text-[7px] font-semibold leading-none shadow-md shadow-black/20 backdrop-blur-md [clip-path:polygon(12px_0,100%_0,100%_100%,0_100%,0_12px)] ${statusClass}`}>{status}</span>}
+      {selectionMode ? (
+        <span className={`absolute left-2 top-2 z-20 grid h-6 w-6 place-items-center rounded-full border backdrop-blur-sm ${selected ? "border-[#a6c8ff]/70 bg-[#3f8cff] text-white" : "border-white/25 bg-black/25 text-transparent"}`}><Check className="h-3.5 w-3.5" /></span>
+      ) : (
+        <>
+          <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} aria-label={isEnglish ? `Drag ${group.title}` : `Перетащить ${group.title}`} className="absolute bottom-2 left-2 z-20 grid h-6 w-6 touch-none place-items-center rounded-md bg-black/20 text-slate-200/80 backdrop-blur-sm transition-colors hover:bg-white/15 hover:text-white active:bg-[#3f8cff]/30"><GripVertical className="h-3.5 w-3.5" /></button>
+          <div className="absolute bottom-2 right-2 z-20 flex items-center gap-1">
+            <button type="button" onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onCreateGiveaway(); }} aria-label={isEnglish ? `Create giveaway for ${group.title}` : `Создать розыгрыш для ${group.title}`} className="grid h-6 w-6 place-items-center rounded-md bg-amber-300/12 text-amber-100 transition-colors hover:bg-amber-300/22"><Star className="h-3.5 w-3.5 fill-current" /></button>
+            <button type="button" onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onTogglePin(); }} aria-label={group.ownerPinned ? (isEnglish ? "Unpin community" : "Открепить группу") : (isEnglish ? "Pin community" : "Закрепить группу")} className={`grid h-6 w-6 place-items-center rounded-md transition-colors ${group.ownerPinned ? "bg-[#3f8cff]/16 text-[#9cc3ff]" : "text-slate-500 hover:bg-white/7 hover:text-slate-200"}`}>{group.ownerPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}</button>
+          </div>
+        </>
+      )}
+    </article>
+  );
+}
+
+
+
+function BrandMark() {
+  return (
+    <span
+      aria-label="TG TOP"
+      className="brand-mark brand-mark-symbol grid h-8 w-8 place-items-center rounded-[9px] border bg-transparent"
+      style={{
+        color: "var(--tg-accent)",
+        borderColor: "color-mix(in srgb, var(--tg-accent) 42%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--tg-accent) 12%, transparent)",
+        boxShadow: "0 0 14px color-mix(in srgb, var(--tg-accent) 18%, transparent)",
+      }}
+    >
+      <TgTopPyramidIcon className="h-[18px] w-[25px]" />
+    </span>
+  );
+}
+
+function WalletConnectControl({ language, balanceTon, variant = "compact", ownerOpenId, address, restored, onDisconnect }: { language: Language; balanceTon: string; variant?: "compact" | "profile"; ownerOpenId?: string; address: string | null; restored: boolean; onDisconnect: () => Promise<void> }) {
+  const [tonConnectUi] = useTonConnectUI();
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const openWalletForOwner = () => {
+    if (ownerOpenId) window.localStorage.setItem("tgtop:ton-wallet-pending-owner", ownerOpenId);
+    tonConnectUi.openModal();
+  };
+  const label = address
+    ? language === "en" ? "Connected" : "Подключён"
+    : language === "en"
+      ? "Connect wallet"
+      : "Кошелёк";
+  const disconnectWallet = async () => {
+    try {
+      await onDisconnect();
+    } finally {
+      setWalletMenuOpen(false);
+    }
+  };
+
+  if (variant === "profile") {
+    const walletLabel = address
+      ? `${address.slice(0, 5)}…${address.slice(-4)}`
+      : language === "en" ? "Connect wallet" : "Подключить кошелёк";
+    const trigger = <button disabled={!restored} onClick={() => address ? setWalletMenuOpen(true) : openWalletForOwner()} className={`mt-3 flex min-h-11 w-full items-center justify-between rounded-xl border px-3.5 text-left transition-colors disabled:opacity-60 ${address ? "border-white/10 bg-white/[0.035] text-slate-200 hover:bg-white/[0.07]" : "border-[#3f8cff]/45 bg-[#3f8cff]/14 text-[#c8ddff] hover:bg-[#3f8cff]/22"}`}><span className="flex min-w-0 items-center gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-current/20 bg-black/10"><WalletCards className="h-3.5 w-3.5" /></span><span className="min-w-0"><b className="block text-xs">{restored ? walletLabel : language === "en" ? "Loading wallet…" : "Загрузка кошелька…"}</b><small className="mt-0.5 block truncate text-[10px] text-slate-400">{address ? `${balanceTon} GRAM` : language === "en" ? "No transfer or signature is requested" : "Перевод и подпись не запрашиваются"}</small></span></span><ChevronRight className="h-4 w-4 shrink-0" /></button>;
+    if (!address) return trigger;
+    return <Popover open={walletMenuOpen} onOpenChange={setWalletMenuOpen}><PopoverTrigger asChild>{trigger}</PopoverTrigger><PopoverContent align="center" className="w-[min(22rem,calc(100vw-2rem))] border-white/10 bg-[#111720] p-3 text-slate-100 shadow-xl"><div className="space-y-3"><div><b className="block text-xs">{language === "en" ? "Personal wallet" : "Личный кошелёк"}</b><code className="mt-1 block break-all text-[10px] text-slate-400">{address}</code></div><button type="button" onClick={() => void disconnectWallet()} className="flex w-full items-center justify-center gap-2 rounded-lg border border-rose-300/25 bg-rose-500/[0.08] px-3 py-2 text-xs font-semibold text-rose-100 transition-colors hover:bg-rose-500/[0.14]"><X className="h-3.5 w-3.5" />{language === "en" ? "Disconnect wallet" : "Отключить кошелёк"}</button><small className="block text-center text-[9px] leading-4 text-slate-500">{language === "en" ? "Balances and operation history are not affected." : "Баланс и история операций не изменятся."}</small></div></PopoverContent></Popover>;
+  }
+
+  return <button disabled={!restored} onClick={openWalletForOwner} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-2.5 text-[11px] font-medium text-[#a6c8ff] disabled:opacity-60"><WalletCards className="h-3.5 w-3.5" />{restored ? <><span>{label}</span>{address && <span className="rounded-md bg-[#0b0f14]/70 px-1.5 py-0.5 text-[10px] text-white">{balanceTon} GRAM</span>}</> : language === "en" ? "Loading…" : "Загрузка…"}</button>;
+}
+
+function WalletNftCard({ item, language }: { item: WalletNft; language: Language }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
+  const categoryLabel: Record<WalletNft["category"], string> = {
+    gifts: language === "en" ? "Gifts" : "Гифты",
+    usernames: language === "en" ? "Username" : "Юзернейм",
+    anonymous_numbers: language === "en" ? "Anonymous number" : "Анон-номер",
+    domains: language === "en" ? "Domain" : "Домен",
+    other: language === "en" ? "Other NFT" : "Другой NFT",
+  };
+  const categoryClass: Record<WalletNft["category"], string> = {
+    gifts: "border-amber-200/20 bg-amber-300/[0.08] text-amber-100",
+    usernames: "border-[#82b6ff]/25 bg-[#3f8cff]/10 text-[#c8ddff]",
+    anonymous_numbers: "border-violet-200/20 bg-violet-400/[0.09] text-violet-100",
+    domains: "border-emerald-200/20 bg-emerald-400/[0.09] text-emerald-100",
+    other: "border-white/10 bg-white/[0.045] text-slate-300",
+  };
+  const shortAddress = item.address.length > 16 ? `${item.address.slice(0, 7)}…${item.address.slice(-5)}` : item.address;
+  const imageUrls = Array.from(new Set([...(item.imageUrls ?? []), item.imageUrl].filter((url): url is string => Boolean(url))));
+  const imageUrl = imageUrls[imageIndex] ?? null;
+  const tryNextImage = () => {
+    if (imageIndex + 1 < imageUrls.length) setImageIndex(index => index + 1);
+    else setImageFailed(true);
+  };
+
+  return <article className="overflow-hidden rounded-xl border border-white/9 bg-[#111720] p-2.5 transition-colors hover:border-white/16 hover:bg-[#151d29]">
+    <div className="relative aspect-square overflow-hidden rounded-lg border border-white/8 bg-[#1b2430]">
+      {imageUrl && !imageFailed ? item.mediaKind === "video" && imageIndex === 0 ? <video src={imageUrl} autoPlay muted loop playsInline className="h-full w-full object-cover" onError={tryNextImage} /> : <img src={imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={tryNextImage} /> : <span className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(84,143,255,.32),transparent 42%),#152131] text-lg font-semibold text-[#aacaff]">{item.name.slice(0, 1).toUpperCase()}</span>}
+      <span className={`absolute left-1.5 top-1.5 rounded-md border px-1.5 py-1 text-[8px] font-semibold backdrop-blur-sm ${categoryClass[item.category]}`}>{categoryLabel[item.category]}</span>
+    </div>
+    <b className="mt-2 block truncate text-[11px] text-slate-100">{item.name}</b>
+    <small className="mt-0.5 block truncate text-[9px] text-slate-500">{item.collectionName ?? categoryLabel[item.category]}</small>
+    <small className="mt-1 block truncate font-mono text-[8px] text-slate-600">{shortAddress}</small>
+  </article>;
+}
+
+type ChannelGiftMedia = { mediaUrl: string | null; mediaKind: "video" | "tgs" | "image" | null; emoji: string };
+
+function ChannelGiftMediaPreview({ gift }: { gift: ChannelGiftMedia }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (gift.mediaKind !== "tgs" || !gift.mediaUrl || !containerRef.current) return;
+    let cancelled = false;
+    let animation: ReturnType<typeof lottie.loadAnimation> | undefined;
+    void (async () => {
+      try {
+        const response = await fetch(gift.mediaUrl!);
+        if (!response.ok || typeof DecompressionStream === "undefined") throw new Error("Unsupported TGS animation");
+        const compressed = await response.arrayBuffer();
+        const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"));
+        const animationData = await new Response(stream).json();
+        if (!cancelled && containerRef.current) animation = lottie.loadAnimation({ container: containerRef.current, renderer: "svg", loop: true, autoplay: true, animationData });
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    })();
+    return () => { cancelled = true; animation?.destroy(); };
+  }, [gift.mediaKind, gift.mediaUrl]);
+
+  if (gift.mediaKind === "video" && gift.mediaUrl && !failed) return <video src={gift.mediaUrl} autoPlay muted loop playsInline onError={() => setFailed(true)} className="h-full w-full object-contain" />;
+  if (gift.mediaKind === "image" && gift.mediaUrl && !failed) return <img src={gift.mediaUrl} alt="" onError={() => setFailed(true)} className="h-full w-full object-contain" />;
+  if (gift.mediaKind === "tgs" && gift.mediaUrl && !failed) return <div ref={containerRef} className="h-full w-full" />;
+  return <span aria-label="Медиа подарка недоступно" className="grid h-full w-full place-items-center px-2 text-center text-[9px] font-medium uppercase tracking-[0.08em] text-slate-500">Медиа недоступно</span>;
+}
+
+function SettingsSheet({
+  open,
+  onOpenChange,
+  language,
+  onLanguageChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  language: Language;
+  onLanguageChange: (language: Language) => void;
+}) {
+  const { appearance, setAppearance, style, setStyle, accent, setAccent, background, setBackground } = useTheme();
+  const isEnglish = language === "en";
+  const appearanceItems: Array<{ value: Appearance; label: string; icon: typeof Moon }> = [
+    { value: "dark", label: "Тёмная", icon: Moon },
+    { value: "light", label: "Светлая", icon: Sun },
+  ];
+  const styleItems: Array<{ value: ThemeStyle; label: string }> = [
+    { value: "original", label: "TG TOP" },
+    { value: "clean", label: "Clean" },
+  ];
+  const languageItems: Array<{ value: Language; label: string }> = [
+    { value: "en", label: "English" },
+    { value: "ru", label: "Русский" },
+  ];
+  const accentItems: Array<{ value: ThemeAccent; label: string; color: string }> = [
+    { value: "blue", label: "Azure Blue", color: "#3f8cff" },
+    { value: "purple", label: "Electric Purple", color: "#9b6cff" },
+    { value: "rose", label: "Rose", color: "#f06b91" },
+    { value: "gold", label: "Pure Gold", color: "#e9b949" },
+    { value: "green", label: "Emerald", color: "#4cc978" },
+    { value: "turquoise", label: "Turquoise", color: "#35c6c2" },
+  ];
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="max-h-[78dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-4 text-slate-100 shadow-[0_-18px_55px_rgba(2,8,16,0.28)]"
+      >
+        <SheetHeader className="border-b border-white/8 px-4 pb-3">
+          <SheetTitle className="text-base font-semibold tracking-tight text-slate-100">
+            {isEnglish ? "Settings" : "Настройки"}
+          </SheetTitle>
+        </SheetHeader>
+        <div className="mx-4 space-y-3 overflow-y-auto pb-1">
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Settings2 className="h-4 w-4 text-[#72a8ff]" />
+              {isEnglish ? "Interface style" : "Стиль интерфейса"}
+            </div>
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
+              {styleItems.map(item => (
+                <button key={item.value} onClick={() => setStyle(item.value)} aria-pressed={style === item.value} className={`h-8 rounded-md text-[11px] font-semibold transition-colors ${style === item.value ? "bg-[#3f8cff]/18 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] leading-4 text-slate-500">{isEnglish ? "TG TOP keeps the branded grid, while Clean uses a calmer Telegram-native shell." : "TG TOP сохраняет фирменную сетку, Clean делает оболочку спокойнее и ближе к Telegram-native интерфейсам."}</p>
+          </section>
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Sun className="h-4 w-4 text-[#72a8ff]" />
+              {isEnglish ? "Theme" : "Тема"}
+            </div>
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
+              {appearanceItems.map(item => {
+                const Icon = item.icon;
+                const active = appearance === item.value;
+                return <button key={item.value} onClick={() => setAppearance(item.value)} aria-label={item.label} aria-pressed={active} className={`tg-settings-choice flex h-8 items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}><Icon className="h-3 w-3" />{item.label}</button>;
+              })}
+            </div>
+          </section>
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Palette className="h-4 w-4 text-[#72a8ff]" />
+              {isEnglish ? "Color accent" : "Цветовой акцент"}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {accentItems.map(item => <button key={item.value} onClick={() => setAccent(item.value)} aria-label={item.label} aria-pressed={accent === item.value} className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg border px-1 transition-colors ${accent === item.value ? "border-[#72a8ff] bg-[#3f8cff]/12" : "border-white/8 bg-[#0b0f14] hover:border-white/20"}`}><span className="h-6 w-6 rounded-md shadow-inner" style={{ backgroundColor: item.color }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>)}
+            </div>
+          </section>
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Languages className="h-4 w-4 text-[#72a8ff]" />
+              {isEnglish ? "Language" : "Язык"}
+            </div>
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
+              {languageItems.map(item => <button key={item.value} onClick={() => onLanguageChange(item.value)} aria-pressed={language === item.value} className={`h-8 rounded-md text-[11px] font-semibold transition-colors ${language === item.value ? "bg-[#3f8cff]/18 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}>{item.label}</button>)}
+            </div>
+          </section>
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Palette className="h-4 w-4 text-[#72a8ff]" />
+              {isEnglish ? "Background palette" : "Палитра фона"}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {THEME_BACKGROUND_OPTIONS.map(item => {
+                const active = background === item.value;
+                return <button key={item.value} type="button" onClick={() => { setBackground(item.value); setAppearance(item.tone === "light" ? "light" : "dark"); }} aria-label={item.label} aria-pressed={active} className={`flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-lg border px-1 transition-colors ${active ? "border-[#72a8ff] bg-[#3f8cff]/12" : "border-white/8 bg-[#0b0f14] hover:border-white/20"}`}><span className="h-7 w-7 rounded-md border border-white/20 shadow-inner" style={{ backgroundColor: item.color }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>;
+              })}
+            </div>
+          </section>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function BotAvatar({ username, className = "", imageClassName = "" }: { username: string; className?: string; imageClassName?: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  return (
+    <span className={`relative grid shrink-0 place-items-center overflow-hidden rounded-xl border border-[#72a8ff]/25 bg-[#3f8cff]/10 text-[#a6c8ff] ${className}`}>
+      <Bot className="h-5 w-5" />
+      {!imageFailed && <img src={`https://t.me/i/userpic/320/${encodeURIComponent(username)}.jpg`} alt="" onError={() => setImageFailed(true)} className={`absolute inset-0 h-full w-full object-cover ${imageClassName}`} />}
+    </span>
+  );
+}
+
+type PublicBotTile = { id: number; username: string; telegramLink: string; category: string };
+
+function BotRankingTile({ bot, categoryLabel, variant, onOpen }: { bot: PublicBotTile; categoryLabel: string; variant: "lead" | "secondary" | "compact"; onOpen: () => void }) {
+  const height = variant === "lead" ? "h-[214px]" : variant === "secondary" ? "h-[142px]" : "h-[96px]";
+  return <button type="button" onClick={onOpen} className={`group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#111720] text-left transition-all hover:border-[#3f8cff]/45 active:scale-[0.985] ${height}`}>
+    <BotAvatar username={bot.username} className="absolute inset-0 h-full w-full rounded-none border-0 bg-[#111720]" imageClassName="brightness-[0.76] saturate-[1.08]" />
+    <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,13,22,0.05)_10%,rgba(8,13,22,0.4)_48%,rgba(8,13,22,0.94)_100%)]" />
+    <span className={`relative flex h-full flex-col justify-end ${variant === "lead" ? "p-4" : "p-3"}`}>
+      <b className={`${variant === "lead" ? "text-lg" : variant === "secondary" ? "text-sm" : "text-xs"} block truncate text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]`}>@{bot.username}</b>
+      <small className="mt-1 block truncate text-[10px] text-slate-200/85">{categoryLabel}</small>
+      {variant !== "compact" && <small className="mt-2 inline-flex w-fit rounded-md border border-[#b9d7ff]/25 bg-[#0e1c31]/80 px-1.5 py-1 text-[9px] font-semibold text-[#d4e6ff]">Открыть</small>}
+    </span>
+  </button>;
+}
 
 export default function Home({ onReady }: { onReady?: () => void }) {
   const { user, isAuthenticated } = useAuth();
@@ -176,6 +513,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [safeWalletAddress, setSafeWalletAddress] = useState<string | null>(null);
   const hasSignaledReady = useRef(false);
   const [page, setPage] = useState<Page>("top");
+  const [language, setLanguageState] = useState<Language>(() => getRussianLanguage());
+  const setLanguage = (nextLanguage: Language) => {
+    setLanguagePreference(nextLanguage);
+    setLanguageState(nextLanguage);
+  };
   const [detailStatsPeriod, setDetailStatsPeriod] = useState<DetailStatsPeriod>("day");
   const [workspaceSection, setWorkspaceSection] = useState<WorkspaceSection>("communities");
   const [walletNftFilter, setWalletNftFilter] = useState<WalletNftFilter>("all");
@@ -221,7 +563,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void tonConnectUi.disconnect().catch(() => undefined);
       window.localStorage.removeItem(ownerKey);
       window.localStorage.removeItem(pendingOwnerKey);
-      toast.error(getRussianLanguage() === "en" ? "The previous wallet session was disconnected for your safety." : "Предыдущая сессия кошелька отключена для безопасности.");
+      toast.error(language === "en" ? "The previous wallet session was disconnected for your safety." : "Предыдущая сессия кошелька отключена для безопасности.");
       return;
     }
     if (walletAddress && (storedOwner === user.openId || pendingOwner === user.openId)) {
@@ -244,14 +586,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       window.localStorage.removeItem("tgtop:ton-wallet-pending-owner");
       setSafeWalletAddress(null);
       setTonWithdrawalAddress("");
-      toast.success(getRussianLanguage() === "en" ? "Wallet disconnected" : "Кошелёк отключён");
+      toast.success(language === "en" ? "Wallet disconnected" : "Кошелёк отключён");
     } catch {
-      toast.error(getRussianLanguage() === "en" ? "Could not disconnect wallet" : "Не удалось отключить кошелёк");
+      toast.error(language === "en" ? "Could not disconnect wallet" : "Не удалось отключить кошелёк");
     }
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
-  const language = getRussianLanguage();
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [detailBoardScope, setDetailBoardScope] = useState<{ category: "Все" | "Каналы" | "Чаты"; country: string; subcategory: string; city: string; displayPosition?: number } | null>(null);
   const [detailBidInput, setDetailBidInput] = useState("");
@@ -457,6 +798,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     enabled: isAuthenticated,
   });
   const mine = (mineQuery.data ?? []) as Group[];
+  const autoMediaRefreshIssuedRef = useRef(false);
+  const refreshMyGroupMediaMutation = trpc.tgTop.refreshMyGroupMedia.useMutation({
+    onSuccess: () => {
+      void mineQuery.refetch();
+    },
+  });
+  useEffect(() => {
+    if (page !== "mine") {
+      autoMediaRefreshIssuedRef.current = false;
+      return;
+    }
+    if (!isAuthenticated || !mineQuery.isFetched || autoMediaRefreshIssuedRef.current) return;
+    autoMediaRefreshIssuedRef.current = true;
+    mine.filter(group => !["listed", "rented"].includes(group.status)).slice(0, 20).forEach(group => {
+      refreshMyGroupMediaMutation.mutate({ groupId: group.id, forceListedRefresh: false });
+    });
+  }, [isAuthenticated, mine, mineQuery.isFetched, page]);
   const [myGroupsViewMode, setMyGroupsViewMode] = useState<MyGroupsViewMode>("list");
   const [myGroupsLayout, setMyGroupsLayout] = useState<Group[]>([]);
   const [myGroupsStatusFilter, setMyGroupsStatusFilter] = useState<"all" | "listed" | "unlisted">("all");
@@ -703,6 +1061,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     onSuccess: result => {
       setTelegramUserAgentCode("");
       toast.success(result.status === "password_pending" ? "Telegram запросил пароль двухэтапной защиты" : "Рабочий Telegram-аккаунт подключён в read-only режиме");
+      if (result.status === "connected") {
+        utils.telegramUserAgent.status.setData(undefined, current => current ? { ...current, status: "connected", accountTelegramId: result.accountTelegramId, accountUsername: result.accountUsername, expiresAt: null } : current);
+      } else {
+        utils.telegramUserAgent.status.setData(undefined, current => current ? { ...current, status: "password_pending" } : current);
+      }
       void utils.telegramUserAgent.status.invalidate();
     },
     onError: error => toast.error(error.message),
@@ -1635,6 +1998,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const detailRewardActive = Boolean(detail?.group.rewardActive && detailEntryReward > 0);
   const openRewardAwareEntry = () => {
     if (!detail) return;
+    const openPublicEntry = () => {
+      const username = detail.group.username?.trim().replace(/^@/, "");
+      if (!username) return false;
+      return openTelegramCommunityLink(`https://t.me/${username}`);
+    };
+    // A public username is already the canonical Telegram entry point. Do not
+    // block a guest/new account on reward-link creation or Bot API revalidation.
+    if (detail.group.username) {
+      if (!openPublicEntry()) {
+        toast.error(tx("Не удалось открыть Telegram. Разрешите открытие внешних ссылок и повторите попытку.", "Telegram could not be opened. Allow external links and try again."));
+      }
+      return;
+    }
     const openVerifiedEntry = () => resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });
     if (!detailRewardActive || !isAuthenticated) {
       openVerifiedEntry();
@@ -1642,7 +2018,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     }
     createRewardInviteLink.mutate({ groupId: detail.group.id }, {
       onError: () => {
-        toast.message(tx("Персональная ссылка пока недоступна — открываем подтверждённый вход без награды.", "Your personal link is unavailable — opening verified entry without a reward."));
+        toast.message(tx("Персональная ссылка пока недоступна — открываем обычный вход без награды.", "Your personal link is unavailable — opening the regular entry without a reward."));
         openVerifiedEntry();
       },
     });
@@ -1695,14 +2071,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     .map(topic => topic.code)));
   const listingCategory = selectedListingGroups.length && selectedListingGroups.every(group => group.category === selectedListingGroups[0]?.category)
     ? selectedListingGroups[0]?.category
-    : (detail && ownsDetail ? detail.group.category : null);
+    : null;
   const listingSubcategoryOptions = listingCategory ? managedTopics.filter(topic => topic.category === listingCategory).map(topic => topic.code) : [];
   const monthlyEntryEligibleGroup = selectedListingGroups.length === 1 && selectedListingGroups[0]?.category === "Каналы" && !selectedListingGroups[0]?.username
     ? selectedListingGroups[0]
     : null;
-  const selectedListingGroup = selectedListingGroups.length === 1
-    ? selectedListingGroups[0]
-    : (detail && ownsDetail ? detail.group : null);
+  const selectedListingGroup = selectedListingGroups.length === 1 ? selectedListingGroups[0] : null;
   const rawListingRankingBid = Number(listingRankingBid);
   const listingRankingBidAmount = Number.isFinite(rawListingRankingBid)
     ? Math.min(MAX_RANKING_BID_GRAM, Math.max(0.1, Math.round(rawListingRankingBid * 10) / 10))
@@ -2142,10 +2516,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0b0f14]/95 px-4 py-2.5 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <button
-            type="button"
             onClick={() => setPage("top")}
-            aria-label="Открыть главную страницу TG TOP"
-            title="На главную"
             className="flex shrink-0 items-center gap-2"
           >
             <BrandMark />
@@ -2227,7 +2598,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button type="button" aria-label={tx("Гео фильтр", "Geo filter")} title={tx("Гео", "Geo")} className={`grid h-7 w-7 place-items-center rounded-md border transition-colors ${country !== "Все" ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                          <button type="button" aria-label={tx("Гео фильтр", "Geo filter")} title={tx("Гео", "Geo")} className={`tg-top-control grid h-7 w-7 place-items-center rounded-md border transition-colors ${country !== "Все" ? "tg-top-control-active border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                             <Globe2 className="h-3.5 w-3.5" />
                           </button>
                         </PopoverTrigger>
@@ -2268,7 +2639,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
 
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button type="button" aria-label={tx("Рубрики и категории", "Categories & topics")} title={tx("Категории", "Categories")} className={`grid h-7 w-7 place-items-center rounded-md border transition-colors ${subcategory !== "Все" ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                          <button type="button" aria-label={tx("Рубрики и категории", "Categories & topics")} title={tx("Категории", "Categories")} className={`tg-top-control grid h-7 w-7 place-items-center rounded-md border transition-colors ${subcategory !== "Все" ? "tg-top-control-active border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                             <Filter className="h-3.5 w-3.5" />
                           </button>
                         </PopoverTrigger>
@@ -2291,29 +2662,29 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       </Popover>
                     </>
                   )}
-                  <button type="button" onClick={() => setTopSearchOpen(current => !current)} aria-label={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Открыть поиск", "Open search")} title={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Поиск", "Search")} className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${topSearchOpen ? "border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                  <button type="button" onClick={() => setTopSearchOpen(current => !current)} aria-label={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Открыть поиск", "Open search")} title={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Поиск", "Search")} className={`tg-top-control grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${topSearchOpen ? "tg-top-control-active border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                     <Search className="h-3.5 w-3.5" />
                   </button>
                   </span>
                 </div>
               </div>
-              <div className="order-1 grid basis-full grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
+              <div className="tg-top-tabs order-1 grid basis-full grid-cols-3 rounded-xl border border-white/8 bg-[#111720] p-0.5">
               {([
                 ["communities", tx("Сообщества", "Communities")],
                 ["nft", "NFT"],
                 ["bots", tx("Боты", "Bots")],
               ] as const).map(([value, label]) => (
-                <button key={value} type="button" onClick={() => selectTopSection(value)} className={`h-8 rounded-lg text-[10px] font-semibold transition-colors ${topSection === value ? "bg-[#2b4158] text-[#d7e7f6]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                <button key={value} type="button" onClick={() => selectTopSection(value)} className={`tg-top-tab h-8 rounded-lg text-[10px] font-semibold transition-colors ${topSection === value ? "tg-top-tab-active bg-[#2b4158] text-[#d7e7f6]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
             </div>
               {topSearchOpen && <Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)} aria-label={topSection === "nft" ? tx("Поиск NFT", "Search NFT") : tx("Поиск группы", "Search communities")} placeholder={topSection === "nft" ? tx("Поиск NFT или @username", "Search NFT or @username") : tx("Поиск по названию или @username", "Search by name or @username")} className="order-5 h-9 basis-full border-white/10 bg-[#111720] px-3 text-xs text-slate-200 placeholder:text-slate-600" />}
-              {topSection === "communities" && <div className="order-2 grid min-w-0 flex-1 grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
+              {topSection === "communities" && <div className="tg-top-tabs order-2 grid min-w-0 flex-1 grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
               {([
                 ["Все", tx("Все", "All")],
                 ["Каналы", tx("Каналы", "Channels")],
                 ["Чаты", tx("Чаты", "Chats")],
               ] as const).map(([value, label]) => (
-                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`h-7 rounded-md text-[9px] font-semibold transition-colors ${globalDirection === value ? "bg-[#293d52] text-[#d1e2f2]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`tg-top-tab h-7 rounded-md text-[9px] font-semibold transition-colors ${globalDirection === value ? "tg-top-tab-active bg-[#293d52] text-[#d1e2f2]" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
               </div>}
             </div>
@@ -2750,7 +3121,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       <div className="flex items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#72a8ff]"><Pin className="h-3 w-3" />{tx("Закреплено", "Pinned")}</div>
                       <SortableContext items={visiblePinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
                         <div className="grid grid-cols-3 gap-2">
-                          {visiblePinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} accessLabel={getCommunityAccessLabel(group, language)} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} onCreateGiveaway={() => openGiveawayCreate(group)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
+                          {visiblePinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} onCreateGiveaway={() => openGiveawayCreate(group)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
                         </div>
                       </SortableContext>
                     </section>
@@ -2759,7 +3130,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     {visiblePinnedMyGroups.length > 0 && <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{tx("Остальные", "Others")}</div>}
                     <SortableContext items={visibleUnpinnedMyGroups.map(group => group.id)} strategy={rectSortingStrategy}>
                       <div className="grid grid-cols-3 gap-2">
-                        {visibleUnpinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} accessLabel={getCommunityAccessLabel(group, language)} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} onCreateGiveaway={() => openGiveawayCreate(group)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
+                        {visibleUnpinnedMyGroups.map(group => <SortableMyGroupTile key={group.id} group={group} language={language} disabled={saveMyGroupsLayoutMutation.isPending} onOpen={() => openGroup(group.id)} onTogglePin={() => toggleMyGroupPin(group.id)} onCreateGiveaway={() => openGiveawayCreate(group)} selectionMode={myGroupsSelectionMode} selected={selectedGroupIds.includes(group.id)} onSelect={() => myGroupsSelectionMode ? toggleGroupSelection(group.id) : selectMyGroup(group.id)} />)}
                         {!myGroupsSelectionMode && Array.from({ length: Math.max(1, 3 - (visibleUnpinnedMyGroups.length % 3)) }).map((_, index) => (
                           <button key={`add-group-${index}`} type="button" onClick={() => setMyGroupsAddOpen(true)} className="aspect-square rounded-xl border border-dashed border-[#3f8cff]/28 bg-[#3f8cff]/[0.035] p-2 text-center text-[#8fb9ff] transition-colors hover:bg-[#3f8cff]/10 active:scale-[0.98]">
                             <Plus className="mx-auto h-4 w-4" />
@@ -2954,7 +3325,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <div className="mt-3 flex items-start gap-3">
                     <div className="relative shrink-0">
                       <button type="button" onClick={openRewardAwareEntry} disabled={resolveVerifiedEntryLink.isPending || createRewardInviteLink.isPending} className="rounded-[22px] transition-transform active:scale-[0.98] disabled:cursor-default">
-                        <Avatar group={detail.group} hero />
+                        <Avatar group={detail.group} hero allowAnimatedMedia />
                       </button>
                       <span className={`absolute bottom-1 right-1 inline-flex items-center gap-0.5 whitespace-nowrap text-[8px] font-medium leading-none ${dailyGrowthPct !== null && dailyGrowthPct < 0 ? "text-rose-300/75" : "text-emerald-300/75"}`}>
                         {dailyGrowthPct !== null && dailyGrowthPct < 0 ? <TrendingDown className="h-2 w-2" /> : <TrendingUp className="h-2 w-2" />}{dailyGrowthPct !== null && dailyGrowthPct > 0 ? "+" : ""}{dailyGrowthPct !== null ? `${dailyGrowthPct.toFixed(1)}%` : "0%"}
@@ -2962,19 +3333,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                     <div className="min-w-0 flex-1 pt-0.5">
                       <h1 className="mt-1 truncate text-[21px] font-bold tracking-tight text-white">{detail.group.title}</h1>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium text-slate-400">
-                        <span className="inline-flex items-center gap-1">
-                          <span className="text-sm">▣</span>
-                          {detail.group.inviteLink && !detail.group.username ? tx("Приватное сообщество", "Private community") : detail.group.category === "Каналы" ? tx("Канал", "Channel") : tx("Группа", "Group")}
-                        </span>
-                        {detail.group.createdAt && (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
-                            <span className="text-slate-600">·</span>
-                            <Calendar className="h-3 w-3 text-slate-500" />
-                            <span>{tx("Создана", "Created")}: {date(detail.group.createdAt, language)}</span>
-                          </span>
-                        )}
-                      </div>
+                      <p className="mt-1 flex items-center gap-1 text-xs font-medium text-slate-400"><span className="text-sm">▣</span>{detail.group.inviteLink && !detail.group.username ? "Приватное сообщество" : detail.group.category === "Каналы" ? "Канал" : "Группа"}</p>
                       {detail.group.description ? <p className="mt-2 line-clamp-4 text-xs leading-4 text-slate-300">{detail.group.description}</p> : <p className="mt-2 text-xs leading-4 text-slate-500">Описание сообщества не добавлено.</p>}
                       <p className="mt-1.5 truncate text-[11px] font-medium text-[#92b8ed]">{detailHeaderAddress}</p>
                     </div>
@@ -2998,10 +3357,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                         createProtectedGroupDeal.mutate({ groupId: detail.group.id });
                       }}
                       disabled={!detailCanBeBought}
-                      className="flex min-h-[40px] w-[76px] shrink-0 flex-col items-center justify-center rounded-xl border border-[#386a5f] bg-[#203a35] px-1.5 text-center text-white transition-colors hover:bg-[#26443e] active:scale-[0.98] disabled:cursor-default"
+                      className="flex min-h-[38px] w-[76px] shrink-0 flex-col items-center justify-center rounded-xl border border-[#386a5f] bg-[#203a35] px-1.5 text-center text-white transition-colors hover:bg-[#26443e] active:scale-[0.98] disabled:cursor-default"
                     >
-                      <b className="text-[12px] font-bold leading-tight text-white">{detailSalePrice}</b>
-                      <span className="mt-0.5 text-[8px] font-semibold tracking-wide text-[#8ee0c3]">GRAM</span>
+                      <b className="text-[12px] leading-3">{detailSalePrice} <small className="text-[7px] font-medium text-[#b7d8ce]">GRAM</small></b><small className="mt-0.5 text-[7px] leading-2 text-[#b7d8ce]">Купить</small>
                     </button>}
                     {managerPublic && <button
                       type="button"
@@ -3078,90 +3436,41 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <div className="relative flex flex-col">
                   {detail && ownsDetail && (
                     <section className="order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">
-                      <button type="button" onClick={() => setInlineListingOpen(value => !value)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
+                      <button type="button" onClick={() => { if (inlineListingOpen) setInlineListingOpen(false); else openListing([detail.group.id], { inline: true }); }} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
                         <span className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/10 text-[#8fb9ff]"><Settings2 className="h-3.5 w-3.5" /></span><span><b className="block text-xs text-slate-100">{tx("Параметры публикации", "Publication settings")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detail.group.status === "listed" ? tx("Видимость, объявление, продажа", "Visibility, announcement, sale") : tx("Настройте перед размещением", "Configure before listing")}</small></span></span>
                         <ChevronRight className={`h-4 w-4 text-slate-500 transition-transform ${inlineListingOpen ? "rotate-90" : ""}`} />
                       </button>
                       {inlineListingOpen && (
                         <div className="mt-1.5 space-y-1.5 border-t border-white/8 pt-1.5">
-                          <div className="space-y-1 rounded-lg bg-black/15 p-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-medium text-slate-300">{tx("Страна / регион в каталоге", "Catalog country / region")}</span>
-                            </div>
-                            <Select value={listingCountry} onValueChange={value => { setListingCountry(value); setListingCity("Все"); }}>
-                              <SelectTrigger className="h-8 w-full rounded-md border-white/10 bg-black/25 text-xs text-slate-200">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
-                                <SelectItem value="Все" className="text-xs text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{tx("Весь мир", "Global")}</SelectItem>
-                                {managedCountries.filter(item => item.code !== "Global" && item.code !== "Все").map(item => (
-                                  <SelectItem key={item.id} value={item.code} className="text-xs text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{item.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {managedCities.filter(city => city.countryCode === listingCountry).length > 0 && (
-                              <div className="pt-1">
-                                <Select value={listingCity} onValueChange={setListingCity}>
-                                  <SelectTrigger className="h-8 w-full rounded-md border-white/10 bg-black/25 text-xs text-slate-200">
-                                    <SelectValue placeholder={tx("Город", "City")} />
-                                  </SelectTrigger>
-                                  <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
-                                    <SelectItem value="Все" className="text-xs text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{tx("Не указан", "Not specified")}</SelectItem>
-                                    {managedCities.filter(city => city.countryCode === listingCountry).map(item => (
-                                      <SelectItem key={item.id} value={item.code} className="text-xs text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{item.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                          <div className="rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/[0.06] p-2.5">
+                            <b className="block text-[11px] text-[#c7dcff]">{tx("Цена, место, категория и гео", "Price, placement, category and geo")}</b>
+                            <small className="mt-0.5 block text-[10px] leading-4 text-slate-400">{tx("Все параметры доступны здесь — отдельное окно больше не нужно.", "All listing parameters are available here — no separate window needed.")}</small>
+                            <div className="mt-2 grid grid-cols-2 gap-1.5">
+                              <div className="col-span-2">
+                                <label className="mb-1 block text-[10px] text-slate-500">{tx("Цена места в рейтинге", "Ranking placement price")}</label>
+                                <div className="flex items-center rounded-lg border border-white/8 bg-[#0b0f14] p-0.5">
+                                  <button type="button" onClick={() => setListingRankingBid(formatTon(Math.max(0.1, listingRankingBidAmount - 0.1)))} aria-label={tx("Уменьшить цену", "Decrease price")} className="grid h-8 w-8 place-items-center rounded-md text-slate-300"><Minus className="h-3.5 w-3.5" /></button>
+                                  <Input value={listingRankingBid} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\\d*(\\.\\d?)?$/.test(value)) setListingRankingBid(value); }} onBlur={() => setListingRankingBid(formatTon(listingRankingBidAmount))} aria-label={tx("Цена места в GRAM", "Ranking price in GRAM")} className="h-8 flex-1 border-0 bg-transparent px-0 text-center text-sm font-semibold text-white focus-visible:ring-0" />
+                                  <b className="mr-1 text-[9px] text-slate-500">GRAM</b>
+                                  <button type="button" onClick={() => setListingRankingBid(formatTon(Math.min(MAX_RANKING_BID_GRAM, listingRankingBidAmount + 0.1)))} aria-label={tx("Увеличить цену", "Increase price")} className="grid h-8 w-8 place-items-center rounded-md text-[#a6c8ff]"><Plus className="h-3.5 w-3.5" /></button>
+                                </div>
+                                <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, listingRankingBidAmount)]} min={0.1} max={MAX_RANKING_SLIDER_GRAM} step={0.1} onValueChange={([value]) => setListingRankingBid(formatTon(value))} className="mt-1 py-1 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
                               </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-1 rounded-lg bg-black/15 p-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-medium text-slate-300">{tx("Категория и рубрика", "Category and topic")}</span>
-                              <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-slate-300">{detail.group.category}</span>
-                            </div>
-                            <Select value={listingSubcategory || "General"} onValueChange={setListingSubcategory}>
-                              <SelectTrigger className="h-8 w-full rounded-md border-white/10 bg-black/25 text-xs text-slate-200">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="z-[70] border-white/10 bg-[#111720] text-slate-100">
-                                <SelectItem value="General" className="text-xs text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">{tx("Все рубрики", "All topics")}</SelectItem>
-                                {listingSubcategoryOptions.filter(item => item !== "General").map(item => (
-                                  <SelectItem key={item} value={item} className="text-xs text-slate-200 focus:bg-[#3f8cff]/15 focus:text-[#c8ddff]">
-                                    {listingCategory ? getManagedTopicLabel(listingCategory, item) : item}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="rounded-xl border border-[#3f8cff]/30 bg-[#3f8cff]/[0.06] p-2.5">
-                            <div className="flex items-center justify-between">
-                              <b className="text-[11px] text-[#c7dcff]">{tx("Цена места в рейтинге", "Ranking placement price")}</b>
-                              <span className="text-[10px] text-slate-400">{tx("от 0.1 GRAM", "from 0.1 GRAM")}</span>
-                            </div>
-                            <div className="mt-1.5 flex items-center rounded-lg border border-white/8 bg-[#0b0f14] p-0.5">
-                              <button type="button" onClick={() => setListingRankingBid(formatTon(Math.max(0.1, listingRankingBidAmount - 0.1)))} aria-label={tx("Уменьшить цену", "Decrease price")} className="grid h-7 w-7 place-items-center rounded text-slate-300 transition-colors hover:bg-white/[0.06]"><Minus className="h-3 w-3" /></button>
-                              <Input value={listingRankingBid} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setListingRankingBid(value); }} onBlur={() => setListingRankingBid(formatTon(listingRankingBidAmount))} aria-label={tx("Цена места в GRAM", "Ranking price in GRAM")} className="h-7 flex-1 border-0 bg-transparent px-0 text-center text-sm font-semibold text-white focus-visible:ring-0" />
-                              <b className="mr-1 text-[10px] text-slate-400">GRAM</b>
-                              <button type="button" onClick={() => setListingRankingBid(formatTon(Math.min(MAX_RANKING_BID_GRAM, listingRankingBidAmount + 0.1)))} aria-label={tx("Увеличить цену", "Increase price")} className="grid h-7 w-7 place-items-center rounded text-[#a6c8ff] transition-colors hover:bg-[#3f8cff]/10"><Plus className="h-3 w-3" /></button>
-                            </div>
-                            <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, listingRankingBidAmount)]} min={0.1} max={MAX_RANKING_SLIDER_GRAM} step={0.1} onValueChange={([value]) => setListingRankingBid(formatTon(value))} className="mt-2 py-1 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:!border-[#b9d6ff] [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
-                            <div className="mt-1.5 rounded-md border border-white/8 bg-white/[0.035] px-2 py-1.5">
-                              {listingRankingPreviewSlotNumber ? (
-                                <>
-                                  <small className="block text-[9px] uppercase tracking-[0.08em] text-slate-500">{tx("Предпросмотр позиции", "Placement preview")}</small>
-                                  <small className="mt-0.5 block truncate text-[10px] font-medium text-[#a6c8ff]">{tx("Рейтинг: ", "Ranking: ")}{listingRankingScope}</small>
-                                  <b className="mt-0.5 block text-xs text-white">{tx(`Займёт ${listingRankingPreviewSlotNumber}-ю позицию`, `Will take position ${listingRankingPreviewSlotNumber}`)}</b>
-                                  {listingRankingMinimum !== null && <small className="mt-0.5 block text-[9px] text-slate-400">{tx(`Для этой ячейки нужно от ${formatTon(listingRankingMinimum)} GRAM`, `This cell requires at least ${formatTon(listingRankingMinimum)} GRAM`)}</small>}
-                                </>
-                              ) : (
-                                <>
-                                  <b className="block text-[11px] text-amber-100">{tx("С этой суммой группа не попадёт в Top", "This amount will not enter Top")}</b>
-                                  <small className="mt-0.5 block text-[9px] text-slate-500">{tx("Увеличьте ставку, чтобы занять доступную ячейку.", "Increase the bid to take an available cell.")}</small>
-                                </>
-                              )}
+                              <div className="col-span-2 rounded-lg bg-black/15 px-2 py-1.5 text-[10px]">
+                                {listingRankingPreviewSlotNumber ? <><span className="block text-slate-500">{tx("Прогноз позиции", "Placement preview")}</span><b className="mt-0.5 block text-[#a6c8ff]">{tx(`Займёт ${listingRankingPreviewSlotNumber}-ю позицию`, `Will take position ${listingRankingPreviewSlotNumber}`)}</b></> : <b className="text-amber-100">{tx("Увеличьте ставку для Top", "Increase the bid to enter Top")}</b>}
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] text-slate-500">{tx("Страна", "Country")}</label>
+                                <Select value={listingCountry} onValueChange={value => { setListingCountry(value); setListingCity("Все"); }}><SelectTrigger className="h-8 rounded-lg border-white/10 bg-[#0b0f14] text-[10px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="z-[90] border-white/10 bg-[#111720] text-slate-100"><SelectItem value="Все">{tx("Весь мир", "Worldwide")}</SelectItem>{managedCountries.filter(item => item.code !== "Global" && item.code !== "Все").map(item => <SelectItem key={item.id} value={item.code}>{item.label}</SelectItem>)}</SelectContent></Select>
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] text-slate-500">{tx("Город", "City")}</label>
+                                <Select value={listingCity} onValueChange={setListingCity}><SelectTrigger className="h-8 rounded-lg border-white/10 bg-[#0b0f14] text-[10px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="z-[90] border-white/10 bg-[#111720] text-slate-100"><SelectItem value="Все">{tx("Не указан", "Not specified")}</SelectItem>{managedCities.filter(city => city.countryCode === listingCountry).map(item => <SelectItem key={item.id} value={item.code}>{item.label}</SelectItem>)}</SelectContent></Select>
+                              </div>
+                              <div className="col-span-2">
+                                <label className="mb-1 block text-[10px] text-slate-500">{tx("Подкатегория", "Subcategory")}</label>
+                                <Select value={listingSubcategory || "General"} onValueChange={setListingSubcategory}><SelectTrigger className="h-8 rounded-lg border-white/10 bg-[#0b0f14] text-[10px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="z-[90] border-white/10 bg-[#111720] text-slate-100"><SelectItem value="General">{tx("Все рубрики", "All topics")}</SelectItem>{listingSubcategoryOptions.filter(item => item !== "General").map(item => <SelectItem key={item} value={item}>{getManagedTopicLabel(listingCategory ?? "Каналы", item)}</SelectItem>)}</SelectContent></Select>
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5">
@@ -3599,7 +3908,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <WalletConnectControl language={language} balanceTon={formatTon(Number(mainTon))} variant="profile" ownerOpenId={user?.openId} address={safeWalletAddress} restored={walletConnectionRestored} onDisconnect={disconnectTonWallet} />
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <Sheet open={tonDepositOpen} onOpenChange={setTonDepositOpen}>
-                    <button type="button" onClick={() => setTonDepositOpen(true)} aria-label={tx("Пополнить баланс GRAM", "Deposit GRAM balance")} className="rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2 text-left transition-colors hover:bg-[#3f8cff]/18"><b className="block text-[11px] text-[#c8ddff]">{tx("Пополнить", "Deposit")}</b><small className="mt-0.5 block text-[9px] text-[#8fb9ff]">GRAM</small></button>
+                    <button type="button" onClick={() => setTonDepositOpen(true)} aria-label={tx("Пополнить баланс GRAM", "Deposit GRAM balance")} className="tg-profile-balance-action tg-profile-deposit-action rounded-xl border border-[#3f8cff]/35 bg-[#3f8cff]/10 px-3 py-2 text-left transition-colors hover:bg-[#3f8cff]/18"><b className="block text-[11px] text-[#c8ddff]">{tx("Пополнить", "Deposit")}</b><small className="mt-0.5 block text-[9px] text-[#8fb9ff]">GRAM</small></button>
                     <SheetContent side="bottom" onOpenAutoFocus={event => event.preventDefault()} className="max-h-[84dvh] rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">
                       <SheetHeader className="px-4 pb-3 text-left">
                         <SheetTitle className="text-base text-slate-100">{tx("Пополнить баланс GRAM", "Deposit GRAM balance")}</SheetTitle>
@@ -3633,7 +3942,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       }
                     }
                   }}>
-                    <button type="button" onClick={() => setTonWithdrawalOpen(true)} aria-label={tx("Вывести GRAM", "Withdraw GRAM")} className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] px-3 py-2 text-left transition-colors hover:bg-emerald-400/[0.13]"><b className="block text-[11px] text-emerald-100">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-emerald-300/75">GRAM</small></button>
+                    <button type="button" onClick={() => setTonWithdrawalOpen(true)} aria-label={tx("Вывести GRAM", "Withdraw GRAM")} className="tg-profile-balance-action tg-profile-withdraw-action rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] px-3 py-2 text-left transition-colors hover:bg-emerald-400/[0.13]"><b className="block text-[11px] text-emerald-100">{tx("Вывести", "Withdraw")}</b><small className="mt-0.5 block text-[9px] text-emerald-300/75">GRAM</small></button>
                     <SheetContent side="bottom" onOpenAutoFocus={event => event.preventDefault()} className="max-h-[76dvh] overflow-y-auto rounded-t-[24px] border-white/10 bg-[#10161f] text-slate-100">
                       <SheetHeader className="px-4 pb-2 text-left">
                         <SheetTitle className="text-base font-semibold text-slate-100">{tx("Вывод GRAM", "Withdraw GRAM")}</SheetTitle>
@@ -3938,6 +4247,28 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     {tx("Скопировать ссылку", "Copy link")}
                   </button>
                 </div>
+              </div>
+            </section>
+            <section className="overflow-hidden rounded-2xl border border-white/8 bg-[#111720]">
+              <div className="border-b border-white/8 px-4 py-4">
+                <h2 className="text-sm font-semibold">{tx("Как это работает", "How it works")}</h2>
+                <p className="mt-1 text-xs text-slate-500">{tx("Коротко о безопасном использовании TG TOP.", "A quick guide to using TG TOP safely.")}</p>
+              </div>
+              <div className="divide-y divide-white/7">
+                {[
+                  [tx("Кошелек", "Wallet"), tx("Подключение кошелька только показывает ваш GRAM-адрес. TG TOP пока не запрашивает подпись или перевод GRAM.", "Connecting a wallet shows your GRAM address. TG TOP does not yet request a GRAM signature or transfer.")],
+                  [tx("Листинг", "Listing"), tx("Подключите @TG_TOPBOT как администратора, получите 0.1 GRAM и настройте каталог, продажу или аренду в личной папке.", "Add @TG_TOPBOT as an administrator, receive 0.1 GRAM, then configure catalog, sale, or rental settings in My Groups.")],
+                  [tx("Рейтинг", "Ranking"), tx("Место в топе меняется при большей ставке. Перед оплатой будет отдельное подтверждение — автоматические GRAM-платежи еще не включены.", "A higher bid changes the top placement. Payment will require a separate confirmation; automatic GRAM payments are not enabled yet.")],
+                  [tx("NFT и сделки", "NFTs and deals"), tx("Проверяйте владельца и условия вручную. Передача прав и денег будет доступна только через защищенный сценарий сделки после запуска проверки платежей.", "Check the owner and terms manually. Rights and funds transfer only through a protected deal after payment verification launches.")],
+                ].map(([title, text]) => (
+                  <details key={title} className="group px-4">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-medium text-slate-200">
+                      {title}
+                      <ChevronRight className="h-4 w-4 text-slate-600 transition-transform group-open:rotate-90" />
+                    </summary>
+                    <p className="pb-3 text-xs leading-5 text-slate-500">{text}</p>
+                  </details>
+                ))}
               </div>
             </section>
           </section>
@@ -4797,6 +5128,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <SettingsSheet
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
+        language={language}
+        onLanguageChange={setLanguage}
       />
       <Sheet open={Boolean(adminGuideKind)} onOpenChange={open => !open && setAdminGuideKind(null)}>
         <SheetContent side="bottom" className="!bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[52dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-[calc(1rem+env(safe-area-inset-bottom))] text-slate-100">

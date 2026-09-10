@@ -2,6 +2,7 @@ export type Page = "top" | "catalog" | "giveaways" | "mine" | "details" | "owner
 export type Audience = "all" | "small" | "medium" | "large";
 export type MyGroupsViewMode = "list" | "grid";
 export type Language = "ru" | "en";
+export const LANGUAGE_STORAGE_KEY = "tgtop:language";
 export type DetailStatsPeriod = "day" | "month" | "all";
 export type WorkspaceSection = "communities" | "bots" | "nft";
 export type WalletNftFilter = "all" | "gifts" | "usernames" | "anonymous_numbers" | "domains" | "other";
@@ -12,7 +13,14 @@ export type TopSection = "communities" | "nft" | "bots";
 export type NftMarketCategory = "all" | "gifts" | "usernames" | "anonymous_numbers" | "other";
 export type NftDealCategory = "all" | "sale" | "auction" | "installments" | "rent" | "collateral";
 
-export const getRussianLanguage = (): Language => "ru";
+export const getRussianLanguage = (): Language => {
+  if (typeof window === "undefined") return "en";
+  return window.localStorage.getItem(LANGUAGE_STORAGE_KEY) === "ru" ? "ru" : "en";
+};
+
+export const setLanguagePreference = (language: Language) => {
+  if (typeof window !== "undefined") window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+};
 
 export const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const;
 export const COUNTRY_LABELS: Record<string, { ru: string; en: string }> = {

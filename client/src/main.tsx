@@ -23,20 +23,7 @@ declare global {
   }
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry(failureCount, error) {
-        if (error instanceof TRPCClientError) {
-          const status = error.data?.httpStatus;
-          if (status && status >= 400 && status < 500) return false;
-        }
-        return failureCount < 3;
-      },
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 5000),
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;

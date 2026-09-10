@@ -2215,6 +2215,21 @@ export async function getGroupByChatId(chatId: string) {
   return result[0];
 }
 
+export async function updateGroupAnimatedAvatarSnapshot(groupId: number, media: {
+  animatedAvatarKey: string | null;
+  animatedAvatarUrl: string | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.update(groupsCatalog).set({
+    animatedAvatarKey: media.animatedAvatarKey,
+    animatedAvatarUrl: media.animatedAvatarUrl,
+    animatedAvatarUpdatedAt: new Date(),
+  }).where(eq(groupsCatalog.id, groupId));
+  if (!result[0]?.affectedRows) throw new Error("Сообщество не найдено");
+  return await getGroupById(groupId);
+}
+
 export async function getMyGroups(ownerOpenId: string) {
   const db = await getDb();
   if (!db) return [];

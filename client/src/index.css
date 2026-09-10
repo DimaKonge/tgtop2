@@ -117,9 +117,13 @@ html[data-theme="light"] .tg-shell .text-slate-400,
 html[data-theme="light"] .tg-shell .text-slate-500,
 html[data-theme="light"] .tg-shell .text-slate-600 { color: #64748b !important; }
 html[data-theme="light"] .tg-shell .text-white { color: #0f172a !important; }
+html[data-theme="light"] .tg-shell .tg-media-overlay-content,
+html[data-theme="light"] .tg-shell .tg-media-overlay-title { color: #f8fafc !important; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.72); }
+html[data-theme="light"] .tg-shell .tg-media-overlay-meta { color: rgba(241, 245, 249, 0.9) !important; text-shadow: 0 1px 7px rgba(0, 0, 0, 0.8); }
+html[data-theme="light"] .tg-shell .tg-media-overlay-meta a { color: inherit !important; }
 html[data-theme="light"] .tg-shell .brand-mark-symbol {
-  color: #ffffff !important;
-  text-shadow: 0 1px 4px rgba(255, 255, 255, 0.25);
+  color: var(--tg-accent) !important;
+  text-shadow: 0 1px 4px color-mix(in srgb, var(--tg-accent) 28%, transparent);
 }
 html[data-theme="light"] .tg-shell .bg-white\/5,
 html[data-theme="light"] .tg-shell .bg-white\/8,
@@ -151,7 +155,8 @@ html[data-theme="light"] [data-slot="sheet-content"] .text-slate-300 { color: #1
 html[data-theme="light"] [data-slot="sheet-content"] .text-slate-400,
 html[data-theme="light"] [data-slot="sheet-content"] .text-slate-500,
 html[data-theme="light"] [data-slot="sheet-content"] .text-slate-600 { color: #64748b !important; }
-html[data-theme="light"] .brand-mark { border-color: rgba(37, 99, 235, 0.22) !important; box-shadow: 0 6px 16px rgba(63, 140, 255, 0.18) !important; }
+html[data-theme="light"] .brand-mark { border-color: color-mix(in srgb, var(--tg-accent) 42%, transparent) !important; background-color: color-mix(in srgb, var(--tg-accent) 12%, transparent) !important; box-shadow: 0 6px 16px color-mix(in srgb, var(--tg-accent) 18%, transparent) !important; }
+html[data-theme="dark"] .brand-mark-symbol { transform: none; }
 
 .tg-launch {
   position: fixed;
@@ -168,10 +173,10 @@ html[data-theme="light"] .brand-mark { border-color: rgba(37, 99, 235, 0.22) !im
 }
 .tg-launch-glow { position: absolute; inset: 20% -20% auto; height: 44%; background: radial-gradient(ellipse, rgba(63, 140, 255, 0.14), transparent 68%); pointer-events: none; }
 .tg-launch-brand { position: relative; display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; letter-spacing: -0.02em; }
-.tg-launch-mark { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; background: #000; font-size: 14px; font-weight: 900; }
+.tg-launch-mark { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid color-mix(in srgb, var(--tg-accent, #f5b84b) 48%, white); border-radius: 8px; background: color-mix(in srgb, var(--tg-accent, #f5b84b) 14%, #05070a); color: var(--tg-accent, #f5b84b); font-size: 14px; font-weight: 900; box-shadow: 0 0 16px color-mix(in srgb, var(--tg-accent, #f5b84b) 18%, transparent); }
 .tg-launch-center { position: relative; display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; margin-top: -4vh; }
 .tg-launch-pyramid { position: relative; width: 208px; height: 154px; transform: perspective(520px) rotateX(7deg); }
-.tg-launch-cube { position: absolute; width: 48px; height: 48px; border: 1px solid rgba(115, 169, 255, 0.75); border-radius: 10px; background: linear-gradient(145deg, #4e91f8 0%, #255bb9 55%, #102d63 100%); box-shadow: 0 12px 32px rgba(31, 104, 224, 0.28), inset 0 1px 0 rgba(255,255,255,0.3); opacity: 0; transform: translateY(54px) scale(0.76) rotate(-8deg); animation: tg-cube-rise 460ms cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+.tg-launch-cube { position: absolute; width: 48px; height: 48px; border: 1px solid color-mix(in srgb, var(--tg-accent, #3f8cff) 72%, white); border-radius: 10px; background: linear-gradient(145deg, color-mix(in srgb, var(--tg-accent, #3f8cff) 88%, white) 0%, color-mix(in srgb, var(--tg-accent, #3f8cff) 64%, #111827) 55%, color-mix(in srgb, var(--tg-accent, #3f8cff) 34%, #020617) 100%); box-shadow: 0 12px 32px color-mix(in srgb, var(--tg-accent, #3f8cff) 28%, transparent), inset 0 1px 0 rgba(255,255,255,0.3); opacity: 0; transform: translateY(54px) scale(0.76) rotate(-8deg); animation: tg-cube-rise 460ms cubic-bezier(0.23, 1, 0.32, 1) forwards; }
 .cube-1 { left: 80px; top: 0; animation-delay: 300ms; }
 .cube-2 { left: 52px; top: 52px; animation-delay: 215ms; }
 .cube-3 { left: 108px; top: 52px; animation-delay: 245ms; }
@@ -380,12 +385,140 @@ html[data-theme="light"] .tg-shell .bg-\[\#2b4158\] {
 
 html[data-theme="light"] .brand-mark {
   overflow: hidden;
-  border-color: rgba(37, 99, 235, 0.2) !important;
-  background-color: #f7fbff !important;
-  background-image: url("/manus-storage/tgtop-logo-light-header-512_31677d56.png");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 78%;
-  color: transparent !important;
-  text-shadow: none !important;
+  border-color: color-mix(in srgb, var(--tg-accent) 42%, transparent) !important;
+  background-color: color-mix(in srgb, var(--tg-accent) 12%, #f7fbff) !important;
+  background-image: none !important;
+  color: var(--tg-accent) !important;
+  text-shadow: 0 1px 4px color-mix(in srgb, var(--tg-accent) 28%, transparent) !important;
 }
+
+/* Light-theme contrast for the compact top navigation controls. These selectors stay scoped to the top controls. */
+html[data-theme="light"] .tg-shell .tg-top-tabs {
+  border-color: rgba(100, 116, 139, 0.24) !important;
+  background: rgba(248, 250, 252, 0.96) !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+html[data-theme="light"] .tg-shell .tg-top-tab { color: #475569 !important; }
+html[data-theme="light"] .tg-shell .tg-top-tab:hover {
+  background: rgba(226, 232, 240, 0.78) !important;
+  color: #0f172a !important;
+}
+html[data-theme="light"] .tg-shell .tg-top-tab-active {
+  background: color-mix(in srgb, var(--tg-accent) 18%, white) !important;
+  color: #0f172a !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tg-accent) 32%, transparent);
+}
+html[data-theme="light"] .tg-shell .tg-top-control {
+  border-color: rgba(100, 116, 139, 0.28) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: #475569 !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+html[data-theme="light"] .tg-shell .tg-top-control:hover {
+  border-color: color-mix(in srgb, var(--tg-accent) 50%, transparent) !important;
+  background: color-mix(in srgb, var(--tg-accent) 8%, white) !important;
+  color: color-mix(in srgb, var(--tg-accent) 72%, #0f172a) !important;
+}
+html[data-theme="light"] .tg-shell .tg-top-control-active {
+  border-color: color-mix(in srgb, var(--tg-accent) 52%, transparent) !important;
+  background: color-mix(in srgb, var(--tg-accent) 16%, white) !important;
+  color: color-mix(in srgb, var(--tg-accent) 76%, #0f172a) !important;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--tg-accent) 15%, transparent);
+}
+html[data-theme="light"] .tg-shell .tg-top-tabs ~ input {
+  border-color: rgba(100, 116, 139, 0.24) !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+html[data-theme="light"] .tg-shell .tg-top-tabs ~ input::placeholder { color: #64748b !important; }
+@media (prefers-reduced-motion: reduce) {
+  .tg-launch-cube { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+}
+
+/* The launch screen follows the same accent token as the header pyramid. */
+.tg-launch-glow {
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--tg-accent, #3f8cff) 18%, transparent), transparent 68%);
+}
+.tg-launch-progress span {
+  background: var(--tg-accent, #3f8cff);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tg-accent, #3f8cff) 32%, transparent);
+}
+
+/* Profile balance controls and chart use readable light-theme tokens. */
+.tg-gram-balance-chart {
+  --tg-chart-fill: #4b97ff;
+  --tg-chart-stroke: #64b5ff;
+  --tg-chart-dot: #b8d8ff;
+}
+html[data-theme="light"] .tg-shell .tg-profile-balance-action {
+  color: #1e293b !important;
+  border-color: rgba(37, 99, 235, 0.34) !important;
+  background-color: rgba(37, 99, 235, 0.11) !important;
+}
+html[data-theme="light"] .tg-shell .tg-profile-balance-action:hover {
+  background-color: rgba(37, 99, 235, 0.18) !important;
+}
+html[data-theme="light"] .tg-shell .tg-profile-deposit-action b { color: #1d4ed8 !important; }
+html[data-theme="light"] .tg-shell .tg-profile-deposit-action small { color: #2563eb !important; }
+html[data-theme="light"] .tg-shell .tg-profile-withdraw-action {
+  border-color: rgba(4, 120, 87, 0.32) !important;
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+html[data-theme="light"] .tg-shell .tg-profile-withdraw-action:hover { background-color: rgba(16, 185, 129, 0.19) !important; }
+html[data-theme="light"] .tg-shell .tg-profile-withdraw-action b { color: #047857 !important; }
+html[data-theme="light"] .tg-shell .tg-profile-withdraw-action small { color: #059669 !important; }
+html[data-theme="light"] .tg-shell .tg-settings-choice[aria-pressed="true"] {
+  background-color: rgba(37, 99, 235, 0.16) !important;
+  color: #1d4ed8 !important;
+}
+html[data-theme="light"] .tg-shell .tg-settings-choice:not([aria-pressed="true"]) {
+  color: #475569 !important;
+}
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart {
+  --tg-chart-fill: #2563eb;
+  --tg-chart-stroke: #2563eb;
+  --tg-chart-dot: #1d4ed8;
+  border-color: rgba(30, 41, 59, 0.14) !important;
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .text-slate-100 { color: #0f172a !important; }
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .text-slate-500,
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .text-slate-600 { color: #475569 !important; }
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .border-\[\#3f8cff\]\/25 {
+  border-color: rgba(37, 99, 235, 0.34) !important;
+}
+html[data-theme="light"] .tg-shell .tg-gram-balance-chart .bg-\[\#3f8cff\]\/10 {
+  background-color: rgba(37, 99, 235, 0.12) !important;
+}
+
+/* User-selectable background palette. The palette changes the shell surface while preserving the selected accent and component contrast. */
+html[data-background="black"] .tg-shell { background: #05070a !important; }
+html[data-background="onyx"] .tg-shell { background: #111318 !important; }
+html[data-background="midnight"] .tg-shell { background: #101a2d !important; }
+html[data-background="indigo"] .tg-shell { background: #17213b !important; }
+html[data-background="cobalt"] .tg-shell { background: #152b52 !important; }
+html[data-background="electric"] .tg-shell { background: #241a45 !important; }
+html[data-background="plum"] .tg-shell { background: #351b3b !important; }
+html[data-background="burgundy"] .tg-shell { background: #3b1e2a !important; }
+html[data-background="forest"] .tg-shell { background: #17352d !important; }
+html[data-background="jade"] .tg-shell { background: #16443f !important; }
+html[data-background="turquoise"] .tg-shell { background: #123a45 !important; }
+html[data-background="navy"] .tg-shell { background: #172a45 !important; }
+html[data-background="steel"] .tg-shell { background: #536171 !important; }
+html[data-background="ivory"] body,
+html[data-background="ivory"] .tg-shell { background: #f3efe6 !important; color: #1f2937 !important; }
+html[data-background="ivory"] .tg-shell header,
+html[data-background="ivory"] .tg-shell nav { background: rgba(255, 253, 247, 0.96) !important; border-color: rgba(71, 85, 105, 0.18) !important; }
+html[data-background="ivory"] .tg-shell .text-white,
+html[data-background="ivory"] .tg-shell .text-slate-100,
+html[data-background="ivory"] .tg-shell .text-slate-200,
+html[data-background="ivory"] .tg-shell .text-slate-300 { color: #1f2937 !important; }
+html[data-background="ivory"] .tg-shell .text-slate-400,
+html[data-background="ivory"] .tg-shell .text-slate-500,
+html[data-background="ivory"] .tg-shell .text-slate-600 { color: #64748b !important; }
+html[data-background="ivory"] .tg-shell .border-white\/8,
+html[data-background="ivory"] .tg-shell .border-white\/10,
+html[data-background="ivory"] .tg-shell .border-white\/12,
+html[data-background="ivory"] .tg-shell .border-white\/15,
+html[data-background="ivory"] .tg-shell .border-white\/20 { border-color: rgba(71, 85, 105, 0.2) !important; }

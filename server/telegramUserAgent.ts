@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { Api, TelegramClient } from "teleproto";
 import { StringSession } from "teleproto/sessions/index.js";
 import { getLatestTelegramStatsSnapshot, getTelegramOwnerDmBinding, getTelegramStatsTargetByUsername, getTelegramUserAgentSession, listTelegramStatsTargets, markTelegramStatsTargetUnavailable, recordTelegramUserAgentAuditEvent, saveTelegramOwnerDmBinding, saveTelegramStatsSnapshot, saveTelegramStatsTarget, saveTelegramUserAgentSession } from "./db";
+import { storagePut } from "./storage";
 
 const LOGIN_TTL_MS = 10 * 60_000;
 
@@ -258,6 +259,49 @@ export async function openConnectedTelegramUserAgentClientForWorker() {
 
 export async function persistConnectedTelegramUserAgentClientSession(client: { session: { save: () => string } }) {
   await saveTelegramUserAgentSession({ status: "connected", encryptedSession: encrypt(client.session.save()) });
+}
+
+function isTelegramPhotoWithVideo(photo: Api.TypePhoto): photo is Api.Photo {
+  return photo instanceof Api.Photo && Array.isArray(photo.videoSizes) && photo.videoSizes.some(size => size instanceof Api.VideoSize);
+}
+
+export async function fetchTelegramGroupProfileMedia(chatId: string, groupId: number) {
+  const { client } = await openConnectedTelegramUserAgentClientForWorker();
+  try {
+    const entity = await client.getEntity(chatId);
+    let fullChat: Api.TypeChatFull;
+    if (entity instanceof Api.Channel) {
+      const result = await client.invoke(new Api.channels.GetFullChannel({ channel: entity }));
+      fullChat = result.fullChat;
+    } else if (entity instanceof Api.Chat) {
+      const result = await client.invoke(new Api.messages.GetFullChat({ chatId: entity.id }));
+      fullChat = result.fullChat;
+    } else {
+      throw new Error("User API вернул неподдерживаемый тип сообщества");
+    }
+
+    const photo = fullChat.chatPhoto;
+    if (!(photo instanceof Api.Photo)) {
+      return { groupId, mediaType: null, animatedAvatarKey: null, animatedAvatarUrl: null, reason: "no_profile_media" as const };
+    }
+
+    const hasVideo = isTelegramPhotoWithVideo(photo);
+    if (!hasVideo) {
+      return { groupId, mediaType: "image" as const, animatedAvatarKey: null, animatedAvatarUrl: null, reason: "static_profile_media" as const };
+    }
+
+    const media = await client.downloadMedia(photo as unknown as Api.TypeMessageMedia, { requestTimeout: 20_000 });
+    if (!Buffer.isBuffer(media) || media.length === 0) {
+      return { groupId, mediaType: null, animatedAvatarKey: null, animatedAvatarUrl: null, reason: "media_download_empty" as const };
+    }
+    if (media.length > 12 * 1024 * 1024) throw new Error("Профильное video слишком большое для snapshot");
+
+    const uploaded = await storagePut(`telegram/group-media/${groupId}.mp4`, media, "video/mp4");
+    await persistConnectedTelegramUserAgentClientSession(client);
+    return { groupId, mediaType: "video" as const, animatedAvatarKey: uploaded.key, animatedAvatarUrl: uploaded.url, reason: "updated" as const };
+  } finally {
+    await client.disconnect();
+  }
 }
 
 export function encryptTelegramOwnerDmPayload(value: string) {

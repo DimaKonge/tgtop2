@@ -23,7 +23,7 @@ const CSP_REPORT_ONLY = [
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' data: blob: https:",
-  "connect-src 'self' https://tgtop.me https://tgtop.xyz https://telegram.org https://*.telegram.org https://oauth.telegram.org https://tonapi.io https://*.tonapi.io https://bridge.tonapi.io https://config.ton.org https://raw.githubusercontent.com https://manus-analytics.com",
+  "connect-src 'self' https://tgtop.me https://tgtop.xyz https://telegram.org https://*.telegram.org https://oauth.telegram.org https://tonapi.io https://*.tonapi.io https://bridge.tonapi.io https://config.ton.org https://manus-analytics.com",
   "frame-src 'self' https://telegram.org https://*.telegram.org https://app.tonkeeper.com",
   "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
   "report-uri /api/csp-report",
@@ -81,29 +81,6 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
-function applyCors(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  } else {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-  }
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, x-telegram-init-data, trpc-accept, X-Requested-With, Accept, Origin"
-  );
-  res.setHeader("Access-Control-Max-Age", "86400");
-
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return;
-  }
-  next();
-}
-
 function applySecurityHeaders(req: express.Request, res: express.Response, next: express.NextFunction) {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -153,19 +130,7 @@ async function startServer() {
   const server = createServer(app);
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
-  app.use(applyCors);
   app.use(applySecurityHeaders);
-  app.get("/tonconnect-manifest.json", (_req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.setHeader("Cache-Control", "public, max-age=3600");
-    res.setHeader("Content-Type", "application/json");
-    res.json({
-      url: "https://tgtop.me",
-      name: "TG TOP",
-      iconUrl: "https://ton.org/download/ton_symbol.png",
-    });
-  });
   const trpcRateLimit = createInMemoryRateLimit(60_000, 120);
   const cspReportRateLimit = createInMemoryRateLimit(60_000, 60, 1_000);
   app.get("/healthz", async (_req, res) => {
@@ -206,26 +171,22 @@ async function startServer() {
     })
   );
   // development mode uses Vite, production mode uses static files
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  const port = Number(process.env.PORT) || 3000;
-  server.listen(port, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${port}/`);
-    console.log(`Server listening on http://0.0.0.0:${port}/`);
-  });
+  const preferredPort = parseInt(process.env.PORT || "3000");
+  const port = await findAvailablePort(preferredPort);
 
-  const handleShutdown = (signal: string) => {
-    console.log(`Received ${signal}, closing server...`);
-    server.close(() => {
-      process.exit(0);
-    });
-  };
-  process.on("SIGTERM", () => handleShutdown("SIGTERM"));
-  process.on("SIGINT", () => handleShutdown("SIGINT"));
+  if (port !== preferredPort) {
+    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  }
+
+  server.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}/`);
+  });
 }
 
 startServer().catch(console.error);
