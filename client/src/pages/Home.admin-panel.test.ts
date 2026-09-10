@@ -35,7 +35,7 @@ describe("TG TOP admin panel", () => {
     expect(source).toContain('Обновить список');
   });
 
-  it("keeps analytics presentation covered while removing historical stats from the worker-account sheet", () => {
+  it("renders only Telegram-returned analytics with readable labels and explicit unavailable states", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const chartPanelsSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
 
@@ -47,8 +47,8 @@ describe("TG TOP admin panel", () => {
     expect(chartPanelsSource).toContain('if (label === "Left") return "#f26667"');
     expect(chartPanelsSource).toContain("Telegram не отдал этот график за выбранный период.");
     expect(chartPanelsSource).toContain("const bucketGraph =");
-    expect(source).not.toContain("История статистики Telegram");
-    expect(source).not.toContain("getHistoricalStats.useQuery");
-    expect(source).not.toContain("allowHistoricalStatsTarget.useMutation");
+    expect(source).not.toContain('История статистики Telegram');
+    expect(source).not.toContain('getHistoricalStats.useQuery');
+    expect(source).not.toContain('allowHistoricalStatsTarget.useMutation');
   });
 });

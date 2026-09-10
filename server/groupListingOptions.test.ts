@@ -113,6 +113,12 @@ describe("normalizeGroupListingOptions", () => {
     });
   });
 
+  it("awaits animated media snapshot persistence after a successful listing", () => {
+    const source = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
+    expect(source).toContain("await Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group)))");
+    expect(source).not.toContain("void Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group)))");
+  });
+
   it("keeps listing balance validation inside the transaction that performs the debit", () => {
     const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
     const start = source.indexOf("export async function listGroupsWithCredits");

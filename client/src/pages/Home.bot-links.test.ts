@@ -1,23 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const EXTRACTED_HOME_COMPONENTS = [
-  "SortableMyGroupTile",
-  "NftCard",
-  "NftShowcase",
-  "BrandMark",
-  "WalletConnectControl",
-  "WalletNftCard",
-  "ChannelGiftMediaPreview",
-  "SettingsSheet",
-  "BotAvatar",
-  "BotRankingTile",
-].map(name => readFileSync(new URL(`../components/${name}.tsx`, import.meta.url), "utf8")).join("\n");
-
-
 describe("TG TOP production bot links", () => {
   it("uses @TG_TOPBOT for both channel and group admin onboarding", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 
     expect(source).toContain("https://t.me/TG_TOPBOT?");
     expect(source).toContain('startchannel&admin=${channelAdminRights}');
@@ -42,13 +28,14 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain("GiftsLabBot");
   });
 
-  it("exposes full listing controls directly in owned detail publication settings without separate sheet", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
-    expect(source).toContain("Цена места в рейтинге");
-    expect(source).toContain("от 0.1 GRAM");
-    expect(source).toContain("Категория и рубрика");
+  it("exposes full listing controls from owned detail publication settings", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    expect(source).toContain("Цена, место, категория и гео");
+    expect(source).toContain("Все параметры доступны здесь — отдельное окно больше не нужно.");
+    expect(source).toContain("openListing([detail.group.id], { inline: true })");
     expect(source).toContain('min={0.1}');
     expect(source).toContain("Предпросмотр позиции");
+    expect(source).toContain("Категория определяется типом Telegram-площадки; подкатегорию можно изменить ниже.");
     expect(source).toContain("Страна / регион в каталоге");
   });
 
@@ -57,7 +44,7 @@ describe("TG TOP production bot links", () => {
     const topCard = readFileSync(new URL("../components/TopRankingCard.tsx", import.meta.url), "utf8");
     const artwork = readFileSync(new URL("../components/CommunityArtwork.tsx", import.meta.url), "utf8");
     const compactRow = readFileSync(new URL("../components/CompactCommunityRow.tsx", import.meta.url), "utf8");
-    const source = `${home}\n${topCard}\n${artwork}\n${compactRow}\n${EXTRACTED_HOME_COMPONENTS}`;
+    const source = `${home}\n${topCard}\n${artwork}\n${compactRow}`;
     const styles = readFileSync(new URL("../index.css", import.meta.url), "utf8");
     const chartPanelsSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
 
@@ -115,15 +102,22 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Сначала добавьте бота администратором своей группы.');
     expect(source).toContain('const isTelegramMiniApp = Boolean(webApp?.initData);');
     expect(source).toContain('const openTelegramInNewBrowserTab = (url: string) => {');
+    expect(source).toContain('window.setTimeout(() => {');
+    expect(source).toContain('if (document.visibilityState === "visible") window.location.assign(url);');
+    expect(source).toContain('window.location.assign(url);');
     expect(source).toContain('const resolveVerifiedEntryLink = trpc.tgTop.resolveVerifiedEntryLink.useMutation');
-    expect(source).toContain('const openVerifiedEntry = () => resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });');
-    expect(source).toContain('Персональная ссылка пока недоступна — открываем подтверждённый вход без награды.');
+    expect(source).toContain('const openPublicEntry = () => {');
+    expect(source).toContain('const username = detail.group.username?.trim().replace(/^@/, "");');
+    expect(source).toContain('if (detail.group.username) {');
+    expect(source).toContain('Не удалось открыть Telegram. Разрешите открытие внешних ссылок и повторите попытку.');
+    expect(source).toContain('return openTelegramCommunityLink(`https://t.me/${username}`);');
+    expect(source).toContain('resolveVerifiedEntryLink.mutate({ groupId: detail.group.id });');
+    expect(source).toContain('Персональная ссылка пока недоступна — открываем обычный вход без награды.');
     expect(source).toContain('Не удалось открыть ссылку. Разрешите открытие ссылок и повторите попытку.');
     expect(source).toContain('openTelegramInNewBrowserTab(`https://t.me/${detail.group.managerUsername}`)');
     expect(source).not.toContain('Не на продаже');
     expect(source).not.toContain('{ownsDetail ? "На продаже" : "Купить за"}');
-    expect(source).not.toContain('<small className="mt-0.5 text-[7px] leading-2 text-[#b7d8ce]">Купить</small>');
-    expect(source).toContain('<b className="text-[12px] font-bold leading-tight text-white">{detailSalePrice}</b>');
+    expect(source).toContain('<small className="mt-0.5 text-[7px] leading-2 text-[#b7d8ce]">Купить</small>');
     expect(source).toContain('className="mt-3 flex items-stretch gap-1.5"');
     expect(source).toContain('{managerPublic && <button');
     expect(source).toContain('const getSalePriceForSave = (): string | null | undefined => {');
@@ -275,7 +269,13 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('Рабочее пространство');
     expect(source).not.toContain('<b className="block text-sm">{tx("Мои группы", "My groups")}</b>');
-    expect(domainSource).toContain('export const getRussianLanguage = (): Language => "ru"');
+    expect(domainSource).toContain('export const getRussianLanguage = (): Language => {');
+    expect(domainSource).toContain('return window.localStorage.getItem(LANGUAGE_STORAGE_KEY) === "ru" ? "ru" : "en";');
+    expect(domainSource).toContain('export const setLanguagePreference = (language: Language) => {');
+    expect(source).toContain('{ value: "en", label: "English" }');
+    expect(source).toContain('{ value: "ru", label: "Русский" }');
+    expect(source).toContain('Background palette');
+    expect(source).toContain('THEME_BACKGROUND_OPTIONS.map');
     expect(source).not.toContain('localStorage.getItem("tg-top-language")');
     expect(source).not.toContain('tx("Личная папка", "Personal cabinet")');
     expect(source).not.toContain('managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"');
@@ -287,7 +287,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('getAccountActivity.useQuery');
     expect(source).toContain('WebApp?.openInvoice');
     expect(source).toContain('Оплата подтверждена Telegram. Позиция обновляется…');
-    expect(source).toContain('function NftShowcase');
+    const showcaseSource = readFileSync(new URL("../components/tgtop/NftShowcase.tsx", import.meta.url), "utf8");
+    expect(showcaseSource).toContain("export function NftShowcase");
     expect(source).toContain('NFT-витрина площадки');
     expect(source).toContain('NFT-витрина владельца');
     expect(source).toContain('Моя NFT-витрина');
@@ -441,7 +442,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Подтвердить в кошельке');
     expect(source).not.toContain('Не отправляйте TON на этот адрес вручную без кода из этого окна');
     expect(source).toContain('Платёж вернулся в кошелёк. Средства не зачислены.');
-    expect(source).toContain('{ value: "system"');
+    expect(source).not.toContain('{ value: "system"');
     expect(source).toContain('setFiltersOpen(true)');
     expect(source).toContain('side="bottom"');
     expect(source).toContain('max-h-[82dvh] rounded-t-[22px]');
@@ -530,7 +531,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Цветовой акцент');
     expect(source).toContain('Azure Blue');
     expect(source).toContain('Electric Purple');
-    expect(source).not.toContain('onLanguageChange');
+    expect(source).toContain('onLanguageChange={setLanguage}');
     expect(source).toContain('tx("Весь мир", "Worldwide")');
     expect(source).toContain('<Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)}');
     expect(source).toContain('topSection === "nft" ? tx("Поиск NFT", "Search NFT")');
@@ -566,8 +567,11 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('avatarSrc={leadSlot.group ? getTelegramAvatarSrc(leadSlot.group) : null}');
     expect(source).not.toContain('bidAmount={leadSlot.bidAmount}');
     expect(source).not.toContain('slotNumber={leadSlot.slotNumber}');
-    expect(source).toContain('place-items-center rounded-[9px] border border-[#f5b84b]/35 bg-[#111720] text-[#f5b84b]');
-    expect(source).toContain('style={{ color: "#f5b84b" }}');
+    expect(source).toContain('className="brand-mark brand-mark-symbol');
+    expect(source).toContain('color: "var(--tg-accent)"');
+    expect(source).toContain('borderColor: "color-mix(in srgb, var(--tg-accent) 42%, transparent)"');
+    expect(source).toContain('tg-top-control');
+    expect(source).toContain('tg-top-tab-active');
     expect(domainSource).toContain('export const COUNTRY_OPTIONS = ["Global", "UA", "PL", "DE", "GB", "US", "RU", "FR", "ES", "IT", "NL", "CZ", "RO", "TR", "CA", "AU", "AE", "KZ"] as const');
     expect(domainSource).toContain('PL: { ru: "Польша", en: "Poland" }');
     expect(domainSource).toContain('DE: { ru: "Германия", en: "Germany" }');
@@ -706,7 +710,7 @@ describe("TG TOP production bot links", () => {
   });
 
   it("keeps the primary ranking action after all listing settings", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const rankingSection = source.indexOf('tx("Цена места в рейтинге"');
     const settingsNote = source.indexOf('tx("Новая публикация использует", "A new publication uses")');
     const primaryAction = source.indexOf('tx("Залистить", "List community")');
@@ -715,9 +719,8 @@ describe("TG TOP production bot links", () => {
     expect(primaryAction).toBeGreaterThan(settingsNote);
   });
 
-  it("uses the TOP pyramid for bots and a long plus button before choosing a group for an outbid", () => {
-    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8") + "\n" + EXTRACTED_HOME_COMPONENTS;
-
+    it("uses the TOP pyramid for bots and a long plus button before choosing a group for an outbid", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     expect(source).toContain('function BotRankingTile');
     expect(source).toContain('variant="lead"');
     expect(source).toContain('approvedBots.slice(1, 3)');
@@ -726,5 +729,31 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('imageClassName="brightness-[0.76] saturate-[1.08]"');
     expect(source).toContain('aria-label="Добавить свою группу" title="Добавить свою группу" className="mt-2 flex h-10 w-full items-center justify-center');
     expect(source).not.toContain('className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-dashed border-[#3f8cff]/55');
+  });
+  it("keeps the brand pyramid upright and the appearance selector limited to dark and light", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    const css = readFileSync(new URL("../index.css", import.meta.url), "utf8");
+    const iconSource = readFileSync(new URL("../components/TgTopPyramidIcon.tsx", import.meta.url), "utf8");
+    expect(css).toContain('html[data-theme="dark"] .brand-mark-symbol { transform: none; }');
+    expect(css).not.toContain('html[data-theme="dark"] .brand-mark-symbol { transform: rotate(180deg); }');
+    expect(iconSource).toContain('y="0.75"');
+    expect(iconSource).toContain('y="13.75"');
+    expect(source).toContain('{ value: "dark", label: "Тёмная", icon: Moon }');
+    expect(source).toContain('{ value: "light", label: "Светлая", icon: Sun }');
+    expect(source).not.toContain('{ value: "system", label: "Система", icon: Settings2 }');
+    expect(source).toContain('className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1"');
+  });
+  it("gives the profile actions and balance chart explicit light-theme hooks", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    const chartSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
+    const css = readFileSync(new URL("../index.css", import.meta.url), "utf8");
+    expect(source).toContain("tg-profile-balance-action tg-profile-deposit-action");
+    expect(source).toContain("tg-profile-balance-action tg-profile-withdraw-action");
+    expect(chartSource).toContain('className="tg-gram-balance-chart');
+    expect(chartSource).toContain('stopColor="var(--tg-chart-fill)"');
+    expect(chartSource).toContain('stroke="var(--tg-chart-stroke)"');
+    expect(css).toContain('html[data-theme="light"] .tg-shell .tg-profile-deposit-action b');
+    expect(css).toContain('html[data-theme="light"] .tg-shell .tg-profile-withdraw-action b');
+    expect(css).toContain('html[data-theme="light"] .tg-shell .tg-gram-balance-chart');
   });
 });

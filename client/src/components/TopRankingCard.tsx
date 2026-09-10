@@ -79,9 +79,9 @@ export function TopRankingCard({ group, variant, language, avatarSrc, showTgTopP
             <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_35%_22%,#254e7a_0%,#111720_70%)] p-[24%]"><TgTopAnimatedPyramidAvatar className="h-full w-full" title="TG TOP" /></span>
           )}
           <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,15,0.06)_8%,rgba(7,10,15,0.82)_100%)]" />
-          <span className={`absolute inset-x-0 bottom-0 min-w-0 ${compact ? "p-2" : lead ? "p-5 sm:p-6" : "p-3 sm:p-4"}`}>
-            <b className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} block max-w-full truncate font-semibold text-white`}>{group.title}</b>
-            <small className={`mt-1 block max-w-full truncate text-slate-200/80 ${compact ? "text-[8px]" : "text-xs"}`}>
+          <span className={`tg-media-overlay-content absolute inset-x-0 bottom-0 min-w-0 ${compact ? "p-2" : lead ? "p-5 sm:p-6" : "p-3 sm:p-4"}`}>
+            <b className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} tg-media-overlay-title block max-w-full truncate font-semibold text-white`}>{group.title}</b>
+            <small className={`tg-media-overlay-meta mt-1 block max-w-full truncate text-slate-200/80 ${compact ? "text-[8px]" : "text-xs"}`}>
               {lead && <>{groupUrl && onOpenCommunity ? <a href={groupUrl} onClick={event => { event.preventDefault(); event.stopPropagation(); onOpenCommunity(groupUrl); }} className="no-underline hover:text-white">{accessLabel}</a> : accessLabel} · </>}
               {formatCatalogNumber(group.membersCount, language)} {language === "en" ? "members" : "участников"} · +{formatCatalogNumber(group.joinedCount, language)}
             </small>

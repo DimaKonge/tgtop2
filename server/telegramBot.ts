@@ -89,7 +89,7 @@ type TelegramUpdate = {
   pre_checkout_query?: { id: string; from: TelegramUser; currency: string; total_amount: number; invoice_payload: string };
 };
 
-let botToken = process.env.TELEGRAM_BOT_TOKEN;
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const reserveBotToken = process.env.TELEGRAM_RESERVE_BOT_TOKEN;
 const miniAppUrl = process.env.MINI_APP_URL ?? "https://tgtop.me";
 const pollTimeoutSeconds = 30;
@@ -889,29 +889,6 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
       }).catch(() => {});
     }
   }
-  const isBeta = process.env.IS_BETA_BOT === "true";
-
-  if (message?.text?.startsWith("/beta") || (isBeta && message?.text?.startsWith("/status"))) {
-    const info = [
-      "🧪 <b>TG TOP Sandbox / Beta Bot</b>",
-      "",
-      "• <b>Режим:</b> " + (isBeta ? "Тестовый (Beta/Sandbox)" : "Продакшн"),
-      "• <b>Бот:</b> " + (activeBotLabel || "@TGTOP_robot"),
-      "• <b>Ваш Telegram ID:</b> <code>" + (message.from?.id ?? "unknown") + "</code>",
-      "• <b>Ваш Username:</b> @" + (message.from?.username ?? "нет"),
-      "• <b>Время сервера:</b> " + new Date().toISOString(),
-      "",
-      "<i>В этом боте проверяются новые функции и релизы перед выкатом на основной @TG_TOPBOT.</i>"
-    ].join("\n");
-
-    await telegramCall("sendMessage", {
-      chat_id: message.chat.id,
-      text: info,
-      parse_mode: "HTML"
-    }).catch(console.error);
-    return;
-  }
-
   if (message?.text?.startsWith("/terms")) {
     await telegramCall<boolean>("sendMessage", {
       chat_id: message.chat.id,
@@ -948,12 +925,10 @@ async function handleUpdate(update: TelegramUpdate): Promise<void> {
         referrer,
       }));
     }
-    const isBeta = process.env.IS_BETA_BOT === "true";
-    const welcomePrefix = isBeta ? "🧪 [BETA] " : "";
-    await openMiniApp(message.chat.id, welcomePrefix + "Добро пожаловать в TG TOP — каталог Telegram-сообществ. Откройте приложение, чтобы начать.", true);
+    await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — рейтинг Telegram-сообществ и других активов. Откройте приложение, чтобы начать.", true);
     return;
   }
-  await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — каталог Telegram-сообществ. Откройте приложение, чтобы начать.");
+  await openMiniApp(message.chat.id, "Добро пожаловать в TG TOP — рейтинг Telegram-сообществ и других активов. Откройте приложение, чтобы начать.");
 }
 
 function getTelegramPollingErrorSummary(error: unknown): string {
@@ -987,7 +962,7 @@ export function getTelegramEventKey(update: TelegramUpdate): string | null {
   return `message:${message.chat.id}:${message.message_id}`;
 }
 
-export async function runTelegramBot(botLabel = "@TG_TOPBOT"): Promise<void> { botToken = process.env.TELEGRAM_BOT_TOKEN;
+export async function runTelegramBot(botLabel = "@TG_TOPBOT"): Promise<void> {
   if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
   activeBotLabel = botLabel;
   console.info(`[Telegram] Starting long-polling for ${botLabel}`);
