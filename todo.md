@@ -1346,7 +1346,7 @@
 
 - [ ] Diagnose and fix TON Connect wallet onboarding for a new Telegram account: chooser opens but connection does not complete; verify manifest/origin/callback without signing or sending transactions
 
-- [ ] Inline listing price, predicted placement, category/subcategory, country, and city controls inside the expanded publication-parameters panel and remove the separate price/geo/category window without changing listing validation
+- [x] Inline listing price, predicted placement, category/subcategory, country, and city controls inside the expanded publication-parameters panel and remove the separate price/geo/category window without changing listing validation
 
 - [x] Configure Google AI Studio automation to edit through a controlled branch/PR and deploy only after build, tests, health checks, and rollback-safe staging; preserve integration access while preventing broken direct production writes
 

@@ -3436,15 +3436,43 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <div className="relative flex flex-col">
                   {detail && ownsDetail && (
                     <section className="order-3 mt-2 rounded-xl border border-[#30415d] bg-[#111d32]/90 p-1.5">
-                      <button type="button" onClick={() => setInlineListingOpen(value => !value)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
+                      <button type="button" onClick={() => { if (inlineListingOpen) setInlineListingOpen(false); else openListing([detail.group.id], { inline: true }); }} className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.045] active:scale-[0.99]">
                         <span className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/10 text-[#8fb9ff]"><Settings2 className="h-3.5 w-3.5" /></span><span><b className="block text-xs text-slate-100">{tx("Параметры публикации", "Publication settings")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detail.group.status === "listed" ? tx("Видимость, объявление, продажа", "Visibility, announcement, sale") : tx("Настройте перед размещением", "Configure before listing")}</small></span></span>
                         <ChevronRight className={`h-4 w-4 text-slate-500 transition-transform ${inlineListingOpen ? "rotate-90" : ""}`} />
                       </button>
                       {inlineListingOpen && (
                         <div className="mt-1.5 space-y-1.5 border-t border-white/8 pt-1.5">
-                          <button type="button" onClick={() => openListing([detail.group.id])} className="flex w-full items-center justify-between gap-3 rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/[0.08] px-2.5 py-2 text-left transition-colors hover:bg-[#3f8cff]/[0.13] active:scale-[0.99]">
-                            <span><b className="block text-[11px] text-[#c7dcff]">{tx("Цена, место, категория и гео", "Price, placement, category and geo")}</b><small className="mt-0.5 block text-[10px] text-slate-400">{tx("Открыть полный листинг: от 0.1 GRAM с прогнозом позиции", "Open full listing: from 0.1 GRAM with placement preview")}</small></span><ChevronRight className="h-4 w-4 shrink-0 text-[#8fb9ff]" />
-                          </button>
+                          <div className="rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/[0.06] p-2.5">
+                            <b className="block text-[11px] text-[#c7dcff]">{tx("Цена, место, категория и гео", "Price, placement, category and geo")}</b>
+                            <small className="mt-0.5 block text-[10px] leading-4 text-slate-400">{tx("Все параметры доступны здесь — отдельное окно больше не нужно.", "All listing parameters are available here — no separate window needed.")}</small>
+                            <div className="mt-2 grid grid-cols-2 gap-1.5">
+                              <div className="col-span-2">
+                                <label className="mb-1 block text-[10px] text-slate-500">{tx("Цена места в рейтинге", "Ranking placement price")}</label>
+                                <div className="flex items-center rounded-lg border border-white/8 bg-[#0b0f14] p-0.5">
+                                  <button type="button" onClick={() => setListingRankingBid(formatTon(Math.max(0.1, listingRankingBidAmount - 0.1)))} aria-label={tx("Уменьшить цену", "Decrease price")} className="grid h-8 w-8 place-items-center rounded-md text-slate-300"><Minus className="h-3.5 w-3.5" /></button>
+                                  <Input value={listingRankingBid} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\\d*(\\.\\d?)?$/.test(value)) setListingRankingBid(value); }} onBlur={() => setListingRankingBid(formatTon(listingRankingBidAmount))} aria-label={tx("Цена места в GRAM", "Ranking price in GRAM")} className="h-8 flex-1 border-0 bg-transparent px-0 text-center text-sm font-semibold text-white focus-visible:ring-0" />
+                                  <b className="mr-1 text-[9px] text-slate-500">GRAM</b>
+                                  <button type="button" onClick={() => setListingRankingBid(formatTon(Math.min(MAX_RANKING_BID_GRAM, listingRankingBidAmount + 0.1)))} aria-label={tx("Увеличить цену", "Increase price")} className="grid h-8 w-8 place-items-center rounded-md text-[#a6c8ff]"><Plus className="h-3.5 w-3.5" /></button>
+                                </div>
+                                <Slider value={[Math.min(MAX_RANKING_SLIDER_GRAM, listingRankingBidAmount)]} min={0.1} max={MAX_RANKING_SLIDER_GRAM} step={0.1} onValueChange={([value]) => setListingRankingBid(formatTon(value))} className="mt-1 py-1 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-range]]:!bg-[#3f8cff] [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:!bg-[#3f8cff]" />
+                              </div>
+                              <div className="col-span-2 rounded-lg bg-black/15 px-2 py-1.5 text-[10px]">
+                                {listingRankingPreviewSlotNumber ? <><span className="block text-slate-500">{tx("Прогноз позиции", "Placement preview")}</span><b className="mt-0.5 block text-[#a6c8ff]">{tx(`Займёт ${listingRankingPreviewSlotNumber}-ю позицию`, `Will take position ${listingRankingPreviewSlotNumber}`)}</b></> : <b className="text-amber-100">{tx("Увеличьте ставку для Top", "Increase the bid to enter Top")}</b>}
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] text-slate-500">{tx("Страна", "Country")}</label>
+                                <Select value={listingCountry} onValueChange={value => { setListingCountry(value); setListingCity("Все"); }}><SelectTrigger className="h-8 rounded-lg border-white/10 bg-[#0b0f14] text-[10px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="z-[90] border-white/10 bg-[#111720] text-slate-100"><SelectItem value="Все">{tx("Весь мир", "Worldwide")}</SelectItem>{managedCountries.filter(item => item.code !== "Global" && item.code !== "Все").map(item => <SelectItem key={item.id} value={item.code}>{item.label}</SelectItem>)}</SelectContent></Select>
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] text-slate-500">{tx("Город", "City")}</label>
+                                <Select value={listingCity} onValueChange={setListingCity}><SelectTrigger className="h-8 rounded-lg border-white/10 bg-[#0b0f14] text-[10px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="z-[90] border-white/10 bg-[#111720] text-slate-100"><SelectItem value="Все">{tx("Не указан", "Not specified")}</SelectItem>{managedCities.filter(city => city.countryCode === listingCountry).map(item => <SelectItem key={item.id} value={item.code}>{item.label}</SelectItem>)}</SelectContent></Select>
+                              </div>
+                              <div className="col-span-2">
+                                <label className="mb-1 block text-[10px] text-slate-500">{tx("Подкатегория", "Subcategory")}</label>
+                                <Select value={listingSubcategory || "General"} onValueChange={setListingSubcategory}><SelectTrigger className="h-8 rounded-lg border-white/10 bg-[#0b0f14] text-[10px] text-slate-200"><SelectValue /></SelectTrigger><SelectContent className="z-[90] border-white/10 bg-[#111720] text-slate-100"><SelectItem value="General">{tx("Все рубрики", "All topics")}</SelectItem>{listingSubcategoryOptions.filter(item => item !== "General").map(item => <SelectItem key={item} value={item}>{getManagedTopicLabel(listingCategory ?? "Каналы", item)}</SelectItem>)}</SelectContent></Select>
+                              </div>
+                            </div>
+                          </div>
                           <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5">
                             <span><b className="block text-[11px] text-slate-200">{detailVisibility === "public" ? tx("Публичная публикация", "Public publication") : tx("Анонимная публикация", "Anonymous publication")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detailVisibility === "public" ? tx("Другие смогут перейти в ваш профиль", "Others can open your profile") : tx("Владелец не показывается в карточке", "The owner stays hidden in the card")}</small></span>
                             <button type="button" role="switch" aria-checked={detailVisibility === "public"} onClick={() => setDetailVisibility(value => value === "public" ? "anonymous" : "public")} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${detailVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detailVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></button>

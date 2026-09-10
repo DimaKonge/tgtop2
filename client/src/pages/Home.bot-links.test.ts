@@ -31,8 +31,8 @@ describe("TG TOP production bot links", () => {
   it("exposes full listing controls from owned detail publication settings", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     expect(source).toContain("Цена, место, категория и гео");
-    expect(source).toContain("Открыть полный листинг: от 0.1 GRAM с прогнозом позиции");
-    expect(source).toContain("onClick={() => openListing([detail.group.id])}");
+    expect(source).toContain("Все параметры доступны здесь — отдельное окно больше не нужно.");
+    expect(source).toContain("openListing([detail.group.id], { inline: true })");
     expect(source).toContain('min={0.1}');
     expect(source).toContain("Предпросмотр позиции");
     expect(source).toContain("Категория определяется типом Telegram-площадки; подкатегорию можно изменить ниже.");
