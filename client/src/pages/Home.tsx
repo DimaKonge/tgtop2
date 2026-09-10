@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useTheme, type Appearance, type ThemeAccent, type ThemeStyle } from "@/contexts/ThemeContext";
+import { THEME_BACKGROUND_OPTIONS, useTheme, type Appearance, type ThemeAccent, type ThemeStyle } from "@/contexts/ThemeContext";
 import {
   ArrowLeft,
   BarChart3,
@@ -39,6 +39,7 @@ import {
   GripVertical,
   Hash,
   LayoutGrid,
+  Languages,
    List,
    MessageSquare,
    Minus,
@@ -68,7 +69,7 @@ import {
 import { toast } from "sonner";
 import { useIsConnectionRestored, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 import lottie from "lottie-web";
-import { CATEGORY_SUBCATEGORIES, CITY_OPTIONS, COUNTRY_LABELS, COUNTRY_OPTIONS, SUBCATEGORY_LABELS, type Audience, type DetailStatsPeriod, type GlobalDirection, type Group, type Language, type ListingCountry, type ListingType, type MyGroupsViewMode, type Nft, type NftDealCategory, type NftMarketCategory, type Page, type PreparedNftTransfer, type ShowcaseNft, type Slot, type TopSection, type WalletNft, type WalletNftFilter, type WorkspaceSection, getRussianLanguage, hasConfiguredRewardCampaign } from "@/lib/tgTop-domain";
+import { CATEGORY_SUBCATEGORIES, CITY_OPTIONS, COUNTRY_LABELS, COUNTRY_OPTIONS, SUBCATEGORY_LABELS, type Audience, type DetailStatsPeriod, type GlobalDirection, type Group, type Language, type ListingCountry, type ListingType, type MyGroupsViewMode, type Nft, type NftDealCategory, type NftMarketCategory, type Page, type PreparedNftTransfer, type ShowcaseNft, type Slot, type TopSection, type WalletNft, type WalletNftFilter, type WorkspaceSection, getRussianLanguage, hasConfiguredRewardCampaign, setLanguagePreference } from "@/lib/tgTop-domain";
 import { NftShowcase } from "@/components/tgtop/NftShowcase";
 import { NftCard } from "@/components/tgtop/NftCard";
 const formatTon = (value: number | string | null | undefined) => {
@@ -373,11 +374,16 @@ function ChannelGiftMediaPreview({ gift }: { gift: ChannelGiftMedia }) {
 function SettingsSheet({
   open,
   onOpenChange,
+  language,
+  onLanguageChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  language: Language;
+  onLanguageChange: (language: Language) => void;
 }) {
-  const { appearance, setAppearance, style, setStyle, accent, setAccent } = useTheme();
+  const { appearance, setAppearance, style, setStyle, accent, setAccent, background, setBackground } = useTheme();
+  const isEnglish = language === "en";
   const appearanceItems: Array<{ value: Appearance; label: string; icon: typeof Moon }> = [
     { value: "dark", label: "Тёмная", icon: Moon },
     { value: "light", label: "Светлая", icon: Sun },
@@ -385,6 +391,10 @@ function SettingsSheet({
   const styleItems: Array<{ value: ThemeStyle; label: string }> = [
     { value: "original", label: "TG TOP" },
     { value: "clean", label: "Clean" },
+  ];
+  const languageItems: Array<{ value: Language; label: string }> = [
+    { value: "en", label: "English" },
+    { value: "ru", label: "Русский" },
   ];
   const accentItems: Array<{ value: ThemeAccent; label: string; color: string }> = [
     { value: "blue", label: "Azure Blue", color: "#3f8cff" },
@@ -402,14 +412,14 @@ function SettingsSheet({
       >
         <SheetHeader className="border-b border-white/8 px-4 pb-3">
           <SheetTitle className="text-base font-semibold tracking-tight text-slate-100">
-            Настройки
+            {isEnglish ? "Settings" : "Настройки"}
           </SheetTitle>
         </SheetHeader>
         <div className="mx-4 space-y-3 overflow-y-auto pb-1">
           <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
               <Settings2 className="h-4 w-4 text-[#72a8ff]" />
-              Стиль интерфейса
+              {isEnglish ? "Interface style" : "Стиль интерфейса"}
             </div>
             <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
               {styleItems.map(item => (
@@ -418,12 +428,12 @@ function SettingsSheet({
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[10px] leading-4 text-slate-500">TG TOP сохраняет фирменную сетку, Clean делает оболочку спокойнее и ближе к Telegram-native интерфейсам.</p>
+            <p className="mt-2 text-[10px] leading-4 text-slate-500">{isEnglish ? "TG TOP keeps the branded grid, while Clean uses a calmer Telegram-native shell." : "TG TOP сохраняет фирменную сетку, Clean делает оболочку спокойнее и ближе к Telegram-native интерфейсам."}</p>
           </section>
           <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
               <Sun className="h-4 w-4 text-[#72a8ff]" />
-              Тема
+              {isEnglish ? "Theme" : "Тема"}
             </div>
             <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
               {appearanceItems.map(item => {
@@ -436,10 +446,31 @@ function SettingsSheet({
           <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
               <Palette className="h-4 w-4 text-[#72a8ff]" />
-              Цветовой акцент
+              {isEnglish ? "Color accent" : "Цветовой акцент"}
             </div>
             <div className="grid grid-cols-3 gap-2">
               {accentItems.map(item => <button key={item.value} onClick={() => setAccent(item.value)} aria-label={item.label} aria-pressed={accent === item.value} className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg border px-1 transition-colors ${accent === item.value ? "border-[#72a8ff] bg-[#3f8cff]/12" : "border-white/8 bg-[#0b0f14] hover:border-white/20"}`}><span className="h-6 w-6 rounded-md shadow-inner" style={{ backgroundColor: item.color }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>)}
+            </div>
+          </section>
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Languages className="h-4 w-4 text-[#72a8ff]" />
+              {isEnglish ? "Language" : "Язык"}
+            </div>
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
+              {languageItems.map(item => <button key={item.value} onClick={() => onLanguageChange(item.value)} aria-pressed={language === item.value} className={`h-8 rounded-md text-[11px] font-semibold transition-colors ${language === item.value ? "bg-[#3f8cff]/18 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}>{item.label}</button>)}
+            </div>
+          </section>
+          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <Palette className="h-4 w-4 text-[#72a8ff]" />
+              {isEnglish ? "Background palette" : "Палитра фона"}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {THEME_BACKGROUND_OPTIONS.map(item => {
+                const active = background === item.value;
+                return <button key={item.value} type="button" onClick={() => { setBackground(item.value); setAppearance(item.tone === "light" ? "light" : "dark"); }} aria-label={item.label} aria-pressed={active} className={`flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-lg border px-1 transition-colors ${active ? "border-[#72a8ff] bg-[#3f8cff]/12" : "border-white/8 bg-[#0b0f14] hover:border-white/20"}`}><span className="h-7 w-7 rounded-md border border-white/20 shadow-inner" style={{ backgroundColor: item.color }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>;
+              })}
             </div>
           </section>
         </div>
@@ -482,6 +513,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [safeWalletAddress, setSafeWalletAddress] = useState<string | null>(null);
   const hasSignaledReady = useRef(false);
   const [page, setPage] = useState<Page>("top");
+  const [language, setLanguageState] = useState<Language>(() => getRussianLanguage());
+  const setLanguage = (nextLanguage: Language) => {
+    setLanguagePreference(nextLanguage);
+    setLanguageState(nextLanguage);
+  };
   const [detailStatsPeriod, setDetailStatsPeriod] = useState<DetailStatsPeriod>("day");
   const [workspaceSection, setWorkspaceSection] = useState<WorkspaceSection>("communities");
   const [walletNftFilter, setWalletNftFilter] = useState<WalletNftFilter>("all");
@@ -527,7 +563,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       void tonConnectUi.disconnect().catch(() => undefined);
       window.localStorage.removeItem(ownerKey);
       window.localStorage.removeItem(pendingOwnerKey);
-      toast.error(getRussianLanguage() === "en" ? "The previous wallet session was disconnected for your safety." : "Предыдущая сессия кошелька отключена для безопасности.");
+      toast.error(language === "en" ? "The previous wallet session was disconnected for your safety." : "Предыдущая сессия кошелька отключена для безопасности.");
       return;
     }
     if (walletAddress && (storedOwner === user.openId || pendingOwner === user.openId)) {
@@ -550,14 +586,13 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       window.localStorage.removeItem("tgtop:ton-wallet-pending-owner");
       setSafeWalletAddress(null);
       setTonWithdrawalAddress("");
-      toast.success(getRussianLanguage() === "en" ? "Wallet disconnected" : "Кошелёк отключён");
+      toast.success(language === "en" ? "Wallet disconnected" : "Кошелёк отключён");
     } catch {
-      toast.error(getRussianLanguage() === "en" ? "Could not disconnect wallet" : "Не удалось отключить кошелёк");
+      toast.error(language === "en" ? "Could not disconnect wallet" : "Не удалось отключить кошелёк");
     }
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminGuideKind, setAdminGuideKind] = useState<"channel" | "group" | null>(null);
-  const language = getRussianLanguage();
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [detailBoardScope, setDetailBoardScope] = useState<{ category: "Все" | "Каналы" | "Чаты"; country: string; subcategory: string; city: string; displayPosition?: number } | null>(null);
   const [detailBidInput, setDetailBidInput] = useState("");
@@ -5065,6 +5100,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       <SettingsSheet
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
+        language={language}
+        onLanguageChange={setLanguage}
       />
       <Sheet open={Boolean(adminGuideKind)} onOpenChange={open => !open && setAdminGuideKind(null)}>
         <SheetContent side="bottom" className="!bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[52dvh] rounded-t-[22px] border-white/10 bg-[#10161f] pb-[calc(1rem+env(safe-area-inset-bottom))] text-slate-100">

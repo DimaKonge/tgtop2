@@ -269,7 +269,13 @@ describe("TG TOP production bot links", () => {
     expect(source).not.toContain('function OwnerEntry');
     expect(source).toContain('Рабочее пространство');
     expect(source).not.toContain('<b className="block text-sm">{tx("Мои группы", "My groups")}</b>');
-    expect(domainSource).toContain('export const getRussianLanguage = (): Language => "ru"');
+    expect(domainSource).toContain('export const getRussianLanguage = (): Language => {');
+    expect(domainSource).toContain('return window.localStorage.getItem(LANGUAGE_STORAGE_KEY) === "ru" ? "ru" : "en";');
+    expect(domainSource).toContain('export const setLanguagePreference = (language: Language) => {');
+    expect(source).toContain('{ value: "en", label: "English" }');
+    expect(source).toContain('{ value: "ru", label: "Русский" }');
+    expect(source).toContain('Background palette');
+    expect(source).toContain('THEME_BACKGROUND_OPTIONS.map');
     expect(source).not.toContain('localStorage.getItem("tg-top-language")');
     expect(source).not.toContain('tx("Личная папка", "Personal cabinet")');
     expect(source).not.toContain('managerPublic && detail.group.managerName ? detail.group.managerName : "Анонимно"');
@@ -525,7 +531,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('Цветовой акцент');
     expect(source).toContain('Azure Blue');
     expect(source).toContain('Electric Purple');
-    expect(source).not.toContain('onLanguageChange');
+    expect(source).toContain('onLanguageChange={setLanguage}');
     expect(source).toContain('tx("Весь мир", "Worldwide")');
     expect(source).toContain('<Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)}');
     expect(source).toContain('topSection === "nft" ? tx("Поиск NFT", "Search NFT")');

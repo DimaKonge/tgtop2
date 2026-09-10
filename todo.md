@@ -1351,3 +1351,9 @@
 - [ ] Configure Google AI Studio automation to edit through a controlled branch/PR and deploy only after build, tests, health checks, and rollback-safe staging; preserve integration access while preventing broken direct production writes
 
 - [x] Switch GitHub Actions VPS deployment from SERVER_SSH_KEY to password-based SSH using the existing SERVER_HOST, SERVER_USER, and SERVER_PASSWORD secrets, then verify staged deploy and rollback health gates
+
+- [ ] Restore production TG TOP after current blank/non-opening site and verify live HTTP, health, service, Nginx, assets, and browser runtime
+
+- [x] Make English the default TG TOP locale and expose a persistent Settings selector with exactly English and Russian options
+
+- [x] Add a selectable background palette beyond black/white, with persistent theme tokens that keep text, buttons, charts, logo cubes, and active states readable

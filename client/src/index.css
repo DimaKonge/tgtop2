@@ -491,3 +491,34 @@ html[data-theme="light"] .tg-shell .tg-gram-balance-chart .border-\[\#3f8cff\]\/
 html[data-theme="light"] .tg-shell .tg-gram-balance-chart .bg-\[\#3f8cff\]\/10 {
   background-color: rgba(37, 99, 235, 0.12) !important;
 }
+
+/* User-selectable background palette. The palette changes the shell surface while preserving the selected accent and component contrast. */
+html[data-background="black"] .tg-shell { background: #05070a !important; }
+html[data-background="onyx"] .tg-shell { background: #111318 !important; }
+html[data-background="midnight"] .tg-shell { background: #101a2d !important; }
+html[data-background="indigo"] .tg-shell { background: #17213b !important; }
+html[data-background="cobalt"] .tg-shell { background: #152b52 !important; }
+html[data-background="electric"] .tg-shell { background: #241a45 !important; }
+html[data-background="plum"] .tg-shell { background: #351b3b !important; }
+html[data-background="burgundy"] .tg-shell { background: #3b1e2a !important; }
+html[data-background="forest"] .tg-shell { background: #17352d !important; }
+html[data-background="jade"] .tg-shell { background: #16443f !important; }
+html[data-background="turquoise"] .tg-shell { background: #123a45 !important; }
+html[data-background="navy"] .tg-shell { background: #172a45 !important; }
+html[data-background="steel"] .tg-shell { background: #536171 !important; }
+html[data-background="ivory"] body,
+html[data-background="ivory"] .tg-shell { background: #f3efe6 !important; color: #1f2937 !important; }
+html[data-background="ivory"] .tg-shell header,
+html[data-background="ivory"] .tg-shell nav { background: rgba(255, 253, 247, 0.96) !important; border-color: rgba(71, 85, 105, 0.18) !important; }
+html[data-background="ivory"] .tg-shell .text-white,
+html[data-background="ivory"] .tg-shell .text-slate-100,
+html[data-background="ivory"] .tg-shell .text-slate-200,
+html[data-background="ivory"] .tg-shell .text-slate-300 { color: #1f2937 !important; }
+html[data-background="ivory"] .tg-shell .text-slate-400,
+html[data-background="ivory"] .tg-shell .text-slate-500,
+html[data-background="ivory"] .tg-shell .text-slate-600 { color: #64748b !important; }
+html[data-background="ivory"] .tg-shell .border-white\/8,
+html[data-background="ivory"] .tg-shell .border-white\/10,
+html[data-background="ivory"] .tg-shell .border-white\/12,
+html[data-background="ivory"] .tg-shell .border-white\/15,
+html[data-background="ivory"] .tg-shell .border-white\/20 { border-color: rgba(71, 85, 105, 0.2) !important; }
