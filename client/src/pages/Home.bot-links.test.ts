@@ -191,8 +191,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('["bots", tx("Боты", "Bots")]');
     expect(source).toContain('topSection === "nft"');
     expect(source).toContain('<NftCard');
-    expect(source).toContain('value="onchain"');
-    expect(source).toContain('value="offchain"');
+    expect(source).toContain('["onchain", "On-chain"]');
+    expect(source).toContain('["offchain", "Off-chain"]');
     expect(source).toContain('prepareNftTransfer');
     expect(source).not.toContain('completeOffchainNftTransfer');
     expect(source).toContain('Заявка на передачу');
@@ -274,7 +274,7 @@ describe("TG TOP production bot links", () => {
     expect(domainSource).toContain('export const setLanguagePreference = (language: Language) => {');
     expect(source).toContain('{ value: "en", label: "English" }');
     expect(source).toContain('{ value: "ru", label: "Русский" }');
-    expect(source).toContain('Background palette');
+    expect(source).toContain('Telegram-style background');
     expect(source).toContain('THEME_BACKGROUND_OPTIONS.map');
     expect(source).not.toContain('localStorage.getItem("tg-top-language")');
     expect(source).not.toContain('tx("Личная папка", "Personal cabinet")');
@@ -307,7 +307,8 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('label: "ТОП"');
     expect(source).not.toContain('label: "Розыгрыши"');
     expect(source).not.toContain('label: "Заработать"');
-    expect(source).toContain('grid w-full grid-cols-3');
+    expect(source).toContain('grid w-full gap-1');
+    expect(source).toContain('moderationAccess?.canModerate ? "grid-cols-4" : "grid-cols-3"');
     expect(source).toContain('label: "Рабочее пространство"');
     expect(source).toContain('label: "Мой кабинет"');
     expect(source).toContain('aria-label={item.label}');
@@ -463,7 +464,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('rewardPerSubscription: isChatRewardCampaign ? 0 : joinRewardUnits');
     expect(source).toContain('rewardPerInvite: isChatRewardCampaign ? 0 : joinRewardUnits');
     expect(source).toContain('rewardPerManualAdd: isChatRewardCampaign ? joinRewardUnits : 0');
-    expect(source).toContain('className="group relative flex h-[68px] w-full min-w-0 items-center justify-between gap-2.5 overflow-hidden rounded-2xl');
+    expect(source).toContain('className="tg-community-card group relative flex h-[68px] w-full min-w-0 items-center justify-between gap-2.5 overflow-hidden rounded-2xl');
     expect(source).toContain('tx("Цена в GRAM", "Price in GRAM")');
     expect(source).toContain('appearance-none');
     expect(source).not.toContain('Telegram поддерживает платный вход Stars только для каналов.');
@@ -527,10 +528,9 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('onClick={openRewardAwareEntry}');
     expect(source).toContain('tx("Сделать вход платным", "Make entry paid")');
     expect(source).toContain('max-h-[78dvh] rounded-t-[22px]');
-    expect(source).toContain('Стиль интерфейса');
-    expect(source).toContain('Цветовой акцент');
-    expect(source).toContain('Azure Blue');
-    expect(source).toContain('Electric Purple');
+    expect(source).toContain('Telegram-style фон');
+    expect(source).toContain('Telegram-style background');
+    expect(source).toContain('Выбранный цвет также обновляет кубики, загрузку, кнопки, графики, фильтры и навигацию.');
     expect(source).toContain('onLanguageChange={setLanguage}');
     expect(source).toContain('tx("Весь мир", "Worldwide")');
     expect(source).toContain('<Input value={topSearchQuery} onChange={event => setTopSearchQuery(event.target.value)}');
@@ -538,7 +538,11 @@ describe("TG TOP production bot links", () => {
     expect(domainSource).toContain('export type NftMarketCategory = "all" | "gifts" | "usernames" | "anonymous_numbers" | "other"');
     expect(source).toContain('aria-label="Рубрики NFT"');
     expect(domainSource).toContain('export type NftDealCategory = "all" | "sale" | "auction" | "installments" | "rent" | "collateral"');
-    expect(source).toContain('aria-label="Режимы сделок NFT"');
+    expect(source).toContain('const [nftFilterOpen, setNftFilterOpen] = useState(false);');
+    expect(source).toContain('aria-label={tx("Фильтры NFT", "NFT filters")}');
+    expect(source).toContain('tx("Тип сделки", "Deal type")');
+    expect(source).toContain('tx("Источник", "Source")');
+    expect(source).not.toContain('aria-label="Режимы сделок NFT"');
     expect(source).toContain('tx("Аукцион", "Auction")');
     expect(source).toContain('tx("Рассрочка", "Installments")');
     expect(source).toContain('tx("Залог", "Collateral")');
@@ -730,7 +734,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('aria-label="Добавить свою группу" title="Добавить свою группу" className="mt-2 flex h-10 w-full items-center justify-center');
     expect(source).not.toContain('className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-dashed border-[#3f8cff]/55');
   });
-  it("keeps the brand pyramid upright and the appearance selector limited to dark and light", () => {
+  it("keeps the brand pyramid upright and exposes only RU/EN with a dark background palette", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const css = readFileSync(new URL("../index.css", import.meta.url), "utf8");
     const iconSource = readFileSync(new URL("../components/TgTopPyramidIcon.tsx", import.meta.url), "utf8");
@@ -738,12 +742,15 @@ describe("TG TOP production bot links", () => {
     expect(css).not.toContain('html[data-theme="dark"] .brand-mark-symbol { transform: rotate(180deg); }');
     expect(iconSource).toContain('y="0.75"');
     expect(iconSource).toContain('y="13.75"');
-    expect(source).toContain('{ value: "dark", label: "Тёмная", icon: Moon }');
-    expect(source).toContain('{ value: "light", label: "Светлая", icon: Sun }');
-    expect(source).not.toContain('{ value: "system", label: "Система", icon: Settings2 }');
-    expect(source).toContain('className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1"');
+    expect(source).toContain('const languageItems: Array<{ value: Language; label: string }>');
+    expect(source).toContain('{ value: "en", label: "English" }');
+    expect(source).toContain('{ value: "ru", label: "Русский" }');
+    expect(source).not.toContain('value: "light", label: "Светлая"');
+    expect(source).not.toContain('value: "system", label: "Система"');
+    expect(source).toContain('isEnglish ? "Telegram-style background" : "Telegram-style фон"');
+    expect(source).toContain('THEME_BACKGROUND_OPTIONS.map(item =>');
   });
-  it("gives the profile actions and balance chart explicit light-theme hooks", () => {
+  it("keeps profile actions and the balance chart bound to dark palette tokens", () => {
     const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
     const chartSource = readFileSync(new URL("../components/analytics/ChartPanels.tsx", import.meta.url), "utf8");
     const css = readFileSync(new URL("../index.css", import.meta.url), "utf8");
@@ -752,8 +759,23 @@ describe("TG TOP production bot links", () => {
     expect(chartSource).toContain('className="tg-gram-balance-chart');
     expect(chartSource).toContain('stopColor="var(--tg-chart-fill)"');
     expect(chartSource).toContain('stroke="var(--tg-chart-stroke)"');
-    expect(css).toContain('html[data-theme="light"] .tg-shell .tg-profile-deposit-action b');
-    expect(css).toContain('html[data-theme="light"] .tg-shell .tg-profile-withdraw-action b');
-    expect(css).toContain('html[data-theme="light"] .tg-shell .tg-gram-balance-chart');
+    expect(css).toContain('html[data-background] .tg-shell');
+    expect(css).toContain('html[data-background] .tg-gram-balance-chart');
+    expect(css).not.toContain('html[data-theme="light"] .tg-shell .tg-gram-balance-chart');
+  });
+  it("offers an optional card background palette inside inline publication settings while keeping app color as the default", () => {
+    const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
+    const topCard = readFileSync(new URL("../components/TopRankingCard.tsx", import.meta.url), "utf8");
+    const compactRow = readFileSync(new URL("../components/CompactCommunityRow.tsx", import.meta.url), "utf8");
+    const styles = readFileSync(new URL("../index.css", import.meta.url), "utf8");
+    expect(source).toContain('const [listingCardBackgroundPreset, setListingCardBackgroundPreset] = useState<ThemeBackground | null>(null);');
+    expect(source).toContain('tx("Фон карточки", "Card background")');
+    expect(source).toContain('tx("Как в приложении", "Use app color")');
+    expect(source).toContain('cardBackgroundPreset: listingCardBackgroundPreset');
+    expect(source).toContain('setListingCardBackgroundSheetOpen(true)');
+    expect(topCard).toContain('style={getCommunityCardBackgroundStyle(group?.cardBackgroundPreset)}');
+    expect(compactRow).toContain('style={getCommunityCardBackgroundStyle(group?.cardBackgroundPreset)}');
+    expect(styles).toContain('.tg-community-card');
+    expect(styles).toContain('var(--tg-community-card-bg, var(--tg-surface))');
   });
 });

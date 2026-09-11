@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Star } from "lucide-react";
 import { formatCatalogNumber } from "@/lib/catalog-format";
 import { TgTopAnimatedPyramidAvatar } from "@/components/TgTopAnimatedPyramidAvatar";
+import { getCommunityCardBackgroundStyle } from "@/lib/community-card-background";
 
 export type TopRankingCardVariant = "lead" | "secondary" | "compact";
 
@@ -15,6 +16,7 @@ export type TopRankingCardGroup = {
   joinedCount: number;
   rewardActive?: boolean;
   rewardAmount?: number;
+  cardBackgroundPreset?: string | null;
   /** Set only by the verified server-side TOP identity configuration. */
   topPyramidAvatar?: boolean;
 };
@@ -58,7 +60,8 @@ export function TopRankingCard({ group, variant, language, avatarSrc, showTgTopP
         }
       }}
       aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
-      className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
+      style={getCommunityCardBackgroundStyle(group?.cardBackgroundPreset)}
+      className={`tg-community-card relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
     >
       {group?.rewardActive && (group.rewardAmount ?? 0) > 0 && (
         <span aria-label={language === "en" ? "Rewards available" : "Вознаграждение активно"} className={`absolute right-1.5 top-1.5 z-10 grid place-items-center rounded-full border border-amber-100/25 bg-[#202b3a]/90 text-amber-200 shadow-md shadow-black/20 ${lead ? "h-7 w-7" : compact ? "h-4 w-4" : "h-5 w-5"}`}>

@@ -23,7 +23,7 @@ describe("TG TOP Global rendered mobile featured board", () => {
   });
 
   it("keeps the seven featured positions compact before the ranked continuation list", async () => {
-    const slots = page.locator('[role="button"]').filter({ hasText: "Свободно" });
+    const slots = page.locator('[role="button"]').filter({ hasText: /Свободно|Available/ });
     expect(await slots.count()).toBe(7);
 
     const boxes = await slots.evaluateAll(elements =>

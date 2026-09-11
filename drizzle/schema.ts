@@ -302,6 +302,7 @@ export const groupsCatalog = mysqlTable("groups_catalog", {
   listedAt: timestamp("listedAt"),
   salePriceTon: decimal("salePriceTon", { precision: 20, scale: 9 }),
   listingType: mysqlEnum("listingType", ["catalog", "sale"]).default("catalog").notNull(),
+  cardBackgroundPreset: varchar("cardBackgroundPreset", { length: 64 }),
   anonymousListing: boolean("anonymousListing").default(true).notNull(),
   showOwnerContact: boolean("showOwnerContact").default(false).notNull(),
   managerTelegramUserId: varchar("managerTelegramUserId", { length: 64 }),

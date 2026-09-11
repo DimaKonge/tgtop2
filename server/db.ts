@@ -24,6 +24,7 @@ import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, ge
 import { canCancelNftRental, canConfirmNftRental, rentalTotalUnits, validateRentalDays, NFT_RENTAL_MAX_DAYS as POLICY_NFT_RENTAL_MAX_DAYS } from "./nftRentalPolicy";
 import { normalizeTelegramBotLink } from "./botListingPolicy";
 import { canIssueOnboardingIntent, getOnboardingIntentWindow, isPendingOnboardingIntent, ONBOARDING_INTENT_TTL_MS, ONBOARDING_INTENT_WINDOW_MS, type TelegramOnboardingKind } from "./onboardingIntentPolicy";
+import type { CardBackgroundPreset } from "../shared/card-background-presets";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -2394,6 +2395,8 @@ export async function getPublicSearchGroupByUsername(username: string) {
     username: group.username,
     description: group.description,
     avatarFileId: group.avatarFileId,
+    animatedAvatarUrl: group.animatedAvatarUrl,
+    cardBackgroundPreset: group.cardBackgroundPreset,
     membersCount: group.membersCount,
     category: group.category,
     country: group.country,
@@ -2666,6 +2669,7 @@ export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: nu
 
 export type GroupListingOptions = {
   salePriceTon?: string | null;
+  cardBackgroundPreset?: CardBackgroundPreset | null;
   country?: string;
   city?: string;
   subcategory?: string;
@@ -2691,6 +2695,7 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
   return {
     listingType,
     salePriceTon,
+    cardBackgroundPreset: options.cardBackgroundPreset ?? null,
     rentalPriceTon: null,
     minRentalDays: null,
     maxRentalDays: null,
@@ -2806,6 +2811,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       listedAt: new Date(),
       listingType: listingOptions.listingType,
       salePriceTon: listingOptions.salePriceTon,
+      ...(listingOptions.cardBackgroundPreset !== undefined ? { cardBackgroundPreset: listingOptions.cardBackgroundPreset } : {}),
       ...(listingOptions.country ? { country: listingOptions.country } : {}),
       ...(listingOptions.city !== undefined ? { city: listingOptions.city || null } : {}),
       ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),

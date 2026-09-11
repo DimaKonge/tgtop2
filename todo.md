@@ -1357,3 +1357,17 @@
 - [x] Make English the default TG TOP locale and expose a persistent Settings selector with exactly English and Russian options
 
 - [x] Add a selectable background palette beyond black/white, with persistent theme tokens that keep text, buttons, charts, logo cubes, and active states readable
+
+- [x] Replace NFT-wide deal and on-chain/off-chain toggle rows with a compact filter button and popover next to search while preserving all existing NFT filter states
+
+- [x] Let community cards inherit the selected global application palette by default (initially Black), and add a compact «Фон карточки» button in listing settings for a safe preset owner override with live preview, persistence and automatic readable text/action contrast in catalog and detail cards
+
+- [ ] Deploy the verified visible English/Russian Settings selector, dark background palette, and compact NFT filter release through the protected GitHub Actions staged pipeline; verify live Settings and NFT behavior after health checks
+
+- [x] Remove the Light/System appearance modes and replace them with the full dark Telegram-style background palette from the provided reference (black, blue, purple, rose, red, orange, gold, green, turquoise and steel shades); make selected palette tokens drive the TG TOP cube avatar, launch animation/progress, primary buttons, active filters, charts, and bottom navigation with readable contrast
+
+- [ ] Design and implement idempotent referral rewards of +1 bonus GRAM only to the inviter when a new beta tester first opens the Mini App through that referral link and completes Telegram authorization; cap the lifetime reward at 2 GRAM per inviter, display referral-bonus progress as 0/2, 1/2, or 2/2, record over-limit referrals without payment, and prevent self-referral/duplicate-account abuse
+
+- [ ] Add admin-only Bonus GRAM controls: configure referral reward/limit, manually credit a user by verified Telegram username with mandatory reason and audit record, and show referral-bonus progress without introducing balance freezing in this release
+
+- [ ] Future scope: add audited balance freeze/unfreeze controls that prevent frozen balances from being spent or withdrawn

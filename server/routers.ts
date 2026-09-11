@@ -18,6 +18,7 @@ import { financeProcedures } from "./routers/financeRouter";
 import { supportRouter } from "./routers/supportRouter";
 import { getTelegramIdFromOpenId } from "./onboardingIntentPolicy";
 import { canRefreshGroupMediaSnapshot, shouldUpdateAnimatedAvatarSnapshot } from "./groupMediaSnapshotPolicy";
+import { CARD_BACKGROUND_PRESET_IDS } from "../shared/card-background-presets";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -39,6 +40,7 @@ async function refreshListedGroupMediaSnapshot(group: { id: number; chatId: stri
 
 const groupListingInput = z.object({
   salePriceTon: gramAmount.nullable().optional(),
+  cardBackgroundPreset: z.enum(CARD_BACKGROUND_PRESET_IDS).nullable().optional(),
   country: z.string().trim().min(2).max(64).optional(),
   city: z.string().trim().max(96).optional(),
   subcategory: z.string().min(2).max(64).optional(),

@@ -24,8 +24,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { THEME_BACKGROUND_OPTIONS, useTheme, type Appearance, type ThemeAccent, type ThemeStyle } from "@/contexts/ThemeContext";
+import { THEME_BACKGROUND_OPTIONS, useTheme, type ThemeBackground } from "@/contexts/ThemeContext";
 import {
   ArrowLeft,
   BarChart3,
@@ -43,7 +42,6 @@ import {
    List,
    MessageSquare,
    Minus,
-  Moon,
   PackageOpen,
   Palette,
   Plus,
@@ -55,7 +53,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Star,
-  Sun,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -382,27 +379,11 @@ function SettingsSheet({
   language: Language;
   onLanguageChange: (language: Language) => void;
 }) {
-  const { appearance, setAppearance, style, setStyle, accent, setAccent, background, setBackground } = useTheme();
+  const { background, setBackground } = useTheme();
   const isEnglish = language === "en";
-  const appearanceItems: Array<{ value: Appearance; label: string; icon: typeof Moon }> = [
-    { value: "dark", label: "Тёмная", icon: Moon },
-    { value: "light", label: "Светлая", icon: Sun },
-  ];
-  const styleItems: Array<{ value: ThemeStyle; label: string }> = [
-    { value: "original", label: "TG TOP" },
-    { value: "clean", label: "Clean" },
-  ];
   const languageItems: Array<{ value: Language; label: string }> = [
     { value: "en", label: "English" },
     { value: "ru", label: "Русский" },
-  ];
-  const accentItems: Array<{ value: ThemeAccent; label: string; color: string }> = [
-    { value: "blue", label: "Azure Blue", color: "#3f8cff" },
-    { value: "purple", label: "Electric Purple", color: "#9b6cff" },
-    { value: "rose", label: "Rose", color: "#f06b91" },
-    { value: "gold", label: "Pure Gold", color: "#e9b949" },
-    { value: "green", label: "Emerald", color: "#4cc978" },
-    { value: "turquoise", label: "Turquoise", color: "#35c6c2" },
   ];
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -418,42 +399,6 @@ function SettingsSheet({
         <div className="mx-4 space-y-3 overflow-y-auto pb-1">
           <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
-              <Settings2 className="h-4 w-4 text-[#72a8ff]" />
-              {isEnglish ? "Interface style" : "Стиль интерфейса"}
-            </div>
-            <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
-              {styleItems.map(item => (
-                <button key={item.value} onClick={() => setStyle(item.value)} aria-pressed={style === item.value} className={`h-8 rounded-md text-[11px] font-semibold transition-colors ${style === item.value ? "bg-[#3f8cff]/18 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}>
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <p className="mt-2 text-[10px] leading-4 text-slate-500">{isEnglish ? "TG TOP keeps the branded grid, while Clean uses a calmer Telegram-native shell." : "TG TOP сохраняет фирменную сетку, Clean делает оболочку спокойнее и ближе к Telegram-native интерфейсам."}</p>
-          </section>
-          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
-            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
-              <Sun className="h-4 w-4 text-[#72a8ff]" />
-              {isEnglish ? "Theme" : "Тема"}
-            </div>
-            <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
-              {appearanceItems.map(item => {
-                const Icon = item.icon;
-                const active = appearance === item.value;
-                return <button key={item.value} onClick={() => setAppearance(item.value)} aria-label={item.label} aria-pressed={active} className={`tg-settings-choice flex h-8 items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium ${active ? "bg-[#3f8cff]/15 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}><Icon className="h-3 w-3" />{item.label}</button>;
-              })}
-            </div>
-          </section>
-          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
-            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
-              <Palette className="h-4 w-4 text-[#72a8ff]" />
-              {isEnglish ? "Color accent" : "Цветовой акцент"}
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {accentItems.map(item => <button key={item.value} onClick={() => setAccent(item.value)} aria-label={item.label} aria-pressed={accent === item.value} className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg border px-1 transition-colors ${accent === item.value ? "border-[#72a8ff] bg-[#3f8cff]/12" : "border-white/8 bg-[#0b0f14] hover:border-white/20"}`}><span className="h-6 w-6 rounded-md shadow-inner" style={{ backgroundColor: item.color }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>)}
-            </div>
-          </section>
-          <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
-            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
               <Languages className="h-4 w-4 text-[#72a8ff]" />
               {isEnglish ? "Language" : "Язык"}
             </div>
@@ -464,12 +409,13 @@ function SettingsSheet({
           <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
               <Palette className="h-4 w-4 text-[#72a8ff]" />
-              {isEnglish ? "Background palette" : "Палитра фона"}
+              {isEnglish ? "Telegram-style background" : "Telegram-style фон"}
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <p className="mb-2 text-[10px] leading-4 text-slate-500">{isEnglish ? "The selected color also updates cubes, loading, buttons, charts, filters and navigation." : "Выбранный цвет также обновляет кубики, загрузку, кнопки, графики, фильтры и навигацию."}</p>
+            <div className="grid grid-cols-4 gap-2">
               {THEME_BACKGROUND_OPTIONS.map(item => {
                 const active = background === item.value;
-                return <button key={item.value} type="button" onClick={() => { setBackground(item.value); setAppearance(item.tone === "light" ? "light" : "dark"); }} aria-label={item.label} aria-pressed={active} className={`flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-lg border px-1 transition-colors ${active ? "border-[#72a8ff] bg-[#3f8cff]/12" : "border-white/8 bg-[#0b0f14] hover:border-white/20"}`}><span className="h-7 w-7 rounded-md border border-white/20 shadow-inner" style={{ backgroundColor: item.color }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>;
+                return <button key={item.value} type="button" onClick={() => setBackground(item.value)} aria-label={item.label} aria-pressed={active} className={`flex min-h-[62px] flex-col items-center justify-center gap-1 rounded-lg border px-1 transition-colors ${active ? "border-[color:var(--tg-accent)] bg-[color:var(--tg-accent-soft)] text-[color:var(--tg-accent)]" : "border-white/8 bg-[#0b0f14] hover:border-white/20"}`}><span className="h-7 w-7 rounded-md border border-white/20 shadow-inner" style={{ backgroundColor: item.color, boxShadow: `0 0 0 2px ${item.accent}22` }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>;
               })}
             </div>
           </section>
@@ -623,6 +569,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [managerSheetOpen, setManagerSheetOpen] = useState(false);
   const [listingCountrySheetOpen, setListingCountrySheetOpen] = useState(false);
   const [listingSubcategorySheetOpen, setListingSubcategorySheetOpen] = useState(false);
+  const [listingCardBackgroundSheetOpen, setListingCardBackgroundSheetOpen] = useState(false);
   const [selectedManagerTelegramUserId, setSelectedManagerTelegramUserId] = useState<string | null>(null);
   const [listingCountry, setListingCountry] = useState<ListingCountry>("Global");
   const [listingCity, setListingCity] = useState("Все");
@@ -632,6 +579,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [showOwnerContact, setShowOwnerContact] = useState(false); // legacy compatibility for existing detail/outbid payloads; no listing control
   const [managerPublic, setManagerPublic] = useState(true);
   const [listingAnnouncementEnabled, setListingAnnouncementEnabled] = useState(true);
+  const [listingCardBackgroundPreset, setListingCardBackgroundPreset] = useState<ThemeBackground | null>(null);
   const [searchIndexable, setSearchIndexable] = useState(false);
   const [monthlyEntryEnabled, setMonthlyEntryEnabled] = useState(false);
   const [monthlyEntryStars, setMonthlyEntryStars] = useState("");
@@ -647,6 +595,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [nftAssetFilter, setNftAssetFilter] = useState<"all" | "onchain" | "offchain">("all");
   const [nftMarketCategory, setNftMarketCategory] = useState<NftMarketCategory>("all");
   const [nftDealCategory, setNftDealCategory] = useState<NftDealCategory>("all");
+  const [nftFilterOpen, setNftFilterOpen] = useState(false);
   const [botCategory, setBotCategory] = useState("Все");
   const [channelGiftsOpen, setChannelGiftsOpen] = useState(false);
   const [selectedNftId, setSelectedNftId] = useState<number | null>(null);
@@ -2221,6 +2170,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setIsListingForSale(firstGroup?.listingType === "sale" && Boolean(firstGroup.salePriceTon));
     setManagerPublic(firstGroup?.managerPublic !== false);
     setListingAnnouncementEnabled(firstGroup?.listingAnnouncementEnabled ?? true);
+    setListingCardBackgroundPreset((THEME_BACKGROUND_OPTIONS.some(item => item.value === firstGroup?.cardBackgroundPreset) ? firstGroup?.cardBackgroundPreset : null) as ThemeBackground | null);
     setMonthlyEntryEnabled(Boolean(firstGroup?.monthlyEntryEnabled));
     setMonthlyEntryStars(firstGroup?.monthlyEntryStars ? String(firstGroup.monthlyEntryStars) : "");
     setMonthlyEntryLinkName(firstGroup?.monthlyEntryLinkName ?? "");
@@ -2261,6 +2211,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       city: listingCity === "Все" ? undefined : listingCity,
       subcategory: listingCategory && listingSubcategory ? listingSubcategory : undefined,
       salePriceTon: normalizedSalePrice ?? undefined,
+      cardBackgroundPreset: listingCardBackgroundPreset,
       managerPublic,
       listingAnnouncementEnabled,
       searchIndexable: selectedListingGroups.length === 1 ? searchIndexable : undefined,
@@ -2301,6 +2252,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       city: listingCity === "Все" ? undefined : listingCity,
       subcategory: listingSubcategory || undefined,
       salePriceTon: normalizedSalePrice ?? undefined,
+      cardBackgroundPreset: listingCardBackgroundPreset,
       anonymousListing: detailVisibility === "anonymous",
       showOwnerContact,
       managerPublic,
@@ -2665,6 +2617,19 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                   <button type="button" onClick={() => setTopSearchOpen(current => !current)} aria-label={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Открыть поиск", "Open search")} title={topSearchOpen ? tx("Скрыть поиск", "Hide search") : tx("Поиск", "Search")} className={`tg-top-control grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${topSearchOpen ? "tg-top-control-active border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
                     <Search className="h-3.5 w-3.5" />
                   </button>
+                  {topSection === "nft" && <Popover open={nftFilterOpen} onOpenChange={setNftFilterOpen}>
+                    <PopoverTrigger asChild>
+                      <button type="button" aria-label={tx("Фильтры NFT", "NFT filters")} title={tx("Фильтры NFT", "NFT filters")} className={`tg-top-control relative grid h-7 w-7 shrink-0 place-items-center rounded-md border transition-colors ${nftDealCategory !== "all" || nftAssetFilter !== "all" ? "tg-top-control-active border-[#3390ec]/50 bg-[#3390ec]/16 text-[#b8d7ff]" : "border-white/10 bg-white/5 text-slate-400 hover:border-[#3390ec]/45 hover:text-[#79a7ff]"}`}>
+                        <Filter className="h-3.5 w-3.5" />
+                        {(nftDealCategory !== "all" || nftAssetFilter !== "all") && <span aria-hidden className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-[color:var(--tg-accent)]" />}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-64 border-white/10 bg-[#111720] p-3 text-slate-100 shadow-xl">
+                      <div className="flex items-center justify-between gap-3"><b className="text-xs">{tx("Фильтры NFT", "NFT filters")}</b><button type="button" onClick={() => { setNftDealCategory("all"); setNftAssetFilter("all"); }} className="text-[10px] font-semibold text-[color:var(--tg-accent)]">{tx("Сбросить", "Reset")}</button></div>
+                      <div className="mt-3"><span className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">{tx("Тип сделки", "Deal type")}</span><div className="mt-1.5 grid grid-cols-2 gap-1">{([ ["all", tx("Все сделки", "All deals")], ["sale", tx("Продажа", "Sale")], ["auction", tx("Аукцион", "Auction")], ["installments", tx("Рассрочка", "Installments")], ["rent", tx("Аренда", "Rent")], ["collateral", tx("Залог", "Collateral")] ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setNftDealCategory(value)} aria-pressed={nftDealCategory === value} className={`rounded-lg px-2 py-2 text-left text-[10px] font-medium ${nftDealCategory === value ? "bg-[color:var(--tg-accent-soft)] text-[color:var(--tg-accent)]" : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"}`}>{label}</button>)}</div></div>
+                      <div className="mt-3"><span className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">{tx("Источник", "Source")}</span><div className="mt-1.5 grid grid-cols-3 gap-1">{([ ["all", tx("Все", "All")], ["onchain", "On-chain"], ["offchain", "Off-chain"] ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setNftAssetFilter(value)} aria-pressed={nftAssetFilter === value} className={`rounded-lg px-1.5 py-2 text-[10px] font-medium ${nftAssetFilter === value ? "bg-[color:var(--tg-accent-soft)] text-[color:var(--tg-accent)]" : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"}`}>{label}</button>)}</div></div>
+                    </PopoverContent>
+                  </Popover>}
                   </span>
                 </div>
               </div>
@@ -2734,23 +2699,6 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     <button key={value} type="button" onClick={() => setNftMarketCategory(value)} className={`h-8 shrink-0 rounded-md px-3 text-[10px] font-semibold transition-colors ${nftMarketCategory === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
                   ))}
                 </div>
-                <div aria-label="Режимы сделок NFT" className="flex gap-1.5 overflow-x-auto rounded-lg border border-white/8 bg-[#111720] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {([
-                    ["all", tx("Все сделки", "All deals")],
-                    ["sale", tx("Продажа", "Sale")],
-                    ["auction", tx("Аукцион", "Auction")],
-                    ["installments", tx("Рассрочка", "Installments")],
-                    ["rent", tx("Аренда", "Rent")],
-                    ["collateral", tx("Залог", "Collateral")],
-                  ] as const).map(([value, label]) => (
-                    <button key={value} type="button" onClick={() => setNftDealCategory(value)} className={`h-8 shrink-0 rounded-md px-3 text-[10px] font-semibold transition-colors ${nftDealCategory === value ? "bg-[#3f8cff] text-white shadow-sm" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
-                  ))}
-                </div>
-                <ToggleGroup type="single" value={nftAssetFilter} onValueChange={value => value && setNftAssetFilter(value as typeof nftAssetFilter)} className="grid w-full grid-cols-3 rounded-lg border border-white/8 bg-[#111720] p-0.5">
-                  <ToggleGroupItem value="all" className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white">{tx("Все", "All")}</ToggleGroupItem>
-                  <ToggleGroupItem value="onchain" className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white">On-chain</ToggleGroupItem>
-                  <ToggleGroupItem value="offchain" className="h-8 border-0 text-[10px] text-slate-400 data-[state=on]:rounded-md data-[state=on]:bg-[#3f8cff] data-[state=on]:text-white">Off-chain</ToggleGroupItem>
-                </ToggleGroup>
                 {nftsQuery.isLoading ? (
                   <div className="rounded-2xl border border-white/8 bg-[#111720] p-6 text-center text-sm text-slate-500">{ui.loading}</div>
                 ) : visibleNfts.length ? (
@@ -3477,9 +3425,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             <span><b className="block text-[11px] text-slate-200">{detailVisibility === "public" ? tx("Публичная публикация", "Public publication") : tx("Анонимная публикация", "Anonymous publication")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{detailVisibility === "public" ? tx("Другие смогут перейти в ваш профиль", "Others can open your profile") : tx("Владелец не показывается в карточке", "The owner stays hidden in the card")}</small></span>
                             <button type="button" role="switch" aria-checked={detailVisibility === "public"} onClick={() => setDetailVisibility(value => value === "public" ? "anonymous" : "public")} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${detailVisibility === "public" ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${detailVisibility === "public" ? "translate-x-6" : "translate-x-0"}`} /></button>
                           </div>
-                          <div className="grid grid-cols-2 gap-1.5">
+                          <div className="grid grid-cols-3 gap-1.5">
                             <button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2 py-1.5 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button>
                             <button type="button" onClick={() => { setLotGroupId(detail.group.id); setSelectedManagerTelegramUserId(detail.group.managerTelegramUserId ?? null); setManagerPublic(detail.group.managerPublic !== false); setManagerSheetOpen(true); }} className="rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/[0.08] px-2 py-1.5 text-left transition-colors hover:bg-[#3f8cff]/[0.13]"><b className="block text-[11px] text-slate-200">{tx("Менеджер", "Manager")}</b><small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">{detail.group.managerName ?? tx("Выбрать администратора", "Choose administrator")}</small></button>
+                            <button type="button" onClick={() => setListingCardBackgroundSheetOpen(true)} className="rounded-lg border border-white/8 bg-black/15 px-2 py-1.5 text-left transition-colors hover:bg-white/[0.055]"><span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded border border-white/20" style={{ backgroundColor: THEME_BACKGROUND_OPTIONS.find(item => item.value === listingCardBackgroundPreset)?.color ?? "var(--tg-shell-bg)" }} /><b className="block truncate text-[11px] text-slate-200">{tx("Фон карточки", "Card background")}</b></span><small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">{listingCardBackgroundPreset ? THEME_BACKGROUND_OPTIONS.find(item => item.value === listingCardBackgroundPreset)?.label : tx("Как в приложении", "Use app color")}</small></button>
                           </div>
                           {detail.group.managerName && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5"><span><b className="block text-[11px] text-slate-200">{tx("Показывать менеджера", "Show manager")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{managerPublic ? tx("Гости увидят профиль менеджера", "Guests can open the manager profile") : tx("Скрыт из публичной карточки", "Hidden from public details")}</small></span><button type="button" role="switch" aria-checked={managerPublic} onClick={() => setManagerPublic(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${managerPublic ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${managerPublic ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
                           {detail.group.username && <div className="flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-1.5"><span><b className="block text-[11px] text-slate-200">Показывать в Google</b><small className="mt-0.5 block text-[10px] text-slate-500">Создаст публичную страницу tgtop.me/c/{detail.group.username}</small></span><button type="button" role="switch" aria-checked={searchIndexable} onClick={() => setSearchIndexable(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${searchIndexable ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${searchIndexable ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
@@ -4373,6 +4322,16 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         </SheetContent>
       </Sheet>
 
+      <Sheet open={listingCardBackgroundSheetOpen} onOpenChange={setListingCardBackgroundSheetOpen}>
+        <SheetContent side="bottom" className="max-h-[78dvh] overflow-y-auto rounded-t-[22px] border-white/10 bg-[#10161f] text-slate-100">
+          <SheetHeader className="px-4 pb-2 text-left"><SheetTitle className="text-base text-slate-100">{tx("Фон карточки", "Card background")}</SheetTitle><p className="text-[11px] leading-4 text-slate-500">{tx("По умолчанию карточка использует выбранный фон приложения. Выберите оттенок, только если хотите выделить эту группу.", "By default, the card uses the selected app background. Choose a shade only to highlight this community.")}</p></SheetHeader>
+          <div className="space-y-3 px-4 pb-4">
+            <button type="button" onClick={() => { setListingCardBackgroundPreset(null); setListingCardBackgroundSheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left ${listingCardBackgroundPreset === null ? "border-[color:var(--tg-accent)] bg-[color:var(--tg-accent-soft)]" : "border-white/8 bg-white/[0.025]"}`}><span className="h-9 w-9 rounded-lg border border-white/15 bg-[var(--tg-shell-bg)]" /><span><b className="block text-xs text-slate-100">{tx("Как в приложении", "Use app color")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{tx("Наследовать общую палитру", "Inherit the global palette")}</small></span></button>
+            <div className="grid grid-cols-4 gap-2">{THEME_BACKGROUND_OPTIONS.map(item => { const active = listingCardBackgroundPreset === item.value; return <button key={item.value} type="button" onClick={() => { setListingCardBackgroundPreset(item.value); setListingCardBackgroundSheetOpen(false); }} aria-pressed={active} className={`flex min-h-[62px] flex-col items-center justify-center gap-1 rounded-lg border px-1 ${active ? "border-[color:var(--tg-accent)] bg-[color:var(--tg-accent-soft)]" : "border-white/8 bg-white/[0.025]"}`}><span className="h-7 w-7 rounded-md border border-white/20" style={{ backgroundColor: item.color, boxShadow: `0 0 0 2px ${item.accent}22` }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>; })}</div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <Sheet open={listingCountrySheetOpen} onOpenChange={setListingCountrySheetOpen}>
         <SheetContent side="bottom" className="!bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-h-[62dvh] overflow-y-auto rounded-t-[26px] border-white/10 bg-[#10161f] text-slate-100">
           <SheetHeader className="px-4 pb-2">
@@ -4536,7 +4495,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 <section className="order-3 rounded-2xl border border-white/8 bg-white/[0.025] p-3">
                   <div className="flex items-center gap-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg border border-[#3f8cff]/20 bg-[#3f8cff]/10 text-[#8fb9ff]"><Settings2 className="h-4 w-4" /></span><span><b className="block text-xs text-slate-100">{tx("Настройки размещения", "Placement settings")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{tx("Объявление, менеджер, продажа и вознаграждения", "Announcement, manager, sale, and rewards")}</small></span></div>
                   <div className="mt-3 flex flex-col gap-2 border-t border-white/8 pt-2">
-                    <div className="order-1 grid grid-cols-2 gap-2"><button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button><button type="button" onClick={() => { setLotGroupId(starsPaymentGroup.id); setSelectedManagerTelegramUserId(starsPaymentGroup.managerTelegramUserId ?? null); setManagerPublic(starsPaymentGroup.managerPublic !== false); setManagerSheetOpen(true); }} className="rounded-lg border border-white/8 bg-black/15 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.055]"><b className="block text-[11px] text-slate-200">{tx("Менеджер", "Manager")}</b><small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">{starsPaymentGroup.managerName ?? tx("Выбрать администратора", "Choose administrator")}</small></button></div>
+                    <div className="order-1 grid grid-cols-3 gap-2"><button type="button" onClick={() => setListingAnnouncementEnabled(value => !value)} className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${listingAnnouncementEnabled ? "border-[#3f8cff]/35 bg-[#3f8cff]/10" : "border-white/8 bg-black/15"}`}><b className="block text-[11px] text-slate-200">{tx("Объявление", "Announcement")}</b><small className={`mt-0.5 block text-[10px] ${listingAnnouncementEnabled ? "text-[#8fb9ff]" : "text-slate-500"}`}>{listingAnnouncementEnabled ? tx("Бот напишет в группе", "Bot will post") : tx("Отключено", "Off")}</small></button><button type="button" onClick={() => { setLotGroupId(starsPaymentGroup.id); setSelectedManagerTelegramUserId(starsPaymentGroup.managerTelegramUserId ?? null); setManagerPublic(starsPaymentGroup.managerPublic !== false); setManagerSheetOpen(true); }} className="rounded-lg border border-white/8 bg-black/15 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.055]"><b className="block text-[11px] text-slate-200">{tx("Менеджер", "Manager")}</b><small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">{starsPaymentGroup.managerName ?? tx("Выбрать администратора", "Choose administrator")}</small></button><button type="button" onClick={() => setListingCardBackgroundSheetOpen(true)} className="rounded-lg border border-white/8 bg-black/15 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.055]"><span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded border border-white/20" style={{ backgroundColor: THEME_BACKGROUND_OPTIONS.find(item => item.value === listingCardBackgroundPreset)?.color ?? "var(--tg-shell-bg)" }} /><b className="block text-[11px] text-slate-200">{tx("Фон карточки", "Card background")}</b></span><small className="mt-0.5 block truncate text-[10px] text-[#8fb9ff]">{listingCardBackgroundPreset ? THEME_BACKGROUND_OPTIONS.find(item => item.value === listingCardBackgroundPreset)?.label : tx("Как в приложении", "Use app color")}</small></button></div>
                     {starsPaymentGroup.managerName && <div className="order-2 flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{tx("Показывать менеджера", "Show manager")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{managerPublic ? tx("Гости увидят менеджера", "Guests will see the manager") : tx("Скрыт из карточки", "Hidden from details")}</small></span><button type="button" role="switch" aria-checked={managerPublic} onClick={() => setManagerPublic(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${managerPublic ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${managerPublic ? "translate-x-6" : "translate-x-0"}`} /></button></div>}
                     <div className="order-3 flex items-center justify-between gap-3 rounded-lg bg-black/15 px-2.5 py-2"><span><b className="block text-[11px] text-slate-200">{tx("Выставить на продажу", "Offer for sale")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{isListingForSale ? tx("Цена будет видна покупателям", "Buyers will see the price") : tx("Без продажи", "Not for sale")}</small></span><button type="button" role="switch" aria-checked={isListingForSale} onClick={() => setIsListingForSale(value => !value)} className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${isListingForSale ? "border-[#72a8ff] bg-[#3f8cff]" : "border-white/15 bg-white/8"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isListingForSale ? "translate-x-6" : "translate-x-0"}`} /></button></div>
                     {isListingForSale && <div className="order-3 relative"><Input value={salePriceTon} inputMode="decimal" onChange={event => { const value = event.target.value.replace(",", "."); if (/^\d*(\.\d?)?$/.test(value)) setSalePriceTon(value); }} placeholder={tx("Цена продажи", "Sale price")} className="h-9 border-white/10 bg-black/15 pr-10 text-[11px] placeholder:text-[11px]" /><span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-medium text-slate-500">GRAM</span></div>}
