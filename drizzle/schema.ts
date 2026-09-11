@@ -23,6 +23,43 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+export const referralBonusGrants = mysqlTable("referral_bonus_grants", {
+  id: int("id").autoincrement().primaryKey(),
+  inviterOpenId: varchar("inviterOpenId", { length: 64 }).notNull(),
+  inviteeOpenId: varchar("inviteeOpenId", { length: 64 }).notNull(),
+  amount: int("amount").notNull(),
+  source: varchar("source", { length: 32 }).default("beta_referral").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("referral_bonus_grants_invitee_unique").on(table.inviteeOpenId),
+  index("referral_bonus_grants_inviter_created_idx").on(table.inviterOpenId, table.createdAt),
+]);
+export type ReferralBonusGrant = typeof referralBonusGrants.$inferSelect;
+
+export const referralRewardConfigs = mysqlTable("referral_reward_configs", {
+  id: int("id").primaryKey().default(1),
+  rewardAmount: int("rewardAmount").default(100).notNull(),
+  lifetimeLimit: int("lifetimeLimit").default(2).notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  updatedByOpenId: varchar("updatedByOpenId", { length: 64 }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ReferralRewardConfig = typeof referralRewardConfigs.$inferSelect;
+
+export const bonusCreditAudits = mysqlTable("bonus_credit_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  actorOpenId: varchar("actorOpenId", { length: 64 }).notNull(),
+  targetOpenId: varchar("targetOpenId", { length: 64 }).notNull(),
+  targetTelegramUsername: varchar("targetTelegramUsername", { length: 128 }),
+  amount: int("amount").notNull(),
+  reason: varchar("reason", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("bonus_credit_audits_target_created_idx").on(table.targetOpenId, table.createdAt),
+  index("bonus_credit_audits_actor_created_idx").on(table.actorOpenId, table.createdAt),
+]);
+export type BonusCreditAudit = typeof bonusCreditAudits.$inferSelect;
+
 export const miniAppLaunchEvents = mysqlTable("mini_app_launch_events", {
   id: int("id").autoincrement().primaryKey(),
   userOpenId: varchar("userOpenId", { length: 64 }).notNull(),

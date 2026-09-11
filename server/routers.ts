@@ -298,6 +298,22 @@ export const appRouter = router({
       return await db.getModerationAccess(ctx.user.openId);
     }),
 
+    getReferralOverview: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getReferralOverview(ctx.user.openId);
+    }),
+
+    getReferralAdminOverview: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getReferralAdminOverview(ctx.user.openId);
+    }),
+
+    updateReferralRewardConfig: protectedProcedure
+      .input(z.object({ rewardAmount: z.number().int().min(0).max(100_000), lifetimeLimit: z.number().int().min(0).max(100), enabled: z.boolean() }))
+      .mutation(async ({ ctx, input }) => db.updateReferralRewardConfig(ctx.user.openId, input)),
+
+    creditBonusByTelegramUsername: protectedProcedure
+      .input(z.object({ telegramUsername: z.string().trim().min(2).max(128), amount: z.number().int().positive().max(100_000), reason: z.string().trim().min(3).max(255) }))
+      .mutation(async ({ ctx, input }) => db.creditBonusByTelegramUsername(ctx.user.openId, input.telegramUsername, input.amount, input.reason)),
+
     getCatalogTaxonomy: publicProcedure.query(async () => {
       return await db.getCatalogTaxonomy();
     }),

@@ -840,6 +840,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         referralCode: string;
         referralLink: string;
         referralsCount: number;
+        awardedCount?: number;
+        lifetimeLimit?: number;
+        rewardAmount?: number;
+        enabled?: boolean;
+        progressLabel?: string;
         earnings: string;
       };
     }
@@ -921,9 +926,20 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   }>;
   const moderatorsQuery = trpc.tgTop.getModerators.useQuery(undefined, { enabled: Boolean(moderationAccess?.canManageModerators) });
   const moderators = (moderatorsQuery.data ?? []) as Array<{ openId: string; name: string | null; telegramUsername: string | null; role: "admin" | "moderator" }>;
+  const referralAdminQuery = trpc.tgTop.getReferralAdminOverview.useQuery(undefined, { enabled: Boolean(moderationAccess?.canManageModerators) });
+  const referralAdmin = referralAdminQuery.data as {
+    config: { rewardAmount: number; lifetimeLimit: number; enabled: boolean };
+    grants: Array<{ grant: { id: number; inviterOpenId: string; inviteeOpenId: string; amount: number; createdAt: Date }; inviterName: string | null; inviterUsername: string | null }>;
+  } | undefined;
   const [moderationReasonDraft, setModerationReasonDraft] = useState("");
   const [detailModerationReason, setDetailModerationReason] = useState("");
   const [moderatorUsernameDraft, setModeratorUsernameDraft] = useState("");
+  const [referralRewardDraft, setReferralRewardDraft] = useState("1");
+  const [referralLifetimeDraft, setReferralLifetimeDraft] = useState("2");
+  const [referralEnabledDraft, setReferralEnabledDraft] = useState(true);
+  const [bonusUsernameDraft, setBonusUsernameDraft] = useState("");
+  const [bonusAmountDraft, setBonusAmountDraft] = useState("1");
+  const [bonusReasonDraft, setBonusReasonDraft] = useState("");
   const [catalogCountryCodeDraft, setCatalogCountryCodeDraft] = useState("");
   const [catalogCountryLabelDraft, setCatalogCountryLabelDraft] = useState("");
   const [catalogCityCountryDraft, setCatalogCityCountryDraft] = useState("Global");
@@ -934,6 +950,12 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const [catalogTopicLabelDraft, setCatalogTopicLabelDraft] = useState("");
   const [botTelegramLinkDraft, setBotTelegramLinkDraft] = useState("");
   const [botModerationDrafts, setBotModerationDrafts] = useState<Record<number, { category: string; reason: string }>>({});
+  useEffect(() => {
+    if (!referralAdmin?.config) return;
+    setReferralRewardDraft(formatGram(referralAdmin.config.rewardAmount));
+    setReferralLifetimeDraft(String(referralAdmin.config.lifetimeLimit));
+    setReferralEnabledDraft(referralAdmin.config.enabled);
+  }, [referralAdmin?.config?.rewardAmount, referralAdmin?.config?.lifetimeLimit, referralAdmin?.config?.enabled]);
   const [moderationWindowOpen, setModerationWindowOpen] = useState(false);
   const [telegramUserAgentSheetOpen, setTelegramUserAgentSheetOpen] = useState(false);
   const [telegramUserAgentPhone, setTelegramUserAgentPhone] = useState("");
@@ -1224,6 +1246,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       setModeratorUsernameDraft("");
       void utils.tgTop.getModerators.invalidate();
       void utils.tgTop.getModerationAccess.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const updateReferralRewardConfig = trpc.tgTop.updateReferralRewardConfig.useMutation({
+    onSuccess: () => {
+      toast.success(tx("Настройки реферального бонуса сохранены", "Referral bonus settings saved"));
+      void utils.tgTop.getReferralAdminOverview.invalidate();
+      void utils.tgTop.getAccount.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const creditBonusByTelegramUsername = trpc.tgTop.creditBonusByTelegramUsername.useMutation({
+    onSuccess: result => {
+      toast.success(tx(`Начислено ${formatGram(result.amount)} GRAM`, `${formatGram(result.amount)} GRAM credited`));
+      setBonusUsernameDraft("");
+      setBonusReasonDraft("");
+      void utils.tgTop.getReferralAdminOverview.invalidate();
+      void utils.tgTop.getAccount.invalidate();
     },
     onError: error => toast.error(error.message),
   });
@@ -3624,6 +3664,23 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <span className="rounded-md border border-[#3390ec]/30 bg-[#3390ec]/10 px-2 py-1 text-[10px] font-medium text-[#a6c8ff]">{moderationAccess.role === "admin" ? "Администратор" : "Модератор"}</span>
             </div>
 
+            {moderationAccess.role === "admin" && (
+              <section className="space-y-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.045] p-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-100">Реферальный бонус</h2>
+                  <p className="mt-1 text-[11px] leading-4 text-slate-400">Только пригласивший получает бонус за нового beta-тестера. Лимит lifetime применяется к каждому аккаунту.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-[10px] text-slate-400">Сумма, GRAM<Input value={referralRewardDraft} inputMode="decimal" onChange={event => setReferralRewardDraft(event.target.value)} className="mt-1 h-9 border-white/10 bg-[#17212b] text-xs text-slate-100" /></label>
+                  <label className="text-[10px] text-slate-400">Лимит приглашений<Input value={referralLifetimeDraft} inputMode="numeric" onChange={event => setReferralLifetimeDraft(event.target.value)} className="mt-1 h-9 border-white/10 bg-[#17212b] text-xs text-slate-100" /></label>
+                </div>
+                <label className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-[#17212b] px-3 py-2 text-[11px] text-slate-300"><span>Начисление включено</span><button type="button" role="switch" aria-checked={referralEnabledDraft} onClick={() => setReferralEnabledDraft(value => !value)} className={`relative h-6 w-11 rounded-full border transition-colors ${referralEnabledDraft ? "border-emerald-300/40 bg-emerald-500/70" : "border-white/15 bg-white/10"}`}><span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${referralEnabledDraft ? "translate-x-5" : "translate-x-0"}`} /></button></label>
+                <button type="button" onClick={() => updateReferralRewardConfig.mutate({ rewardAmount: Math.round((Number(referralRewardDraft) || 0) * 100), lifetimeLimit: Math.max(0, Math.round(Number(referralLifetimeDraft) || 0)), enabled: referralEnabledDraft })} disabled={updateReferralRewardConfig.isPending} className="w-full rounded-xl border border-amber-300/30 bg-amber-400/10 py-2 text-[11px] font-semibold text-amber-100 disabled:opacity-50">Сохранить настройки</button>
+                <div className="border-t border-white/8 pt-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Начислить вручную по username</p><div className="mt-2 grid grid-cols-[minmax(0,1fr)_88px] gap-2"><Input value={bonusUsernameDraft} onChange={event => setBonusUsernameDraft(event.target.value)} placeholder="@username" className="h-9 border-white/10 bg-[#17212b] text-[11px] text-slate-100" /><Input value={bonusAmountDraft} inputMode="decimal" onChange={event => setBonusAmountDraft(event.target.value)} placeholder="GRAM" className="h-9 border-white/10 bg-[#17212b] text-[11px] text-slate-100" /></div><Input value={bonusReasonDraft} onChange={event => setBonusReasonDraft(event.target.value)} placeholder="Причина начисления" className="mt-2 h-9 border-white/10 bg-[#17212b] text-[11px] text-slate-100" /><button type="button" onClick={() => creditBonusByTelegramUsername.mutate({ telegramUsername: bonusUsernameDraft, amount: Math.round((Number(bonusAmountDraft) || 0) * 100), reason: bonusReasonDraft })} disabled={creditBonusByTelegramUsername.isPending || bonusUsernameDraft.trim().length < 2 || bonusReasonDraft.trim().length < 3} className="mt-2 w-full rounded-xl border border-emerald-300/25 bg-emerald-400/10 py-2 text-[11px] font-semibold text-emerald-100 disabled:opacity-50">Начислить бонус</button></div>
+                {referralAdmin?.grants.length ? <div className="space-y-1 border-t border-white/8 pt-3">{referralAdmin.grants.slice(0, 5).map(item => <div key={item.grant.id} className="flex items-center justify-between gap-3 text-[10px] text-slate-400"><span className="truncate">{item.inviterUsername ? `@${item.inviterUsername}` : item.inviterName ?? item.grant.inviterOpenId}</span><b className="shrink-0 text-emerald-200">+{formatGram(item.grant.amount)} GRAM</b></div>)}</div> : null}
+              </section>
+            )}
+
             <button type="button" onClick={() => setModerationWindowOpen(true)} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#3f8cff]/25 bg-[#3f8cff]/[0.07] p-4 text-left transition-colors hover:bg-[#3f8cff]/[0.11] active:scale-[0.99]">
               <span className="flex min-w-0 items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#72a8ff]/25 bg-[#3f8cff]/10 text-[#a6c8ff]"><ShieldCheck className="h-5 w-5" /></span><span className="min-w-0"><b className="block text-sm text-slate-100">Модерация</b><small className="mt-1 block truncate text-[11px] text-slate-400">Сообщества и боты · {botModerationQueue.length} заявок на проверке</small></span></span><span className="rounded-lg border border-[#72a8ff]/25 px-2.5 py-2 text-[10px] font-semibold text-[#c8ddff]">Открыть</span>
             </button>
@@ -4167,15 +4224,15 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <div className="border-b border-white/8 px-4 py-4">
                 <h2 className="text-sm font-semibold">{tx("Реферальная программа", "Referral program")}</h2>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  {tx("Приглашайте владельцев площадок. Доход отражается только после закрытых сделок с комиссией TG TOP.", "Invite community owners. Earnings appear only after completed TG TOP fee-bearing deals.")}
+                  {tx("За первых двух успешно вошедших beta-тестеров пригласивший получает по +1 GRAM. Приглашённый пользователь бонус не получает.", "The inviter receives +1 GRAM for each of the first two successful beta testers. The invited user receives no referral bonus.")}
                 </p>
               </div>
               <div className="space-y-3 p-4">
                 <div className="grid grid-cols-2 gap-3">
                   <Metric
-                    label={tx("Приглашено", "Invited")}
-                    value={String(referral?.referralsCount ?? 0)}
-                    note={tx("активированных аккаунтов", "activated accounts")}
+                    label={tx("Бонусный лимит", "Bonus limit")}
+                    value={referral?.progressLabel ?? `0/${referral?.lifetimeLimit ?? 2}`}
+                    note={tx(`по ${formatGram(referral?.rewardAmount ?? 100)} GRAM пригласившему`, `${formatGram(referral?.rewardAmount ?? 100)} GRAM to inviter`)}
                   />
                   <Metric
                     label={tx("Заработано", "Earned")}
@@ -4183,6 +4240,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     note={tx("из комиссий платформы", "from platform fees")}
                   />
                 </div>
+                <p className="text-[10px] text-slate-500">{tx(`Всего переходов по ссылке: ${referral?.referralsCount ?? 0}`, `Total referral link activations: ${referral?.referralsCount ?? 0}`)}</p>
                 <div className="rounded-xl border border-white/8 bg-[#0b0f14] p-3">
                   <span className="text-[10px] uppercase tracking-[0.12em] text-slate-500">{tx("Ваша ссылка", "Your link")}</span>
                   <code className="mt-1.5 block truncate text-xs text-[#a6c8ff]">
