@@ -44,4 +44,29 @@ describe("ranking placement persistence", () => {
     expect(source).toContain("const balance = await tx.update(users)");
     expect(source).toContain("currentBid: `${formatTonAmount(bidAmount / 1000)} GRAM`");
   });
+
+  it("persists cardBackgroundPreset across the complete ranking checkout flow", () => {
+    const home = readFileSync(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
+    const routers = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
+    const db = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+
+    // 1. Home.tsx passes cardBackgroundPreset in placeBid.mutate
+    expect(home).toContain("cardBackgroundPreset: listingCardBackgroundPreset");
+
+    // 2. server/routers.ts accepts cardBackgroundPreset in placeBid Zod input
+    expect(routers).toContain("cardBackgroundPreset: z.string().trim().max(64).nullable().optional()");
+
+    // 3. placeBid checks undefined and adds cardBackgroundPreset to options object
+    expect(routers).toContain("input.cardBackgroundPreset === undefined");
+    expect(routers).toContain("cardBackgroundPreset: input.cardBackgroundPreset as CardBackgroundPreset | null | undefined");
+
+    // 4. server/db.ts validates against CARD_BACKGROUND_PRESET_IDS and updates groups_catalog
+    expect(db).toContain("cardBackgroundPreset?: CardBackgroundPreset | null;");
+    expect(db).toContain("if (options?.cardBackgroundPreset && !(CARD_BACKGROUND_PRESET_IDS as readonly string[]).includes(options.cardBackgroundPreset))");
+    expect(db).toContain("...(options?.cardBackgroundPreset !== undefined ? { cardBackgroundPreset: options.cardBackgroundPreset } : {})");
+
+    // 5. openStarsPayment initializes preset from current group with null fallback
+    expect(home).toContain("setListingCardBackgroundPreset(");
+    expect(home).toContain("THEME_BACKGROUND_OPTIONS.some(item => item.value === currentGroup?.cardBackgroundPreset)");
+  });
 });

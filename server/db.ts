@@ -24,7 +24,7 @@ import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, ge
 import { canCancelNftRental, canConfirmNftRental, rentalTotalUnits, validateRentalDays, NFT_RENTAL_MAX_DAYS as POLICY_NFT_RENTAL_MAX_DAYS } from "./nftRentalPolicy";
 import { normalizeTelegramBotLink } from "./botListingPolicy";
 import { canIssueOnboardingIntent, getOnboardingIntentWindow, isPendingOnboardingIntent, ONBOARDING_INTENT_TTL_MS, ONBOARDING_INTENT_WINDOW_MS, type TelegramOnboardingKind } from "./onboardingIntentPolicy";
-import type { CardBackgroundPreset } from "../shared/card-background-presets";
+import { CARD_BACKGROUND_PRESET_IDS, type CardBackgroundPreset } from "../shared/card-background-presets";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -1361,6 +1361,7 @@ export type RankingLotOptions = {
   city?: string;
   subcategory?: string;
   salePriceTon?: string | null;
+  cardBackgroundPreset?: CardBackgroundPreset | null;
   rewardActive?: boolean;
   rewardBudget?: number;
   rewardPerSubscription?: number;
@@ -1413,6 +1414,9 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   if (options?.city) {
     const [city] = await db.select({ id: catalogCities.id }).from(catalogCities).where(and(eq(catalogCities.countryCode, effectiveCountry), eq(catalogCities.code, options.city))).limit(1);
     if (!city) throw new Error("Выберите город из доступного списка");
+  }
+  if (options?.cardBackgroundPreset && !(CARD_BACKGROUND_PRESET_IDS as readonly string[]).includes(options.cardBackgroundPreset)) {
+    throw new Error("Выберите фон карточки из доступного списка");
   }
   const requestedTarget = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
   if (!requestedTarget) throw new Error("Позиция рейтинга не найдена");
@@ -1547,6 +1551,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
       ...(options?.city !== undefined ? { city: options.city || null } : {}),
       ...(options?.subcategory ? { subcategory: options.subcategory } : {}),
       ...(options?.salePriceTon !== undefined ? { salePriceTon, listingType: salePriceTon ? "sale" : "catalog" } : {}),
+      ...(options?.cardBackgroundPreset !== undefined ? { cardBackgroundPreset: options.cardBackgroundPreset } : {}),
       ...(options?.rewardActive !== undefined ? { rewardActive: options.rewardActive } : {}),
       ...(options?.rewardBudget !== undefined ? { rewardBudget: options.rewardBudget } : {}),
       ...(options?.rewardPerSubscription !== undefined ? { rewardPerSubscription: options.rewardPerSubscription } : {}),

@@ -2446,6 +2446,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       managerPublic,
       listingAnnouncementEnabled,
       salePriceTon: normalizedSalePrice,
+      cardBackgroundPreset: listingCardBackgroundPreset,
       rewardActive: rewardCampaignEnabled,
       rewardBudget: budgetUnits,
       rewardPerSubscription: isChat ? 0 : joinRewardUnits,
@@ -2470,6 +2471,11 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     setSelectedManagerTelegramUserId(currentGroup.managerTelegramUserId ?? null);
     setManagerPublic(currentGroup.managerPublic !== false);
     setListingAnnouncementEnabled(currentGroup.listingAnnouncementEnabled ?? true);
+    setListingCardBackgroundPreset(
+      (THEME_BACKGROUND_OPTIONS.some(item => item.value === currentGroup?.cardBackgroundPreset)
+        ? currentGroup.cardBackgroundPreset
+        : null) as ThemeBackground | null
+    );
     setIsListingForSale(currentGroup.listingType === "sale" && Boolean(currentGroup.salePriceTon));
     setSalePriceTon(currentGroup.salePriceTon ? formatTon(currentGroup.salePriceTon) : "");
     setRewardCampaignEnabled(hasConfiguredRewardCampaign(currentGroup));
