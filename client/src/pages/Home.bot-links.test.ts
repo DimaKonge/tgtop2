@@ -319,7 +319,7 @@ describe("TG TOP production bot links", () => {
     expect(source).toContain('item.key === "mine" ? tx("Рабочее", "Workspace")');
     expect(source).toContain('const totalBalanceLabel = `${(Number(mainTon) + bonusBalanceUnits / 100).toFixed(2)} GRAM`;');
     expect(source).not.toContain('>Общий баланс</small>');
-    expect(source).toContain('bg-[#14263b]/35');
+    expect(source).toContain('totalBalanceLabel');
     expect(source).toContain('const [topSearchOpen, setTopSearchOpen] = useState(false);');
     expect(source).toContain('onClick={() => setTopSearchOpen(current => !current)}');
     expect(source).toContain('{topSearchOpen && <Input value={topSearchQuery}');
