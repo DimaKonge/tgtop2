@@ -2695,7 +2695,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 ["Каналы", tx("Каналы", "Channels")],
                 ["Чаты", tx("Чаты", "Chats")],
               ] as const).map(([value, label]) => (
-                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`tg-top-tab h-7 rounded-md text-[9px] transition-all ${globalDirection === value ? "tg-top-tab-active bg-[#25466b] text-[#cbe1fc] border border-[#3f8cff]/25 shadow-sm font-semibold" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
+                <button key={value} type="button" onClick={() => selectGlobalDirection(value)} className={`tg-top-tab tg-top-subtab h-7 rounded-md text-[9px] transition-all ${globalDirection === value ? "tg-top-tab-active tg-top-subtab-active border border-[color:var(--tg-accent-border)] bg-[color:var(--tg-accent-soft)] text-[color:var(--tg-accent)] shadow-sm font-semibold" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"}`}>{label}</button>
               ))}
               </div>}
             </div>
