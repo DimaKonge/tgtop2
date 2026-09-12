@@ -356,3 +356,202 @@ html[data-background] .tg-launch { background: var(--tg-shell-bg) !important; }
   border-color: color-mix(in srgb, var(--tg-community-card-accent, var(--tg-accent)) 64%, transparent) !important;
   box-shadow: 0 10px 28px color-mix(in srgb, var(--tg-community-card-accent, var(--tg-accent)) 18%, transparent) !important;
 }
+
+/* White background theme: crisp pure white surfaces with sleek dark/black active buttons */
+html[data-background="ivory_white"] {
+  --tg-shell-bg: #f2f5f9;
+  --tg-surface: #ffffff;
+  --tg-surface-raised: #ffffff;
+  --tg-accent: #0f172a;
+  --tg-accent-soft: #0f172a;
+  --tg-accent-border: #0f172a;
+  --tg-chart-fill: #0f172a;
+  --tg-chart-stroke: #334155;
+  --tg-chart-dot: #0f172a;
+  color-scheme: light;
+}
+
+html[data-background="ivory_white"] body,
+html[data-background="ivory_white"] .tg-shell {
+  background: #f2f5f9 !important;
+  color: #0f172a !important;
+}
+
+html[data-background="ivory_white"] .tg-shell header,
+html[data-background="ivory_white"] .tg-shell nav {
+  background: rgba(242, 245, 249, 0.92) !important;
+  backdrop-filter: blur(20px);
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-background="ivory_white"] [data-slot="sheet-content"][class*="rounded-t-"] {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 -18px 55px rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-background="ivory_white"] [data-slot="sheet-overlay"] {
+  background: rgba(15, 23, 42, 0.4) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* Surfaces and Cards */
+html[data-background="ivory_white"] .tg-shell .bg-\[\#0b0f14\],
+html[data-background="ivory_white"] .tg-shell .bg-\[\#111720\],
+html[data-background="ivory_white"] .tg-shell .bg-\[\#10161f\],
+html[data-background="ivory_white"] .tg-shell .bg-\[\#1b2430\],
+html[data-background="ivory_white"] .tg-shell .bg-\[\#141c27\],
+html[data-background="ivory_white"] .tg-shell .bg-\[\#17212b\],
+html[data-background="ivory_white"] .tg-shell .bg-\[\#202b3a\],
+html[data-background="ivory_white"] .tg-shell .bg-\[\#293d52\],
+html[data-background="ivory_white"] .tg-shell .bg-\[\#2b4158\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#0b0f14\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#111720\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#10161f\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#17212b\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#202b3a\] {
+  background: #ffffff !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Typography in White theme */
+html[data-background="ivory_white"] .tg-shell .text-white,
+html[data-background="ivory_white"] .tg-shell .text-slate-100,
+html[data-background="ivory_white"] .tg-shell .text-slate-200,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .text-white,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .text-slate-100,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .text-slate-200 {
+  color: #0f172a !important;
+}
+
+html[data-background="ivory_white"] .tg-shell .text-slate-300,
+html[data-background="ivory_white"] .tg-shell .text-slate-400,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .text-slate-300,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .text-slate-400 {
+  color: #475569 !important;
+}
+
+html[data-background="ivory_white"] .tg-shell .text-slate-500,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Borders in White theme */
+html[data-background="ivory_white"] .tg-shell .border-white\/8,
+html[data-background="ivory_white"] .tg-shell .border-white\/10,
+html[data-background="ivory_white"] .tg-shell .border-white\/12,
+html[data-background="ivory_white"] .tg-shell .border-white\/15,
+html[data-background="ivory_white"] .tg-shell .border-white\/20,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .border-white\/8,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .border-white\/10,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .border-white\/12,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .border-white\/15,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Inactive button backgrounds */
+html[data-background="ivory_white"] .tg-shell .bg-white\/\[0\.04\],
+html[data-background="ivory_white"] .tg-shell .bg-white\/\[0\.055\],
+html[data-background="ivory_white"] .tg-shell .bg-white\/\[0\.06\],
+html[data-background="ivory_white"] .tg-shell .bg-white\/\[0\.08\],
+html[data-background="ivory_white"] .tg-shell .bg-black\/10,
+html[data-background="ivory_white"] .tg-shell .bg-black\/15,
+html[data-background="ivory_white"] .tg-shell .bg-black\/20,
+html[data-background="ivory_white"] .tg-shell .bg-black\/30,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-white\/\[0\.04\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-white\/\[0\.055\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-white\/\[0\.06\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-white\/\[0\.08\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-black\/10,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-black\/15,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-black\/20,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-black\/30 {
+  background: #eaeff5 !important;
+  color: #334155 !important;
+}
+
+/* ACTIVE AND ENABLED BUTTONS - SLEEK DARK/BLACK STYLING */
+html[data-background="ivory_white"] .tg-top-tab-active,
+html[data-background="ivory_white"] .tg-top-subtab-active,
+html[data-background="ivory_white"] .tg-bottom-nav-active,
+html[data-background="ivory_white"] .tg-shell button[aria-pressed="true"],
+html[data-background="ivory_white"] [data-slot="sheet-content"] button[aria-pressed="true"],
+html[data-background="ivory_white"] .bg-\[\#3f8cff\],
+html[data-background="ivory_white"] .tg-shell .bg-\[\#3f8cff\],
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#3f8cff\] {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25) !important;
+}
+
+html[data-background="ivory_white"] .tg-top-tab-active *,
+html[data-background="ivory_white"] .tg-top-subtab-active *,
+html[data-background="ivory_white"] .tg-bottom-nav-active *,
+html[data-background="ivory_white"] .tg-shell button[aria-pressed="true"] *,
+html[data-background="ivory_white"] [data-slot="sheet-content"] button[aria-pressed="true"] *,
+html[data-background="ivory_white"] .bg-\[\#3f8cff\] * {
+  color: #ffffff !important;
+}
+
+/* Active segments/chips with soft tint */
+html[data-background="ivory_white"] .bg-\[\#3f8cff\]\/10,
+html[data-background="ivory_white"] .bg-\[\#3f8cff\]\/12,
+html[data-background="ivory_white"] .bg-\[\#3f8cff\]\/15,
+html[data-background="ivory_white"] .bg-\[\#3f8cff\]\/18,
+html[data-background="ivory_white"] .tg-shell .bg-\[\#3f8cff\]\/10,
+html[data-background="ivory_white"] .tg-shell .bg-\[\#3f8cff\]\/12,
+html[data-background="ivory_white"] .tg-shell .bg-\[\#3f8cff\]\/15,
+html[data-background="ivory_white"] .tg-shell .bg-\[\#3f8cff\]\/18,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#3f8cff\]\/10,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#3f8cff\]\/12,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#3f8cff\]\/15,
+html[data-background="ivory_white"] [data-slot="sheet-content"] .bg-\[\#3f8cff\]\/18 {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+}
+
+html[data-background="ivory_white"] .bg-\[\#3f8cff\]\/10 *,
+html[data-background="ivory_white"] .bg-\[\#3f8cff\]\/12 *,
+html[data-background="ivory_white"] .bg-\[\#3f8cff\]\/15 *,
+html[data-background="ivory_white"] .bg-\[\#3f8cff\]\/18 * {
+  color: #ffffff !important;
+}
+
+/* Bottom navigation in White theme */
+html[data-background="ivory_white"] .tg-bottom-nav {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(24px) saturate(145%);
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+html[data-background="ivory_white"] .tg-bottom-nav::before {
+  border-color: rgba(15, 23, 42, 0.06);
+  background: none;
+}
+
+html[data-background="ivory_white"] .brand-mark,
+html[data-background="ivory_white"] .tg-top-pyramid-avatar {
+  color: #0f172a !important;
+}
+
+html[data-background="ivory_white"] .tg-top-pyramid-avatar__tile {
+  fill: #0f172a !important;
+  stroke: #334155 !important;
+}
+
+html[data-background="ivory_white"] .tg-community-card {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+html[data-background="ivory_white"] .tg-community-card:hover {
+  border-color: rgba(15, 23, 42, 0.22) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08) !important;
+}
+

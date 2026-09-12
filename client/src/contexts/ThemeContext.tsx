@@ -7,7 +7,7 @@ export type ThemeStyle = "original" | "clean";
 export type ThemeAccent = "blue" | "purple" | "rose" | "gold" | "green" | "turquoise";
 export const THEME_BACKGROUND_OPTIONS = [
   { value: "black", label: "Black", color: "#080a0e", accent: "#3f8cff" },
-  { value: "ivory_white", label: "Ivory White", color: "#494846", accent: "#e7dfcf" },
+  { value: "ivory_white", label: "White", color: "#f4f6fa", accent: "#0f172a" },
   { value: "onyx_black", label: "Onyx Black", color: "#111318", accent: "#b2bbc8" },
   { value: "turquoise", label: "Turquoise", color: "#123a45", accent: "#4fd4d0" },
   { value: "deep_cyan", label: "Deep Cyan", color: "#11404a", accent: "#3ed4e3" },

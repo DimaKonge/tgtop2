@@ -124,6 +124,7 @@ export function SettingsSheet({
                 const active = background === item.value;
                 const isTopHero = item.value === "black" || item.value === "ivory_white";
                 const isBrandBlack = item.value === "black";
+                const isWhite = item.value === "ivory_white";
                 return (
                   <button
                     key={item.value}
@@ -134,6 +135,8 @@ export function SettingsSheet({
                     style={{
                       background: isBrandBlack
                         ? "radial-gradient(circle at 50% 20%, #254e7a 0%, #080a0e 75%)"
+                        : isWhite
+                        ? "radial-gradient(circle at 50% 20%, #ffffff 0%, #d5dde8 85%)"
                         : `radial-gradient(circle at 50% 25%, color-mix(in srgb, ${item.accent} 70%, ${item.color}) 0%, ${item.color} 80%)`,
                     }}
                     className={`group relative flex w-full flex-col items-center justify-between overflow-hidden rounded-xl p-1.5 transition-all duration-150 ${
@@ -147,11 +150,13 @@ export function SettingsSheet({
                     <span className="flex w-full items-center justify-between">
                       {isBrandBlack ? (
                         <TgTopPyramidIcon className="h-4 w-4 text-[#72a8ff] drop-shadow-sm opacity-90 transition-transform group-hover:scale-110" />
+                      ) : isWhite ? (
+                        <TgTopPyramidIcon className="h-4 w-4 text-[#0f172a] drop-shadow-sm opacity-90 transition-transform group-hover:scale-110" />
                       ) : (
                         <span />
                       )}
                       {active ? (
-                        <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-black shadow-sm">
+                        <span className="grid h-4 w-4 place-items-center rounded-full bg-slate-900 text-white shadow-sm ring-1 ring-white/30">
                           <Check className="h-2.5 w-2.5 stroke-[3]" />
                         </span>
                       ) : (
@@ -159,7 +164,7 @@ export function SettingsSheet({
                       )}
                     </span>
                     <span className="w-full truncate rounded-md bg-black/60 backdrop-blur-xs px-1 py-0.5 text-center text-[9.5px] font-medium text-white shadow-sm">
-                      {isBrandBlack ? "TG TOP Black" : item.label}
+                      {isBrandBlack ? "TG TOP Black" : isWhite ? "White" : item.label}
                     </span>
                   </button>
                 );
