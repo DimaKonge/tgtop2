@@ -1913,6 +1913,40 @@ export default function Home({ onReady }: { onReady?: () => void }) {
     user?.telegramUsername ||
     tx("Пользователь Telegram", "Telegram user");
   const userTelegramUsername = telegramUser?.username || user?.telegramUsername || null;
+  const [userAvatarError, setUserAvatarError] = useState(false);
+  useEffect(() => {
+    setUserAvatarError(false);
+  }, [displayUserAvatar]);
+  const userInitial = (
+    userDisplayName.replace(/^@/, "").trim().slice(0, 1) ||
+    userTelegramUsername?.replace(/^@/, "").trim().slice(0, 1) ||
+    "T"
+  ).toUpperCase();
+  const renderUserAvatar = (size: "sm" | "md") => {
+    const isSm = size === "sm";
+    const sizeClasses = isSm ? "h-9 w-9 text-xs" : "h-12 w-12 text-base";
+    const hasPhoto = Boolean(displayUserAvatar) && !userAvatarError;
+
+    return (
+      <span
+        className={`grid ${sizeClasses} shrink-0 place-items-center overflow-hidden rounded-full border border-white/15 bg-[#1b2430] font-bold text-white shadow-sm ring-1 ring-white/10`}
+      >
+        {hasPhoto && displayUserAvatar ? (
+          <img
+            src={displayUserAvatar}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="h-full w-full object-cover"
+            onError={() => setUserAvatarError(true)}
+          />
+        ) : (
+          <span className="grid h-full w-full place-items-center bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#0f172a] text-white font-bold drop-shadow-sm select-none">
+            {userInitial}
+          </span>
+        )}
+      </span>
+    );
+  };
   const selectedSlot = detail
     ? detailSlots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
@@ -2613,23 +2647,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <button
                 onClick={() => setPage("profile")}
                 aria-label="Открыть профиль"
-                className="flex items-center"
+                className="flex items-center transition-transform hover:scale-105"
               >
-                <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-200">
-                  {displayUserAvatar ? (
-                    <img
-                      src={displayUserAvatar}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      className="h-full w-full object-cover"
-                      onError={e => {
-                        (e.currentTarget as HTMLElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    (userDisplayName.slice(0, 1).toUpperCase() || "T")
-                  )}
-                </span>
+                {renderUserAvatar("sm")}
               </button>
             ) : (
               <button
@@ -3961,21 +3981,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <h1 className="px-1 text-sm font-semibold text-slate-300">{tx("Личный кабинет", "Account")}</h1>
             <div className="tg-clean-surface rounded-2xl border border-white/8 bg-[#111720] p-5 shadow-[0_10px_28px_rgba(2,8,16,0.14)]">
               <div className="flex items-center gap-3.5">
-                <span className="grid h-12 w-12 place-items-center shrink-0 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold text-slate-200">
-                  {displayUserAvatar ? (
-                    <img
-                      src={displayUserAvatar}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      className="h-full w-full object-cover"
-                      onError={e => {
-                        (e.currentTarget as HTMLElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    (userDisplayName.slice(0, 1).toUpperCase() || "T")
-                  )}
-                </span>
+                {renderUserAvatar("md")}
                 <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-semibold text-slate-100 truncate leading-snug">
                     {userDisplayName}
