@@ -284,28 +284,43 @@ html[data-background] .tg-shell { background: var(--tg-shell-bg) !important; col
 html[data-background] .tg-shell header,
 html[data-background] .tg-shell nav,
 html[data-background] [data-slot="sheet-content"][class*="rounded-t-"] { background: color-mix(in srgb, var(--tg-surface) 94%, transparent) !important; border-color: color-mix(in srgb, var(--tg-accent) 16%, white 7%) !important; }
-html[data-background] .tg-shell .bg-\[\#0b0f14\] { background: var(--tg-shell-bg) !important; }
+html[data-background] .tg-shell .bg-\[\#0b0f14\],
+html[data-background] [data-slot="sheet-content"] .bg-\[\#0b0f14\] { background: var(--tg-shell-bg) !important; }
 html[data-background] .tg-shell .bg-\[\#111720\],
 html[data-background] .tg-shell .bg-\[\#10161f\],
 html[data-background] .tg-shell .bg-\[\#1b2430\],
-html[data-background] .tg-shell .bg-\[\#141c27\] { background: var(--tg-surface) !important; }
+html[data-background] .tg-shell .bg-\[\#141c27\],
+html[data-background] [data-slot="sheet-content"] .bg-\[\#111720\],
+html[data-background] [data-slot="sheet-content"] .bg-\[\#10161f\],
+html[data-background] [data-slot="sheet-content"] .bg-\[\#1b2430\],
+html[data-background] [data-slot="sheet-content"] .bg-\[\#141c27\] { background: var(--tg-surface) !important; }
 html[data-background] .tg-shell .bg-\[\#17212b\],
 html[data-background] .tg-shell .bg-\[\#202b3a\],
 html[data-background] .tg-shell .bg-\[\#293d52\],
-html[data-background] .tg-shell .bg-\[\#2b4158\] { background: var(--tg-surface-raised) !important; }
-html[data-background] .tg-shell .bg-\[\#3f8cff\] { background: var(--tg-accent) !important; }
+html[data-background] .tg-shell .bg-\[\#2b4158\],
+html[data-background] [data-slot="sheet-content"] .bg-\[\#17212b\],
+html[data-background] [data-slot="sheet-content"] .bg-\[\#202b3a\] { background: var(--tg-surface-raised) !important; }
+html[data-background] .tg-shell .bg-\[\#3f8cff\],
+html[data-background] [data-slot="sheet-content"] .bg-\[\#3f8cff\] { background: var(--tg-accent) !important; }
 html[data-background] .tg-shell .text-\[\#72a8ff\],
 html[data-background] .tg-shell .text-\[\#79a7ff\],
 html[data-background] .tg-shell .text-\[\#8fb9ff\],
 html[data-background] .tg-shell .text-\[\#a6c8ff\],
-html[data-background] .tg-shell .text-\[\#b8d7ff\] { color: var(--tg-accent) !important; }
+html[data-background] .tg-shell .text-\[\#b8d7ff\],
+html[data-background] [data-slot="sheet-content"] .text-\[\#72a8ff\],
+html[data-background] [data-slot="sheet-content"] .text-\[\#79a7ff\],
+html[data-background] [data-slot="sheet-content"] .text-\[\#8fb9ff\],
+html[data-background] [data-slot="sheet-content"] .text-\[\#a6c8ff\],
+html[data-background] [data-slot="sheet-content"] .text-\[\#b8d7ff\] { color: var(--tg-accent) !important; }
 html[data-background] .border-\[\#3f8cff\],
 html[data-background] .tg-shell .border-\[\#3f8cff\],
 html[data-background] .tg-shell .border-\[\#3f8cff\]\/20,
 html[data-background] .tg-shell .border-\[\#3f8cff\]\/25,
 html[data-background] .tg-shell .border-\[\#3f8cff\]\/30,
 html[data-background] .tg-shell .border-\[\#3f8cff\]\/35,
-html[data-background] .tg-shell .border-\[\#3390ec\]\/50 { border-color: var(--tg-accent-border) !important; }
+html[data-background] .tg-shell .border-\[\#3390ec\]\/50,
+html[data-background] [data-slot="sheet-content"] .border-\[\#3f8cff\],
+html[data-background] [data-slot="sheet-content"] .border-\[\#3f8cff\]\/35 { border-color: var(--tg-accent-border) !important; }
 html[data-background] .bg-\[\#3f8cff\]\/15,
 html[data-background] .tg-shell .bg-\[\#3f8cff\]\/8,
 html[data-background] .tg-shell .bg-\[\#3f8cff\]\/10,
@@ -313,7 +328,11 @@ html[data-background] .tg-shell .bg-\[\#3f8cff\]\/12,
 html[data-background] .tg-shell .bg-\[\#3f8cff\]\/14,
 html[data-background] .tg-shell .bg-\[\#3f8cff\]\/15,
 html[data-background] .tg-shell .bg-\[\#3f8cff\]\/18,
-html[data-background] .tg-shell .bg-\[\#3390ec\]\/16 { background: var(--tg-accent-soft) !important; }
+html[data-background] .tg-shell .bg-\[\#3390ec\]\/16,
+html[data-background] [data-slot="sheet-content"] .bg-\[\#3f8cff\]\/10,
+html[data-background] [data-slot="sheet-content"] .bg-\[\#3f8cff\]\/12,
+html[data-background] [data-slot="sheet-content"] .bg-\[\#3f8cff\]\/15,
+html[data-background] [data-slot="sheet-content"] .bg-\[\#3f8cff\]\/18 { background: var(--tg-accent-soft) !important; }
 html[data-background] .tg-gram-balance-chart { --tg-chart-fill: color-mix(in srgb, var(--tg-accent) 82%, #152238); --tg-chart-stroke: color-mix(in srgb, var(--tg-accent) 90%, white); --tg-chart-dot: color-mix(in srgb, var(--tg-accent) 64%, white); background: var(--tg-shell-bg) !important; border-color: var(--tg-accent-border) !important; }
 html[data-background] .tg-bottom-nav { background: linear-gradient(135deg, color-mix(in srgb, var(--tg-surface-raised) 86%, transparent), color-mix(in srgb, var(--tg-shell-bg) 90%, transparent)) !important; border-color: var(--tg-accent-border) !important; }
 html[data-background] .tg-top-tab-active:not(.tg-top-subtab-active) {

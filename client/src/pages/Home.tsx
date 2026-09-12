@@ -399,23 +399,65 @@ function SettingsSheet({
         <div className="mx-4 space-y-3 overflow-y-auto pb-1">
           <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
-              <Languages className="h-4 w-4 text-[#72a8ff]" />
+              <Languages className="h-4 w-4 text-[color:var(--tg-accent)]" />
               {isEnglish ? "Language" : "Язык"}
             </div>
             <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
-              {languageItems.map(item => <button key={item.value} onClick={() => onLanguageChange(item.value)} aria-pressed={language === item.value} className={`h-8 rounded-md text-[11px] font-semibold transition-colors ${language === item.value ? "bg-[#3f8cff]/18 text-[#a6c8ff]" : "text-slate-500 hover:text-slate-200"}`}>{item.label}</button>)}
+              {languageItems.map(item => (
+                <button
+                  key={item.value}
+                  onClick={() => onLanguageChange(item.value)}
+                  aria-pressed={language === item.value}
+                  className={`h-8 rounded-md text-[11px] font-semibold transition-colors ${
+                    language === item.value
+                      ? "border border-[color:var(--tg-accent-border)] bg-[color:var(--tg-accent-soft)] text-[color:var(--tg-accent)] font-bold shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
           </section>
           <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
-              <Palette className="h-4 w-4 text-[#72a8ff]" />
+              <Palette className="h-4 w-4 text-[color:var(--tg-accent)]" />
               {isEnglish ? "Telegram-style background" : "Telegram-style фон"}
             </div>
             <p className="mb-2 text-[10px] leading-4 text-slate-500">{isEnglish ? "The selected color also updates cubes, loading, buttons, charts, filters and navigation." : "Выбранный цвет также обновляет кубики, загрузку, кнопки, графики, фильтры и навигацию."}</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[380px] overflow-y-auto pr-1">
               {THEME_BACKGROUND_OPTIONS.map(item => {
                 const active = background === item.value;
-                return <button key={item.value} type="button" onClick={() => setBackground(item.value)} aria-label={item.label} aria-pressed={active} className={`flex min-h-[62px] flex-col items-center justify-center gap-1 rounded-lg border px-1 transition-colors ${active ? "border-[color:var(--tg-accent)] bg-[color:var(--tg-accent-soft)] text-[color:var(--tg-accent)]" : "border-white/8 bg-[#0b0f14] hover:border-white/20"}`}><span className="h-7 w-7 rounded-md border border-white/20 shadow-inner" style={{ backgroundColor: item.color, boxShadow: `0 0 0 2px ${item.accent}22` }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setBackground(item.value)}
+                    aria-label={item.label}
+                    aria-pressed={active}
+                    style={{
+                      background: `radial-gradient(circle at 50% 25%, color-mix(in srgb, ${item.accent} 70%, ${item.color}) 0%, ${item.color} 80%)`,
+                    }}
+                    className={`group relative flex h-[74px] w-full flex-col items-center justify-between overflow-hidden rounded-xl p-1.5 transition-all duration-150 ${
+                      active
+                        ? "ring-2 ring-white shadow-[0_0_14px_rgba(255,255,255,0.45)] scale-[1.03] z-10"
+                        : "border border-white/15 hover:border-white/40 hover:scale-[1.02] shadow-sm"
+                    }`}
+                  >
+                    <span className="flex w-full justify-end">
+                      {active ? (
+                        <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-black shadow-sm">
+                          <Check className="h-2.5 w-2.5 stroke-[3]" />
+                        </span>
+                      ) : (
+                        <span className="h-4 w-4" />
+                      )}
+                    </span>
+                    <span className="w-full truncate rounded-md bg-black/60 backdrop-blur-xs px-1 py-0.5 text-center text-[9.5px] font-medium text-white shadow-sm">
+                      {item.label}
+                    </span>
+                  </button>
+                );
               })}
             </div>
           </section>
@@ -1830,17 +1872,31 @@ export default function Home({ onReady }: { onReady?: () => void }) {
       ? [...CATEGORY_SUBCATEGORIES["Каналы"]]
       : [...CATEGORY_SUBCATEGORIES["Каналы"], ...CATEGORY_SUBCATEGORIES["Чаты"]]
   )).filter(item => item !== "General");
-  const telegramAvatar =
+  const telegramUser =
     typeof window !== "undefined"
-      ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
+      ? window.Telegram?.WebApp?.initDataUnsafe?.user
       : undefined;
+  const telegramAvatar = telegramUser?.photo_url;
+  const telegramUserId = telegramUser?.id
+    ? String(telegramUser.id)
+    : (user?.openId?.startsWith("telegram:") ? user.openId.replace("telegram:", "") : null);
   const telegramAvatarVersion =
     typeof window !== "undefined"
       ? new URLSearchParams(window.Telegram?.WebApp?.initData ?? "").get("auth_date")
       : null;
   const displayUserAvatar = telegramAvatar
     ? `${telegramAvatar}${telegramAvatar.includes("?") ? "&" : "?"}tgtop_avatar=${encodeURIComponent(telegramAvatarVersion ?? "current")}`
-    : user?.avatarUrl;
+    : (user?.avatarUrl || (telegramUserId ? `/api/telegram-user-avatar/${telegramUserId}` : null));
+  const telegramFullName = telegramUser
+    ? [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(" ").trim()
+    : "";
+  const userDisplayName =
+    telegramFullName ||
+    user?.name ||
+    telegramUser?.username ||
+    user?.telegramUsername ||
+    tx("Пользователь Telegram", "Telegram user");
+  const userTelegramUsername = telegramUser?.username || user?.telegramUsername || null;
   const selectedSlot = detail
     ? detailSlots.find(slot => slot.group?.id === detail.group.id)
     : undefined;
@@ -2543,18 +2599,20 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                 aria-label="Открыть профиль"
                 className="flex items-center"
               >
-                <span className="grid h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold">
-                  <>
-                    {displayUserAvatar ? (
-                      <img
-                        src={displayUserAvatar}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      (user?.name?.slice(0, 1).toUpperCase() ?? "T")
-                    )}
-                  </>
+                <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-xs font-semibold text-slate-200">
+                  {displayUserAvatar ? (
+                    <img
+                      src={displayUserAvatar}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="h-full w-full object-cover"
+                      onError={e => {
+                        (e.currentTarget as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    (userDisplayName.slice(0, 1).toUpperCase() || "T")
+                  )}
                 </span>
               </button>
             ) : (
@@ -3886,23 +3944,32 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <section className="space-y-4">
             <h1 className="px-1 text-sm font-semibold text-slate-300">{tx("Личный кабинет", "Account")}</h1>
             <div className="tg-clean-surface rounded-2xl border border-white/8 bg-[#111720] p-5 shadow-[0_10px_28px_rgba(2,8,16,0.14)]">
-              <div className="flex items-center gap-3">
-                <span className="grid h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold">
+              <div className="flex items-center gap-3.5">
+                <span className="grid h-12 w-12 place-items-center shrink-0 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold text-slate-200">
                   {displayUserAvatar ? (
                     <img
                       src={displayUserAvatar}
                       alt=""
+                      referrerPolicy="no-referrer"
                       className="h-full w-full object-cover"
+                      onError={e => {
+                        (e.currentTarget as HTMLElement).style.display = "none";
+                      }}
                     />
                   ) : (
-                    (user?.name?.slice(0, 1).toUpperCase() ?? "T")
+                    (userDisplayName.slice(0, 1).toUpperCase() || "T")
                   )}
                 </span>
-                <span>
-                  <h2 className="text-lg font-semibold">
-                    {user?.name ?? tx("Пользователь Telegram", "Telegram user")}
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-semibold text-slate-100 truncate leading-snug">
+                    {userDisplayName}
                   </h2>
-                </span>
+                  {userTelegramUsername && (
+                    <p className="text-xs text-slate-400 font-normal truncate mt-0.5">
+                      @{userTelegramUsername}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <Metric
@@ -4391,7 +4458,44 @@ export default function Home({ onReady }: { onReady?: () => void }) {
           <SheetHeader className="px-4 pb-2 text-left"><SheetTitle className="text-base text-slate-100">{tx("Фон карточки", "Card background")}</SheetTitle><p className="text-[11px] leading-4 text-slate-500">{tx("По умолчанию карточка использует выбранный фон приложения. Выберите оттенок, только если хотите выделить эту группу.", "By default, the card uses the selected app background. Choose a shade only to highlight this community.")}</p></SheetHeader>
           <div className="space-y-3 px-4 pb-4">
             <button type="button" onClick={() => { setListingCardBackgroundPreset(null); setListingCardBackgroundSheetOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left ${listingCardBackgroundPreset === null ? "border-[color:var(--tg-accent)] bg-[color:var(--tg-accent-soft)]" : "border-white/8 bg-white/[0.025]"}`}><span className="h-9 w-9 rounded-lg border border-white/15 bg-[var(--tg-shell-bg)]" /><span><b className="block text-xs text-slate-100">{tx("Как в приложении", "Use app color")}</b><small className="mt-0.5 block text-[10px] text-slate-500">{tx("Наследовать общую палитру", "Inherit the global palette")}</small></span></button>
-            <div className="grid grid-cols-4 gap-2">{THEME_BACKGROUND_OPTIONS.map(item => { const active = listingCardBackgroundPreset === item.value; return <button key={item.value} type="button" onClick={() => { setListingCardBackgroundPreset(item.value); setListingCardBackgroundSheetOpen(false); }} aria-pressed={active} className={`flex min-h-[62px] flex-col items-center justify-center gap-1 rounded-lg border px-1 ${active ? "border-[color:var(--tg-accent)] bg-[color:var(--tg-accent-soft)]" : "border-white/8 bg-white/[0.025]"}`}><span className="h-7 w-7 rounded-md border border-white/20" style={{ backgroundColor: item.color, boxShadow: `0 0 0 2px ${item.accent}22` }} /><span className="max-w-full truncate text-[9px] text-slate-400">{item.label}</span></button>; })}</div>
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[380px] overflow-y-auto pr-1">
+              {THEME_BACKGROUND_OPTIONS.map(item => {
+                const active = listingCardBackgroundPreset === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => {
+                      setListingCardBackgroundPreset(item.value);
+                      setListingCardBackgroundSheetOpen(false);
+                    }}
+                    aria-pressed={active}
+                    aria-label={item.label}
+                    style={{
+                      background: `radial-gradient(circle at 50% 25%, color-mix(in srgb, ${item.accent} 70%, ${item.color}) 0%, ${item.color} 80%)`,
+                    }}
+                    className={`group relative flex h-[74px] w-full flex-col items-center justify-between overflow-hidden rounded-xl p-1.5 transition-all duration-150 ${
+                      active
+                        ? "ring-2 ring-white shadow-[0_0_14px_rgba(255,255,255,0.45)] scale-[1.03] z-10"
+                        : "border border-white/15 hover:border-white/40 hover:scale-[1.02] shadow-sm"
+                    }`}
+                  >
+                    <span className="flex w-full justify-end">
+                      {active ? (
+                        <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-black shadow-sm">
+                          <Check className="h-2.5 w-2.5 stroke-[3]" />
+                        </span>
+                      ) : (
+                        <span className="h-4 w-4" />
+                      )}
+                    </span>
+                    <span className="w-full truncate rounded-md bg-black/60 backdrop-blur-xs px-1 py-0.5 text-center text-[9.5px] font-medium text-white shadow-sm">
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </SheetContent>
       </Sheet>

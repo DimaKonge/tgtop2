@@ -30,7 +30,7 @@ export function CommunityAvatar({
 }) {
   const [videoFailed, setVideoFailed] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
-  const size = hero ? "h-32 w-32" : large ? "h-16 w-16" : compact ? "h-9 w-9" : "h-11 w-11";
+  const size = hero ? "h-32 w-32" : large ? "h-16 w-16" : compact ? "h-12 w-12" : "h-11 w-11";
   const avatarSrc = getTelegramAvatarSrc(group);
   return (
     <span className={`${size} grid shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#1b2430] text-sm font-semibold text-slate-200`}>

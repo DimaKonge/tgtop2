@@ -7,7 +7,7 @@ describe("TG TOP Telegram user avatar sync", () => {
 
     expect(source).toContain("const displayUserAvatar = telegramAvatar");
     expect(source).toContain("tgtop_avatar=");
-    expect(source).toContain("user?.avatarUrl;");
+    expect(source).toContain("user?.avatarUrl");
     expect(source).not.toContain("user?.avatarUrl ?? telegramAvatar");
     expect(source).toContain("src={displayUserAvatar}");
   });

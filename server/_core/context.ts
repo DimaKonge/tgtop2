@@ -27,10 +27,13 @@ export async function createContext(
       try {
         const telegramUser = verifiedTelegram.user;
         const openId = `telegram:${telegramUser.id}`;
+        const telegramFullName = [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(" ").trim();
+        const name = telegramFullName || telegramUser.username || `User ${telegramUser.id}`;
+        const avatarUrl = telegramUser.photo_url || `/api/telegram-user-avatar/${telegramUser.id}`;
         await upsertUser({
           openId,
-          name: telegramUser.username ?? [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(" "),
-          avatarUrl: telegramUser.photo_url ?? null,
+          name,
+          avatarUrl,
           telegramUsername: telegramUser.username ?? null,
           loginMethod: "telegram-mini-app",
           lastSignedIn: new Date(),

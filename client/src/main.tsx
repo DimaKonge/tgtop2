@@ -8,9 +8,18 @@ import App from "./App";
 import { startTelegramLogin } from "./lib/telegramLogin";
 import "./index.css";
 
+type TelegramWebAppUser = {
+  id?: number | string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  language_code?: string;
+};
+
 type TelegramWebApp = {
   initData?: string;
-  initDataUnsafe?: { user?: { photo_url?: string }; start_param?: string };
+  initDataUnsafe?: { user?: TelegramWebAppUser; start_param?: string };
   ready?: () => void;
   expand?: () => void;
   openInvoice?: (url: string, callback?: (status: "paid" | "cancelled" | "failed" | "pending") => void) => void;
