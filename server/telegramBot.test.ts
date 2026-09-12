@@ -114,7 +114,7 @@ describe("TG TOP Telegram catalog onboarding", () => {
     expect(source).toContain("includeWelcomeSticker = false");
     expect(stickerIndex).toBeGreaterThan(-1);
     expect(textIndex).toBeGreaterThan(stickerIndex);
-    expect(source).toContain("openMiniApp(message.chat.id, \"Добро пожаловать в TG TOP");
+    expect(source).toContain("openMiniApp(message.chat.id, welcomePrefix + \"Добро пожаловать в TG TOP — каталог Telegram-сообществ");
   });
 
   it("reduces Telegram polling failures to a safe API summary without request internals", () => {

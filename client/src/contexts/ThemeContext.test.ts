@@ -2,14 +2,15 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("TG TOP theme preferences", () => {
-  it("supports system, light and dark modes with persisted style and accent choices", () => {
+  it("uses one persisted dark Telegram-style palette instead of light or system modes", () => {
     const source = readFileSync(new URL("./ThemeContext.tsx", import.meta.url), "utf8");
-    expect(source).toContain('export type Appearance = "system" | "dark" | "light";');
-    expect(source).toContain('export type ThemeStyle = "original" | "clean";');
-    expect(source).toContain('export type ThemeAccent = "blue" | "purple" | "rose" | "gold" | "green" | "turquoise";');
-    expect(source).toContain('localStorage.setItem(STYLE_STORAGE_KEY, style);');
-    expect(source).toContain('localStorage.setItem(ACCENT_STORAGE_KEY, accent);');
-    expect(source).toContain('document.documentElement.dataset.style = style;');
-    expect(source).toContain('document.documentElement.dataset.accent = accent;');
+    expect(source).toContain('export type Appearance = "dark";');
+    expect(source).toContain('export type ThemeBackground = (typeof THEME_BACKGROUND_OPTIONS)[number]["value"];');
+    expect(source).toContain('BACKGROUND_STORAGE_KEY = "tg-top-background"');
+    expect(source).toContain('stored as ThemeBackground : "black"');
+    expect(source).toContain('document.documentElement.dataset.background = background;');
+    expect(source).toContain('document.documentElement.style.setProperty("--tg-shell-bg", palette.color);');
+    expect(source).toContain('document.documentElement.style.setProperty("--tg-accent", palette.accent);');
+    expect(source).not.toContain('"system" | "dark" | "light"');
   });
 });

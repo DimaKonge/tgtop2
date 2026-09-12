@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { getUserByOpenId, upsertUser } from "../db";
+import { claimBetaReferralReward, getUserByOpenId, upsertUser } from "../db";
 import { validateTelegramInitDataWithTokens } from "../telegramAuth";
 import { sdk } from "./sdk";
 
@@ -35,6 +35,7 @@ export async function createContext(
           loginMethod: "telegram-mini-app",
           lastSignedIn: new Date(),
         });
+        await claimBetaReferralReward(openId);
         user = (await getUserByOpenId(openId)) ?? null;
         if (!user) authUnavailable = true;
       } catch (error) {

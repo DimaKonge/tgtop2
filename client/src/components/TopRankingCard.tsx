@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Star } from "lucide-react";
 import { formatCatalogNumber } from "@/lib/catalog-format";
 import { TgTopAnimatedPyramidAvatar } from "@/components/TgTopAnimatedPyramidAvatar";
+import { getCommunityCardBackgroundStyle } from "@/lib/community-card-background";
 
 export type TopRankingCardVariant = "lead" | "secondary" | "compact";
 
@@ -15,6 +16,7 @@ export type TopRankingCardGroup = {
   joinedCount: number;
   rewardActive?: boolean;
   rewardAmount?: number;
+  cardBackgroundPreset?: string | null;
   /** Set only by the verified server-side TOP identity configuration. */
   topPyramidAvatar?: boolean;
 };
@@ -58,7 +60,8 @@ export function TopRankingCard({ group, variant, language, avatarSrc, showTgTopP
         }
       }}
       aria-label={group ? `${language === "en" ? "Open" : "Открыть"} ${group.title}` : undefined}
-      className={`relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
+      style={getCommunityCardBackgroundStyle(group?.cardBackgroundPreset)}
+      className={`tg-community-card relative min-w-0 w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#3f8cff]/55 hover:shadow-[0_10px_28px_rgba(63,140,255,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3f8cff]/70 active:translate-y-0 active:scale-[0.99] ${cardStyle}`}
     >
       {group?.rewardActive && (group.rewardAmount ?? 0) > 0 && (
         <span aria-label={language === "en" ? "Rewards available" : "Вознаграждение активно"} className={`absolute right-1.5 top-1.5 z-10 grid place-items-center rounded-full border border-amber-100/25 bg-[#202b3a]/90 text-amber-200 shadow-md shadow-black/20 ${lead ? "h-7 w-7" : compact ? "h-4 w-4" : "h-5 w-5"}`}>
@@ -79,9 +82,9 @@ export function TopRankingCard({ group, variant, language, avatarSrc, showTgTopP
             <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_35%_22%,#254e7a_0%,#111720_70%)] p-[24%]"><TgTopAnimatedPyramidAvatar className="h-full w-full" title="TG TOP" /></span>
           )}
           <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,15,0.06)_8%,rgba(7,10,15,0.82)_100%)]" />
-          <span className={`absolute inset-x-0 bottom-0 min-w-0 ${compact ? "p-2" : lead ? "p-5 sm:p-6" : "p-3 sm:p-4"}`}>
-            <b className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} block max-w-full truncate font-semibold text-white`}>{group.title}</b>
-            <small className={`mt-1 block max-w-full truncate text-slate-200/80 ${compact ? "text-[8px]" : "text-xs"}`}>
+          <span className={`tg-media-overlay-content absolute inset-x-0 bottom-0 min-w-0 ${compact ? "p-2" : lead ? "p-5 sm:p-6" : "p-3 sm:p-4"}`}>
+            <b className={`${lead ? "text-xl" : compact ? "text-[11px]" : "text-sm"} tg-media-overlay-title block max-w-full truncate font-semibold text-white`}>{group.title}</b>
+            <small className={`tg-media-overlay-meta mt-1 block max-w-full truncate text-slate-200/80 ${compact ? "text-[8px]" : "text-xs"}`}>
               {lead && <>{groupUrl && onOpenCommunity ? <a href={groupUrl} onClick={event => { event.preventDefault(); event.stopPropagation(); onOpenCommunity(groupUrl); }} className="no-underline hover:text-white">{accessLabel}</a> : accessLabel} · </>}
               {formatCatalogNumber(group.membersCount, language)} {language === "en" ? "members" : "участников"} · +{formatCatalogNumber(group.joinedCount, language)}
             </small>

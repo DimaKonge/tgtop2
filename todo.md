@@ -1193,14 +1193,185 @@
 
 - [x] Подготовить официальный стартовый контент TG TOP: позиционирование канала, приветствие чата, объяснение листинга, правила, FAQ и тестовый контент-план; публиковать только после явного подтверждения владельца.
 
-- [ ] Создать и выгрузить медиапакет TG TOP: вертикальные изображения для сторис/постов, короткое видео и фирменный аватар; проверить читаемость и не публиковать без подтверждения.
+- [x] Создать и выгрузить медиапакет TG TOP: вертикальные изображения для сторис/постов, короткое видео и фирменный аватар; проверить читаемость и не публиковать без подтверждения. Три сторис сгенерированы в `webdev-static-assets`, визуально проверены; аватар и видео подготовлены ранее.
 
 - [x] Подготовить рекламную серию TG TOP: отдельные посты для владельцев каналов/чатов, тестировщиков и пользователей, по 3–5 релевантных тегов и с понятным CTA; не публиковать без подтверждения.
 
-- [x] Добавить «Все страны/Весь мир» первым пунктом Geo, «＋ Предложить страну» и «＋ Предложить категорию» с переходом в https://t.me/c/4358714855/2 во всех соответствующих controls.
+- [x] Добавить «Все страны/Весь мир» первым пунктом Geo, «＋ Предложить страну» и «＋ Предложить категорию» с переходом в https://t.me/c/4358714855/2 во всех соответствующих controls. Public-link rollout: https://t.me/TGTOP_Owner/2.
 
 - [x] Заменить все формулировки общего Geo-выбора на точное «Весь мир» и проверить, что выбор сбрасывает страну, регион и город во всех окнах.
 
 - [x] Вернуть «＋ Добавить категорию» в нижнюю часть каждого category Select и показать ясное сообщение для приватной topic-ссылки, если пользователь не состоит в чате.
 
-- [x] Заменить proposal link во всех Geo/category кнопках на https://t.me/TGTOP_Owner/2, проверить отсутствие старой приватной ссылки и исправить JSX regression.
+- [x] Заменить proposal link во всех Geo/category кнопках на https://t.me/TGTOP_Owner/2, проверить отсутствие старой приватной ссылки и исправить JSX regression. Live rollout confirmed 2026-09-01.
+
+- [x] Медиа-пакет: генерация сторис 01 launch — `/manus-storage/tgtop-story-01-launch_10d71957.png`. Визуально проверено.
+- [x] Медиа-пакет: генерация сторис 02 listing — `/manus-storage/tgtop-story-02-listing_29771868.png`. Визуально проверено.
+- [x] Медиа-пакет: генерация сторис 03 feedback — `/manus-storage/tgtop-story-03-feedback_93b5e591.png`. Визуально проверено.
+
+- [ ] Декомпозиция Home.tsx: вынести чистые owner-workspace/profile/admin секции в отдельные компоненты без изменения поведения и контрактов.
+- [x] Декомпозиция Home.tsx, подшаг: вынести чистый NftShowcase в `client/src/components/tgtop/NftShowcase.tsx`; сохранить вызовы в detail/profile без изменения поведения; targeted Vitest 3 passed, TypeScript passed.
+- [x] Декомпозиция Home.tsx, подшаг: вынести чистый NftCard в отдельный компонент без изменения NFT rental flow. Added `client/src/components/tgtop/NftCard.tsx` and regression test; targeted Vitest 4 passed, TypeScript passed.
+
+- [x] Создать жёлтую версию анимированной 7-cube заглушки TG TOP для аватара сообщества, проверить читаемость в карточке и подготовить файл к выгрузке. Экспортирован и проверен квадратный PNG.
+
+- [x] Создать квадратный жёлтый аватар по предоставленному референсу: 7 кубиков, та же пирамида, тёмный navy-фон и мягкое золотистое свечение; подготовить к выгрузке без изменения проекта. Готов `tgtop-yellow-pyramid-avatar-static.png` (1024×1024).
+
+- [x] Создать и выгрузить MP4-анимацию существующей жёлтой 1–2–4 пирамиды TG TOP: плавный glow, последовательное оживление кубиков, бесшовный loop, квадратный формат для аватара. MP4: 720×720, H.264, 8 секунд, 12 fps, 96 кадров; целостность подтверждена ffprobe.
+
+- [x] Пересобрать MP4-аватар по предоставленным реальному PNG и записи экрана: сохранить точные proportions, spacing, amber fill, glow и motion текущей заглушки; предыдущий static-like вариант не использовать. Новый MP4: 720×720, 7 секунд, H.264, 30 fps, 210 кадров, без аудио; проверены центрирование, одинаковые 7 сквиркл-кубиков и синхронная пульсация.
+
+- [x] Переделать yellow avatar animation без мерцания: первое место появляется первым, затем 2 средних и 4 нижних кубика; использовать плавные opacity/translate/scale transitions и спокойный loop. Проверены кадры перехода и полной сборки.
+
+- [x] Уточнение yellow avatar: вернуть полупрозрачные янтарные Liquid Glass ячейки с яркой тонкой рамкой, внутренним бликом, мягким glow и лёгкой глубиной; сохранить чистую сборку сверху вниз без мерцания. Проверена исправленная Liquid Glass версия.
+
+- [x] Обновить Liquid Glass avatar по новому референсу: ускорить и сгладить выезд ярусов снизу с коротким stagger, повысить контраст золотого fill/рамки/блика и сохранить отсутствие мерцания. MP4: 720×720, 6 секунд, 30 fps, 180 кадров; проверены переход и полная сборка.
+
+- [x] Смягчить появление Liquid Glass avatar: плавный fade-in + лёгкий подъём снизу с естественным замедлением, аккуратный stagger по ярусам и без мерцания. Проверены ранний, переходный и полный кадры; MP4 собран и проверен.
+
+- [x] Сделать видео-аватар по точной loading-анимации TG TOP: повторить порядок появления, motion и фирменный цвет кубиков без новых эффектов. Позиции, задержки, translateY/scale/rotate и easing взяты из `.tg-launch-cube`; экспорт проверен.
+
+- [x] Уточнение loading-avatar: повторить loading-анимацию приложения, но использовать золотую палитру кубиков вместо синей. Готов золотой MP4 `tgtop-loading-gold-avatar.mp4`.
+
+- [x] Сделать золотой loading-avatar бесшовным loop: собрать пирамиду, удержать, плавно свернуть в обратном порядке и повторить цикл без резкого стыка. MP4: 720×720, 6 секунд, 30 fps, 180 кадров; первый и последний кадры побитово идентичны.
+
+- [x] Исправить reverse timeline золотого loading-loop: сворачивать кубики строго в обратном порядке появления, один за другим, без перестановки ярусов. Порядок зафиксирован как cube-1 → cube-3 → cube-2 → cube-7 → cube-6 → cube-5 → cube-4 и визуально проверен.
+
+- [x] Убрать паузу в золотом loading-loop: после появления последнего кубика reverse-сворачивание должно начинаться сразу, без удержания полной пирамиды. Применено в sticker timeline.
+
+- [x] Подготовить золотые loading-кубики как Telegram video sticker: прозрачный фон/alpha, WebM VP9, 512×512, до 3 секунд, до 30 fps, без аудио и размером до 256 KB. WebM VP9 alpha_mode=1, 512×512, 2 секунды, 30 fps, 117,445 bytes; проверено в Chromium.
+
+- [x] Для прозрачного Telegram video sticker использовать именно безпаузы loop: непрерывная сборка и обратное сворачивание, без удержания полной пирамиды. Использован `tgtop-loading-gold-avatar-loop-no-pause.mp4` timeline.
+
+- [x] Подготовить детализированный квадратный видео-аватар: сохранить золотой безпаузы loading-loop, вернуть тёмный navy-фон с глубиной/атмосферным glow, усилить детализацию Liquid Glass и проверить MP4. MP4: 1024×1024, 2 секунды, 30 fps, H.264, без аудио, 208,086 bytes; визуально проверен.
+
+- [x] Исправить detailed avatar-video: сделать первый кадр полностью собранной золотой 1–2–4 пирамидой, сохранить предыдущий navy-фон и видео-стиль, чтобы Telegram не показывал пустое окно. Первый кадр проверен.
+
+- [x] Для выбранного detailed avatar-video сделать первый кадр полной пирамидой и убрать паузу между сборкой и обратным сворачиванием, сохранив текущий фон, цвет и детализацию. MP4: 1024×1024, 3 секунды, 30 fps, H.264, без аудио; проверены first frame и post-collapse transition.
+
+- [x] Исправить фон avatar-video: убрать полосы и заметные геометрические пятна, вернуть чистый тёмный navy/black фон TG TOP с мягким равномерным свечением; кубики и motion не менять. Проверены первый и переходный кадры; полосы отсутствуют.
+
+- [x] Подготовить обновлённый прозрачный Telegram video sticker: 512×512, полная золотая пирамида в первом кадре, затем безпаузы loop, WebM VP9 alpha, без аудио. 75,757 bytes, 2 секунды, 30 fps; alpha подтверждён Chromium preview.
+- [x] Подготовить прозрачный Telegram video emoji: ровно 100×100, та же золотая анимация, полная пирамида в первом кадре, WebM VP9 alpha, без аудио. 21,907 bytes, 2 секунды, 30 fps; масштаб и alpha проверены Chromium preview.
+
+- [ ] Readiness-аудит перед тестированием: проверить production smoke для сайта, Telegram Mini App, onboarding через @TGTOP_robot, My Groups и защищённой мутации; записать результаты.
+- [ ] Readiness-аудит: проверить наличие обязательных production auth/config настроек, HTTPS/Mini App origin и отсутствие блокирующих runtime/build ошибок.
+- [x] Readiness-аудит: классифицировать незакрытые задачи как blocker для тестирования, blocker для публичного трафика или post-MVP; исправить только подтверждённые критические дефекты. Результаты записаны в `READINESS_AUDIT_RU.md`; устаревшая проверка NftShowcase исправлена, полный gate восстановлен.
+
+- [ ] Подготовить BotFather description photo 640×360: фирменная золотая TG TOP пирамида на тёмном фоне и короткий читаемый текст для блока «What can this bot do?». Не загружать в Telegram без явного подтверждения пользователя.
+
+- [x] Подготовить BotFather GIF 640×360: тёмный TG TOP фон, золотая пирамида с полной пирамидой в первом кадре, плавный loop без паузы и короткий текст «TG TOP — Telegram groups & channels catalog». Не загружать в Telegram без явного подтверждения пользователя. GIF: 640×360, 60 кадров, 2.1 MB; визуально проверен.
+
+- [ ] Диагностировать discoverability `@TG_TOPBOT` в глобальном поиске Telegram по `tg top`: проверить username/display name/описание и отделить задержку индексации от ошибки конфигурации; не менять BotFather без явного подтверждения пользователя.
+
+- [x] Обновить welcome/start copy @TG_TOPBOT: «Добро пожаловать в TG TOP — рейтинг Telegram-сообществ и других активов. Откройте приложение, чтобы начать.» и кнопку «Открыть TG TOP»; сохранить существующую Mini App deep-link логику. Primary и reserve flow синхронизированы; 20 bot-тестов и TypeScript прошли.
+
+- [ ] Исправить верхний аватар TG TOP в Mini App: показывать фирменный брендовый ассет вместо буквенного `T`, сохранить безопасный fallback при недоступности ассета и добавить regression check.
+
+- [x] Исправить синхронизацию пользовательского Telegram-аватара: при каждом валидированном Mini App запуске обновлять `photo_url`, инвалидировать устаревший cache и показывать новый аватар в верхней панели/профиле. Свежий `initDataUnsafe.user.photo_url` теперь имеет приоритет над session avatar; regression test, TypeScript и build прошли.
+
+- [x] Убрать буквенный `T` из avatar fallback сайта: при отсутствии Telegram-фото показывать фирменную пирамиду TG TOP из кубиков с палитрой текущей темы, а не инициалы пользователя.
+
+- [x] Для подключённых групп и каналов вне листинга обновлять Telegram-аватар при каждом открытии My Groups/приложения; листинговые snapshots и платёжные операции не менять.
+
+- [x] Вернуть отображение динамических видеоаватаров подключённых групп/каналов на платформе: показывать сохранённый MP4 в карточках и деталях с lazy/muted/playsInline playback, не менять listing snapshot без нового листинга, использовать Telegram photo/фирменные кубики как fallback и добавить regression coverage.
+
+- [x] Автоматически получать доступные фото/видеоаватары подключённых групп через существующий User API, сохранять медиа в storage и показывать видео в TG TOP; для listing сохранять snapshot до смены места/повторного листинга, для unlisted обновлять при открытии, добавить лимиты и fallback.
+
+- [x] Add a guarded User API media sync helper for Telegram group/channel profile photo/video
+- [x] Persist animated media snapshots only for unlisted groups or explicit listing refreshes
+- [x] Expose owner-scoped group media refresh through tRPC with rate limiting and safe fallback behavior
+- [x] Enable animated video avatar rendering in community cards with static/fallback support
+- [x] Add Vitest coverage for media snapshot eligibility and refresh procedure guards
+
+- [x] Fix visible TG TOP header logo so the actual branded pyramid/asset appears instead of the old letter mark or missing symbol
+- [ ] Fix live Telegram user avatar refresh after re-login or avatar change by invalidating stale cached session data and proving the fresh photo_url path
+
+- [x] Put the TG TOP cube logo directly to the left of the `TG TOP` text in the top header, using the branded pyramid/cube asset at compact header size
+
+- [x] Keep the bottom home/navigation button unchanged; place the branded cube logo only in the upper header immediately before `TG TOP`
+
+- [x] Show the saved Telegram profile video in the second featured lot (`Market`) with muted loop playback and static/avatar fallback
+
+- [ ] Apply the header/logo, Telegram user-avatar refresh, and Market second-lot video fixes to the live `tgtop.me` deployment that contains the real listed catalog
+
+- [x] Remove the entire Telegram statistics history section from the Worker Telegram Account sheet; keep only connection status, owner DM binding, and disconnect controls
+- [x] Fix reconnect flow so a successful Telegram code/2FA confirmation persists the connected session and keeps the sheet on the Read-only state instead of returning to the connect form
+- [x] Fix light-theme upper TG TOP logo palette so the compact header mark uses the branded warm-gold cubes instead of blue/black blocks
+
+- [ ] Replace the stale live Telegram bundle/server deployment so the actual `tgtop.me` build removes Worker Account historical stats and renders the Market profile video instead of the old static image
+- [ ] Verify the live Telegram WebApp after cache-busting/restart, including top cube-logo, user avatar refresh, Worker Account sheet, and Market video
+
+- [x] Use the confirmed VPS deploy access to inspect the actual service/build/branch and prepare a safe rollout package for the stale live bundle without changing database or S3 data
+
+- [x] Add a dedicated read-only GitHub deploy key for VPS access without deleting or resetting the existing `/opt/tgtop` checkout
+- [x] Verify VPS can read `DimaKonge/tgtop2` before preparing any staged release
+
+- [x] Keep featured and My Groups media-overlay titles/meta readable in light theme with explicit overlay classes, while preserving the unchanged bottom navigation
+
+- [x] Identify the exact active and staging release paths on VPS and document one safe activation step without resetting `/opt/tgtop` or touching DB/S3
+
+- [x] Prepare a reviewed activation helper for `/opt/tgtop/releases/stage-22fdf3e` with backup, atomic file swap, service restart, and rollback checks; do not execute it automatically
+
+- [x] Copy the syntax-checked activation helper into the VPS `stage-22fdf3e` scripts directory without activating the release
+
+- [x] Rework light-theme brand mark so the TG TOP cubes use the same intentional light-theme accent palette instead of the current blue treatment
+- [x] Increase light-theme contrast for header balance, filter chips, icon buttons, and active navigation states without changing dark theme or lower-navigation structure
+- [x] Preserve readable light-theme media-card titles/meta with a tested overlay treatment across featured and Market cards
+
+- [x] Bind the upper TG TOP cube-logo and launch cubes to the selected accent token for blue, purple, rose, gold, green, and turquoise themes while leaving bottom navigation unchanged
+
+- [x] Finalize accent-aware light-theme cube logo and improve contrast for compact top tabs and geo/category/search controls
+
+- [x] Activate the verified light-theme release `stage-6d8ce547` on the VPS with rollback backup; confirm tgtop.me/www/tgtop.xyz HTTP 200, all four systemd services active, healthz OK, no stale PNG logo or historical-stats UI in the live bundle
+
+- [x] Bind splash launch glow and progress bar to the selected accent token across all six theme accents
+
+- [x] Fix dark-theme TG TOP pyramid orientation so the top cube is at the top and the four-cube base is at the bottom
+- [x] Improve light-theme button and active-state contrast across profile and owner surfaces
+- [x] Make the light-theme balance chart readable with light surfaces, dark labels, and accent-aware graph colors
+- [x] Reduce Settings appearance choices to exactly Dark and Light and remove the System option and unnecessary style selector
+
+- [x] Run read-only VPS preflight for /opt/tgtop, tgtop.service, firewall/DNS, and current release before changing production
+- [x] Synchronize /opt/tgtop with the selected GitHub main branch without overwriting .env, database, S3 metadata, or rollback backups
+- [x] Build the synchronized production checkout on the VPS and restart tgtop.service safely with rollback on failure
+- [x] Verify active systemd status, health endpoint, canonical site response, and upright dark-theme BrandMark after rollout
+
+- [x] Fix guest community CTA so a valid stored public Telegram link opens without blocking on owner/admin verification; keep admin verification for protected operations and add regression coverage
+
+- [x] Make the Telegram community CTA open valid public and private entry links reliably inside Telegram WebApp and in a normal browser, with explicit fallback/error handling
+- [x] Ensure a successful new listing captures and persists the current Telegram video avatar snapshot, then renders it in the featured/detail card without requiring a second listing
+
+- [x] Refresh and persist the current Telegram profile video for the TG TOP channel through the guarded User API media flow, then verify the live catalog card renders the saved MP4
+
+- [ ] Diagnose and fix TON Connect wallet onboarding for a new Telegram account: chooser opens but connection does not complete; verify manifest/origin/callback without signing or sending transactions
+
+- [x] Inline listing price, predicted placement, category/subcategory, country, and city controls inside the expanded publication-parameters panel and remove the separate price/geo/category window without changing listing validation
+
+- [x] Configure Google AI Studio automation to edit through a controlled branch/PR and deploy only after build, tests, health checks, and rollback-safe staging; preserve integration access while preventing broken direct production writes
+
+- [x] Switch GitHub Actions VPS deployment from SERVER_SSH_KEY to password-based SSH using the existing SERVER_HOST, SERVER_USER, and SERVER_PASSWORD secrets, then verify staged deploy and rollback health gates
+
+- [x] Restore production TG TOP after current blank/non-opening site and verify live HTTP, health, service, Nginx, assets, and browser runtime
+
+- [x] Make English the default TG TOP locale and expose a persistent Settings selector with exactly English and Russian options
+
+- [x] Add a selectable background palette beyond black/white, with persistent theme tokens that keep text, buttons, charts, logo cubes, and active states readable
+
+- [x] Replace NFT-wide deal and on-chain/off-chain toggle rows with a compact filter button and popover next to search while preserving all existing NFT filter states
+
+- [x] Let community cards inherit the selected global application palette by default (initially Black), and add a compact «Фон карточки» button in listing settings for a safe preset owner override with live preview, persistence and automatic readable text/action contrast in catalog and detail cards
+
+- [ ] Deploy the verified visible English/Russian Settings selector, dark background palette, and compact NFT filter release through the protected GitHub Actions staged pipeline; verify live Settings and NFT behavior after health checks
+
+- [x] Remove the Light/System appearance modes and replace them with the full dark Telegram-style background palette from the provided reference (black, blue, purple, rose, red, orange, gold, green, turquoise and steel shades); make selected palette tokens drive the TG TOP cube avatar, launch animation/progress, primary buttons, active filters, charts, and bottom navigation with readable contrast
+
+- [x] Design and implement idempotent referral rewards of +1 bonus GRAM only to the inviter when a new beta tester first opens the Mini App through that referral link and completes Telegram authorization; cap the lifetime reward at 2 GRAM per inviter, display referral-bonus progress as 0/2, 1/2, or 2/2, record over-limit referrals without payment, and prevent self-referral/duplicate-account abuse
+
+- [x] Add admin-only Bonus GRAM controls: configure referral reward/limit, manually credit a user by verified Telegram username with mandatory reason and audit record, and show referral-bonus progress without introducing balance freezing in this release
+
+- [x] Fix ranking checkout cardBackgroundPreset persistence: pass preset in Home.tsx submitPlacement and initialize in openStarsPayment, accept cardBackgroundPreset in server/routers.ts placeBid and map to payRankingBidWithGramCredit options, validate preset whitelist in server/db.ts, and add regression coverage
+
+- [x] Add idempotent production migration for groups_catalog.cardBackgroundPreset and referral reward tables, register in scripts/release-vps.sh, and add regression test
+
+- [ ] Future scope: add audited balance freeze/unfreeze controls that prevent frozen balances from being spent or withdrawn

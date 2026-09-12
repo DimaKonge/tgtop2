@@ -1,7 +1,7 @@
 import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, like, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { randomBytes } from "node:crypto";
-import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramOnboardingIntents, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, telegramOperationsOwnerBindings, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, miniAppLaunchEvents, telegramSupportMessages, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramOnboardingIntents, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, telegramOperationsOwnerBindings, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, miniAppLaunchEvents, telegramSupportMessages, referralBonusGrants, referralRewardConfigs, bonusCreditAudits, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
 import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
@@ -24,6 +24,7 @@ import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, ge
 import { canCancelNftRental, canConfirmNftRental, rentalTotalUnits, validateRentalDays, NFT_RENTAL_MAX_DAYS as POLICY_NFT_RENTAL_MAX_DAYS } from "./nftRentalPolicy";
 import { normalizeTelegramBotLink } from "./botListingPolicy";
 import { canIssueOnboardingIntent, getOnboardingIntentWindow, isPendingOnboardingIntent, ONBOARDING_INTENT_TTL_MS, ONBOARDING_INTENT_WINDOW_MS, type TelegramOnboardingKind } from "./onboardingIntentPolicy";
+import { CARD_BACKGROUND_PRESET_IDS, type CardBackgroundPreset } from "../shared/card-background-presets";
 
 export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
 
@@ -1127,6 +1128,22 @@ function createReferralCode() {
   return `TG${randomBytes(5).toString("hex").toUpperCase()}`;
 }
 
+const DEFAULT_REFERRAL_REWARD_UNITS = 100;
+const DEFAULT_REFERRAL_LIFETIME_LIMIT = 2;
+
+async function ensureReferralRewardConfig(db: any) {
+  await db.insert(referralRewardConfigs).values({ id: 1 }).onDuplicateKeyUpdate({ set: { id: 1 } });
+  const [config] = await db.select().from(referralRewardConfigs).where(eq(referralRewardConfigs.id, 1)).limit(1);
+  return config ?? {
+    id: 1,
+    rewardAmount: DEFAULT_REFERRAL_REWARD_UNITS,
+    lifetimeLimit: DEFAULT_REFERRAL_LIFETIME_LIMIT,
+    enabled: true,
+    updatedByOpenId: null,
+    updatedAt: new Date(),
+  };
+}
+
 export async function getReferralOverview(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
@@ -1146,14 +1163,98 @@ export async function getReferralOverview(openId: string) {
     }
   }
   if (!referralCode) throw new Error("Не удалось создать реферальный код");
+  const config = await ensureReferralRewardConfig(db);
+  const grants = await db.select({ id: referralBonusGrants.id }).from(referralBonusGrants).where(eq(referralBonusGrants.inviterOpenId, openId));
   const referrals = await db.select({ id: users.id }).from(users).where(eq(users.referredBy, referralCode));
   const freshUser = await getUserByOpenId(openId);
   return {
     referralCode,
     referralLink: `https://t.me/TG_TOPBOT?start=ref_${referralCode}`,
     referralsCount: referrals.length,
+    awardedCount: grants.length,
+    lifetimeLimit: config.lifetimeLimit,
+    rewardAmount: config.rewardAmount,
+    enabled: config.enabled,
+    progressLabel: `${Math.min(grants.length, config.lifetimeLimit)}/${config.lifetimeLimit}`,
     earnings: freshUser?.referralEarnings ?? user.referralEarnings,
   };
+}
+
+export type ReferralRewardClaimResult =
+  | { status: "awarded"; inviterOpenId: string; inviteeOpenId: string; amount: number; awardedCount: number; lifetimeLimit: number }
+  | { status: "already_awarded" | "not_attributed" | "self_referral" | "disabled" | "limit_reached"; awardedCount: number; lifetimeLimit: number };
+
+export async function claimBetaReferralReward(inviteeOpenId: string): Promise<ReferralRewardClaimResult> {
+  const db = await getDb();
+  if (!db) return { status: "not_attributed", awardedCount: 0, lifetimeLimit: DEFAULT_REFERRAL_LIFETIME_LIMIT };
+  try {
+    return await db.transaction(async tx => {
+      const [invitee] = await tx.select().from(users).where(eq(users.openId, inviteeOpenId)).limit(1).for("update");
+      const config = await ensureReferralRewardConfig(tx);
+      if (!invitee?.referredBy) return { status: "not_attributed", awardedCount: 0, lifetimeLimit: config.lifetimeLimit };
+      const [inviter] = await tx.select().from(users).where(eq(users.referralCode, invitee.referredBy)).limit(1).for("update");
+      if (!inviter || inviter.openId === inviteeOpenId) return { status: "self_referral", awardedCount: 0, lifetimeLimit: config.lifetimeLimit };
+      const existing = await tx.select({ id: referralBonusGrants.id }).from(referralBonusGrants).where(eq(referralBonusGrants.inviteeOpenId, inviteeOpenId)).limit(1);
+      const grants = await tx.select({ id: referralBonusGrants.id }).from(referralBonusGrants).where(eq(referralBonusGrants.inviterOpenId, inviter.openId)).limit(Math.max(1, config.lifetimeLimit));
+      if (existing.length) return { status: "already_awarded", awardedCount: grants.length, lifetimeLimit: config.lifetimeLimit };
+      if (!config.enabled) return { status: "disabled", awardedCount: grants.length, lifetimeLimit: config.lifetimeLimit };
+      if (grants.length >= config.lifetimeLimit) return { status: "limit_reached", awardedCount: grants.length, lifetimeLimit: config.lifetimeLimit };
+      await tx.insert(referralBonusGrants).values({ inviterOpenId: inviter.openId, inviteeOpenId, amount: config.rewardAmount });
+      await tx.insert(creditTransactions).values({ userOpenId: inviter.openId, telegramChatId: inviteeOpenId, amount: config.rewardAmount, kind: "reward_invite_referral" });
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${config.rewardAmount}` }).where(eq(users.openId, inviter.openId));
+      return { status: "awarded", inviterOpenId: inviter.openId, inviteeOpenId, amount: config.rewardAmount, awardedCount: grants.length + 1, lifetimeLimit: config.lifetimeLimit };
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === "ER_DUP_ENTRY") {
+      const config = await ensureReferralRewardConfig(db);
+      const [invitee] = await db.select({ referredBy: users.referredBy }).from(users).where(eq(users.openId, inviteeOpenId)).limit(1);
+      const [inviter] = invitee?.referredBy ? await db.select({ openId: users.openId }).from(users).where(eq(users.referralCode, invitee.referredBy)).limit(1) : [];
+      const grants = inviter ? await db.select({ id: referralBonusGrants.id }).from(referralBonusGrants).where(eq(referralBonusGrants.inviterOpenId, inviter.openId)) : [];
+      return { status: "already_awarded", awardedCount: grants.length, lifetimeLimit: config.lifetimeLimit };
+    }
+    throw error;
+  }
+}
+
+export async function getReferralAdminOverview(actorOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const access = await getModerationAccess(actorOpenId);
+  if (!access.canManageModerators) throw new Error("Недостаточно прав для управления реферальными бонусами");
+  const config = await ensureReferralRewardConfig(db);
+  const grants = await db.select({ grant: referralBonusGrants, inviterName: users.name, inviterUsername: users.telegramUsername }).from(referralBonusGrants).leftJoin(users, eq(referralBonusGrants.inviterOpenId, users.openId)).orderBy(desc(referralBonusGrants.createdAt)).limit(100);
+  return { config, grants };
+}
+
+export async function updateReferralRewardConfig(actorOpenId: string, input: { rewardAmount: number; lifetimeLimit: number; enabled: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const access = await getModerationAccess(actorOpenId);
+  if (!access.canManageModerators) throw new Error("Недостаточно прав для управления реферальными бонусами");
+  if (!Number.isInteger(input.rewardAmount) || input.rewardAmount < 0 || input.rewardAmount > 100_000) throw new Error("Некорректный размер реферального бонуса");
+  if (!Number.isInteger(input.lifetimeLimit) || input.lifetimeLimit < 0 || input.lifetimeLimit > 100) throw new Error("Некорректный lifetime limit");
+  await db.insert(referralRewardConfigs).values({ id: 1, rewardAmount: input.rewardAmount, lifetimeLimit: input.lifetimeLimit, enabled: input.enabled, updatedByOpenId: actorOpenId }).onDuplicateKeyUpdate({ set: { rewardAmount: input.rewardAmount, lifetimeLimit: input.lifetimeLimit, enabled: input.enabled, updatedByOpenId: actorOpenId } });
+  return await ensureReferralRewardConfig(db);
+}
+
+export async function creditBonusByTelegramUsername(actorOpenId: string, telegramUsername: string, amount: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const access = await getModerationAccess(actorOpenId);
+  if (!access.canManageModerators) throw new Error("Недостаточно прав для ручного начисления бонуса");
+  const username = telegramUsername.replace(/^@/, "").trim().toLowerCase();
+  if (!/^[a-z0-9_]{2,128}$/.test(username)) throw new Error("Укажите корректный Telegram username");
+  const cleanReason = reason.trim();
+  if (cleanReason.length < 3) throw new Error("Укажите причину начисления");
+  if (!Number.isInteger(amount) || amount <= 0 || amount > 100_000) throw new Error("Некорректная сумма бонуса");
+  const [target] = await db.select().from(users).where(sql`LOWER(${users.telegramUsername}) = ${username}`).limit(1);
+  if (!target) throw new Error("Пользователь ещё не входил в TG TOP через Telegram");
+  await db.transaction(async tx => {
+    await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${amount}` }).where(eq(users.openId, target.openId));
+    await tx.insert(creditTransactions).values({ userOpenId: target.openId, amount, kind: "manual_bonus" });
+    await tx.insert(bonusCreditAudits).values({ actorOpenId, targetOpenId: target.openId, targetTelegramUsername: target.telegramUsername, amount, reason: cleanReason });
+  });
+  return { targetOpenId: target.openId, telegramUsername: target.telegramUsername, amount, reason: cleanReason };
 }
 
 export async function attributeTelegramReferral(telegramUserId: number, referralCode: string) {
@@ -1260,6 +1361,7 @@ export type RankingLotOptions = {
   city?: string;
   subcategory?: string;
   salePriceTon?: string | null;
+  cardBackgroundPreset?: CardBackgroundPreset | null;
   rewardActive?: boolean;
   rewardBudget?: number;
   rewardPerSubscription?: number;
@@ -1312,6 +1414,9 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
   if (options?.city) {
     const [city] = await db.select({ id: catalogCities.id }).from(catalogCities).where(and(eq(catalogCities.countryCode, effectiveCountry), eq(catalogCities.code, options.city))).limit(1);
     if (!city) throw new Error("Выберите город из доступного списка");
+  }
+  if (options?.cardBackgroundPreset && !(CARD_BACKGROUND_PRESET_IDS as readonly string[]).includes(options.cardBackgroundPreset)) {
+    throw new Error("Выберите фон карточки из доступного списка");
   }
   const requestedTarget = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
   if (!requestedTarget) throw new Error("Позиция рейтинга не найдена");
@@ -1446,6 +1551,7 @@ export async function placeBid(slotId: number, bidAmount: number, currentBidStr:
       ...(options?.city !== undefined ? { city: options.city || null } : {}),
       ...(options?.subcategory ? { subcategory: options.subcategory } : {}),
       ...(options?.salePriceTon !== undefined ? { salePriceTon, listingType: salePriceTon ? "sale" : "catalog" } : {}),
+      ...(options?.cardBackgroundPreset !== undefined ? { cardBackgroundPreset: options.cardBackgroundPreset } : {}),
       ...(options?.rewardActive !== undefined ? { rewardActive: options.rewardActive } : {}),
       ...(options?.rewardBudget !== undefined ? { rewardBudget: options.rewardBudget } : {}),
       ...(options?.rewardPerSubscription !== undefined ? { rewardPerSubscription: options.rewardPerSubscription } : {}),
@@ -2215,6 +2321,21 @@ export async function getGroupByChatId(chatId: string) {
   return result[0];
 }
 
+export async function updateGroupAnimatedAvatarSnapshot(groupId: number, media: {
+  animatedAvatarKey: string | null;
+  animatedAvatarUrl: string | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.update(groupsCatalog).set({
+    animatedAvatarKey: media.animatedAvatarKey,
+    animatedAvatarUrl: media.animatedAvatarUrl,
+    animatedAvatarUpdatedAt: new Date(),
+  }).where(eq(groupsCatalog.id, groupId));
+  if (!result[0]?.affectedRows) throw new Error("Сообщество не найдено");
+  return await getGroupById(groupId);
+}
+
 export async function getMyGroups(ownerOpenId: string) {
   const db = await getDb();
   if (!db) return [];
@@ -2379,6 +2500,8 @@ export async function getPublicSearchGroupByUsername(username: string) {
     username: group.username,
     description: group.description,
     avatarFileId: group.avatarFileId,
+    animatedAvatarUrl: group.animatedAvatarUrl,
+    cardBackgroundPreset: group.cardBackgroundPreset,
     membersCount: group.membersCount,
     category: group.category,
     country: group.country,
@@ -2651,6 +2774,7 @@ export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: nu
 
 export type GroupListingOptions = {
   salePriceTon?: string | null;
+  cardBackgroundPreset?: CardBackgroundPreset | null;
   country?: string;
   city?: string;
   subcategory?: string;
@@ -2676,6 +2800,7 @@ export function normalizeGroupListingOptions(listing?: GroupListingOptions | str
   return {
     listingType,
     salePriceTon,
+    cardBackgroundPreset: options.cardBackgroundPreset ?? null,
     rentalPriceTon: null,
     minRentalDays: null,
     maxRentalDays: null,
@@ -2791,6 +2916,7 @@ export async function listGroupsWithCredits(ownerOpenId: string, groupIds: numbe
       listedAt: new Date(),
       listingType: listingOptions.listingType,
       salePriceTon: listingOptions.salePriceTon,
+      ...(listingOptions.cardBackgroundPreset !== undefined ? { cardBackgroundPreset: listingOptions.cardBackgroundPreset } : {}),
       ...(listingOptions.country ? { country: listingOptions.country } : {}),
       ...(listingOptions.city !== undefined ? { city: listingOptions.city || null } : {}),
       ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),

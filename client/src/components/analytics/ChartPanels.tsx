@@ -149,13 +149,13 @@ export function GramBalanceChart({ transactions, currentBalance, language }: { t
     : `16,${toY(currentBalance)} 248,${toY(currentBalance)}`;
   const displayBalance = currentBalance.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
 
-  return <div className="mt-4 rounded-xl border border-white/8 bg-[#0b1017] p-3">
+  return <div className="tg-gram-balance-chart mt-4 rounded-xl border border-white/8 bg-[#0b1017] p-3">
     <div className="flex items-start justify-between gap-3"><span><small className="block text-[10px] uppercase tracking-[0.12em] text-slate-500">{language === "en" ? "GRAM balance dynamics" : "Динамика GRAM"}</small><b className="mt-1 block text-xl font-semibold text-slate-100">{displayBalance} GRAM</b></span><span className="grid h-8 w-8 place-items-center rounded-lg border border-[#3f8cff]/25 bg-[#3f8cff]/10 text-[#a6c8ff]"><BarChart3 className="h-4 w-4" /></span></div>
     <svg viewBox="0 0 264 74" preserveAspectRatio="none" className="mt-3 h-20 w-full overflow-visible" role="img" aria-label={language === "en" ? "GRAM balance chart based on recorded operations" : "График GRAM на основе зафиксированных операций"}>
-      <defs><linearGradient id="gram-balance-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#4b97ff" stopOpacity="0.28" /><stop offset="100%" stopColor="#4b97ff" stopOpacity="0" /></linearGradient></defs>
+      <defs><linearGradient id="gram-balance-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="var(--tg-chart-fill)" stopOpacity="0.28" /><stop offset="100%" stopColor="var(--tg-chart-fill)" stopOpacity="0" /></linearGradient></defs>
       <path d={`M 16 66 L ${linePoints.split(" ").join(" L ")} L 248 66 Z`} fill="url(#gram-balance-fill)" />
-      <polyline points={linePoints} fill="none" stroke="#64b5ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {points.length > 0 && <circle cx="248" cy={toY(points.at(-1)!.balance)} r="2.75" fill="#b8d8ff" />}
+      <polyline points={linePoints} fill="none" stroke="var(--tg-chart-stroke)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {points.length > 0 && <circle cx="248" cy={toY(points.at(-1)!.balance)} r="2.75" fill="var(--tg-chart-dot)" />}
     </svg>
     <div className="mt-1 flex items-center justify-between text-[9px] text-slate-600"><span>{points[0] ? date(points[0].createdAt, language) : language === "en" ? "No operations yet" : "Операций пока нет"}</span><span>{points.at(-1) ? date(points.at(-1)!.createdAt, language) : language === "en" ? "Current" : "Сейчас"}</span></div>
   </div>;

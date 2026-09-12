@@ -47,6 +47,19 @@ describe("normalizeGroupListingOptions", () => {
     });
   });
 
+  it("retains an optional card background override while null keeps the global palette fallback", () => {
+    expect(normalizeGroupListingOptions({ cardBackgroundPreset: "pure_gold" })).toMatchObject({
+      cardBackgroundPreset: "pure_gold",
+    });
+    expect(normalizeGroupListingOptions({ cardBackgroundPreset: null })).toMatchObject({
+      cardBackgroundPreset: null,
+    });
+    const router = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
+    const schema = readFileSync(new URL("../drizzle/schema.ts", import.meta.url), "utf8");
+    expect(router).toContain('cardBackgroundPreset: z.enum(CARD_BACKGROUND_PRESET_IDS).nullable().optional()');
+    expect(schema).toContain('cardBackgroundPreset: varchar("cardBackgroundPreset", { length: 64 })');
+  });
+
   it("retains the valid General subcategory used by migrated TG TOP listings", () => {
     expect(normalizeGroupListingOptions({ listingType: "catalog", country: "Global", subcategory: "General" })).toMatchObject({
       listingType: "catalog",
@@ -111,6 +124,12 @@ describe("normalizeGroupListingOptions", () => {
       rewardPerInvite: 2,
       rewardPerManualAdd: 1,
     });
+  });
+
+  it("awaits animated media snapshot persistence after a successful listing", () => {
+    const source = readFileSync(new URL("./routers.ts", import.meta.url), "utf8");
+    expect(source).toContain("await Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group)))");
+    expect(source).not.toContain("void Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group)))");
   });
 
   it("keeps listing balance validation inside the transaction that performs the debit", () => {

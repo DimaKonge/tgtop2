@@ -6,6 +6,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { createStarsRankingInvoiceLink, createTelegramMonthlySubscriptionInviteLink, createTelegramPrivateInviteLink, createTelegramRewardInviteLink, notifyCommunityListed, notifyCommunityRemovedFromTop, notifyRecordedRankingBid } from "./telegramNotifications";
 import { getTelegramChatGifts, getTelegramGroupAdministrators, getTelegramUserAvatarUrl, resolveVerifiedGroupEntryLink } from "./telegramBot";
+import { fetchTelegramGroupProfileMedia } from "./telegramUserAgent";
 import { formatTonAmount } from "./tonFormatting";
 import { getWalletNfts } from "./tonNft";
 import { canCreateNftListing } from "./nftOwnershipPublicationPolicy";
@@ -16,11 +17,30 @@ import { telegramUserAgentRouter } from "./routers/telegramUserAgentRouter";
 import { financeProcedures } from "./routers/financeRouter";
 import { supportRouter } from "./routers/supportRouter";
 import { getTelegramIdFromOpenId } from "./onboardingIntentPolicy";
+import { canRefreshGroupMediaSnapshot, shouldUpdateAnimatedAvatarSnapshot } from "./groupMediaSnapshotPolicy";
+import { CARD_BACKGROUND_PRESET_IDS, type CardBackgroundPreset } from "../shared/card-background-presets";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
+const mediaRefreshCooldowns = new Map<string, number>();
+const MEDIA_REFRESH_COOLDOWN_MS = 10 * 60_000;
+
+async function refreshListedGroupMediaSnapshot(group: { id: number; chatId: string }) {
+  try {
+    const result = await fetchTelegramGroupProfileMedia(group.chatId, group.id);
+    if (!shouldUpdateAnimatedAvatarSnapshot(result.mediaType, result.reason)) return;
+    await db.updateGroupAnimatedAvatarSnapshot(group.id, {
+      animatedAvatarKey: result.animatedAvatarKey,
+      animatedAvatarUrl: result.animatedAvatarUrl,
+    });
+  } catch (error) {
+    console.warn(`[Media] Snapshot refresh skipped for group ${group.id}`, error);
+  }
+}
+
 const groupListingInput = z.object({
   salePriceTon: gramAmount.nullable().optional(),
+  cardBackgroundPreset: z.enum(CARD_BACKGROUND_PRESET_IDS).nullable().optional(),
   country: z.string().trim().min(2).max(64).optional(),
   city: z.string().trim().max(96).optional(),
   subcategory: z.string().min(2).max(64).optional(),
@@ -88,6 +108,7 @@ export const appRouter = router({
         city: groupListingInput.shape.city,
         subcategory: z.string().min(2).max(64).optional(),
         salePriceTon: gramAmount.nullable().optional(),
+        cardBackgroundPreset: z.string().trim().max(64).nullable().optional(),
         rewardActive: z.boolean().optional(),
         rewardBudget: z.number().int().min(0).optional(),
         rewardPerSubscription: z.number().int().min(0).optional(),
@@ -105,7 +126,7 @@ export const appRouter = router({
           group.username ?? group.title,
           ctx.user.openId,
           input.groupId,
-          input.anonymousListing === undefined && input.showOwnerContact === undefined && input.managerPublic === undefined && input.listingAnnouncementEnabled === undefined && input.searchIndexable === undefined && input.country === undefined && input.city === undefined && input.subcategory === undefined && input.salePriceTon === undefined && input.rewardActive === undefined && input.rewardBudget === undefined && input.rewardPerSubscription === undefined && input.rewardPerManualAdd === undefined
+          input.anonymousListing === undefined && input.showOwnerContact === undefined && input.managerPublic === undefined && input.listingAnnouncementEnabled === undefined && input.searchIndexable === undefined && input.country === undefined && input.city === undefined && input.subcategory === undefined && input.salePriceTon === undefined && input.cardBackgroundPreset === undefined && input.rewardActive === undefined && input.rewardBudget === undefined && input.rewardPerSubscription === undefined && input.rewardPerManualAdd === undefined
             ? undefined
             : {
                 anonymousListing: input.anonymousListing,
@@ -117,6 +138,7 @@ export const appRouter = router({
                 city: input.city,
                 subcategory: input.subcategory,
                 salePriceTon: input.salePriceTon,
+                cardBackgroundPreset: input.cardBackgroundPreset as CardBackgroundPreset | null | undefined,
                 rewardActive: input.rewardActive,
                 rewardBudget: input.rewardBudget,
                 rewardPerSubscription: input.rewardPerSubscription,
@@ -166,6 +188,28 @@ export const appRouter = router({
     myGroups: protectedProcedure.query(async ({ ctx }) => {
       return await db.getMyGroups(ctx.user.openId);
     }),
+    refreshMyGroupMedia: protectedProcedure
+      .input(z.object({ groupId: z.number().int().positive(), forceListedRefresh: z.boolean().default(false) }))
+      .mutation(async ({ ctx, input }) => {
+        const group = await db.getGroupById(input.groupId);
+        if (!group || group.ownerOpenId !== ctx.user.openId) throw new Error("Сообщество недоступно для обновления media");
+        if (!canRefreshGroupMediaSnapshot(group.status, input.forceListedRefresh)) {
+          return { groupId: group.id, refreshed: false, skipped: "listed_snapshot" as const };
+        }
+        const cooldownKey = `${ctx.user.openId}:${group.id}`;
+        const lastRefreshAt = mediaRefreshCooldowns.get(cooldownKey) ?? 0;
+        if (!input.forceListedRefresh && Date.now() - lastRefreshAt < MEDIA_REFRESH_COOLDOWN_MS) {
+          return { groupId: group.id, refreshed: false, skipped: "cooldown" as const };
+        }
+        mediaRefreshCooldowns.set(cooldownKey, Date.now());
+        const result = await fetchTelegramGroupProfileMedia(group.chatId, group.id);
+        if (!shouldUpdateAnimatedAvatarSnapshot(result.mediaType, result.reason)) return { ...result, refreshed: false };
+        const saved = await db.updateGroupAnimatedAvatarSnapshot(group.id, {
+          animatedAvatarKey: result.animatedAvatarKey,
+          animatedAvatarUrl: result.animatedAvatarUrl,
+        });
+        return { ...result, refreshed: true, group: saved };
+      }),
     getGroupAdministrators: protectedProcedure
       .input(z.object({ groupId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
@@ -255,6 +299,22 @@ export const appRouter = router({
     getModerationAccess: protectedProcedure.query(async ({ ctx }) => {
       return await db.getModerationAccess(ctx.user.openId);
     }),
+
+    getReferralOverview: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getReferralOverview(ctx.user.openId);
+    }),
+
+    getReferralAdminOverview: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getReferralAdminOverview(ctx.user.openId);
+    }),
+
+    updateReferralRewardConfig: protectedProcedure
+      .input(z.object({ rewardAmount: z.number().int().min(0).max(100_000), lifetimeLimit: z.number().int().min(0).max(100), enabled: z.boolean() }))
+      .mutation(async ({ ctx, input }) => db.updateReferralRewardConfig(ctx.user.openId, input)),
+
+    creditBonusByTelegramUsername: protectedProcedure
+      .input(z.object({ telegramUsername: z.string().trim().min(2).max(128), amount: z.number().int().positive().max(100_000), reason: z.string().trim().min(3).max(255) }))
+      .mutation(async ({ ctx, input }) => db.creditBonusByTelegramUsername(ctx.user.openId, input.telegramUsername, input.amount, input.reason)),
 
     getCatalogTaxonomy: publicProcedure.query(async () => {
       return await db.getCatalogTaxonomy();
@@ -409,6 +469,7 @@ export const appRouter = router({
           listingType: group.listingType,
           salePriceTon: group.salePriceTon,
         })));
+        await Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group)));
         return { success: true, announced: countSuccessfulTelegramAnnouncements(deliveries) };
       }),
 
@@ -423,6 +484,7 @@ export const appRouter = router({
           listingType: group.listingType,
           salePriceTon: group.salePriceTon,
         })));
+        await Promise.all(groups.map(group => refreshListedGroupMediaSnapshot(group)));
         return { success: true, announced: countSuccessfulTelegramAnnouncements(deliveries) };
       }),
 
