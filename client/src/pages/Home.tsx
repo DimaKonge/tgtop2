@@ -428,6 +428,8 @@ function SettingsSheet({
             <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[380px] overflow-y-auto pr-1">
               {THEME_BACKGROUND_OPTIONS.map(item => {
                 const active = background === item.value;
+                const isTopHero = item.value === "black" || item.value === "ivory_white";
+                const isBrandBlack = item.value === "black";
                 return (
                   <button
                     key={item.value}
@@ -436,15 +438,24 @@ function SettingsSheet({
                     aria-label={item.label}
                     aria-pressed={active}
                     style={{
-                      background: `radial-gradient(circle at 50% 25%, color-mix(in srgb, ${item.accent} 70%, ${item.color}) 0%, ${item.color} 80%)`,
+                      background: isBrandBlack
+                        ? "radial-gradient(circle at 50% 20%, #254e7a 0%, #080a0e 75%)"
+                        : `radial-gradient(circle at 50% 25%, color-mix(in srgb, ${item.accent} 70%, ${item.color}) 0%, ${item.color} 80%)`,
                     }}
-                    className={`group relative flex h-[74px] w-full flex-col items-center justify-between overflow-hidden rounded-xl p-1.5 transition-all duration-150 ${
+                    className={`group relative flex w-full flex-col items-center justify-between overflow-hidden rounded-xl p-1.5 transition-all duration-150 ${
+                      isTopHero ? "col-span-2 sm:col-span-2 h-[78px]" : "col-span-1 h-[74px]"
+                    } ${
                       active
                         ? "ring-2 ring-white shadow-[0_0_14px_rgba(255,255,255,0.45)] scale-[1.03] z-10"
                         : "border border-white/15 hover:border-white/40 hover:scale-[1.02] shadow-sm"
                     }`}
                   >
-                    <span className="flex w-full justify-end">
+                    <span className="flex w-full items-center justify-between">
+                      {isBrandBlack ? (
+                        <TgTopPyramidIcon className="h-4 w-4 text-[#72a8ff] drop-shadow-sm opacity-90 transition-transform group-hover:scale-110" />
+                      ) : (
+                        <span />
+                      )}
                       {active ? (
                         <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-black shadow-sm">
                           <Check className="h-2.5 w-2.5 stroke-[3]" />
@@ -454,7 +465,7 @@ function SettingsSheet({
                       )}
                     </span>
                     <span className="w-full truncate rounded-md bg-black/60 backdrop-blur-xs px-1 py-0.5 text-center text-[9.5px] font-medium text-white shadow-sm">
-                      {item.label}
+                      {isBrandBlack ? "TG TOP Black" : item.label}
                     </span>
                   </button>
                 );
@@ -4461,6 +4472,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
             <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[380px] overflow-y-auto pr-1">
               {THEME_BACKGROUND_OPTIONS.map(item => {
                 const active = listingCardBackgroundPreset === item.value;
+                const isTopHero = item.value === "black" || item.value === "ivory_white";
+                const isBrandBlack = item.value === "black";
                 return (
                   <button
                     key={item.value}
@@ -4472,15 +4485,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     aria-pressed={active}
                     aria-label={item.label}
                     style={{
-                      background: `radial-gradient(circle at 50% 25%, color-mix(in srgb, ${item.accent} 70%, ${item.color}) 0%, ${item.color} 80%)`,
+                      background: isBrandBlack
+                        ? "radial-gradient(circle at 50% 20%, #254e7a 0%, #080a0e 75%)"
+                        : `radial-gradient(circle at 50% 25%, color-mix(in srgb, ${item.accent} 70%, ${item.color}) 0%, ${item.color} 80%)`,
                     }}
-                    className={`group relative flex h-[74px] w-full flex-col items-center justify-between overflow-hidden rounded-xl p-1.5 transition-all duration-150 ${
+                    className={`group relative flex w-full flex-col items-center justify-between overflow-hidden rounded-xl p-1.5 transition-all duration-150 ${
+                      isTopHero ? "col-span-2 sm:col-span-2 h-[78px]" : "col-span-1 h-[74px]"
+                    } ${
                       active
                         ? "ring-2 ring-white shadow-[0_0_14px_rgba(255,255,255,0.45)] scale-[1.03] z-10"
                         : "border border-white/15 hover:border-white/40 hover:scale-[1.02] shadow-sm"
                     }`}
                   >
-                    <span className="flex w-full justify-end">
+                    <span className="flex w-full items-center justify-between">
+                      {isBrandBlack ? (
+                        <TgTopPyramidIcon className="h-4 w-4 text-[#72a8ff] drop-shadow-sm opacity-90 transition-transform group-hover:scale-110" />
+                      ) : (
+                        <span />
+                      )}
                       {active ? (
                         <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-black shadow-sm">
                           <Check className="h-2.5 w-2.5 stroke-[3]" />
@@ -4490,7 +4512,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       )}
                     </span>
                     <span className="w-full truncate rounded-md bg-black/60 backdrop-blur-xs px-1 py-0.5 text-center text-[9.5px] font-medium text-white shadow-sm">
-                      {item.label}
+                      {isBrandBlack ? "TG TOP Black" : item.label}
                     </span>
                   </button>
                 );
