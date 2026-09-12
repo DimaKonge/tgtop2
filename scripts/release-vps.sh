@@ -90,10 +90,13 @@ trap rollback ERR
 [ ! -e "$PREVIOUS" ]
 if [ -x "$BASE/node_modules/.bin/pnpm" ]; then
   PNPM_RUN=("$BASE/node_modules/.bin/pnpm")
-elif command -v pnpm >/dev/null 2>&1; then
+elif command -v pnpm >/dev/null 2>&1 && pnpm --version >/dev/null 2>&1; then
   PNPM_RUN=("$(command -v pnpm)")
 elif command -v npm >/dev/null 2>&1; then
-  PNPM_RUN=(npm exec --yes --package=pnpm@10.4.1 -- pnpm)
+  PNPM_TOOL_DIR="$BASE/releases/.tools/pnpm-10.4.1"
+  mkdir -p "$PNPM_TOOL_DIR"
+  npm install --prefix "$PNPM_TOOL_DIR" --no-save --ignore-scripts pnpm@10.4.1 >/tmp/tgtop-${RELEASE}-pnpm-bootstrap.log
+  PNPM_RUN=(node "$PNPM_TOOL_DIR/node_modules/pnpm/bin/pnpm.cjs")
 else
   echo "No usable pnpm or npm executable is available on VPS; refusing release" >&2
   exit 1
