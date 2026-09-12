@@ -2525,9 +2525,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
               <button
                 onClick={() => setPage("profile")}
                 aria-label="Открыть кабинет с балансом"
-                className="hidden min-[360px]:block rounded-xl border border-[#3f8cff]/20 bg-[#14263b]/35 px-3 py-2 text-right leading-tight shadow-[0_4px_14px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-colors hover:border-[#3f8cff]/35 hover:bg-[#14263b]/55"
+                className="hidden min-[360px]:inline-flex items-center px-1.5 py-1 text-right transition-opacity hover:opacity-80 active:opacity-60"
               >
-                <b className="block whitespace-nowrap text-[12px] font-semibold tracking-tight text-[#b9d6ff]">{totalBalanceLabel}</b>
+                <b className="whitespace-nowrap text-xs font-semibold tracking-tight text-slate-200">{totalBalanceLabel}</b>
               </button>
             )}
             <button
