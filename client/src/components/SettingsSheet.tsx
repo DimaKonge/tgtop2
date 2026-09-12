@@ -1,4 +1,4 @@
-import { Moon, Palette, Settings2, Sun } from "lucide-react";
+import { Moon, Palette, Settings2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTheme, type Appearance, type ThemeAccent, type ThemeStyle } from "@/contexts/ThemeContext";
 
@@ -11,9 +11,7 @@ export function SettingsSheet({
 }) {
   const { appearance, setAppearance, style, setStyle, accent, setAccent } = useTheme();
   const appearanceItems: Array<{ value: Appearance; label: string; icon: typeof Moon }> = [
-    { value: "system", label: "Система", icon: Settings2 },
     { value: "dark", label: "Темная", icon: Moon },
-    { value: "light", label: "Светлая", icon: Sun },
   ];
   const styleItems: Array<{ value: ThemeStyle; label: string }> = [
     { value: "original", label: "TG TOP" },
@@ -55,10 +53,10 @@ export function SettingsSheet({
           </section>
           <section className="tg-clean-surface rounded-xl border border-white/8 bg-black/10 p-3 shadow-[0_8px_22px_rgba(2,8,16,0.12)]">
             <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-300">
-              <Sun className="h-4 w-4 text-[#72a8ff]" />
+              <Moon className="h-4 w-4 text-[#72a8ff]" />
               Тема
             </div>
-            <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
+            <div className="grid grid-cols-1 gap-1 rounded-xl border border-white/8 bg-[#0b0f14] p-1">
               {appearanceItems.map(item => {
                 const Icon = item.icon;
                 const active = appearance === item.value;
