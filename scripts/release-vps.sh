@@ -88,7 +88,16 @@ trap rollback ERR
 [ "$(sha256sum "$ARCHIVE" | awk '{print $1}')" = "$EXPECTED_SHA" ]
 [ ! -e "$STAGE" ]
 [ ! -e "$PREVIOUS" ]
-[ -x "$BASE/node_modules/.bin/pnpm" ] || { echo "Project-local pnpm is unavailable; refusing release" >&2; exit 1; }
+if [ -x "$BASE/node_modules/.bin/pnpm" ]; then
+  PNPM_RUN=("$BASE/node_modules/.bin/pnpm")
+elif command -v pnpm >/dev/null 2>&1; then
+  PNPM_RUN=("$(command -v pnpm)")
+elif command -v npm >/dev/null 2>&1; then
+  PNPM_RUN=(npm exec --yes --package=pnpm@10.4.1 -- pnpm)
+else
+  echo "No usable pnpm or npm executable is available on VPS; refusing release" >&2
+  exit 1
+fi
 case "$MIN_FREE_KB" in ''|*[!0-9]*|0) echo "TG_TOP_RELEASE_MIN_FREE_KB must be a positive integer" >&2; exit 1;; esac
 case "$STAGE_RETENTION_MINUTES" in ''|*[!0-9]*|0) echo "TG_TOP_STAGE_RETENTION_MINUTES must be a positive integer" >&2; exit 1;; esac
 case "$SOURCE_RETENTION_MINUTES" in ''|*[!0-9]*|0) echo "TG_TOP_SOURCE_RETENTION_MINUTES must be a positive integer" >&2; exit 1;; esac
@@ -107,9 +116,9 @@ tar -xzf "$ARCHIVE" -C "$STAGE"
 for item in dist package.json patches/wouter@3.7.1.patch scripts; do test -e "$STAGE/$item"; done
 
 if [ -e "$STAGE/pnpm-lock.yaml" ]; then
-  "$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
+  "${PNPM_RUN[@]}" --dir "$STAGE" install --frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
 else
-  "$BASE/node_modules/.bin/pnpm" --dir "$STAGE" install --no-frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
+  "${PNPM_RUN[@]}" --dir "$STAGE" install --no-frozen-lockfile --ignore-scripts >/tmp/tgtop-${RELEASE}-pnpm.log
 fi
 (
   cd "$STAGE"
