@@ -150,7 +150,12 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+const isProd = process.env.NODE_ENV === "production";
+const plugins = [
+  react(),
+  tailwindcss(),
+  ...(isProd ? [] : [jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()]),
+];
 
 export default defineConfig({
   plugins,
@@ -167,6 +172,28 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("@ton") || id.includes("@tonconnect")) {
+              return "vendor-ton";
+            }
+            if (id.includes("recharts") || id.includes("d3-")) {
+              return "vendor-charts";
+            }
+            if (id.includes("framer-motion") || id.includes("lottie-web")) {
+              return "vendor-motion";
+            }
+            if (id.includes("@radix-ui") || id.includes("lucide-react")) {
+              return "vendor-ui";
+            }
+            return "vendor";
+          }
+        },
+      },
+    },
   },
   server: {
     host: "0.0.0.0",
