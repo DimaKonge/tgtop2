@@ -1370,4 +1370,8 @@
 
 - [x] Add admin-only Bonus GRAM controls: configure referral reward/limit, manually credit a user by verified Telegram username with mandatory reason and audit record, and show referral-bonus progress without introducing balance freezing in this release
 
+- [x] Fix ranking checkout cardBackgroundPreset persistence: pass preset in Home.tsx submitPlacement and initialize in openStarsPayment, accept cardBackgroundPreset in server/routers.ts placeBid and map to payRankingBidWithGramCredit options, validate preset whitelist in server/db.ts, and add regression coverage
+
+- [x] Add idempotent production migration for groups_catalog.cardBackgroundPreset and referral reward tables, register in scripts/release-vps.sh, and add regression test
+
 - [ ] Future scope: add audited balance freeze/unfreeze controls that prevent frozen balances from being spent or withdrawn

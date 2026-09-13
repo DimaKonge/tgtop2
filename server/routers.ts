@@ -18,7 +18,7 @@ import { financeProcedures } from "./routers/financeRouter";
 import { supportRouter } from "./routers/supportRouter";
 import { getTelegramIdFromOpenId } from "./onboardingIntentPolicy";
 import { canRefreshGroupMediaSnapshot, shouldUpdateAnimatedAvatarSnapshot } from "./groupMediaSnapshotPolicy";
-import { CARD_BACKGROUND_PRESET_IDS } from "../shared/card-background-presets";
+import { CARD_BACKGROUND_PRESET_IDS, type CardBackgroundPreset } from "../shared/card-background-presets";
 
 const gramAmount = z.string().regex(/^\d+(\.\d{1,2})?$/);
 const catalogCode = z.string().trim().min(2).max(96).regex(/^[A-Za-z0-9 _-]+$/);
@@ -108,6 +108,7 @@ export const appRouter = router({
         city: groupListingInput.shape.city,
         subcategory: z.string().min(2).max(64).optional(),
         salePriceTon: gramAmount.nullable().optional(),
+        cardBackgroundPreset: z.string().trim().max(64).nullable().optional(),
         rewardActive: z.boolean().optional(),
         rewardBudget: z.number().int().min(0).optional(),
         rewardPerSubscription: z.number().int().min(0).optional(),
@@ -125,7 +126,7 @@ export const appRouter = router({
           group.username ?? group.title,
           ctx.user.openId,
           input.groupId,
-          input.anonymousListing === undefined && input.showOwnerContact === undefined && input.managerPublic === undefined && input.listingAnnouncementEnabled === undefined && input.searchIndexable === undefined && input.country === undefined && input.city === undefined && input.subcategory === undefined && input.salePriceTon === undefined && input.rewardActive === undefined && input.rewardBudget === undefined && input.rewardPerSubscription === undefined && input.rewardPerManualAdd === undefined
+          input.anonymousListing === undefined && input.showOwnerContact === undefined && input.managerPublic === undefined && input.listingAnnouncementEnabled === undefined && input.searchIndexable === undefined && input.country === undefined && input.city === undefined && input.subcategory === undefined && input.salePriceTon === undefined && input.cardBackgroundPreset === undefined && input.rewardActive === undefined && input.rewardBudget === undefined && input.rewardPerSubscription === undefined && input.rewardPerManualAdd === undefined
             ? undefined
             : {
                 anonymousListing: input.anonymousListing,
@@ -137,6 +138,7 @@ export const appRouter = router({
                 city: input.city,
                 subcategory: input.subcategory,
                 salePriceTon: input.salePriceTon,
+                cardBackgroundPreset: input.cardBackgroundPreset as CardBackgroundPreset | null | undefined,
                 rewardActive: input.rewardActive,
                 rewardBudget: input.rewardBudget,
                 rewardPerSubscription: input.rewardPerSubscription,
