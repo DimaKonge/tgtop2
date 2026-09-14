@@ -1,0 +1,1 @@
+ALTER TABLE `groups_catalog` MODIFY COLUMN `anonymousListing` boolean NOT NULL DEFAULT true;

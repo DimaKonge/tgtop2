@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `mainBalanceTon` decimal(20,9) DEFAULT '0.000000000' NOT NULL;

@@ -1,0 +1,1 @@
+ALTER TABLE `nft_usernames` ADD `showcaseProfile` boolean DEFAULT false NOT NULL;

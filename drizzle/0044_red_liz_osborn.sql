@@ -1,0 +1,1 @@
+ALTER TABLE `catalog_topics` MODIFY COLUMN `category` enum('Каналы','Чаты','Боты') NOT NULL;

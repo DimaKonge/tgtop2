@@ -1,0 +1,1 @@
+ALTER TABLE `groups_catalog` ADD `managerAvatarUrl` varchar(512);

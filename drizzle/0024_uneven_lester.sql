@@ -1,0 +1,1 @@
+ALTER TABLE `credit_transactions` MODIFY COLUMN `kind` enum('group_connection_bonus','listing_spend','manual_bonus') NOT NULL;

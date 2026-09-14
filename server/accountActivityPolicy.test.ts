@@ -1,0 +1,32 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+
+describe("account activity policy", () => {
+  it("unifies only persisted TG TOP records and labels recorded bids as distinct from paid Stars", () => {
+    const source = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
+    expect(source).toContain("export async function getAccountActivity");
+    expect(source).toContain("starsRankingPaymentIntents");
+    expect(source).toContain("rankingBidIntents");
+    expect(source).toContain("tonDeposits");
+    expect(source).toContain("tonWithdrawals");
+    expect(source).toContain("transactionHash: tonWithdrawals.transactionHash");
+    expect(source).toContain('transactionHash: item.status === "confirmed" ? item.transactionHash : null');
+    expect(source).toContain('title: "gram_deposit"');
+    expect(source).toContain('title: "gram_withdrawal"');
+    expect(source).toContain('title: "ranking_refund_pair"');
+    expect(source).toContain('status: "refunded"');
+    expect(source).toContain("getUserDeals(openId)");
+    expect(source).toContain("getNftTransferHistory(openId)");
+    expect(source).toContain('currency: "Stars"');
+    expect(source).toContain('title: "ranking_bid"');
+    expect(source).toContain('item.kind === "manual_bonus"');
+    expect(source).toContain('"reward_campaign_reserve"');
+    expect(source).toContain('"reward_subscription"');
+    expect(source).toContain('if (group.category !== "Чаты") throw new Error("Автоочистка доступна только для чатов")');
+    expect(source).not.toContain('Анонимное размещение доступно только для чатов');
+    expect(source).toContain('city?: string');
+    expect(source).toContain('export async function saveMyGroupsLayout(ownerOpenId: string, orderedGroupIds: number[], pinnedGroupIds: number[])');
+    expect(source).toContain('orderBy(desc(groupsCatalog.ownerPinned), asc(groupsCatalog.ownerSortOrder), desc(groupsCatalog.createdAt))');
+    expect(source).toContain('Порядок должен включать все ваши группы');
+  });
+});

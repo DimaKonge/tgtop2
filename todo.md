@@ -1,0 +1,1377 @@
+# TG TOP - Project TODO
+
+- [x] Update database schema for auction slots, groups, bids, and deals in drizzle/schema.ts
+- [x] Apply database migrations via webdev_execute_sql
+- [x] Implement backend tRPC routers for slots bidding, groups catalog, and user profile
+- [x] Build Telegram bot webhook / polling integration (@GiftsLabBot) for auto-listing admin groups
+- [x] Build frontend UI matching the reference screenshot: Web3 Header, King Pedestal (#1 slot), Premier Lots (#4-#7), My Storage / Public Directory tabs, and Explore/My Tags/Deals/Dashboard navigation
+- [x] Implement "outbid" auction mechanism (highest bidder wins the slot instantly)
+- [x] Add NFT tab with MarketApp rental mechanics for usernames and channels
+- [x] Implement category-specific top filtering with independent King Pedestal and Premier Lots per category
+- [x] Redesign the ranking page as a pyramid: one large #1 banner, two #2-#3 cards, four #4-#7 cards, then the general list
+- [x] Apply modern Liquid Glass Web3 visual system with translucent panels, blur, glow, cyan/indigo accents, and restrained gold highlights
+- [x] Add empty slot plus icon for instant group addition and personal storage
+- [x] Add 0.1 GRAM reward for group addition and referral program with multi-tier commission support
+- [x] Implement direct project/group sales with 50% platform commission rule
+- [x] Successfully build and test project with checkpoint saved
+- [x] Configure tiered ranking placement weights: #1 = 50%, #2-#3 = 25%, #4-#7 = 10%, general list = 1%
+- [x] Keep direct project sales commission rule (50%) distinct from ranking placement weights
+- [ ] Add referral links generator with configurable 0-50% commission share of TG TOP platform fees
+- [ ] Implement completed-deal payout calculation deducting the set referral share from platform fees
+- [ ] Verify referral dashboard in profile with earnings breakdown
+- [ ] Inspect the legacy server deployment and create a restorable backup before changes
+- [x] Configure the fresh @TGTOP_robot token and production bot event handler
+- [x] Implement the persistent Telegram update handler that opens the Mini App and records groups/channels after @TGTOP_robot becomes an administrator
+- [x] Replace obsolete @GiftsLabBot admin and referral deep links with @TGTOP_robot throughout the production UI
+- [x] Deploy TG TOP to the production server in a separate directory and validate the public URL
+- [ ] Switch traffic only after the website, bot, group onboarding, and My Storage flow pass a real test
+- [ ] Confirm and remove obsolete `/root/tg_top` deployment from the production server
+- [x] Deploy clean TG TOP production service and validate it before handing it over
+- [ ] Configure a standard HTTPS domain for the Telegram Mini App; retain tgtop.ton as the project's Web3 identity
+- [x] Confirm `tgtop.xyz` registrar status is explicitly Active
+- [x] Re-check public DNS to confirm the Zomro name servers are delegated and visible externally
+- [x] Create `@` and `www` A records for `tgtop.xyz` pointing to `212.43.154.171`
+- [x] Prepare the VPS with the production runtime, reverse proxy, and deployment configuration
+- [x] Deploy the TG TOP web application and persistent `@TGTOP_robot` service on the VPS
+- [ ] Add the required external authentication settings to the VPS and verify protected mutations
+- [x] Validate Telegram.WebApp initData server-side and use the verified Telegram identity for protected TG TOP actions
+- [ ] Validate bot onboarding, Mini App launch, authenticated profile/storage access, and a protected action in production
+- [x] Issue and validate HTTPS certificates for `tgtop.xyz` and `www.tgtop.xyz`
+- [ ] Configure the HTTPS Mini App URL in BotFather and verify the real group-onboarding flow
+- [x] Verify a real Telegram onboarding: @TGTOP_robot added `@o_a_th` as a listed catalog channel with member statistics
+- [ ] Enable BotFather Main App for @TGTOP_robot with `https://tgtop.xyz` to add the profile-level Launch App button
+- [x] Remove MarketApp branding and the NFT asset-listing modal from the TG TOP interface
+- [x] Capture richer Telegram group/channel metadata and activity metrics through @TGTOP_robot
+- [x] Build a navigable group detail screen with ownership-aware statistics and catalog placement information
+- [ ] Simplify the Mini App layout, reduce visual effects and replace the current typography with a cleaner Telegram-friendly font system
+- [x] Route clicks on empty ranking slots to My Groups and provide direct channel/chat bot-admin buttons there
+- [x] Make the group directory welcome screen show all groups by default and move country/type/subcategory filters into a slide-out panel
+- [x] Remove the My Storage / Public Directory switcher and keep personal groups in a dedicated My Groups view
+- [x] Populate selected ranking cards with the real group avatar, full title, username, and member count
+- [x] Add a detailed clickable list of all groups beneath the top-ranking slots
+- [x] Award and display 0.1 GRAM for each newly connected group or channel through @TGTOP_robot
+- [x] Store internal GRAM credit transactions and allow credits to be spent on a group’s general-list placement
+- [ ] Record source-backed channel/group age, member growth, posting activity, and engagement snapshots without fabricating unavailable metrics
+- [x] Present group detail statistics in a TGStat-inspired hierarchy while retaining TG TOP branding and only displaying verified metrics
+- [ ] Redesign the Mini App into a serious analytics-first marketplace with restrained styling, clear hierarchy, and consistent professional cards
+- [ ] Let a verified group owner create a sale listing with price and terms, then guide the buyer through a staged ownership-transfer deal
+- [x] Send the owner a rich Telegram confirmation after group onboarding with the verified group link, Mini App button, and 0.1 GRAM internal-credit award
+- [ ] Let a user replace an occupied ranking card by selecting an owned group and confirming a payment higher than the current placement amount
+- [x] Show a chronological general listing beneath the featured cards and refresh both featured cards and the list for every category or country filter
+- [x] Add an audience-size filter that refreshes both featured cards and the general group list together
+- [x] Use the same group-card design for featured placements and the general list, with only scale and position differing
+- [ ] Let owners pay for a higher general-list position, then show all remaining groups below according to the active filter
+- [x] Record bot-observed joins, leaves, net growth, and invite-link attribution when Telegram includes the source in an update
+- [ ] Plan TON Keeper payment confirmation and transaction-verification safeguards before enabling real TON charges for placements or sales
+- [x] Remove elite/premium rank labels, visible slot numbering, free-slot labels, and current-bid labels from the ranking interface
+- [x] Use a hidden-on-home 0.1 TON default starting placement value when a user selects a personal group for a ranking card
+- [x] Remove elite/premium rank labels and visible slot numbering from the ranking interface
+- [ ] Run and verify a real production My Groups flow, including opening an owned group and a protected action
+- [x] Add owner-aware detail controls and explicit catalog placement information to the group detail page
+- [ ] Re-verify the polished mobile marketplace with a real connected group/card state and record the outcome in project notes
+- [x] Add a focused UI acceptance check proving branded empty states and shared GroupCard rendering across featured and general-list states
+- [x] Confirm the one-time 0.1 GRAM connection bonus for the pre-existing `@o_a_th` channel
+- [x] Enforce that each Telegram group or channel can receive the 0.1 GRAM connection bonus only once across removal and re-listing cycles
+- [x] Redesign the main ranking into a single-screen pyramid: one large lead card, two second-row cards, and three-to-five compact third-row cards above the general catalog
+- [x] Simplify the header branding to the TG mark and TG TOP name only, removing the «Проверенные площадки» subtitle
+- [x] Match the «+ Канал» button styling to the outlined dark «+ Чат» button in My Groups
+- [x] Show separate bonus GRAM and main TON balances in the profile
+- [x] Add a profile transaction history with group, date, operation type, and amount
+- [x] Diagnose and fix missing Telegram group avatars in the production catalog and My Groups views
+- [x] Cascade displaced groups one rank lower when a higher placement is outbid, returning only the final displaced group to the general catalog
+- [x] Diagnose and fix missing Telegram group avatars in the production catalog and My Groups views
+- [x] Center the plus icon in empty ranking slots and show an occupied group's avatar as full-card imagery with an overlaid title
+- [x] Use a lighter font weight for the «Добавить группу» empty-slot label
+- [x] Rename the main marketplace heading from «Площадки» to «Global»
+- [x] Remove the redundant «Каталог» eyebrow above the main Global heading
+- [x] Remove the redundant «Все площадки» heading above the general catalog list
+- [x] Remove the descriptive subtitle beneath the Global home heading
+- [x] Add a polished synchronized quick category panel with Все / Каналы / Чаты above the ranking pyramid
+- [ ] Confirm the real Telegram Mini App displays the synchronized Все / Каналы / Чаты quick toggle under Global
+- [x] Show a live count of groups matching the active category, country, and audience filters in the Global panel
+- [x] Show a live count of groups matching the active category, country, and audience filters in the Global panel
+- [x] Compact and elevate the Global quick-filter panel while reducing category-label text size
+- [x] Add a visible safe TON Wallet connection entry button without enabling payment actions
+- [x] Label the Global wallet entry button as Connect Wallet
+- [x] Add persistent Russian/English language selection to TG TOP settings
+- [x] Add persistent System/Dark/Light appearance selection with a complete light theme
+- [x] Refresh the TG TOP brand mark so it works cohesively in dark and light themes
+- [x] Use an inverted stylized T as the primary TG TOP brand mark in dark mode
+- [x] Reduce Global control sizes and move action buttons higher on mobile
+- [x] Resize the mobile 1 → 2 → 4 ranking pyramid so the complete top fits within one screen
+- [x] Integrate TON Connect for wallet connection and address display without enabling payment or transaction signing
+- [x] Add NFT as a separate quick-filter direction alongside channels and chats without mixing NFT cards into the group catalog
+- [x] Remove the redundant Catalog tab from the bottom navigation and route catalog access through Global
+- [x] Add an owner-facing «Выставить на листинг» control for connected groups in My Groups
+- [x] Let the owner choose a normal catalog listing with no price or a sale listing with an optional TON price
+- [x] Add MarketApp-style multi-select management for applying listing and sale actions to several owned groups at once
+- [ ] Build a progressive rich owner cabinet covering groups, listings, pricing, bulk actions, deals, NFTs, and referral insight
+- [ ] Add a commission-based referral program with a personal link, referral count, and TG TOP fee earnings dashboard
+- [x] Add a concise TG TOP FAQ covering wallet connection, listings, bidding, NFTs, and safe deal rules
+- [x] Add a group listing panel with catalog-only, sale-price, and rental-term options
+- [ ] Localize all visible TG TOP interface labels and copy through the persistent RU/EN setting
+- [ ] Complete light-theme treatment for every TG TOP owner-management and listing surface
+- [ ] Audit every light-theme owner workflow screen and correct remaining dark-only styles in My Groups, listing sheets, profile deals, NFT cards, and transfer surfaces
+- [ ] Add targeted regression coverage for light-theme owner-management and listing states beyond generic CSS selector assertions
+- [ ] Visually verify authenticated light-theme owner-management, listing, NFT, and protected-deal flows before completing the light-theme task
+- [ ] Add rendered light-theme regression coverage for real owner workflow components rather than only synthetic CSS probes
+- [x] Fix the TG TOP brand-mark symbol disappearing against the black logo tile in light mode and add a regression check
+- [x] Add owner-uploaded MP4 animated group avatars with protected ownership checks, marketplace playback, and Telegram image/initials fallbacks
+- [x] Temporarily hide animated group-avatar upload and playback while retaining ordinary Telegram avatars
+- [x] Format all displayed TON prices and recorded-bid thresholds without trailing zeroes or unnecessary decimals
+- [x] Replace every remaining hard-coded fixed-decimal TON label with concise formatter-backed copy
+- [x] Fix chat onboarding so adding @TGTOP_robot explicitly guides the owner to grant administrator rights instead of silently leaving the bot as a member
+- [x] Generate @TGTOP_robot chat-add links that open Telegram’s administrator confirmation with required rights preselected
+- [x] Simplify group details by removing the raw analytics graph and unavailable metrics, pinning the member count, and adding direct owner unlisting
+- [x] Add initials fallback to ranked cards when animated and static group avatar media both fail
+- [x] Show a clear client-side error if animated-avatar file reading fails before upload
+- [x] Replace the oversized Global side filter drawer with a compact mobile filter experience that does not crowd the ranking pyramid
+- [x] Redesign Settings language and appearance controls as smaller compact selectors that match the streamlined Global filtering style
+- [x] Reduce and verify the 390×844 mobile vertical footprint of the Global 1 → 2 → 4 pyramid
+- [x] Add a rendered acceptance check proving the Global 1→2→4 featured board fits and remains usable at 390×844
+- [x] Record visual verification of the 390×844 TG TOP top screen after the compact pyramid refinement
+- [x] Stabilize mobile card dimensions and prevent Global text, labels, and controls from shifting or overflowing outside their containers
+- [x] Remove rental listing options and rental terms from groups and channels while retaining NFT rental mechanics
+- [x] Simplify the settings panel into compact language and theme rows with minimal explanatory copy
+- [ ] Correct catalog listing charges to exactly 0.1 GRAM and refund the affected 0.9 GRAM overcharge through the ledger
+- [ ] Build trustworthy group and channel analytics from Telegram-observable snapshots, activity, growth, invite, and post-view data without fabricated metrics
+- [ ] Design a TGStat-grade analytics architecture with metric provenance, owner consent, and compliant historical enrichment for public channels
+- [x] Add visible recorded-bid outbid controls for occupied ranking slots and make eligible public @usernames themselves direct Telegram links
+- [x] Remove redundant "Верифицирована с TG" wording from the Global featured card while retaining internal verification data
+- [ ] Accrue and persist referral earnings from completed TG TOP fee-bearing deals with backend regression coverage
+- [x] Add NFT as a fourth primary Global toggle with a dedicated discovery state outside the group catalog
+- [ ] Configure tgtop.ton as TG TOP’s verified Web3 identity while retaining tgtop.xyz as the HTTPS Mini App origin
+- [ ] Deploy an ADNL-backed TON Site for tgtop.ton on the TG TOP VPS without changing the HTTPS Mini App origin
+- [ ] Verify tgtop.ton through a TON Proxy-compatible client and document that conventional browser DNS is not supported
+- [ ] Complete the tgtop.ton site record through Tonkeeper’s manual ADNL field and wallet confirmation
+- [ ] Evaluate a TON Storage static brand mirror for tgtop.ton without moving the live Mini App or backend from tgtop.xyz
+- [ ] Add secure Telegram-account website sign-in that maps to the same TG TOP profile as the Mini App
+- [ ] Build a staged protected group-sale workflow with verified seller control, transfer confirmations, and no automatic funds movement before payment safeguards exist
+- [ ] Release escrowed TON only after bot-observed ownership-transfer evidence, buyer confirmation, expiry handling, and dispute safeguards are implemented
+- [ ] Notify a seller after verified buyer funding and release escrowed TON automatically only after owner-rights transfer is verified
+- [ ] Enforce a twenty-one-day seller ownership-transfer deadline before protected refund or dispute handling
+- [x] Allow buyer cancellation and escrow refund only before bot-observed owner-rights transfer is verified
+- [x] Add role-aware protected-deal stage guidance for buyer funding, seller transfer, bot observation, final confirmation, and outcome states
+- [x] Add operable protected-deal stage controls while keeping payment verification and settlement explicitly locked until on-chain safeguards exist
+- [x] Display a subtle “Комісія TG TOP · 0%” disclosure beside sale prices and protected-deal summaries
+- [ ] Design a separate NFT deposit bot that verifies received assets before enabling NFT sale or rental listings
+- [x] Add Fragment-inspired NFT showcase panels to user profiles and listed community detail pages
+- [x] Let a verified NFT owner assign or remove an NFT showcase from their connected TG TOP channel or chat
+- [ ] Support a distinct verified wallet reference per NFT for rental source, payout, and return routing
+- [ ] Automatically discover eligible NFT assets after wallet connection while requiring owner approval before public display or assignment
+- [ ] Let a renter select a connected community for a leased username, show renewal timing, and prepare safe asset return at expiry
+- [x] Simplify the My Groups mobile layout by removing duplicated placement inputs and separating ranking placement from listing controls
+- [x] Move Connect Wallet into the compact top brand row above Global controls
+- [x] Give the TG TOP logo mark a black background treatment in the header
+- [x] Remove System appearance mode and retain only explicit black and white TG TOP themes
+- [x] Automatically place an eligible newly listed group into the highest free ranking slot; require bids only to displace occupied slots
+- [x] Repair the current production lead slot so the already connected @o_a_th community is visibly assigned to the large first card
+- [ ] Require at least 0.2 TON to overtake the first premium slot while allowing a 0.1 TON entry bid for lower vacant slots
+- [ ] Remove every free ranking-listing path so each TG TOP placement requires a qualifying TON bid
+- [x] Record qualifying ranking bids as explicit internal intents, notify the user through @TGTOP_robot, and never label them as paid until TON verification is enabled
+- [ ] Add scalable catalog, analytics, offers, and NFT query safeguards through indexes, pagination, and request controls
+- [x] Add production indexes for ranking boards, group snapshots, account ledgers, deal histories, and deal-expiry queries
+- [x] Add a short black TG TOP launch screen with a real readiness indicator and reduced-motion support
+- [x] Animate rising cubes into the TG TOP 1→2→4 pyramid during launch
+- [x] Replace the launch screen’s fixed delay with a real readiness signal while retaining reduced-motion behavior
+- [x] Animate rising cubes into the TG TOP 1→2→4 pyramid during launch
+- [x] Move Connect Wallet into the compact top brand row and pull the Global panel upward
+- [x] Redesign the Global mobile control area as a minimal marketplace header with compact type segments and unobtrusive geography selection
+- [x] Make the Global heading state the exact active top list, including selected type, subcategory, and geography
+- [x] Replace geographic filter codes with localized country and region names in the active top heading and filtering controls
+- [x] Remove the Europe region option and use concrete localized country choices in TG TOP geography filtering
+- [x] Add Ukraine, Poland, Germany, United Kingdom, United States, and Russia as the first concrete TG TOP country filters
+- [x] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
+- [x] Add independent community type, subcategory, and geography filters synchronized across Global ranking cards and catalog listings
+- [x] Add persisted channel and chat subcategories that synchronize across Global ranking cards, catalog listings, and detailed filters
+- [x] Unify detailed and compact Global filtering with shared type, subcategory, and geography states plus matching query semantics
+- [x] Make default migrated subcategories valid for both channel and chat listings and test safe round-trip behavior
+- [x] Audit and correct every visible UI string so Russian has no Ukrainian or English remnants and English is complete and natural
+- [x] Add transparent offer history with price, state, role, creation time, transfer deadline, and pre-transfer cancellation control
+- [ ] Add a non-custodial peer-to-peer NFT transfer flow with @username or Telegram ID recipient verification, 0% TG TOP commission, and clear TON network-fee disclosure
+- [ ] Split NFT discovery, ownership proof, and transfer controls into separate On-chain and Off-chain asset categories
+- [x] Add an audited Off-chain NFT transfer sheet with recipient lookup, explicit confirmation, 0% TG TOP commission, and immutable transfer history records
+- [x] Add On-chain and Off-chain NFT category labels and discovery filters while reserving On-chain transfer signing for cryptographically verified wallets
+- [x] Display a subtle “Комісія TG TOP · 0% на старті” disclosure beside sale prices and protected-deal summaries
+- [x] Show the listing owner inside every community card and provide a safe direct entry to that owner’s TG TOP profile
+- [x] Remove visible underlines from Telegram username links inside community cards while preserving direct navigation
+- [x] Backfill every vacant ranking slot atomically from eligible listed communities after a ranked listing is removed
+- [x] Show the bot-observed invitation count in the community detail analytics alongside joins, leaves, and posts
+- [ ] Build a secure account-wallet foundation with TON Connect, deposit verification, withdrawal requests, immutable transaction states, and no live payout before treasury safeguards are approved
+- [ ] Add server-verified TON deposit reconciliation and withdrawal requests with idempotency, recipient-address confirmation, limits, and manual approval before payout
+- [x] Add a Telegram Stars payment choice for ranking bids using official invoice confirmation and immutable payment-intent records
+- [x] Open the official Telegram Stars payment window directly from the Mini App instead of sending the payment invoice as a bot chat message
+- [x] Add a factual TG TOP leaderboard with transparent ranking criteria and no fabricated point balances
+- [x] Add a unified account activity history using real credit, deal, NFT-transfer, and verified wallet records
+- [x] Add a verifiable TG TOP tasks program with explicit completion rules and no unearned rewards
+- [x] Make the lower general-list area and empty state clickable, with a clear plus action that opens the personal cabinet to add or list a community
+- [x] Replace the exposed wallet address in the header with a compact connected indicator and visible account balance
+- [x] Send one localized informational @TGTOP_robot post to a community after its owner successfully lists it, with a safe TG TOP listing button
+- [x] Add explicit bot-observed analytics provenance and observation-start disclosure to community details; document the approved-provider enrichment path without fabricating historical data
+- [x] Add a restrained hover/focus effect to group cards so their clickability is visually clear
+- [x] Export the complete TG TOP source to a private GitHub repository and document the version-saving workflow
+- [x] Add support for private Telegram groups and channels without public usernames, using invite links and secure chat ID identification
+- [x] Ensure announcement delivery handles newly listed groups robustly with retry/fallback logic
+- [x] Add support for deleting groups from My Groups / catalog
+- [x] Add a toggle in group details for the bot to automatically delete Telegram service messages (joins, leaves, pins)
+- [x] Ensure listing announcements consistently dendritic delivery via bot without failing
+- [x] Refine lower catalog list cards for uniform size, right-aligned prominent prices, and removal of commission copy
+- [x] Refine lower catalog cards for more compact height and larger, more prominent avatars
+- [x] Redesign GroupCard lower catalog items for uniform compact size, larger avatar, right-aligned price, and removal of commission copy
+- [x] Trace the exact Telegram Mini App URL, active VPS service, and authenticated profile data path so production UI and bonus balances match deployed code
+- [x] Animate the ranking pyramid top-to-bottom: lead slot first, second row next, then lower slots with staggered entrance motion
+- [x] Replay the ranking-pyramid entrance sequence whenever category, country, or subcategory filters change
+- [x] Smooth the ranking-pyramid transition to remove visible flicker during filter changes
+- [x] Increase the visible upward travel of ranking-slot entrance motion while retaining smooth fades
+- [x] Add a personal My Groups management grid with pinned communities and persisted drag-and-drop ordering
+- [x] Restrict service-message auto-cleanup to chats and replace the checkbox with a polished toggle
+- [x] Add compact listing-status badges to My Groups rows for listed, sale, and unlisted communities
+- [x] Rework My Groups grid mode into three compact community cells per mobile row
+- [x] Enable long-press drag-and-drop across My Groups cells without a visible drag handle
+- [x] Add selectable empty My Groups grid cells with a plus action for placing a new community
+- [x] Add a compact My Groups status filter for all, listed, and unlisted communities
+- [x] Redesign the public catalog into a Telegram-native lead card plus compact three-column community grid
+- [x] Add smooth catalog-card cascade motion with an emphasized first card and tightened following cells
+- [x] Add List, compact Grid, and Showcase catalog views while retaining the existing 1→2→4 pyramid as Top
+- [x] Add a prominent direct-entry button to group details for public links and private invite links
+- [x] Add a visible navigable owner block to group details with profile identity
+- [x] Open the owner’s TG TOP profile from the group detail owner block
+- [x] Simplify listing configuration to a single optional TON price field without catalog or sale mode buttons
+- [x] Add a chat-only anonymous listing preference that hides the owner on public TG TOP cards
+- [x] Move category, subcategory, country, and expanded country choices into one slide-out filter panel
+- [x] Add country-scoped city filtering with a compact active geography label
+- [x] Prevent accidental selection of app text while preserving input, link, and control interactions
+- [x] Add a sale toggle that reveals the TON price field only when a group is being offered for sale
+- [x] Make the four public catalog modes explicit and easy to find on the Top screen
+- [x] Strengthen My Groups long-press drag feedback so cards visibly lift and follow the finger
+- [x] Replace My Groups status text with concise corner ribbons for sale, catalog, and draft states
+- [x] Restore a synchronized Top quick filter for all communities, channels, chats, and NFT
+- [x] Make My Groups avatars full-bleed card imagery with readable overlaid title and ribbon status
+- [x] Remove List, Grid, and Showcase modes from the public Top screen while retaining the ranking pyramid and catalog list
+- [x] Add List, Grid, and Top modes to My Groups management and remove Showcase entirely
+- [x] Remove the detailed Top filter sheet and duplicate filter row
+- [x] Put country and country-scoped city selection inside the Top World button dropdown
+- [x] Show only the raw matching-group count in the Top header
+- [x] Add a filter-aware title and username search below the Top ranking cards
+- [x] Replace whole-card drag activation with a dedicated My Groups drag handle beside pinning and block native avatar callouts
+- [x] Redesign My Groups status badges as Telegram-inspired green sale, blue catalog, and gray not-in-catalog corner ribbons
+- [x] Move My Groups search above the results and show a direct relevant list instead of Top cards while searching
+- [x] Compact the My Groups view and status filter controls, then redesign Top mode as one larger square card above two smaller cards
+- [x] Show filter-aware totals for displayed groups and their combined subscriber count beneath the My Groups controls
+- [x] Replace the Top country-selector grid with a compact vertical scrolling list of countries
+- [x] Keep the Top geography heading on one line with a compact country label and smaller subdued city label
+- [x] Place public Top search before category controls and hide ranking cards while a query is active
+- [x] Remove the My Groups Top presentation mode and retain only List and drag-sortable Grid views
+- [x] Restyle My Groups view and status controls as smaller compact chip toggles
+- [x] Show private channels and chats as «Приватный» instead of a username or invite link in My Groups cards
+- [x] Refine My Groups status ribbons as subdued translucent diagonal Telegram-style badges
+- [x] Replace the TG TOP brand mark with a compact 1-to-2-to-4 ranking pyramid symbol
+- [x] Make the public Top lead and second-tier ranking cards more square on mobile
+- [x] Keep country and category filters usable and applied while public Top search is active
+- [x] Reduce the public Top lead, second-tier, and lower-tier card sizes so more of the ranking board fits on mobile
+- [x] Include matching ranking-slot communities in public search results without duplicating them in the normal list
+- [x] Keep one shared Top search field visible across Channels, Chats, and NFT, with NFT name and username matching
+- [x] Restore full-width public ranking tiers while reducing only their heights to reveal the third row on mobile
+- [x] Move listing-owner information from public ranking cards into the community detail view
+- [x] Show «Приватный» on public cards whenever a community has neither a public username nor an invite link
+- [x] Label the detail-view entry action «Перейти в приватную группу» for private communities
+- [ ] Add management-panel controls for paid private-entry links with price, expiry, usage limits, payment confirmation, and invite delivery
+- [x] Add «Сделать вход платным», Stars price, and native Telegram paid-link generation controls to eligible private-channel listing settings
+- [x] Restrict Telegram monthly Stars subscription-link controls to managed channels, not chats or groups
+- [x] Add My Groups bulk-selection mode with a visible control, long-press activation, and shared batch actions
+- [x] Replace My Groups List/Grid chips with one toggle button and use the «Не в листинге» / «Unlisted» filter label
+- [x] Tune public ranking-board tier widths to fully use the available mobile content width
+- [x] Make every public 1→2→4 ranking-card tier more square by increasing its height without changing its full-width grid
+- [x] Remove the redundant «Каталог / Catalog» status text from lower public list cards
+- [x] Add an anonymous-listing toggle to bulk listing configuration and apply it to every selected community
+- [x] Replace country and subcategory chip grids in listing configuration with compact dropdown controls
+- [x] Make bulk anonymous-listing work for the selected communities with clear eligibility behavior
+- [x] Redesign bulk-selection actions as a compact fixed bottom bar that does not shift My Groups cards
+- [x] Ensure bulk anonymous listing applies to both channels and chats, including mixed selections
+- [x] Keep listing-sheet switch thumbs inside their tracks and remove redundant mixed-subcategory explanatory copy
+- [x] Keep My Groups list-card dimensions unchanged in selection mode and refine bulk action controls
+- [x] Explicitly anchor listing-sheet switch thumbs to prevent on-state overflow
+- [x] Compact My Groups list rows and rename fixed selection-bar actions to clearer catalog wording
+- [x] Allow mixed group selections to save without a subcategory mismatch when no subcategory is chosen
+- [x] Further reduce My Groups list-card height while keeping selection-mode dimensions stable
+- [x] Remove the My Groups back action and personal-folder label from the header
+- [x] Change the launch-screen status copy to «Открываем каталог»
+- [x] Restore normal lower-list card size on Top and make My Groups rows more compact
+- [x] Make the lower public catalog-list card on Top exactly match the height of the «+ Добавить свою группу» control below it, without changing the ranking pyramid or My Groups rows
+- [x] Restore the intended larger 68px height of the lower public catalog cell on Top without changing the add-community button
+- [x] Credit an internal invitation bonus to the acting user when they manually add a new participant to a bot-administered group without an invite link
+- [x] Let ordinary TG TOP users earn internal credits from verified community-defined subscriber, invite-referral, and manual-addition rewards
+- [x] Add an owner-controlled reward-campaign section funded solely in internal GRAM, with an enable switch, a budget, and a per-subscriber reward amount
+- [x] Add owner-funded community reward budgets and a simple public card-star indicator without displaying the reward amount on the card
+- [x] Show the reward amount and «Подписаться и получить» action only inside the community detail screen
+- [x] Automatically deactivate exhausted reward campaigns and hide their public reward-star indicator until budget is replenished
+- [ ] Design and implement a clear guest journey from a reward-star card through Telegram action back to confirmed earned GRAM feedback in TG TOP
+- [x] Replace the reward star with a Telegram-style card-corner badge that displays the available +GRAM amount, and keep one subscribe-and-earn action in details
+- [x] Simplify reward listing settings around one entry-bonus toggle, total GRAM budget, and one per-subscriber reward amount
+- [x] Superseded: require anonymous mode to be disabled before ranking placement; the confirmed behavior instead permits anonymous communities in rankings
+- [x] Make anonymous listing the default, hide all anonymous owner identity and profile access, and ensure public profiles show only deliberately non-anonymous listings
+- [x] Eliminate flicker and standardize the card-transition speed for All, Channels, Chats, and NFT filter changes
+- [x] Add an owner-only «Разместить в каталоге» button below the main entry action for an unlisted community detail screen
+- [ ] Correct the community-detail hierarchy: compact anonymous identity, contextual market actions only when applicable, primary entry then reward action, and statistics fully visible above bottom navigation
+- [ ] Reorder community details as entry, reward, compact ranking market, conditional sale action, owner controls, and then analytics
+- [ ] Redesign «Перебить ставку» as a compact secondary ranking-market card that does not compete with community entry or purchase actions
+- [ ] Display each occupied ranking lot’s current TON bid directly on its public main-card pyramid cell
+- [ ] Show a compact current or minimum GRAM price badge on every occupied and empty ranking cell
+- [ ] Display separate clearly labelled GRAM badges for ranking placement and optional community sale prices
+- [ ] Add a compact per-cell bid popover with plus/minus controls that change the proposed ranking bid by 0.1 TON
+- [ ] Keep the bid popover open for repeated plus/minus taps and animate each 0.1 TON amount change smoothly
+- [ ] Replace repeated bid-stepper taps with a compact accelerated bid slider: 0.1 TON precision near the current bid and 1 / 2 / 4 / 8 TON fast ranges
+- [ ] Let the bidder select one of their eligible communities before submitting its placement into the chosen ranking slot
+- [ ] Cap the ranking bid slider at 100000 TON and provide a synchronized direct amount input for large bids
+- [ ] Present occupied ranking placements as auction lots with a transparent arrow trigger, current bid, and an automatic minimum outbid amount
+- [x] Refresh the active ranking board at a short interval and animate remotely outbid lots without requiring a page reload
+- [x] Notify a displaced owner in @TGTOP_robot with the competitor price and a Restore place button that opens the lot at competitor price + 0.1 TON
+- [ ] Show the same primary outbid panel inside an occupied community’s detail screen, with current price, minimum price, group selection, and bid controls
+- [ ] In community details, show active giveaway status first, then contextual ranking action, entry, analytics, and a purchase action only for sale listings
+- [ ] Replace all ranking placement and outbid prices, labels, notifications, and validation from TON to internal GRAM
+- [x] Send a direct bot alert headed «Вас только что перебили» with a return-place action and minimum GRAM price
+- [ ] Show a compact per-second elapsed-time counter for how long the current group has held its ranking cell
+- [ ] Show «Подписаться и получить +… GRAM» for rewarded channels and «Вступить и получить +… GRAM» for rewarded chats in cards and details
+- [ ] Credit the exact owner-configured GRAM amount to a participant’s bonus wallet only after bot-observed membership verification
+- [x] Validate and deploy the completed GRAM reward-card and simplified listing-settings changes to tgtop.xyz
+- [ ] When @TGTOP_robot loses admin access to a ranked community, remove it idempotently from the ranking cell and refund the owner’s exact placed GRAM amount
+- [ ] Lock the verified entry link for every ranked community and automatically remove it from Top if that link changes or required bot access is lost
+- [ ] Superseded: keep a paid ranking position and public entry link active after bot removal, while pausing bot-verified analytics and automatic GRAM reward payouts
+- [ ] Keep live ranking updates lightweight and resilient for high concurrent Mini App traffic
+- [ ] Show a clear live cascade when an outbid shifts each affected community down one ranking cell and returns only the last community to the catalog
+- [x] Resolve equal ranking prices by placing the community with the newest recorded bid above earlier equal-price placements
+- [x] Show the current lot price and the next minimum bid with identical wording for both owners and visitors in every ranked community detail view
+- [x] Place the «Перейти в группу» action immediately below the community identity and above the live ranking card
+- [x] Derive the «Адрес в каталоге» line from the actual ranking-board category, country, and subcategory, without generic fallback «Все» segments
+- [x] Allow a new 0.1 GRAM listing only below every higher-priced lot and append it after the existing 0.1 GRAM queue
+- [x] Allow an owner to lower their own bid from 0.1 GRAM with a red preview showing the lower resulting ranking position
+- [x] Keep visitor bidding strictly above the current lot price and expose no bid-reduction controls to non-owners
+- [ ] Add a compact in-card placement drawer with selectable owned groups, anonymous/public visibility, optional sale price, and entry-bonus settings
+- [x] Make «Перебить лот» select exactly one owned group and set only a higher bid
+- [x] Ask whether the selected outbid community should be listed publicly or anonymously before payment
+- [x] Hide the owner @username in a community detail card whenever that placement is anonymous
+- [x] Replace the verbose visibility caption with concise Russian copy in the compact outbid card
+- [x] Use one profile-access toggle: enabled lets other users open the owner profile; disabled makes the placement anonymous
+- [x] Style the profile-access toggle as a Telegram-like settings row with a right-aligned blue switch and concise status copy
+- [x] Allow visibility changes from an already ranked owner detail card, charging the current Top price in GRAM to refresh the placement
+- [x] Put the public-profile toggle beside the owner row; when disabled, replace name and @username with «Анонимное размещение» after paid Top refresh
+- [x] Let an owner reduce their own price down to 0.1 GRAM and show a red message before payment if the placement will move lower
+- [x] Move the owner visibility toggle directly above the single «Обновить ставку» payment action and remove the duplicate Top-update button
+- [ ] Let an owner select and save a group manager from the Telegram administrators returned by @TGTOP_robot
+- [ ] Let an owner enable or disable @TGTOP_robot listing announcements in their channel or chat
+- [ ] Keep sale price, visibility, and entry-bonus configuration exclusively inside the owned community detail card
+- [ ] Order all ranking and lower-list placements by GRAM price descending, while allowing 0.1 GRAM entries below higher prices and preserving first-listed order on equal prices
+- [ ] Build the low-cost lower row as a lightweight first-come live feed with smooth card movement under high concurrent placement traffic
+- [x] Design a free-entry giveaways block with visible prizes, rules, participation counts, and end times before adding any draw mechanics
+- [x] Use a compact Telegram-native giveaway layout: prize card, rule toggles, countdown, participant count, and one clear create or join action
+- [x] Allow boost-only giveaway participation only after server-side verification that the user boosted the selected Telegram community
+- [x] Render profile debits with one minus sign and replace all technical activity codes with clear Russian labels
+- [x] Make Russian the sole visible interface language and rename the My Groups management tab to «Рабочее пространство»
+- [x] Replace the bottom navigation with four primary sections: «Каталог», «Розыгрыши», «Заработать» and «Мой кабинет»
+- [x] Add an owner-facing «Добавить свой розыгрыш» action with owned-community selection, prize, end time, and participation conditions
+- [x] Add a prefilled «Создать розыгрыш» action to owned-community cards in «Моём кабинете» and their detail screens
+- [x] Add a private-by-default public-account switch that opts an owner into profile visibility and the owner leaderboard
+- [x] Restrict the owner leaderboard to public-account opt-ins and allow an anonymous listing to expose only its configured contact
+- [x] Place the private-by-default public-profile switch directly above the owner leaderboard with opt-in explanatory copy
+- [x] Build a balance dashboard from real account records with a GRAM earnings chart, wallet status, and safely gated deposit and withdrawal controls
+- [x] Add an optional «Показать контакт владельца» listing setting that exposes only a detail contact while preserving anonymous profile visibility
+- [x] Use the public-account setting as the default for new listing visibility while allowing the owner to hide any individual community
+- [x] Add an optional «Показать контакт владельца» listing setting that exposes only a detail contact while preserving anonymous profile visibility
+- [ ] Move account activity to the bottom of Profile and show a compact recent view with a «Показать предыдущие» pagination action
+- [ ] Show channel owners every bot-created invite link with its creation time, join count, and verified users who entered through it
+- [ ] Let channel owners create paid Telegram Stars invite links with a Stars price, link name, and owner-visible attribution
+- [ ] Show the paid-entry settings prominently for eligible channels and an explicit Telegram limitation message for chats
+- [ ] On bot-verified ownership transfer, immediately remove the former owner’s My Groups access and refresh public leaderboard totals for both owners
+- [ ] Send concise immediate @TGTOP_robot notifications with a relevant action button for listing, delisting, bid changes, rewards, link creation, ownership changes, and bot-rights errors
+- [ ] Redesign @TGTOP_robot event messages as compact status cards with essential values and no more than two focused action buttons
+- [x] Use the bot-generated official Telegram Stars subscription invite link as the paid channel’s main «Перейти» action
+- [ ] Add dynamic motion to the ranking bid flow: smooth price feedback, brief lot highlight, and an origin-aware panel entrance
+- [x] Add a Telegram mobile safe-area inset to confirmation drawers so primary buttons remain visible above the native bottom bar
+- [x] Add the wallet connect control inside the profile balance dashboard and simplify the header wallet treatment
+- [x] Render a non-anonymous listing owner’s avatar and @username as a clickable entry to their public TG TOP profile only after a successful catalog listing
+- [x] Raise the fixed bulk-action bar above Telegram’s native bottom bar and reserve bottom scroll clearance for selectable My Groups cards
+- [x] Hide the My Groups status ribbon completely for communities that are not listed; retain only catalog and sale ribbons
+- [x] Finish the Profile as a coherent personal cabinet: real GRAM balance graph, in-profile wallet connection, public-account visibility, and compact paginated activity history
+- [x] Send a concise @TGTOP_robot credit notification after each verified GRAM reward and refresh the recipient’s profile balance and activity automatically
+- [x] Repair private invite-link creation for bot-managed communities and show actionable Telegram rights/type errors when a link cannot be issued
+- [ ] Deploy the completed profile cabinet to production and verify live Telegram account data loads without stale balances
+- [x] Open community links through Telegram WebApp navigation so returning from a group preserves the current TG TOP Mini App session and detail screen
+- [x] Refine My Groups into a clear workspace for adding communities, selecting several cards, listing them, removing them from the catalog, and deleting them from the cabinet
+- [x] Refine Profile hierarchy around balance, wallet, reward status, public visibility, leaderboard, and compact account activity
+- [x] Remove anonymous-listing controls from the listing sheet so owner visibility follows only the public-profile setting
+- [x] Hide paid-entry UI completely when the selected community is not eligible instead of showing an unavailable-state explanation
+- [x] Format debit activity with one minus sign and remove technical operation-code labels from Profile history
+- [x] Show a live per-second timer for a group’s continuous occupancy of its exact ranking cell and reset it whenever the group moves to another cell
+- [x] Make a public owner card open the owner’s Telegram account directly when a public @username is available
+- [ ] Reconcile the accepted TG TOP requirements against local code and production before further feature changes, resolving only verified gaps in one tested release
+- [x] Enforce strict ranking order by GRAM bid, breaking equal-price ties by earliest occupancy and displacing lower positions predictably
+- [x] Replace the ranking-card price badge with a subtle integrated price treatment and show a visible live per-second cell-occupancy timer in the lot-price card
+- [x] Make the owner’s «Управлять этой группой» action open editable listing settings for that exact already listed community
+- [x] Add a downward swipe-to-close gesture on an owner’s group detail that returns to the originating list without interfering with normal scrolling
+- [x] Add a downward swipe-to-close gesture on an owner’s group detail that returns to the originating list without interfering with normal scrolling
+- [x] Add a downward swipe-to-close gesture on an owner’s group detail that returns to the originating list without interfering with normal scrolling
+- [x] Enforce strict ranking order by GRAM bid, breaking equal-price ties by earliest occupancy and displacing lower positions predictably
+- [x] Make public owner cards open the owner’s Telegram account directly when a public @username is available
+- [x] Rebuild and test the outbid auction with explicit scenarios for insertion by price, equal-price time priority, downward displacement, and per-cell timer resets
+- [x] Format the exact-cell occupancy timer exclusively as total hours, minutes, and seconds, without a day unit
+- [x] Replace the protected-sale «Создать офер» control with a direct «Купить за … TON» action for a listed sale
+- [x] Correct every ranking minimum label and bid step to GRAM: a 0.1 GRAM floor and 0.1 GRAM increment where applicable
+- [x] Add a slot-linked GRAM bid slider that selects an eligible community and opens the official payment flow for the chosen ranking place
+- [x] Style the ranking-bid sheet as a Telegram-native pricing panel with selected community, large GRAM amount, colour-responsive slider, quick raise controls, and one «Оплатить место» action
+- [x] Use users.publicProfile, rather than the retired anonymous-listing field, when projecting owner cards in catalog and ranking server queries
+- [x] Cap every ranking-bid slider, input, and server payment request at 1,000 GRAM
+- [x] Add a listing-settings ranking-price slider that previews the exact ranking position a selected community would occupy before payment
+- [x] Apply a higher paid bid when the same community remains in its current ranking cell without resetting its cell-occupancy timer
+- [x] Set every ranking slot floor to 0.1 GRAM and automatically promote listed communities into any vacant higher slot by bid and occupancy time
+- [x] Replace large rank numerals inside ranking cards with a compact position ribbon in the upper corner
+- [x] Offer GRAM and Telegram Stars as explicit payment choices in the ranking bid panel while preserving the selected bid amount
+- [x] Enforce a compact ranking invariant: no occupied slot may have any vacant slot above it
+- [x] Cap ranking price controls at 100 GRAM and provide a 0.1 GRAM slider step, plus/minus buttons, and validated manual price entry with live position preview
+- [x] Show every ranking amount in GRAM; remove Stars-only amount labels from listing settings and keep the payment method choice explicit
+- [x] Hide the community-description block entirely when Telegram did not provide a description
+- [x] Show an owned community’s current ranking place, current bid, catalog category, and location path in its management view
+- [x] Add an in-context 0.1 GRAM slider with − / + controls in group management to preview and pay for a higher ranking position
+- [x] Remove the visible 100 GRAM cap label while keeping the slider range at 100 GRAM and allowing a validated manual price above the slider range
+- [x] Keep an independent persisted Top ranking, bid preview, and auction order for every category and subcategory combination; every empty section starts at place 1 from 0.1 GRAM
+- [x] Format displayed GRAM values without redundant trailing zeroes and limit optional sale-price precision to one decimal place
+- [x] Auto-fill every vacant ranking cell from eligible catalog communities for the active general, category, or subcategory ranking board
+- [x] Remove visible numeric position labels from all ranking cards and empty ranking cells
+- [x] Remove every price and position overlay from occupied and vacant ranking cards; reveal pricing only in the bid-management flow
+- [x] Rename the listing-settings action from «Выбрать оплату» to «Залистить» while retaining the secure payment-confirmation step
+- [x] Make listing position preview use the populated target ranking board so occupied places never incorrectly show first place at 0.1 GRAM
+- [ ] Include each listed community in independent overall, community-type, and selected-subcategory rankings, each with its own place and bid order
+- [x] Show the exact ranking scope in listing preview, including overall, community type, or selected subcategory
+- [x] Show a primary ranking-place control in an owned community detail page with the current bid, slider, ± controls, and direct self-bid increase action
+- [x] Show a primary ranking-place control in an owned community detail page with the current bid, slider, ± controls, and direct self-bid increase action
+- [x] Show the exact ranking scope in listing preview, including community type, subcategory, and country
+- [ ] Reorder the target ranking board immediately after every successful paid bid so a higher bid moves above lower bids and cascades other groups downward
+- [x] Derive every displayed current position from the group’s actual persisted ranking cell in the same board, preventing mismatches such as a second cell showing fifth place
+- [x] Temporarily remove Telegram Stars as a ranking-payment option and allow ranking payments only through internal GRAM balance
+- [x] Redesign the owned-community ranking card without horizontal divider lines, using compact visual grouping and clear spacing instead
+- [x] Make live ranking price, current place, occupancy timer, and bid slider the primary block in an owned community detail page; move secondary actions below it
+- [x] Replace the oversized owner action card with a compact inline owner row so the live ranking controls remain visually primary
+- [x] Show the owner’s display name prominently in the compact owner row, with the @username smaller beneath it
+- [x] Replace the browser deletion confirm with a TG TOP-styled destructive confirmation dialog that says «Удалить группу из платформы?»
+- [x] Keep the self-bid amount as editable text while typing, normalize it only on blur or submission, and preserve 0.1 GRAM validation
+- [x] Add sourced audience-growth chart from bot-observed audience snapshots, explicitly omitting unobserved historical data and unavailable daily leave history
+- [x] Start the chosen GRAM payment directly from an owned community’s self-bid control without reopening the price-selection sheet
+- [x] Add an owned-community manager selector backed by the current Telegram administrator list
+- [x] Add a persisted switch that controls @TGTOP_robot listing announcements
+- [x] Redact Telegram polling failures so bot credentials and request internals never reach production logs
+- [x] Replace the revoked @TGTOP_robot token on production and verify long-polling recovery
+- [x] Prevent the web-server production bundle from starting a second Telegram long-polling loop
+- [x] Show the selected community manager and their Telegram account in public details even when the owner listing is anonymous
+- [x] Replace «Менеджер группы» with the shorter «Менеджер» label while retaining the public manager card and Telegram link
+- [x] Add a visible owner-menu control to switch the community listing between anonymous and public visibility
+- [x] Move listing settings from the separate sheet into a compact, ordered owner-management card without duplicated actions
+- [x] Redesign the primary «Перейти в группу» action as an expressive Telegram-blue entry card with clear visual priority
+- [x] Rename «Обновить ставку» to «Обновить лот» and restyle it as a visually prominent primary action
+- [x] Replace the anonymous-placement header block with the compact publication-settings control for owners
+- [x] Move group entry to a subtle header control and make the community avatar open Telegram
+- [x] Remove the duplicate anonymous-placement switch from the ranking bid block while keeping the wide «Обновить лот» action
+- [x] Add a publication setting that lets an owner show or hide the selected manager from public community details
+- [x] Reduce the typography of the reward-budget and reward-per-subscriber fields for a cleaner compact mobile layout
+- [x] Explain in the empty-slot group selector that the listed lot remains in Top until another group outbids it
+- [x] Restyle the «Выбрать и настроить ставку» action with a calmer outlined dark presentation
+- [x] Add the compact lot-publication settings to the bottom bid sheet and rename it «Параметры лота»
+- [x] Remove the standalone Telegram-entry button and make the entire community header card open the community
+- [x] Show a green «Купить» action on a lot card only when sale is enabled and a sale price is set
+- [x] Replace the manager action in the public lot card with an anonymous-posting status and retain a direct group-entry action
+- [x] Show a reward caption below group entry only for active reward campaigns
+- [x] Add «Вступили» and «Отписались» metric cells beneath the audience chart using bot-observed data
+- [x] Show the lot number and live position timer in the top row of the community detail card
+- [x] Show daily audience growth percentage below the avatar with direction-aware green or red styling
+- [x] Show a reward star badge in the card corner only for an active reward campaign
+- [x] Keep the completed bottom controls and let guests select only an already connected own group to outbid
+- [x] When a guest has no connected eligible groups, show neutral copy explaining that the bot must be made an administrator of their group
+- [x] Restore the production SSH deployment key in the workspace and deploy the saved lot-card revision to tgtop.xyz
+- [x] Полностью заменить единый шаблон деталей каждого сообщества по утверждённому макету: убрать старую одиночную кнопку и дубли графика, применить три компактных действия, одну секцию статистики и общий нижний блок ставки для владельца и гостя; визуально проверить на реальном экране Mini App до ответа пользователю.
+- [x] Уплотнить верх общего шаблона деталей по Telegram-скриншоту: разместить таймер строго над аватаром, закрепить звезду в правом верхнем углу, уменьшить высоту трёх действий и убрать лишнее вертикальное пространство перед графиком.
+- [x] Перерисовать нижний owner-блок деталей в том же компактном стиле: уменьшить вертикальные отступы параметров публикации, компактно сгруппировать переключатели и поля, сократить карточки менеджера/розыгрыша и нижнее действие снятия с листинга.
+- [x] Вернуть базовой карточке деталей точные пропорции утверждённого макета: увеличить центральный hero-блок и аватар, восстановить равные действия, широкую динамику с наглядными трендами и чистую панель ставки; расширенные owner-настройки не должны визуально вмешиваться в этот базовый шаблон.
+- [x] Точно воспроизвести компактную owner/guest-панель из последнего референса: для владельца «Обновить лот», для гостя «Перебить ставку», а внизу отдельная кнопка выбора только уже подключённой своей группы.
+- [x] В нижней строке owner-панели разместить рядом две отдельные кнопки: выбора своей уже подключённой группы и выбора менеджера; управление объявлением бота оставить отдельным переключателем параметров выше.
+- [x] Использовать уже реализованные действия панели лота без добавления новых: переставить их строго по последнему референсу пользователя.
+- [x] Показать строгий нативно-Telegram фрагмент панели перед применением: плоские графитовые поверхности, тонкие границы и единый синий акцент без игровых градиентов.
+- [x] Применить согласованный строгий нативно-Telegram стиль к первой части карточки: слот, таймер, аватар, три действия, график и метрики должны визуально соответствовать новой нижней панели.
+- [x] Исправить панель менеджера: одновременно может быть выбран только один вариант — «Анонимно» или один администратор Telegram.
+- [x] Сделать строку «Ваша группа» интерактивной: открывать существующий список уже подключённых групп пользователя и применять выбранную группу к обновлению или перебитию лота.
+- [x] Уплотнить hero-блок деталей вокруг таймера и аватара, а также довести панель ставки: компактный степпер, аккуратный слайдер и отсутствие лишней пустоты.
+- [x] Начислить пользователю 100 GRAM внутреннего бонусного баланса TG TOP без перевода реальных TON.
+- [x] Доработать слайдер ставки до строгого Telegram-вида: компактный степпер, понятная шкала и без лишней пустоты; заменить временную иконку TG TOP на спокойный минимальный знак.
+- [x] Убрать пустые неинтерактивные поля в блоке ставки: каждая область должна содержать цену, диапазон или работающее действие.
+- [x] Пересобрать карточку деталей по последнему полному референсу: горизонтальный hero-блок с аватаром слева, текстом справа, компактными действиями, графиком, метриками и строгой последовательностью параметров/ставки.
+- [ ] Уменьшить управляющие кнопки, тумблеры, степпер и отступы панели лота; заменить длинную нижнюю кнопку на компактное действие «Перейти».
+- [x] Полностью удалить дублирующий блок иконки и суммы слева от степпера в панели ставки.
+- [x] Привести три верхних действия к единому компактному виду с ровной типографикой и добавить в «Перейти в группу» динамическую подпись «+N GRAM за вступление» при активной награде.
+- [x] В верхней строке оставить номер карточки без слова «ЛОТ», показывать звезду награды рядом с номером только при активной награде и разместить небольшой таймер справа; делать «Купить» серой с текстом «Группа не продаётся», если продажа или цена не заданы.
+- [x] Исправить сохранение дробного вознаграждения в GRAM: преобразовывать значение интерфейса в целые внутренние единицы до вызова серверной валидации.
+- [x] После сохранения цены продажи сразу синхронизировать публичную верхнюю кнопку с состоянием продажи и суммой; сократить текст входа до «Перейти» и ещё уменьшить высоту трёх верхних действий.
+- [x] Проверить полный поток продажи сообщества: включение переключателя, обязательная цена, сохранение в базе, индикация «На продаже» у владельца, «Купить за N GRAM» у гостя и защищённое действие покупки.
+- [x] Унифицировать owner- и guest-карточки: таймер рядом с номером, звезда награды справа, одинаковые три верхних действия и одинаковая панель параметров лота с разными финальными действиями.
+- [x] При отсутствии достаточных реальных наблюдений показывать на графике нейтральную линию вместо пустого текстового блока, не подставляя вымышленные данные.
+- [x] Перенести бейдж ежедневного роста внутрь аватара сообщества — в нижний правый угол изображения.
+- [x] Заменить текстовые шильдики вознаграждения «+N GRAM» на компактную золотую звезду в ячейках каталога.
+- [x] В нижней панели заменить заголовок «Обновить ставку»/«Перебить ставку» на «Текущая цена за лот», а действия владельца и гостя вывести в финальную кнопку.
+- [x] Исправить предварительный расчёт нового места при повышении ставки на нижних лотах: показывать результат перестановки по реальному порядку ставок.
+- [x] Исправить гостевую карточку продажи: после сохранения цены показывать «Купить за N GRAM» так же, как у владельца.
+- [x] Оформить кнопку «Перейти»: значок Telegram и текст в одной строке, под ними компактная зелёная подпись с реальной наградой за вступление.
+- [x] Убрать строку «Без контакта» из верхнего действия анонимной публикации, оставив только состояние «Анонимно».
+- [x] После выбора группы в guest-режиме показывать на финальной синей кнопке «Перебить ставку», а не «Перебить лот».
+- [x] Увеличить высоту степпера «− / цена / +» и ползунка ставки для удобного управления на телефоне.
+- [x] В guest-режиме автоматически подставлять текущую ставку лота плюс 0.1 GRAM как минимальную стартовую цену перебития.
+- [x] Разрешить владельцу поставить цену ниже текущей и показывать красное предупреждение с новым местом лота в рейтинге.
+- [x] В неактивном состоянии продажи показывать на первой кнопке только короткий текст «Не на продаже».
+- [x] Убрать надпись «В ТОПЕ» из верхней части карточки сообщества.
+- [x] Немного увеличить высоту четырёх нижних ячеек третьего ряда каталога для более ровной типографики.
+- [x] В нижних ячейках списка увеличить аватары и центрировать их по вертикали.
+- [x] Исправить единый порядок рейтинга: канал с наивысшей ставкой должен быть в топе и в «Все», и в рубрике «Каналы».
+- [x] Перестроить рейтинг в единый общий порядок ставок; вкладки «Каналы» и «Чаты» должны только фильтровать и сортировать его без отдельных мест и ставок.
+- [x] Добавить в карточки «Мои группы» панель листинга: параметры публикации, продажа, вознаграждения, ставка и размещение собственной группы в общем рейтинге.
+- [x] Добавить в панель листинга собственной группы выбор категории и подкатегории, а также кликабельный выбор менеджера или анонимного режима.
+- [x] Показать золотую звезду рядом с заголовком «Вознаграждения» и центрировать текст «Перейти» относительно значка в верхнем действии.
+- [x] Полностью скрывать действие продажи в верхней строке карточки, если группа не выставлена на продажу.
+- [x] В действии «Перейти» показывать сумму награды отдельной нижней строкой без лишнего текста.
+- [x] Оформить нижнюю сумму награды в «Перейти» ярко-зелёным контрастным цветом.
+- [x] Показывать прогнозируемое место в рейтинге при первом размещении и менять его в реальном времени вместе с ползунком ставки.
+- [x] Убрать ручной выбор «Каналы / Чаты» из панели размещения, определять тип по выбранной группе и использовать освободившееся поле для географии.
+- [x] Показывать под ползунком две прогнозируемые позиции: в общем ТОПе и в ТОПе каналов либо чатов с одной общей ставкой.
+- [x] Использовать «Вывести в ТОП» как название блока и выводить в нём заметный показатель будущего места группы.
+- [x] Полностью убрать раздел «Заработать» и соответствующую кнопку из нижней навигации.
+- [x] Уточнено: не переименовывать «Мой кабинет»; он остаётся отдельным входом в баланс и настройки аккаунта.
+- [x] Добавить самостоятельную кнопку «Рабочее пространство» для групп и размещений рядом с отдельной кнопкой «Мой кабинет».
+- [x] Переименовать первый пункт нижней навигации из «Каталог» в «ТОП».
+- [x] Немного увеличить высоту двух карточек второго ряда рейтинга, позиций #2 и #3.
+- [x] Полностью убрать раздел «Заработать» и соответствующую кнопку из нижней навигации.
+- [x] Убирать незначимые нули после запятой в суммах истории оферов.
+- [x] Показывать выбор географии и подкатегории только при открытии настройки из рабочего пространства, скрывая их при входе из ТОПа.
+- [x] Сделать кнопку «Перейти» шире и главным действием, кнопку менеджера компактнее, а под переходом показывать строку «За вступление получите +N GRAM».
+- [x] Расположить действия под аватаром в порядке: «Перейти», условная «Купить», затем «Менеджер»; скрывать покупку при отсутствии продажи.
+- [x] Немного увеличить аватар и главную кнопку «Перейти», сделав покупку и менеджера компактнее.
+- [x] Полностью скрывать кнопку менеджера при анонимной публикации без публичного менеджера.
+- [x] Добавить в рабочее пространство отдельный раздел «Управление каналом / чатом» с независимой настройкой очистки системных сообщений для чатов без требований к листингу.
+- [x] Убрать фон у индикатора прироста под аватаром, оставив небольшие зелёные или красные цифры со стрелкой.
+- [x] Сгруппировать тексты трёх верхних действий карточки и выделить «Перейти» крупным основным текстом с меньшей строкой награды.
+- [x] Подогнать размер аватара под главную кнопку и немного уменьшить высоту «Перейти», «Купить» и «Менеджер».
+- [x] Увеличить аватар до высоты главного действия и уменьшить высоту «Перейти», «Купить» и «Менеджер» примерно вдвое.
+- [x] В кнопке продажи показывать крупную центрированную цену и маленькую нижнюю подпись «Купить» без текста «На продаже».
+- [x] Показывать аватар выбранного менеджера в его верхней кнопке с иконкой как запасным вариантом.
+- [x] Увеличить аватар до высоты главного действия и уменьшить высоту «Перейти», «Купить» и «Менеджер» примерно вдвое.
+- [x] В браузерном гостевом режиме направлять «Купить» и «Подключить Telegram» в @TGTOP_robot / Mini App вместо авторизации Manus. Отменено пользователем: заменено официальным Telegram Login.
+- [x] Реализовать полноценное подключение Telegram из браузера через @TGTOP_robot / Mini App с возвратом в авторизованную сессию TG TOP. Отменено пользователем: заменено официальным Telegram Login.
+- [x] Реализовать браузерный вход через номер телефона Telegram и одноразовый код подтверждения без использования Manus OAuth.
+- [x] Сделать @TG_TOPBOT основным ботом TG TOP для нового подключения сообществ и официального Telegram Login.
+- [x] Сохранить @TGTOP_robot дополнительным резервным ботом с безопасным режимом переключения при недоступности основного.
+- [x] Запустить @TGTOP_robot как параллельный резервный контур наблюдения без двойных бонусов, платежей и уведомлений. Отменено пользователем: выбран полный параллельный режим.
+- [x] Запустить @TG_TOPBOT и @TGTOP_robot в полном параллельном режиме с общей идемпотентной обработкой событий и защитой от дублирования действий.
+- [x] Исправить обработку конфликта уникального ключа telegram_event_receipts, чтобы второй параллельный бот штатно пропускал уже занятое событие без ошибки и повторной бизнес-операции.
+- [x] Сохранять и показывать исходные анимированные Telegram-аватары сообществ в ячейках TG TOP в максимальном доступном качестве со статичным запасным изображением.
+- [x] Исправить production-переход кнопки «Войти через Telegram» в официальный Telegram Login и проверить возврат в сессию TG TOP.
+- [x] Исправить mobile-ошибку Telegram OAuth `redirect_uri_required` и зарегистрировать/передавать корректный адрес возврата TG TOP.
+- [x] Устранить потерю параметров OAuth при запуске Telegram Login из мобильного браузера/Telegram WebView, несмотря на корректно зарегистрированный callback.
+- [x] Исправить Invalid Telegram login state: до создания OAuth cookie перенаправлять www.tgtop.xyz на канонический tgtop.xyz, совпадающий с callback Telegram.
+- [x] После успешного Telegram Login обновлять авторизованную сессию в интерфейсе и показывать ТОП, Розыгрыши, Рабочее пространство и Мой кабинет вместо гостевого режима. Выполнено с уточнением: розыгрыши затем убраны из нижней навигации по запросу пользователя.
+- [x] Добавить стабильный идентификатор приложения в JWT Telegram-сессии, чтобы auth.me не отклонял её как неполную в production.
+- [x] Восстановить загрузку и отображение логотипа Amber WIN вместо резервной буквы A в ячейке и карточке сообщества.
+- [x] Во втором ряду карточек ТОПа показывать только название и число участников, а в третьем — только название без юзернейма.
+- [x] Показать в верхней панели общий баланс как сумму основного и бонусного счёта пользователя.
+- [x] Переставить общий баланс перед иконкой настроек в авторизованной шапке TG TOP.
+- [x] Убрать все текстовые подписи из трёх нижних кнопок, оставив только доступные иконки с активным состоянием.
+- [x] Сделать нижнюю навигацию компактной по ориентиру Tonkeeper: тонкая панель, уменьшенные иконки, короткие подписи ТОП/Розыгрыши/Работа/Кабинет в одну строку без переноса. Отменено пользователем: требуется полное «Рабочее пространство».
+- [x] Исправить обрезание последней подписи нижней навигации: использовать «Кабинет» и равную ширину четырёх пунктов. Отменено пользователем: проблема была в подписи рабочего пространства.
+- [x] Убрать вкладку «Розыгрыши» из нижней навигации, оставив компактные ТОП, Работа и Мой кабинет. Выполнено с уточнением: ТОП, Рабочее пространство и Мой кабинет.
+- [x] Сохранить полную подпись «Рабочее пространство» в компактной навигации без переноса и обрезания после удаления вкладки «Розыгрыши».
+- [x] Сделать нижнюю навигацию компактной по ориентиру Tonkeeper: тонкая панель, уменьшенные иконки, короткие подписи ТОП/Розыгрыши/Работа/Кабинет в одну строку без переноса. Отменено повторной записью: финальный вариант — ТОП, Рабочее пространство и Мой кабинет.
+- [x] Заменить техническую ошибку покупки сообщества на понятное уведомление «Недостаточно средств на балансе» при нехватке GRAM.
+- [x] Открывать Telegram-профиль выбранного менеджера в новой вкладке по нажатию на кнопку менеджера.
+- [x] Открывать «Перейти» в Telegram новой вкладкой в браузере, сохранив нативный переход внутри Telegram Mini App.
+- [x] Заменить текст пустого выбора группы на подсказку о добавлении бота администратором сообщества.
+- [x] Исправить браузерные переходы «Перейти» и «Менеджер»: Telegram должен открываться отдельно, не заменяя вкладку TG TOP.
+- [x] Подготовить приоритетные рекомендации по улучшению браузерной версии TG TOP.
+- [x] Исправить поисковый сниппет главной TG TOP, чтобы Google не показывал случайный список групп.
+- [x] Добавить безопасные публичные SEO-страницы только для разрешённых владельцем групп, чтобы они могли индексироваться в Google.
+- [x] Подготовить и показать визуальный шаблон публичной SEO-карточки сообщества TG TOP.
+- [x] Исправить автоматическую авторизацию внутри Telegram Mini App: не предлагать «Войти через Telegram» уже открывшему приложение пользователю.
+- [x] Восстановить показ исходного анимированного аватара сообщества в карточке TG TOP.
+- [x] Подгружать Telegram-аватары всех администраторов в списке выбора менеджера с корректным fallback.
+- [x] Свернуть геофильтр до маленькой кнопки с иконкой и показывать «Весь мир», если страна не выбрана.
+- [x] Добавить отдельную кнопку тематических категорий, включая «Крипто» и «Новости».
+- [x] Убрать подпись «Данные подтверждаются ботом» из публичной браузерной карточки сообщества.
+- [x] Полностью блокировать тумблеры, действия и ценовые контролы панели лота, пока владелец не выбрал свою группу.
+- [x] Показывать вверху публичной браузерной карточки путь размещения: география, тип сообщества и рубрика.
+- [x] Убрать 0 TON из шапки и показывать только общий баланс пользователя в GRAM.
+- [x] Выделить общий GRAM-баланс в шапке отдельной спокойной Telegram-плашкой.
+- [x] Убрать общий блок «Управление каналом / чатом» из рабочего пространства и оставить настройки только в конкретной группе.
+- [x] Показывать реальный аватар выбранного менеджера в верхней кнопке менеджера карточки сообщества.
+- [x] Сохранить и показывать исходный анимированный аватар затронутой группы вместо статичного Telegram-кадра.
+- [x] Уменьшить заголовок «Рабочее пространство» и его сопроводительный текст для компактной мобильной страницы.
+- [x] Вынести «Личный кабинет» в отдельный верхний заголовок страницы профиля вместо подписи внутри карточки пользователя.
+- [x] Разместить «Подключить кошелёк», «Пополнить» и «Вывести» сразу под блоком балансов и перед графиком профиля.
+- [x] Исправить появление публичного аккаунта в лидерборде владельцев сразу после включения соответствующего переключателя.
+- [x] Уменьшить пустую кнопку «Добавить свою группу» до высоты и плотности обычной карточки списка.
+- [x] Оформить выбранные географию и рубрику в заголовке ТОПа как компактную подпись «Украина · Новости» после «Все сообщества».
+- [x] Сделать плашку «Общий баланс» в шапке более прозрачной и визуально лёгкой.
+- [x] Убрать подпись «Общий баланс» и оставить в плашке только сумму GRAM.
+- [x] Сделать кнопку рубрик такой же компактной иконкой без текста, как кнопка географии.
+- [x] Добавить первой красную кнопку с крестиком для сброса всех фильтров ТОПа.
+- [x] Показывать @username или «Приватный» сообщества отдельной компактной меткой в широкой верхней строке деталей.
+- [x] Сделать всю верхнюю строку «Назад» в деталях сообщества большой зоной возврата по нажатию.
+- [x] Показывать в верхней строке деталей компактный путь принадлежности сообщества в порядке: тип, страна и выбранная рубрика; географию выводить всегда, рубрику — только после явного выбора.
+- [x] Убрать подпись «Добавьте первую группу через личную папку» из нижней кнопки «Добавить свою группу».
+- [x] Сохранять выбранную тематическую рубрику при переключении между «Все», «Каналы» и «Чаты» так же, как географию.
+- [x] Перенести @username или «Приватный» из верхней строки внутрь карточки деталей — сразу под описанием сообщества.
+- [x] Оставить в верхней строке более заметную кнопку «Назад» и путь «Канал/Чат · география · выбранная рубрика» без username.
+- [x] Показывать @username или «Приватный» вместо количества участников во второй и третьей карточках ТОПа.
+- [x] Получить исходный MP4 анимированного аватара F_I_N_E_G_O_L_D от владельца и сохранить его в карточках TG TOP.
+- [x] Попытаться получить публично доступный MP4-анимированный аватар F_I_N_E_G_O_L_D без доступа к личному Telegram-аккаунту: публичная страница Telegram также отдаёт только статичный JPEG.
+- [x] Повторно проверить максимальный профильный файл F_I_N_E_G_O_L_D только через основной бот @TG_TOPBOT: Bot API отдал только статичный JPEG `profile_photos/file_6.jpg`.
+- [ ] Спроектировать клиентский модуль Telegram, который обрабатывает только открытые сообщества с @username и исключает приватные ссылки, группы и личные чаты.
+- [x] Загрузить предоставленный MP4 как анимированный аватар F_I_N_E_G_O_L_D и сохранить его URL в каталоге.
+- [ ] Подготовить подключение выделенного клиентского аккаунта Telegram для автоматической выгрузки видео-аватаров только публичных сообществ.
+- [x] Добавить роли владельца и выбранных модераторов для ручного снятия или удаления чужих лотов, включая оплаченные.
+- [x] Добавить обязательную причину модерации и неизменяемый журнал действий по каждому снятому или удалённому лоту.
+- [x] Добавить локальную автоматическую проверку доступного контента новых листингов ботом с состояниями «допущен», «на ручной проверке» и «не допущен к листингу», без передачи площадок наружу.
+- [x] После допуска листинга проверять новые сообщения и автоматически скрывать нарушающие площадки из поиска и ТОПа с переводом на ручную проверку.
+- [x] Реализовать первый локальный фильтр по тексту, ссылкам и спам-признакам без передачи данных площадок наружу.
+- [x] Скрыть строку поиска ТОПа за компактной кнопкой с раскрытием поиска по нажатию.
+- [x] Убрать NFT из переключателя «Все / Каналы / Чаты» и добавить самостоятельные верхние разделы «Сообщества», «NFT» и «Боты».
+- [x] Перенести географию и тематические рубрики из текущей строки фильтров в более компактное отдельное место.
+- [ ] Сделать панель модерации понятнее: пояснить автоматическое скрытие, ручные решения и пустую очередь проверки.
+- [x] Отключить автоматическое скрытие листингов ботом, чтобы без ручного действия модератора ни одна площадка не снималась с ТОПа.
+- [x] Заменить непонятную пустую очередь на ручной список активных лотов с явным действием «Снять с ТОПа» и обязательной причиной.
+- [x] Добавить отдельную ячейку нижней навигации «Админ-панель», видимую только главному администратору и назначенным модераторам.
+- [x] Показывать в админ-панели все активные размещённые группы с автоматическим обновлением списка и ручным снятием выбранного лота.
+- [x] Сортировать активные лоты в админ-панели по новизне и добавить безопасный переход в Telegram-сообщество из каждой строки.
+- [x] Отправлять владельцу Telegram-уведомление с введённой администратором причиной после ручного снятия его лота с ТОПа.
+- [x] Добавить в админ-панель управление странами, городами и тематическими рубриками только для главного администратора.
+- [x] Хранить управляемые страны, города и рубрики в базе данных и подключить их к формам размещения сообществ.
+- [x] Защитить удаление значений справочников: не допускать удаление страны, города или рубрики, пока они используются размещёнными сообществами.
+- [x] Дать одинаковые права на управление справочниками всем назначенным специальным пользователям админ-панели, а не только главному администратору.
+- [x] Временно скрыть географический и тематический фильтры из верхней панели до согласования нового формата.
+- [x] Явно обозначить в админ-панели выдачу и отзыв доступа по @username для назначенных администраторов панели.
+- [x] Вернуть в раздел «Сообщества» компактную кнопку фильтров рядом с кнопкой поиска, не показывая эти кнопки в NFT и Ботах.
+- [x] Оставить географию и рубрики только в фильтрах «Сообществ»; не добавлять географию в NFT и Боты.
+- [x] Добавить в разделе NFT нижние рубрики «Все / Гифты / Юзернеймы / Анонимные номера / Другие NFT» без географических фильтров.
+- [x] Добавить в админ-панель отдельное создание и удаление рубрик для раздела «Боты».
+- [x] При нажатии на пустую позицию ТОПа переносить пользователя в рабочее пространство и после выбора группы открывать существующий блок «Обновить лот» для этого номера, без старого промежуточного экрана.
+- [x] В блоке «Обновить лот» автоматически заполнять номер и адрес лота, географию, рубрику и минимальную цену из нажатой пустой ячейки.
+- [x] Добавить владельцу компактную кнопку «Снять с листинга» в карточке собственной размещённой группы.
+- [x] Добавить в настройках конкретной группы рабочего пространства подтверждаемую кнопку «Удалить группу».
+- [x] Показывать администраторам TG TOP кнопку «Снять с листинга» при открытии чужой размещённой группы и требовать причину ручной модерации.
+- [x] Повторно проверить Telegram-файл F_I_N_E_G_O_L_D после отключения владельцем защиты сохранения контента: оба бота по-прежнему получают только статичный JPG.
+- [x] Сделать кнопки Гео и Рубрики в заголовке ТОПа маленькими квадратными иконками без текстовых подписей, сохранив выбор фильтров по нажатию.
+- [x] Перестроить верх ТОПа: основные вкладки, затем уменьшенные «Все / Каналы / Чаты» в одной строке с иконками Гео, Рубрики и Поиска, затем заголовок и сразу ячейки рейтинга.
+- [x] Показывать красный крестик сброса в строке заголовка только после выбора страны, города или рубрики; по нажатию сбрасывать только географию и рубрику.
+- [x] Синхронизировать проверенную версию интерфейса с текущим продакшен-доменом Telegram Mini App у @TG_TOPBOT без подмены адреса бота тестовой ссылкой Manus.
+- [ ] Проверить настройки VPS TG TOP в Zomro и устранить причину утраты доступа между сессиями без изменения сервисов или домена без подтверждения.
+- [ ] Разобрать ежедневные ошибки «Failed to create scheduled backup» в Zomro и восстановить корректные резервные точки VPS только после согласования настройки.
+- [x] Удалить временный ключ обслуживания из служебного пользователя, восстановить проверенный доступ к VPS и обновить текущий Mini App TG TOP на `tgtop.xyz` без смены URL бота.
+- [x] Убрать внутренние текстовые «Сбросить» из меню Гео и Рубрик, оставить один «Весь мир» и использовать только красный крестик в строке заголовка для сброса.
+- [x] Показывать в лидерборде владельцев только имя профиля вместо `@username`.
+- [x] Добавить в справочник тематических рубрик каталога «Знакомства» и «Маркеты», чтобы они появились в меню категорий и админ-панели.
+- [ ] Убрать все поля кодов из админ-панели справочников; автоматически создавать внутренние идентификаторы по названиям.
+- [ ] В управлении рубриками заменить выбор Каналы/Чаты/Боты на понятные типы Сообщества и Боты рядом с названием рубрики.
+- [ ] Показывать готовый список стран с галочками; после выбора страны выводить под ней поле добавления нескольких городов с кнопкой «плюс».
+- [ ] Убрать раздел городов и оставить в админ-панели только две простые формы: «Добавить страну» и «Добавить рубрику».
+- [x] Вверху админ-панели показать полный список активных размещений, отсортированный от новых к старым.
+- [x] Для удаления размещения требовать причину и отправлять её владельцу добавленной группы личным сообщением от бота TG TOP.
+- [ ] Исправить источник активных лотов в админ-панели: показывать все реальные текущие размещения в ТОПе и имя владельца каждого лота.
+- [ ] Добавить аватары групп и компактный однострочный вид в список активных лотов админ-панели.
+- [ ] Убрать заголовки «Выбрать регион» и «Выбрать рубрику» из выпадающих меню фильтров.
+- [ ] Показывать в строке адреса ТОПа метки в порядке: рубрика, страна, город.
+- [ ] Сделать активные верхние вкладки мягче: приглушённый сине-графитовый фон вместо яркой синей заливки.
+- [ ] Убрать внутренние границы между кнопками двух верхних рядов, оставив цельные сегменты.
+- [x] Детально изучить открытые финансовые и смарт-контрактные механики OOIA и подготовить карту безопасной применимости для TG TOP.
+- [x] Отдельно оценить, как залоговые и сроковые механики OOIA можно адаптировать для аренды NFT-юзернеймов без передачи окончательного владения.
+- [x] Составить по всем репозиториям OOIA карту модулей для будущего TG TOP: продажи за TON и jettons, escrow, аукционы, офферы, свопы, корзина, raffles, SBT/NTO, NFT-аренда, комиссии и off-chain сервисы — без внедрения до отдельного решения.
+- [x] Добавить в рабочее пространство компактные вкладки «Сообщества», «Боты» и «NFT»; в NFT показать реальные активы подключённого TON-кошелька без включения платежей, переводов или аренды и дать фильтры «Гифты», «Юзернеймы», «Анон-номера», «Домены» и «Другие NFT».
+- [x] Исправить распознавание Telegram Gifts в NFT-витрине: Candy Cane и аналогичные подарки должны попадать в «Подарки», а не в «Другие NFT»; переименовать «Гифты» в «Подарки» и «Анон-номера» в «Номера».
+- [ ] Добавить в карточку конкретного NFT интерактивный выбор видимости: от профиля владельца или анонимно.
+- [ ] Добавить открытие карточки NFT из подключённого кошелька и интерактивные кнопки предпросмотра: «Продать сразу» или «В рассрочку», цена и параметры графика; без сохранения лота, оплаты, подписи или передачи актива.
+- [x] Добавить сразу после статистики карточки канала раскрываемую панель «Подарки»: загрузить через Telegram Bot API реальные подарки конкретного канала и честно показать ограничение прав, если список недоступен.
+- [x] Переделать панель подарков канала в Telegram-подобную квадратную сетку и показывать реальную доступную анимацию каждого подарка вместо общей иконки.
+- [x] Оставить настройки «Обновить лот» и «Текущую ставку за лот» внутри одного общего блока без изменения их содержимого.
+- [x] Заменить действие удаления группы в карточке на подтверждённое снятие с листинга: предупреждать, что оплата за лот не возвращается, а группа остаётся в рабочем пространстве.
+- [x] Сделать компактную кнопку «Снять лот с листинга» заметной в верхней части карточки владельца.
+- [x] Показывать кнопку «Снять с листинга» в заголовке «Обновить лот» владельцу его группы и администраторам TG TOP на всех карточках.
+- [x] Убрать лишнюю внешнюю рамку вокруг нижнего блока лота, оставив только нужные карточки настроек и ставки.
+- [x] Уменьшить боковые поля мобильных карточек сообщества, чтобы информация и сетка подарков использовали больше ширины экрана.
+- [x] Исправить визуальное отображение медиа реальных NFT-подарков подключённого TON-кошелька: изображения и анимации вместо текстовой заглушки при доступном URL.
+- [x] Спроектировать и внедрить пополнение внутреннего баланса TON только после серверной проверки уникальной транзакции в сети; без автоматического вывода средств.
+- [ ] Добавить для депозитов TON защиту от повторного зачисления, уникальный комментарий платежа, финальные статусы, аудит и ручной процесс возврата/вывода.
+- [x] Реализовать пополнение как последовательность: сумма → подтверждение перевода TON Connect пользователем → серверная проверка входящей транзакции → однократное зачисление.
+- [x] Отправлять пользователю подтверждение от бота только после однократного зачисления TON, подтверждённого сетью.
+- [x] Исправить production-ошибку создания записи TON-депозита и заменить вывод технической SQL-ошибки безопасным понятным сообщением.
+- [x] Убрать из окна TON-пополнения предупреждающую табличку о ручном переводе без кода.
+- [x] Исправить возврат TON-платежа с неинициализированного кошелька-получателя: передавать неблокирующий адрес и показывать пользователю статус возврата вместо бесконечной проверки.
+- [x] Проверить предположение о кэше Telegram Mini App: оно не подтвердилось — адрес `UQ…` был актуальным неблокирующим адресом, а ошибка была в серверной трактовке `aborted`.
+- [x] Исправить проверку TON-депозита: успешный non-bounceable перевод на неинициализированный кошелёк с `aborted` должен зачисляться, если средства реально поступили и не были возвращены.
+- [x] Исправить верхний счётчик профиля: показывать одну сумму основного TON и бонусного GRAM в общей плашке в единицах GRAM.
+- [x] Спроектировать безопасный вывод TON: заявка с суммой и адресом, удержание баланса, комиссия, статусы и журнал без автоматической отправки до настройки кошелька выплат.
+- [x] Создать интерфейс вывода TON в стиле примера: сумма, адрес, комиссия, подтверждение и карточка статуса операции.
+- [x] Оформить сценарий вывода в собственном тёмном дизайне TG TOP, не копируя внешний интерфейс: крупная сумма, прозрачная комиссия и статусы заявки.
+- [x] В экране вывода до подтверждения показать адрес, сумму, доступный баланс, комиссию сети и чистую сумму к получению.
+- [x] Добавить отдельные состояния вывода: ошибка минимума, подтверждение «Да/Нет» и зелёная карточка созданной заявки с номером.
+- [x] Показывать «Средства успешно отправлены» только при наличии подтверждённой исходящей TON-транзакции и её хеша; до этого показывать статус ожидания выплаты.
+- [x] Реализовать автоматический вывод TON через отдельный горячий кошелёк выплат с секретом вне кода, лимитами, аварийной паузой и защитой от повторной отправки.
+- [x] Добавить анти-DDoS и антифрод для вывода: лимиты по пользователю и адресу, пауза между заявками, дневные лимиты, очередь и перевод подозрительных операций на ручную проверку.
+- [x] Настроить уже созданный отдельный кошелёк TG TOP как горячий кошелёк автоматических выплат через защищённый секрет, без хранения seed-фразы в коде.
+- [x] Использовать два отдельных кошелька: существующий для зачислений без seed-фразы на сервере и новый горячий кошелёк для ограниченных автоматических выплат.
+- [x] Привязать новый публичный адрес горячего кошелька выплат `UQAIaFX9IkBweFKBlomfvrEeU_AfgdbjkNayBI_CnTc__t9F` через защищённую конфигурацию.
+- [x] Удерживать комиссию сети из запрошенной пользователем суммы вывода: резервировать весь баланс заявки и отправлять получателю чистую сумму после комиссии.
+- [x] Установить минимальную сумму заявки на вывод 0.1 TON при положительной сумме к получению после комиссии.
+- [x] Добавить чистую policy-модель вывода с нано-тонами, идемпотентностью, cooldown, дневными лимитами и классификацией риска без использования JS float.
+- [x] Добавить неизменяемый журнал `ton_withdrawals` с атомарным резервированием только `mainBalanceTon`, отдельными статусами `queued`, `manual_review`, `broadcast_pending`, `sent`, `confirmed`, `failed_refunded` и аудитом хеша исходящей транзакции.
+- [x] Проверить, что 24-словная фраза горячего кошелька производит именно настроенный публичный адрес V4R2, не выводя фразу в логи.
+- [x] Подготовить серверную подпись V4R2 и отправку единственного внешнего BOC через TonAPI без фактического запуска выплаты до явного подтверждения первой операции.
+- [x] Выложить на tgtop.xyz защищённую версию вывода: production-миграция, зависимости и секреты горячего кошелька без автоматической отправки во время выкладки.
+- [ ] После явного подтверждения пользователя провести первый тестовый вывод с точными суммой, получателем и статусом сети.
+- [ ] После успешного подтверждённого теста включить штатные автоматические выплаты для обычных операций, сохранив ручную проверку рисков.
+- [x] По подтверждённой команде владельца включить `TON_WITHDRAWALS_ENABLED=true` на production после миграции и проверки старта сервиса; первый перевод не выполнять без его точных реквизитов.
+- [x] Автоматически подставлять в форму вывода полный TON-адрес, уже привязанный к аккаунту TG TOP, с резервным адресом TonConnect и ручным редактированием.
+- [x] Увеличить панель вывода: крупные поля, крупная сумма и цветовые акценты, при этом отображать пользователю GRAM вместо TON без изменения точного TON-расчёта на сервере.
+- [x] Центрировать ввод суммы и адреса в форме вывода, сохраняя возможность вручную изменить адрес.
+- [x] Переименовать пользовательские подписи и кнопку TON-пополнения в GRAM, сохранив серверную проверку перевода в TON.
+- [x] Сверить и выровнять общий GRAM-баланс с основным и бонусным балансами, показывая 0.20, 0.11 и общий 0.31 GRAM на всех карточках.
+- [x] Показывать имя пользователя вместо юзернейма в верхней карточке личного кабинета.
+- [x] Увеличить цифры в поле суммы вывода и добавить кнопку «Макс» для подстановки всего доступного основного баланса.
+- [x] Увеличить цифры в поле суммы пополнения и оставить GRAM-обозначение в этой панели.
+- [x] Переработать экран вывода: закреплённый привязанный кошелёк сверху, большая сумма и комиссия по центру, одна большая кнопка действия в стиле TG TOP.
+- [x] Уменьшить блоки экрана вывода, увеличить видимый размер вводимой суммы и не показывать клавиатуру автоматически при открытии формы.
+- [x] Убрать большой экран успешного вывода; оставлять в панели только историю операций и показывать компактное зелёное уведомление о зачислении или отправке.
+- [x] Исправить закрытие экрана успешного вывода по кнопке «Готово» и крестику, чтобы сразу был доступен следующий вывод.
+- [x] Сделать поля пополнения и вывода компактнее при заметно более крупных цифрах вводимой суммы.
+- [x] Во всех пользовательских финансовых подписях заменить TON на GRAM и форматировать суммы строго с двумя знаками: 0.00 GRAM.
+- [x] Заменить все оставшиеся видимые пользователю упоминания TON в TG TOP на GRAM, не изменяя внутренние сетевые идентификаторы и безопасную логику.
+- [x] Убрать кнопку ручной проверки сети и автоматически сверять исходящий вывод до статуса «Средства успешно отправлены».
+- [ ] Согласовать следующий финансовый приоритет: история операций со ссылками на транзакции, лимиты и аварийная пауза выплат либо другой выбранный владельцем блок.
+- [x] Убрать ручную проверку для выводов на уже привязанный кошелёк пользователя, сохранив только идемпотентность и запрет повторной сетевой отправки.
+- [x] Убрать из обычного потока вывода экран ручной проверки и показывать зелёный успех только после фактического подтверждения сети.
+- [x] Вернуть 0.20 TON из текущей удержанной ошибочной заявки на основной баланс и записать в истории статус «Отмена».
+- [ ] Исправить фактическую карточку Telegram-канала: показывать «Снять лот» при правах владельца или модератора и не подменять реальные подарки одинаковой эмодзи-заглушкой.
+- [x] Разделить карточки всех сообществ на верхний информационный блок и нижний единый блок лота: у каналов граница после панели подарков, у чатов — после статистики без подарков.
+- [ ] Переделать карточку сообщества в два главных блока: «О группе» с настройками сообщества и «Ставка на лот» с ценой, позицией и обновлением ставки.
+- [x] Разделить существующие окна «Обновить лот» и «Текущая цена за лот» в карточке сообщества, не удаляя, не добавляя и не перенося элементы между ними.
+- [x] Перенести действие «Снять с листинга» из нижней красной плашки в компактную красную кнопку первого блока карточки сообщества.
+- [x] Переименовать блок «Текущая цена за лот» в «Текущая ставка за лот» и показать текущую сумму зелёным цветом.
+- [x] Исправить распознавание Telegram Gifts в NFT-витрине: Candy Cane и аналогичные подарки должны попадать в «Гифты», а не в «Другие NFT».
+- [x] Исправить production-сценарий вывода: убрать устаревшее подтверждение, исключить повторное создание/отправку выплаты и проверить корректность истории.
+- [x] После подтверждённых сетевых выплат в 20:48, 21:35 и 21:49 проверить записи журнала и исключить повторную отправку при повторном открытии формы.
+- [ ] Явно подписать комиссию в выводе как часть списываемой суммы: для 0.22 GRAM списать 0.22, комиссия 0.05, получить 0.17; не вычитать резерв повторно.
+- [ ] Для будущих выплат убрать вычет резерва 0.05 GRAM: списывать и отправлять ровно указанную сумму, а сетевую комиссию оплачивать отдельно горячим кошельком.
+- [x] Заменить фиксированный резерв 0.05 GRAM на фактическую минимальную сетевую комиссию: например, из 0.20 GRAM отправлять около 0.19859 GRAM.
+- [x] После подтверждения владельцем перевести новые выводы на фактическую сетевую комиссию из суммы: 0.20 GRAM минус реальная комиссия, без фиксированного 0.05 GRAM.
+- [x] Остановить повторный toast/баннер ошибки на каждом цикле сверки вывода и явно объяснить, почему основной баланс ниже минимальной суммы, а бонусный баланс недоступен для вывода.
+- [x] Для зависших выводов добавить автоматическую сверку и возврат суммы на основной баланс только после подтверждённого отсутствия сетевой транзакции; исключить двойной возврат и бесконечную обработку.
+- [x] Создать отдельную резервную копию production-кода и финансового журнала перед исправлением текущих багов.
+- [x] Исправить сбой листинга: отсутствующая рубрика `Каналы / General` в catalog_topics не должна показывать SQL-ошибку и не должна списывать ставку.
+- [x] Проверить зависшую заявку вывода 1.00 GRAM для аккаунта dimij: подтвердить сеть или безопасно отменить с возвратом без повторной отправки.
+- [x] Исправить сбой листинга: отсутствующая рубрика `Каналы / General` в catalog_topics не должна показывать SQL-ошибку и не должна списывать ставку.
+- [x] Проверить зависшую заявку вывода 1.00 GRAM для аккаунта dimij: подтвердить сеть или безопасно отменить с возвратом без повторной отправки.
+- [x] Исправить вывод через «Макс»: вся доступная основная сумма должна обрабатываться без зависания, с фактической комиссией внутри суммы и без повторной отправки.
+- [x] Провести регрессионный аудит полного вывода: минимум, «Макс», фактическая комиссия, повторный клик, отказ TonAPI, тайм-аут, подтверждение, отмена с возвратом и история.
+- [x] Отменить заявку вывода 1.00 GRAM id 9 и вернуть средства только после подтверждённого отказа сетевой транзакции.
+- [x] Преобразовывать Global в отсутствие country-фильтра перед валидацией catalog_countries.
+- [x] Округлять ставку листинга до двух знаков перед проверкой точности 0.10 GRAM.
+- [x] Проверить новую заявку вывода со статусом «В обработке», безопасно сверить её с сетью без повторной отправки и сократить время до понятного подтверждённого статуса.
+- [x] По подтверждению владельца отменить зависшую заявку вывода id 10 и вернуть ровно 1.00 GRAM на основной баланс; автоматизировать возврат лишь после подтверждённого отсутствия исходящего перевода.
+- [x] После статуса «Отправлено» показывать в панели вывода корректный текст ожидания сетевого подтверждения вместо «Отправляем средства».
+- [x] Открывать по нажатию на подключённый личный кошелёк меню с адресом и действием «Отключить кошелёк», разрывающим только TonConnect-сессию.
+- [x] Открывать по нажатию на блок графика «Баланс» полный журнал пополнений, выводов, наград, ставок и возвратов с суммой, статусом и датой.
+- [x] Пояснять и группировать парные списания и возвраты рейтинговой ставки в истории баланса, показывая нулевой итог пары.
+- [x] Открывать Tonviewer с хешем транзакции по нажатию на подтверждённый вывод GRAM в полном финансовом журнале.
+- [x] Показывать точное время вместо технического слова «Зафиксировано» и не терять первую связанную операцию ставки в полном журнале.
+- [x] Привести панель свободного лота к готовой панели обновления: показать все настройки, включая «Вознаграждения», и убрать кнопки +10%/+30%/+50%.
+- [x] Оставить место, категорию, географию и минимум выбранной свободной ячейки фиксированной информацией без повторного выбора в панели настройки группы.
+- [x] Отключать переключатель «Вознаграждения» по умолчанию при открытии новой формы листинга, сохраняя ручное включение владельцем.
+- [x] Показывать при включённых вознаграждениях итог списания: ставка за лот плюс введённый бюджет кампании.
+- [x] Показывать в панели свободного лота видимый общий итог: ставка за место, бюджет вознаграждений и сумма к списанию в GRAM.
+- [x] Добавить на ползунок ставки отдельную среднюю ориентирную метку между минимумом и максимумом.
+- [x] Подключить новый домен `tgtop.me` к текущему TG TOP, сохранив `tgtop.xyz` рабочим до проверки.
+- [x] Проверить DNS-записи `tgtop.me` и `www.tgtop.me` после добавления зоны.
+- [x] Настроить HTTPS для `tgtop.me` и проверить открытие сайта по новому адресу.
+- [ ] Переключить основной адрес Mini App только после подтверждения доступности нового домена.
+
+- [x] Сделать `tgtop.me` каноническим доменом и настроить постоянные редиректы со старых адресов без удаления `tgtop.xyz`.
+- [x] В панели свободного лота открывать список администраторов по нажатию «Контакт», а не только переключать видимость.
+- [x] Убрать подписи минимума, средней и максимума под ползунком в панели свободного лота.
+- [x] Исправить нижний Sheet панели свободного лота: вернуть прокрутку и не перекрывать нижнюю часть окна навигацией Telegram.
+- [x] Исправить загрузку администраторов выбранной группы в панели «Контакт» свободного лота.
+- [x] Продлить единый рейтинг отдельными ячейками 8, 9 и 10 в точном формате первых семи позиций.
+- [x] Исправить привязку выбранной ячейки рейтинга к её реальному номеру, рубрике и минимальной ставке.
+- [x] Обновлять актуальные данные своей группы из рабочего пространства перед выбором и размещением в рейтинге.
+- [ ] Проверить и обеспечить передачу актуальных данных рабочей группы из кабинета в карточку и размещение рейтинга.
+- [x] Вернуть верхний Top к семи местам и показывать продолжение рангов #8+ в нижнем списке.
+- [x] Не назначать ложное место #1 в деталях группы, которая находится только в нижнем каталоге; до выбора позиции показывать, что место не выбрано.
+- [x] Показывать в деталях реальную прогнозную позицию для текущей ставки, включая стандартные 0.1 GRAM.
+- [x] Открывать обычную ссылку группы, если кампания вознаграждений выключена.
+- [x] Создавать персональную ссылку бота и учитывать подтверждённые вступления только при активной кампании вознаграждений.
+- [x] Показывать владельцу кампании внесённый бюджет, выплаченную сумму, подтверждённых участников и остаток к возврату.
+- [x] При снятии успешного лота не возвращать ставку, а возвращать только неиспользованный остаток бюджета вознаграждений.
+- [x] Исправить безопасный расчёт сетевой комиссии для малых выводов GRAM без повторной отправки и без потери баланса.
+- [x] Исправить блокировку панели вывода отменённой операцией: разрешить закрытие и не открывать старую отмену автоматически.
+- [x] Убрать видимую плашку номера из нижнего списка Top, сохранив внутреннюю привязку позиции.
+- [x] Показывать в карточке Top только информацию о группе и ставку для перебития, оставляя прогноз только для неразмещённых групп.
+- [x] Перенести подробную панель кампании вознаграждений в карточку своей группы в рабочем пространстве.
+- [x] Показывать в рабочем пространстве подтверждённые Telegram-показатели: для каналов — подписчиков, вступивших, отписавшихся и просмотры последнего поста; для чатов — участников, вступивших, приглашённых по ссылке и отписавшихся.
+- [x] Показывать в рабочем пространстве активность за сегодня: посты для каналов и сообщения для чатов, с честным состоянием отсутствия доступа.
+- [x] Выгружать и показывать в рабочем пространстве реальные подарки, которыми владеет канал, через подтверждённый Telegram-источник.
+- [x] Отделить просмотр блокчейн-данных и подключение кошелька от автоматических переводов и действий с активами.
+- [ ] Упаковать статистику и подарки в единый экран карточки владельца с понятными состояниями загрузки и отсутствия доступа.
+- [x] Добавить регрессии для фильтрации подарков только для каналов и запрета финансовых действий при просмотре.
+- [x] Проверить доступ бота к подаркам канала и честно показывать ошибку Telegram без подмены данных.
+- [x] Проверить, что блокчейн-интеграция отображает только подтверждённые данные и не создаёт новые выплаты.
+- [x] Нормализовать blockchain NFT-метаданные как в маркетах: тип актива, коллекция, название, media URL и анимационный формат.
+- [x] Не показывать размытую картинку как подтверждённое изображение NFT; использовать явное состояние «медиа недоступно».
+- [x] Показывать в кошельке корректную категорию «Гифты» только при подтверждённом типе подарка, остальные активы не смешивать с гифками.
+- [ ] Подготовить отдельный безопасный офер на передачу подарка с подтверждением владельца и покупателя, без автоматической передачи на этапе просмотра.
+- [x] Синхронизировать кнопку «Перейти» с первой подтверждённой ссылкой из порядка ссылок Telegram и не использовать переassignенный username.
+- [ ] Спроектировать аренду collectible-юзернеймов: витрина, срок, цена, арендатор и целевой канал или группа.
+- [ ] Реализовать только подтверждённое назначение арендованного имени через официальный Telegram/Fragment-поток без скрытой передачи активов.
+- [ ] Реализовать прозрачные состояния аренды, истечения срока и возврата имени владельцу с защитными регрессиями.
+- [ ] Добавить в NFT подрубрику «Рассрочка» для collectible-юзернеймов с графиком платежей и статусами без скрытого списания.
+- [ ] Добавить в NFT подрубрику «Залог» для займа под collectible-юзернейм с escrow-условиями, сроком и правилами возврата.
+- [ ] Дать владельцу реального NFT единый листинг с одновременным включением продажи, аукциона, рассрочки и аренды.
+- [ ] Подтверждать продажу/передачу NFT только после безопасного расчёта и подписи кошелька, не переводить актив по одному действию в интерфейсе.
+- [x] Исправить создание персональной invite-ссылки для второго аккаунта в активной кампании наград и не обещать выплату при недоступной ссылке.
+- [x] Показывать в занятых ячейках Top компактно актуальное число участников и посты сегодня для каналов или сообщения сегодня для чатов.
+- [x] Добавить в статистику сообществ переключатель День по умолчанию, Месяц и Всё время, который пересчитывает показатели по наблюдениям бота.
+- [x] Переименовать показатель чата в «Пригласили» и учитывать все подтверждённые ботом вступления по приглашению, а не только ссылки TG TOP.
+- [x] Показывать график и подтверждённые показатели в деталях каждого занятого лота, независимо от владельца, с честным состоянием отсутствия наблюдений.
+- [x] В окне «Перебить лот» показывать кнопки «+ Добавить канал» и «+ Добавить чат», список подключённых сообществ и раскрывать настройки только после выбора; текущую ставку оставить отдельным блоком.
+- [x] Добавить в NFT-витрину безопасную заявку аренды collectible-юзернейма с расчётом срока и суммы в integer GRAM units.
+- [x] Показывать состояния аренды open / escrow funded / active / cancelled / disputed и не обещать назначение без подтверждённой Telegram/Fragment-ссылки.
+- [x] Добавить явное подтверждение аренды покупателем и регрессии для запрета скрытого списания или автоматической передачи имени.
+- [x] Убрать эмодзи-заглушку из preview подарка канала при недоступном медиа и показывать честное состояние «медиа недоступно».
+- [x] Явно подписать блок подарков канала как просмотр без покупки, передачи и автоматических действий.
+- [x] В пустом состоянии панели «Перебить лот» оставить только компактный плюс для добавления своей группы; полную форму показывать только после выбора группы.
+- [x] Изолировать TON Connect-кошелёк от Telegram-аккаунта: не показывать адрес, сохранённый в чужой Mini App-сессии, и требовать явного подключения для текущего аккаунта.
+- [x] Добавить regression-тест на очистку/отклонение cross-account wallet state без разблокировки финансовых действий.
+- [x] При открытии «Контакт» всегда устанавливать ID именно выбранной группы, чтобы список администраторов не показывал данные предыдущего сообщества.
+- [x] Полностью скрыть блоки настроек и ставки в «Перебить лот», если selectedLotGroup ещё не выбран.
+- [x] Убрать постоянное нижнее объяснение из панели «Перебить лот» и показывать красивое окно добавления канала/чата только по кнопке и только администратору.
+- [x] В пустом состоянии «Перебить лот» оставить только текущую ставку за лот и большой плюс, без настроек, ползунка и нижней кнопки.
+- [x] Добавить в карточку собственной группы рабочего пространства компактную панель кампании: бюджет, выплачено, подтверждённые вступления и остаток.
+- [x] Найти и устранить рассинхронизацию, из-за которой Telegram Mini App продолжает открывать старую сборку панели «Перебить лот».
+- [ ] Подготовить понятный релизный путь для `tgtop.me`, отдельно объяснив checkpoint-версию и старый Telegram Mini App на VPS.
+- [x] Перед обновлением VPS-релиза сохранить резервную копию всех несохранённых файлов `/opt/tgtop` и не использовать reset или pull поверх них.
+- [x] Выпустить проверенную версию `8174ce14` на `tgtop.me` с отдельной сборкой, контролируемым перезапуском `tgtop.service` и проверкой отклика.
+- [x] Настроить отдельный отзывной SSH-доступ для обслуживания TG TOP, не передавая личный ключ, пароль или финансовые секреты пользователя.
+- [x] Переключить GitHub-репозиторий `DimaKonge/tgtop2` из публичного в приватный режим и проверить видимость.
+- [x] Сделать плитки «Гео» и «Подкатегория» в панели размещения компактными и равными по размеру плиткам «Объявление» и «Менеджер».
+- [x] Заменить системные списки географии и подкатегории на тёмные выдвижные окна TG TOP с выбранным пунктом и безопасной прокруткой.
+- [x] Исправить кнопку «Вывести в ТОП»: при 0.1 GRAM и свободном месте она должна назначать группу в верхний свободный слот, а не оставлять в нижнем списке.
+- [x] Сделать «Добавить свою группу» компактной кнопкой сразу под Top-7 и перед нижним списком сообществ.
+
+- [x] Развернуть проверенный production-архив версии 8174ce14 на VPS `tgtop.me`, не перезаписывая runtime-конфигурацию и не используя reset, clean или pull.
+- [x] Проверить после релиза статус веб-сервиса и обоих Telegram-ботов, HTTP-ответ сайта и смену публичного asset hash.
+
+- [x] Уменьшить высоту, внутренние отступы и вертикальный зазор кнопки «Добавить свою группу» под Top-7, сохранив доступную область нажатия.
+- [x] Заменить подпись «Добавить свою группу» под Top-7 на одну компактную доступную кнопку с иконкой плюса.
+
+- [x] Устранить пустые ячейки в Top после переключения «Каналы» или «Чаты»: отфильтрованные сообщества должны компактно занимать первые позиции выбранной вкладки.
+- [x] Проверить, что `tgtop.me` и Telegram Mini App фактически получают сборку с одной компактной кнопкой-плюсом под Top-7.
+- [x] Устранить пустые ячейки Top при фильтрации по рубрике, стране или городу: для любой комбинации фильтров подходящие сообщества должны идти подряд в реальном порядке рейтинга.
+- [x] Сделать кнопку добавления под Top-7 полной ширины при компактной высоте и оставить в ней только центрированный плюс.
+- [x] Выровнять вертикальные отступы между третьим рядом Top, длинной кнопкой-плюсом и первым элементом нижнего списка.
+- [x] Добавить отдельную сущность каталога Telegram-ботов со ссылкой, владельцем, статусом модерации и временными метками.
+- [x] Добавить подачу заявки на бота через вставку ссылки `t.me` с безопасной нормализацией и защитой от дублей.
+- [x] Добавить админскую очередь заявок ботов с ручным одобрением или отклонением и серверной проверкой роли администратора.
+- [x] Показывать одобренных ботов отдельной группой во вкладке «Боты», а владельцу — честный статус его заявки до публикации.
+- [x] Добавить категории ботов в публичный каталог и выбор категории модератором при ручном одобрении заявки.
+- [x] Добавить защищённую выдачу полного списка ботов для модерации и удаление бота администратором или модератором.
+- [x] Добавить во вкладку «Боты» фильтры: все, на заявке, залистенные и отклонённые.
+- [x] Вынести ручную проверку в отдельное окно «Модерация» с вкладками «Сообщества» и «Боты».
+- [x] Показывать во вкладке «Сообщества» полный список залистенных групп по времени листинга с новыми сверху.
+- [x] Переделать публичный каталог ботов в плитки TOP с Telegram-аватаром и безопасной заглушкой при недоступном изображении.
+- [x] Заменить горизонтальную полосу рубрик ботов на компактный фильтр с выдвижным нижним меню.
+- [x] Исправить номер позиции в деталях сообщества: при входе из «Каналов» или «Чатов» показывать индекс внутри выбранной вкладки, а не общий номер рейтинга.
+- [x] Добавить на главную вкладку «Боты» длинную компактную кнопку-плюс, открывающую нижнее окно ввода ссылки и отправки на модерацию.
+- [x] Переделать карточки публичного каталога ботов в фирменную пирамиду TOP: крупная верхняя ячейка, второй и нижний ряды.
+- [x] Растянуть публичный Telegram-аватар бота на всю ячейку с читаемым затемнением текста и сохранить безопасную заглушку.
+- [x] Заменить маленький квадратный плюс в пустом состоянии «Перебить лот» на длинную кнопку с центровым плюсом, открывающую текущий picker своей группы.
+- [x] Восстановить отдельный SSH-ключ релиза после сброса среды и завершить выпуск фирменной пирамиды ботов на VPS.
+- [x] Всегда показывать итог к списанию для ставки и при включении вознаграждений добавлять весь введённый бюджет без неверного вычитания.
+- [x] Исправить загрузку менеджеров: обновлять запрос для выбранной группы и давать понятное действие при отсутствии у бота прав администратора.
+- [x] Исправить кнопку «Перейти»: открывать подтверждённую актуальную ссылку и показывать понятную ошибку, если её нет.
+- [x] При ставке 0.1 GRAM автоматически размещать новое сообщество в самом верхнем свободном слоте, а не в нижнем продолжении рейтинга.
+- [x] Использовать единый актуальный источник состояния кошелька на главной, в профиле, при подключении и выводе; сразу очищать устаревший адрес.
+- [x] Сделать окно вывода GRAM компактнее и добавить отключение привязанного кошелька прямо в нём.
+- [x] Убрать дублирующую карточку «Мои группы» из нижней части личного кабинета.
+- [x] Синхронизировать карточку кошелька в личном кабинете с фактическим подключением: показывать адрес и отключение вместо «Подключить кошелёк» при активной сессии.
+- [x] Сделать окно вывода GRAM компактнее и добавить отключение привязанного кошелька прямо в нём.
+- [x] Исправить запуск выбранного TON-кошелька из экранов «Пополнить» и «Вывести» внутри Telegram Mini App.
+- [x] Исправить активность и статус кнопки «Перейти» для подтверждённых публичных и приватных ссылок сообщества.
+- [x] Автоматически снимать сообщество из ТОПа после бот-проверки смены или утраты подтверждённой ссылки входа, сохраняя безопасное уведомление владельцу.
+- [ ] Исправить ложное снятие публичного канала `@tg_top` из ТОПа: восстановить вход только после server/bot-подтверждения того же chat ID и не ослаблять защиту от reassigned username.
+- [ ] Восстановить owner-панель листинга в карточке группы из «Рабочего пространства»: подтверждённый владелец должен видеть параметры лота и управление даже при статусе review, без раскрытия их гостю.
+- [x] Провести комплексный архитектурный аудит TG TOP: критические ошибки, безопасность, данные, боты, рейтинг, кошелёк, production и тесты.
+- [x] Подготовить понятную карту архитектуры и оценку текущей стадии разработки TG TOP.
+- [x] Сформировать поэтапный план модульного упрощения проекта, чтобы будущие изменения вносились безопаснее и быстрее.
+- [x] Провести комплексный архитектурный аудит TG TOP: критические ошибки, безопасность, данные, боты, рейтинг, кошелёк, production и тесты.
+- [x] Подготовить понятную карту архитектуры и оценку текущей стадии разработки TG TOP.
+- [x] Сформировать поэтапный план модульного упрощения проекта, чтобы будущие изменения вносились безопаснее и быстрее.
+- [x] Добавить защищённую выдачу полного списка ботов для модерации и удаление бота администратором или модератором.
+- [x] Вынести ручную проверку в отдельное окно «Модерация» с вкладками «Сообщества» и «Боты».
+- [x] Показывать во вкладке «Сообщества» полный список залистенных групп по времени листинга с новыми сверху.
+- [x] Переделать публичный каталог ботов в плитки TOP с Telegram-аватаром и безопасной заглушкой при недоступном изображении.
+- [x] Заменить горизонтальную полосу рубрик ботов на компактный фильтр с выдвижным нижним меню.
+- [x] Объединить проверку актуальной ставки, списание GRAM, ranking intent и перестроение слотов в одну транзакцию с защитой от конкурирующих ставок.
+- [x] Обновить critical и высокорисковые production-зависимости в отдельном проверяемом изменении без смешивания с продуктовыми функциями.
+- [x] Добавить базовый production-hardening: security headers, rate limit, health/readiness и явную политику ошибок БД для критичных операций.
+- [x] Добавить security headers, rate limit и database-backed health/readiness endpoint для production HTTP-контура.
+- [x] Разобрать оставшиеся high dependency advisory по достижимости в TG TOP и подготовить изолированный безопасный план обновления.
+- [x] Провести отдельную Express 5 migration с contract/smoke-тестами OAuth, storage proxy, tRPC, media, public pages и SPA fallback вместо принудительной подмены path-to-regexp в Express 4.
+- [x] Оформить параметризованный staged-релиз с синхронизацией runtime dependencies, backup/rollback и понятным VPS runbook для будущих изменений.
+- [x] Перенести обработку TON-выплат из памяти веб-процесса в изолированный DB-backed worker с lease, wallet-lock, recovery после рестарта и запретом повторной отправки.
+- [x] Усилить anti-DDoS/anti-abuse периметр финансовых API: server-side rate limits, ограничение одновременных заявок, audit trail и controlled degraded mode.
+- [x] Сохранить быстрый публичный путь для новых функций: финансовые проверки и сетевые операции выполнять только в изолированном worker, не блокируя каталог, ТОП, аналитику и интерфейс.
+- [x] Настроить внешний edge anti-DDoS слой: Nginx limit zones, request-size limits, 429 monitoring и controlled proxy-level circuit controls.
+- [ ] Провести отдельный controlled TON E2E smoke только после точного подтверждения владельцем recipient, суммы и допустимого финансового последствия; до этого держать payout broadcast выключенным.
+- [ ] Подключить CDN/WAF перед VPS и настроить provider-level anti-DDoS/429/5xx alerting для распределённых и канальных атак.
+- [x] Включить CSP Report-Only с контролируемым логом нарушений, проверить Telegram Mini App и TonConnect, затем отдельно решить вопрос enforcing CSP.
+- [ ] Собрать реальные CSP evidence из Telegram Mini App, browser Telegram Login и TonConnect и только затем отдельно решить enforcing CSP с rollback.
+- [x] Добавить подтверждённый TonConnect origin `config.ton.org` в CSP Report-Only allowlist без включения enforcing.
+- [x] Восстановить отдельный SSH-ключ безопасного релиза, проверить VPS-доступ и выпустить проверенные P0/P1 исправления staged-процедурой.
+- [x] Добавить в архитектурную документацию понятную владельцу карту: закрытые риски, оставшиеся риски, статус и очередность работ.
+- [x] Выровнять canonical/OG metadata, robots/sitemap и пользовательские SEO-ссылки на `tgtop.me`, сохранив legacy `tgtop.xyz` только для совместимости redirect и Telegram auth.
+- [x] Сделать полный локальный quality gate staged-релиза устойчивым к memory-pressure через последовательный запуск Vitest.
+- [ ] Уменьшить initial bundle Mini App: отложить некритичные тяжёлые визуальные зависимости и сохранить быстрый старт каталога.
+- [ ] Заменить переход плюса TOP в «Рабочее пространство» на inline bottom sheet со всеми собственными группами, чекбоксами, multi-select и отдельным подтверждением до любого листинга или списания GRAM.
+- [ ] Пройти и документировать безопасный пользовательский путь перед первой сотней групп: добавление бота в администратора, появление в «Рабочем пространстве», owner-управление, выбор в TOP и явное подтверждение листинга без финансовых операций.
+- [ ] При подключении и листинге сообщества подтягивать поддерживаемый анимированный Telegram-аватар в карточки TG TOP с ограничением формата/размера, lazy loading и статичным fallback.
+- [ ] Спроектировать и реализовать закрытые owner-логи: новые подключения бота, листинги и попадания в TOP, подтверждённые депозиты и раздельные статусы заявок/фактических выводов; дать владельцу безопасный read-only доступ и экспорт без раскрытия секретов.
+- [ ] Внедрить подтверждённый вариант A: отправлять закрытые live-события в две private Telegram-группы «TOP-активность» и «Финансы» после настройки их chat ID, с allowlist получателей, безопасной минимизацией данных и без управляющих финансовых действий.
+- [ ] Перевести private live-логи на подключённый рабочий Telegram-аккаунт: только две owner-allowlisted группы, без публикации этих логов от @TG_TOPBOT и без прав на любые другие действия по умолчанию.
+- [ ] Подключить отдельные каналы-витрины для подтверждённых листингов сообществ, подарков, юзернеймов, анонимных номеров и ботов: @TG_TOPBOT публикует только после модерации карточку с безопасной кнопкой перехода; основной канал ведёт рабочий аккаунт по явному подтверждению поста.
+- [ ] Подготовить контентный контур Stories от рабочего Telegram-аккаунта: анимированные визуалы, теги, CTA и переходы на TG TOP; каждая публикация Stories только по отдельному явному подтверждению владельца.
+- [ ] Добавить очередь до 100 Stories в день: проверять доступные Telegram Story-slots до публикации, не превышать лимиты аккаунта/канала, группировать Stories в подтверждаемые владельцем пакеты и фиксировать результат каждой отправки.
+- [ ] Спроектировать и внедрить отдельный Telegram API-контур рабочего аккаунта: encrypted session-state, allowlist публичных сообществ, read-only медиа/статистика по умолчанию, подтверждение постинга и неизменяемый журнал действий без загрузки JSON session-файлов.
+- [ ] Ограничить Stories и редакционные посты публикацией только от имени owner-allowlisted Telegram-каналов с правом `post_stories`; никогда не публиковать их в личный профиль рабочего аккаунта.
+- [ ] Включить owner-only личный диалог: отдельный рабочий Telegram-аккаунт отвечает только разрешённому owner Telegram ID, сохраняет audit действий и требует явного подтверждения для постов, Stories, прав каналов и финансовых операций.
+- [x] Исправить блокировку подтверждённого главного администратора в панели «Рабочий аккаунт Telegram»: использовать безопасное server-side owner-право вместо несовпадающего legacy ownerOpenId, сохранив запрет для обычных пользователей и модераторов.
+- [x] Безопасно инъецировать уже подтверждённые `TELEGRAM_USER_API_ID` и `TELEGRAM_USER_API_HASH` в production runtime через защищённый deployment-механизм, не читая и не выводя значения, затем проверить только readiness рабочего Telegram API-контура.
+- [x] Диагностировать и исправить отказ Telegram при подтверждении корректного свежего кода рабочего аккаунта: проверить server-side session/code-hash lifecycle, нормализацию ответа библиотеки и безопасную классификацию ошибки без журналирования кода или 2FA.
+- [x] Привязать owner-only личный диалог TG TOP Assistant к аккаунту @dimij через постоянный Telegram numeric ID, полученный только из первого входящего сообщения, с запретом обработки всех остальных личных чатов.
+- [ ] Запустить отдельный hardened Telegram user-agent worker с DB-очередью, encrypted session-state, audit каждой входящей/исходящей реплики, rate limit, kill switch и без доступа к публикациям, правам или финансовым операциям.
+- [ ] Реализовать truthful responder «TG TOP Assistant»: принимать от владельца только текстовые команды/вопросы, отвечать без имитации человека, не выполнять публикации, изменение прав или финансовые действия без отдельного явного подтверждения в Mini App.
+- [ ] Исправить отсутствие первого реального owner-ответа: проверить MTProto inbound delivery, owner numeric-ID filter, DB queue, Manus task relay и outbound reply, не заявляя готовность до успешного двустороннего теста.
+- [ ] После восстановления официального лимита Manus API повторно запустить owner-DM очередь и подтвердить реальный ответ на сообщение @dimij; до этого не объявлять Telegram-личку основным рабочим интерфейсом.
+- [ ] После успешного двустороннего теста закрепить owner-only личку TG TOP Assistant как основной рабочий интерфейс для @dimij: поддерживать устойчивый контекст проекта, audit и stop-контур, при этом не принимать секреты и не включать публикации, права или финансовые действия без отдельного подтверждения.
+- [ ] Провести первый реальный безопасный листинг @TGTOP_Community: проверить public chat ID, наличие @TG_TOPBOT с правами администратора и owner identity, затем показать конфигурацию лота до отдельного явного подтверждения.
+- [ ] Проверить существующую TOP-карточку @TGTOP_Community: публичная ссылка, название, аватар, индекс и позиция должны совпадать без создания дубликата или списания GRAM.
+- [ ] Согласовать allowlist групп/каналов для рабочего Telegram-аккаунта и минимальный набор read-only метрик: публичные данные, число участников и доступная официальная статистика без чтения сообщений.
+- [ ] Реализовать отдельный read-only контур статистики по allowlist с audit, явно ограниченным перечнем полей и запретом публикаций, изменения прав, финансовых операций и доступа к чужим личным сообщениям.
+- [ ] Для @TGTOP_Community получить и отобразить только доступную Telegram историческую статистику: временные ряды подписчиков, охвата/просмотров, реакций и репостов, без фабрикации пропущенных значений или сохранения текста постов.
+- [ ] Расширить @TGTOP_Community historical analytics официальными Telegram агрегатами: общий период, прирост, подписки/отписки, уведомления, просмотры, пересылки, реакции, активные часы и доступные источники — без чтения текста постов или личных сообщений.
+- [ ] Отобразить расширенную Telegram analytics в отдельном полноценном экране TG TOP с графиками и диапазонами «день / месяц / всё время», отмечая метрики, которые Telegram не отдал, вместо подмены их нулями.
+- [x] Отправить единственное стартовое приветствие «TG TOP Assistant готов» только после server-side привязки постоянного Telegram ID @dimij; не разрешать иные исходящие DM до запуска owner-only responder и audit-правил.
+- [ ] По реальному обновлению @TGTOP_Community привести экран официальной Telegram analytics к понятному русскому виду: перевести series labels, не показывать misleading last-point totals для time-of-day/source distributions и вывести все доступные Telegram graph categories без подстановки данных.
+- [x] Провести stabilisation audit перед рабочим релизом: зафиксировать только подтверждённые поломки пользовательских путей, production-инфраструктуры, данных и финансовых границ, без добавления новых функций.
+- [x] Подготовить владельцу простую актуальную карту архитектуры TG TOP: Mini App, API, база, два Telegram-бота, рабочий Telegram-аккаунт, payout worker, VPS и release/rollback границы.
+- [x] Сформировать короткий приоритетный план «сначала стабилизируем, затем запускаем» с понятными критериями готовности к реальному запуску.
+- [x] Построчно проверить release-vps.sh и VPS release storage: retention, preflight свободного места, failed-stage cleanup, rollback и health gates.
+- [x] По явному запросу владельца удалить текущие runtime release backup archives на VPS после подтверждения завершения запущенного release; не затрагивать код, MySQL, Telegram-сессии или application data.
+- [x] По уточнённому запросу владельца отключить persistent retention runtime release archives после успешной активации; оставлять rollback-copy только на время самого staged release.
+- [x] Построчно проверить authentication, tRPC role gates и все owner/moderator/finance privileged procedures на fail-closed доступ.
+- [x] Закрыть найденный entry-link access defect: generic resolver должен выдавать public `@username` всем авторизованным пользователям, но private/monthly invite link — только владельцу или модератору.
+- [x] Закрыть найденный finance access defect: очередь и review заявок вывода должны быть доступны только главному администратору, а не любому модератору.
+- [x] Ужесточить Telegram initData timestamp policy: запретить нецелые, нулевые и слишком будущие signed auth_date, сохранив допустимый небольшой clock skew.
+- [x] Закрыть найденный listing/GRAM race: bulk listing должен проверять и списывать баланс в одной transaction с условием достаточного остатка.
+- [x] Построчно проверить основной и резервный Telegram bot flows: ownership, admin rights, idempotent events, entry-link validation и понятные пользовательские ошибки.
+- [x] Закрыть найденный Telegram onboarding data-integrity defect: при ошибке member-count API не создавать новую карточку с искусственным `0` участников; вернуть владельцу понятную retry-инструкцию.
+- [x] Закрыть найденный Telegram ownership defect: принимать onboarding/перепривязку сообщества только от Telegram creator/owner, не от произвольного администратора, чтобы исключить захват карточки через re-add бота.
+- [x] Закрыть найденный onboarding-link defect: fallback Mini App URL в bot/notifications должен использовать canonical `https://tgtop.me`, не legacy `tgtop.xyz`.
+- [x] Закрыть найденный listing-notification truthfulness defect: возвращать фактическое число успешных Telegram announcements, а не число всех размещённых групп.
+- [x] Построчно проверить listing, TOP ranking, GRAM ledger и moderation flows с фокусом на согласованность статусов и reload-safe UI.
+- [x] Закрыть найденный TOP read-side-effect defect: public getSlots должен быть read-only и не создавать доски, не размещать и не переупорядочивать TOP от открытия экрана.
+- [x] Закрыть найденный TOP/listing status defect: successful paid ranking bid должен atomically переводить выбранное сообщество в `listed` с датой размещения и согласованными listing fields.
+- [x] Закрыть найденный duplicate listing-announcement defect: повторное сохранение уже размещённой группы не должно автоматически публиковать объявление в Telegram.
+- [x] Закрыть найденный moderation approval defect: manual approve активного listing должен сохранять `listed`/`listedAt` и TOP slot, а approve review-held группы — возвращать её в owner-controlled pending state.
+- [x] Построчно проверить wallet/deposit/withdrawal/payout code в режиме fail-closed без запуска broadcast, transfer или реальных финансовых операций.
+- [x] Закрыть найденный payout flag mismatch: создание и manual approval вывода должны требовать тот же explicit broadcast flag, что и payout worker, иначе request не создаётся/не переводится в queue.
+- [x] Построчно проверить NFT, deals, rewards, bot catalog и Telegram analytics как второстепенные workflows на broken states и data boundaries.
+- [x] Закрыть критический legacy NFT rental defect: удалить direct rent endpoint/state update, который мог пометить NFT арендованным без protected deal, escrow и external assignment verification.
+- [x] Закрыть critical NFT ownership truthfulness defects: не публиковать on-chain NFT до независимой проверки владения и не менять ownership off-chain NFT в каталоге без внешнего доказательства назначения.
+- [ ] Разбить Home.tsx, routers.ts и db.ts на изолированные domain modules, сохраняя API contracts и добавляя регрессионные тесты на каждый перенос.
+- [x] Без изменения API извлечь owner-only `telegramUserAgent` endpoints из central `routers.ts` в отдельный domain router with the same server-side owner gate.
+- [x] Без изменения UI behavior извлечь pure format/parse helpers из `Home.tsx` в shared client module as the first safe page-monolith reduction.
+- [x] Без изменения API извлечь wallet/deposit/withdrawal/manual-review endpoints из central `routers.ts` в isolated finance router, сохранив fail-closed validation, error policy, audit log и main-admin review gate.
+- [x] Без изменения data flow извлечь pure audience/GRAM/official-Telegram chart panels and metric display из `Home.tsx` в reusable client presentation module.
+- [ ] Провести mobile-first review ключевых экранов и реальные Telegram E2E-проверки: вход, добавление бота, выбор группы, листинг, снятие, переход, модерация.
+- [ ] Выпустить release candidate только после полного deterministic gate, mobile verification, VPS preflight и явного списка известных ограничений.
+- [ ] Провести реальный гостевой E2E для нового Telegram-аккаунта: вход через реферальную ссылку, рекламу или пост канала, проверка профиля, источника перехода, карточки и кнопки перехода без изменения рабочей карточки `@TGTOP_Community`.
+- [ ] Разделить права подключения и продажи: разрешить подтверждённому администратору подключать/размещать группу, но запретить sale-listing на сервере не-владельцу и показать ему disabled-кнопку с понятным owner-only сообщением.
+- [ ] Добавить реальный owner-only учёт запусков Mini App: фиксировать запуск гостя и безопасный источник перехода (рефссылка/реклама/канал/прямой вход), показать журнал в админ-панели без публичного раскрытия и без хранения лишних персональных данных.
+- [ ] Настроить доставку уведомлений о новых запусках Mini App в личный чат владельца от `@TGTOP_robot` после обязательного `/start`, без публичной публикации и без действий от имени личного аккаунта.
+- [ ] Реализовать owner-only inbox поддержки: сохранять входящие сообщения, адресованные `@TGTOP_robot`, показывать их владельцу, отправлять ответы через бота, хранить статусы/историю и не читать личные чаты пользователей.
+- [ ] Отправлять support-сообщения в закрытый чат как безопасные карточки с reply-mapping, а не native forward; ответ владельца реплаем должен возвращаться исходному пользователю через `@TGTOP_robot`.
+- [ ] Собрать owner-only action feed: пользователь, время, объект, действие и результат (успех/отказ/ошибка) для входа, подключения бота, листинга, снятия, ставок, payment intents, wallet status, withdrawal requests, support и moderation без секретов и содержимого личных чатов.
+- [ ] Разделить Telegram-ботов по назначению: @tg_topbot использовать для support/inbox и уведомлений о пользователях, а @TGTOP_robot оставить только для onboarding и подтверждения групп.
+- [ ] В launch-аудите показывать только аккаунт, который привёл нового пользователя: связать `referredBy` с username реферера, а если username отсутствует — показывать Telegram ID; не добавлять лишние данные.
+- [ ] Для прямого `/start` без реферальной ссылки показывать обычный запуск без поля «пришёл от»; реферера отображать только при подтверждённом реферальном коде.
+- [ ] Добавить систему нарушений внутри TG TOP: предупреждение, временное ограничение и бан по заранее определённым правилам, журнал причины/срока/решения и owner-only снятие бана; не блокировать Telegram-аккаунты.
+- [ ] Для заявки в карантине запретить повторный листинг server-side до решения модератора или исправления и новой проверки; не создавать GRAM charge, paid bid или публичную карточку.
+- [ ] Реализовать owner-only moderation controls: карточка пользователя/группы, ручные шильдики Active/Review/Shadow spam/Restricted/Temporary ban/Banned/Trusted, причина/срок, журнал решения и server-side запрет листинга для карантина/бана.
+- [ ] В карточке группы показывать раздельно Telegram-владельца, администратора, который подключил группу, аккаунт, отправивший листинг, и модератора с датами действий; не смешивать эти роли в `ownerOpenId`.
+- [x] MVP: сохранять запуск основного `@tg_topbot` в owner-only базе (аккаунт, время, реферер только при наличии), принимать сообщения пользователей в закрытый support-чат и возвращать ответ реплаем через основной бот.
+- [ ] Для закрытого чата выделить отдельного admin-бота: принимать только owner-authorized команды/реплаи, отправлять логи и ответы через его token; не смешивать его с `@tg_topbot` и `@TGTOP_robot`.
+- [x] Подключить отдельный закрытый канал запусков: отправлять туда первое подтверждённое событие `/start` с аккаунтом пользователя, временем и реферером только при наличии; не дублировать повторные старты.
+- [x] Использовать существующий `@TGTOP_robot` как служебный антиспам/операционный бот для закрытых лог-каналов и support-чата; не создавать отдельный admin-бот и не ломать onboarding-поведение.
+- [x] Окончательно разделить роли: @TGTOP_robot использовать для служебных метрик, антиспам-событий и закрытых каналов; @tg_topbot использовать для пользовательского Mini App, входящих сообщений и ответов поддержки.
+- [ ] Вместо отдельных каналов настроить одну закрытую форум-группу с темами «Поддержка», «Запуски», «Подключения» и «Финансы»: @TG_TOPBOT ведёт поддержку, @TGTOP_robot отправляет служебные метрики в назначенные темы.
+- [ ] В теме «Финансы» отправлять от @TGTOP_robot wallet connect/disconnect и статусы deposit/withdrawal/refund; показывать сумму и Tonviewer hash только после подтверждения сети, без адресов, кодов и секретов.
+- [ ] После staged-релиза провести реальные безопасные E2E-проверки тем «Запуски», «Добавления», «Поддержка» и «Финансы» без создания нового перевода, выплаты или списания.
+- [x] В Finance-topic карточках подтверждённых TON deposit/withdrawal передавать настоящий network hash в Tonviewer; для requested/sent статусов hash не показывать.
+- [x] Подготовить code-path одной закрытой forum-группы: @TG_TOPBOT настраивает/ведёт поддержку, @TGTOP_robot настраивает/ведёт служебные launch/TOP/finance topics; reserve bot не захватывает support reply до глобальной дедупликации.
+- [x] В launch log передавать только реального владельца успешно применённого рефкода; direct start не содержит строки «Пришёл от».
+- [x] Исправить staged VPS release: до переключения code, требующего новую Drizzle schema, применять проверенные аддитивные migrations и проверять migration health без ручного доступа к production БД.
+- [x] Исправить owner identity mapping для setup-команд закрытой forum-группы: принимать только фактического владельца TG TOP, не ослабляя проверку для других участников.
+- [x] Поддержать безопасную однократную настройку private forum topics при включённой anonymous роли владельца Telegram; не считать sender_chat доказательством личности и не открывать setup-команды другим админам.
+- [x] Убрать зависимость setup-команд forum-группы от несовместимого `OWNER_OPEN_ID=telegram:<id>` и заменить её на проверяемую привязку именно закрытой owner-группы без доступа для посторонних администраторов.
+- [x] Для однократной bootstrap-привязки setup-группы проверить exact handle `@dimij` и Telegram status `creator/owner`; после привязки принимать команды только от сохранённого Telegram ID.
+- [x] Исправить setup acknowledgement: success и owner-denied ответы должны возвращаться в тот же forum topic через `message_thread_id`, а не попадать в General.
+- [x] Исправить setup acknowledgement: success и owner-denied ответы должны возвращаться в тот же forum topic через `message_thread_id`, а не попадать в General.
+- [x] Подготовить code-path immutable owner binding: до первой привязки допускается только `@dimij` со статусом Telegram `creator/owner`; далее команды и support replies сверяются с сохранёнными chat ID и Telegram ID.
+- [x] Подготовить topic-aware setup replies: success и owner-denied используют исходный `message_thread_id`; сообщения из General получают отдельное требование открыть нужный topic.
+- [x] Добавить owner-only `/allmembers` в теме «Запуски`: отправлять UTF-8 `.txt` с уникальными аккаунтами, которые запускали бота, по последнему launch от новых к старым, без времени, рефереров, балансов и иных лишних данных.
+- [x] Расширить `/allmembers` до объединённого списка historical known Telegram accounts TG TOP и новых confirmed `/start`; не выдавать исторические profiles за точные bot-start events и сортировать по последней известной активности.
+- [x] Добавить публичную страницу Privacy Policy на `tgtop.me` для ссылки BotFather; описать Mini App, Telegram account data, support relay, launch audit, storage, retention, security and contact route.
+- [x] Подготовить и проверить TG TOP description photo 640×360 и отдельный animated avatar asset для BotFather.
+- [x] Создать и подключить frontend route `/privacy-policy` с русской Privacy Policy для TG TOP; TypeScript, build и safe tests прошли.
+- [ ] Отдельно перевести Telegram Login Redirect URI и Trusted Origin с `tgtop.xyz` на `tgtop.me`, обновив code contract, BotFather/Telegram Login settings и проверив вход до удаления старого домена.
+- [x] Сгенерировать минималистичный статичный логотип TG TOP: узнаваемый силуэт TOP-пирамиды из геометрических ячеек, без текста, читаемый в круглом Telegram-аватаре.
+- [x] Доработать существующий splash keyframe с силуэтом пирамиды ячеек в чистый минималистичный квадратный логотип TG TOP для Telegram-аватара; не использовать несвязанные новые варианты.
+- [x] Согласовать static и animated TG TOP avatars: одна геометрия splash-пирамиды с длинной нижней ячейкой-фундаментом, без расхождения знака между версиями.
+- [x] Убрать пользовательское промежуточное сообщение `Сообщение получено. Ответ придёт сюда от поддержки TG TOP.` из inbound support relay; сохранить доставку карточки в topic «Поддержка» и ответ owner через основной бот.
+- [x] Исправить confirmation после owner support reply: отправлять `✅ Ответ отправлен пользователю.` с тем же `message_thread_id`, а не в General.
+- [x] Расширить inbound support relay на фото, видео, документы, стикеры, GIF/анимации и emoji; сохранять минимальный metadata mapping и разрешать owner reply из закрытого topic.
+- [x] Расширить owner reply в support relay на стикеры, фото, GIF/анимации, видео, документы, audio/voice и emoji; отправлять reply пользователю от `@TG_TOPBOT` и подтверждать в исходном topic.
+- [x] Переделать TG TOP avatar в яркий high-contrast логотип со строгими квадратными ячейками, ступенчатой пирамидой и длинной квадратной ячейкой-фундаментом.
+- [x] Перерисовать присланную NFT-кнопку в чистый 2D TG TOP знак с буквой T, надписью TON и квадратной пирамидой.
+- [x] Убрать фразу «по приглашению» из welcome-поста @TG_TOPBOT без изменения реферальной атрибуции.
+- [x] Добавить выбранный Telegram-стикер к welcome-посту `/start` после получения конкретного sticker file_id.
+- [x] Добавить owner-only команду для получения `file_id` из входящего Telegram-стикера без раскрытия идентификатора обычным пользователям.
+- [x] Добавить пользователю выбор визуального стиля TG TOP Original / Telegram Clean и независимый режим темы System / Dark / Light с сохранением настроек.
+- [x] Добавить переключаемую Gift-палитру цветов в стиле Telegram Gifts, применённую к фирменной сетке TG TOP.
+- [x] Добавить полноценный picker оттенков для TG TOP: тёмные, синие, фиолетовые, красные, золотые, зелёные и бирюзовые варианты с активным состоянием.
+- [x] Переделать нижнюю навигацию TG TOP в полупрозрачную floating-панель с blur, тонкой границей и подсветкой активного раздела без изменения маршрутов.
+- [ ] Привести TG TOP к единой профессиональной Telegram-native системе: убрать визуальный шум, закрепить иерархию ТОП / Проекты / Активы / Рабочее пространство / Профиль и унифицировать карточки, настройки и действия.
+- [x] Выполнить точечный visual redesign TG TOP без изменения бизнес-логики: Telegram-style navy фон, единые outline-иконки, спокойные карточки и полупрозрачная нижняя навигация.
+- [x] В рабочем пространстве оформить поиск, сортировку и переключатель списка/сетки в виде компактных Telegram-style controls.
+- [x] Унифицировать окна TG TOP: единые Telegram-style фон, скругления, отступы, разделители, outline-иконки и цвет главного действия без изменения логики.
+- [x] Оформить нижнюю панель кнопок TG TOP в Liquid Glass стиле: полупрозрачность, blur, внутренний блик, тонкая граница, мягкая тень и active-pill.
+- [x] Логировать подтверждённые подключения бота к группам и каналам в отдельную owner-only тему «Добавления» с chat/thread контекстом, без финансовых и публичных действий.
+- [x] Довести Telegram-native тему: синхронизировать navy-фон и поверхности карточек на ключевых экранах.
+- [x] Уточнить единый набор outline-иконок и blue active states для основных действий.
+- [x] Проверить Liquid Glass нижней панели и контраст в dark/light режимах на мобильном экране.
+- [x] Подогнать экран профиля и баланс-карточки под единые Telegram Clean surfaces без изменения финансовой логики.
+- [x] Подогнать SettingsSheet под единый Telegram Clean стиль: секции, разделители, акцентные controls и читаемые состояния тем.
+- [x] Исправить category TOP fallback: каналы и чаты из списка ниже должны заполнять доступные верхние TOP-слоты своей категории до показа пустых ячеек.
+- [ ] Выпустить проверенный category TOP fallback на production VPS через staged release и подтвердить health без финансовых действий.
+- [ ] В том же staged release выкатить Telegram Clean тему: navy surfaces, SettingsSheet, outline icons, Gift-палитру и Liquid Glass нижнюю панель.
+- [x] Добавить в верхнюю навигацию TG TOP кнопку «Создать» с выбором только «Канал» или «Чат» и переходом в существующий onboarding @TG_TOPBOT.
+- [x] Выполнить staged production release после подтверждения SSH-доступа: Create control, Telegram Clean UI, category TOP fallback и additions logging; проверить health и systemd-сервисы без финансовых действий.
+
+- [ ] Исправить detail-карточку: для реально размещённой площадки показывать фактическую позицию вместо «Прогноз #N», сохранив прогноз только для неподтверждённых позиций.
+
+- [x] Убрать ненужный верхний круглый plus control рядом с балансом; сохранить плюсы пустых ranking slots.
+
+- [ ] Довести светлую Telegram Clean тему: убрать выбеливание header, вернуть контраст вторичного текста и согласовать нижнюю Liquid Glass навигацию с остальными surfaces.
+
+- [ ] Создать и подключить contrast-aware light-variant TG TOP аватара для header светлой темы, сохранив тёмный вариант для dark mode.
+
+- [ ] Сделать нижнюю Liquid Glass навигацию компактнее и прозрачнее, привязав active-pill и иконки к выбранному accent в light/dark режимах.
+
+- [ ] Заменить стандартный значок кнопки «ТОП» на компактную фирменную пирамиду из 7 синих ячеек, повторяющую знак загрузочного экрана.
+
+- [ ] Вынести TOP-only animated pyramid avatar и общие ranking-card primitives из Home.tsx в отдельные UI-модули, сохранив статичный fallback.
+- [ ] Выполнять модульный рефакторинг Home.tsx по независимым блокам (TOP/catalog, Workspace, Analytics, Rewards, Telegram) с regression tests после каждого переноса.
+
+- [ ] Сделать нижний featured-ряд компактным и ровным: одинаковые квадратные ячейки, без растягивания карточек по содержимому, с уменьшенными отступами и подписями.
+
+- [x] Перестроить блок сразу под 7 ranking-ячейками в длинные горизонтальные информационные ячейки, как «Добавить группу», с аватаром, названием, username и метриками.
+
+- [x] Отполировать нижние информационные строки: одинаковая компактная высота, ровный avatar block, аккуратная иерархия названия, username и метрик без изменения верхней сетки.
+
+- [ ] Исправить desktop admin onboarding: открывать selector @TG_TOPBOT через WebApp-aware Telegram link path, сохраняя Mini App активным.
+- [ ] Провести полный аудит и пересмотреть механику GRAM-вознаграждений: персональные ссылки, условия начисления, подтверждение вступления, повторные награды, статусы и понятные сообщения пользователю.
+
+- [ ] Спроектировать reward-модуль для масштаба до 1 000 000 групп: пагинация, индексированный поиск, кэширование, фоновые проверки, rate limits и идемпотентный event ledger без загрузки каталога целиком.
+
+- [ ] Добавить в Workspace модуль «Прогноз охвата»: диапазон переходов/вступлений за период, факторы расчёта, уровень уверенности и состояние «недостаточно данных» без выдуманных значений.
+
+- [ ] Спроектировать и вынести отдельный модуль «Аналитика»: фактические Telegram-метрики, история snapshots/events, время обновления и отдельный честный прогноз охвата.
+
+- [ ] Добавить в ячейки realtime-дельты участников: зелёный `+N` при подтверждённом приросте, красный `−N` при выходах и короткое обновление без мигания.
+
+- [ ] Включить realtime-обновление только для 7 верхних ranking-ячеек; для остальных использовать экономный refresh по расписанию и при открытии.
+- [ ] Запускать приоритетный сбор аналитики при новом и повторном листинге подтверждённой группы; при снятии с TOP переводить её на экономный refresh.
+
+- [ ] Исследовать и подключить историческую аналитику: official Telegram stats при доступных правах, собственные snapshots/events с текущего момента и внешние данные только с явной маркировкой источника и точности.
+
+- [ ] Синхронизировать аватары активных TOP-площадок через User Agent в S3, обновляя объект только при изменении и сохраняя время последней синхронизации.
+
+- [ ] Обновлять аватары активных TOP-ячеек динамически при изменении Telegram-фото через User Agent и S3, с кешированием и fallback на последнюю подтверждённую версию.
+
+- [ ] Подготовить масштабируемый рефакторинг: не загружать миллион групп целиком, добавить pagination/keyset-подход, индексы, кэш, batch refresh, ограничение realtime только активными TOP и защиту от повторных событий.
+- [ ] Добавить отдельную лёгкую privacy page на `/privacy`, выкатить её на `tgtop.me` и обновить privacy URL @TG_TOPBOT через BotFather после проверки страницы.
+- [ ] Добавить антиспам-контур для каналов и групп: массовые join/leave события писать идемпотентно в БД и счётчики без сообщений в сообщество; будущие owner-сводки — только пакетно, с rate limit и явным включением.
+- [x] Добавить простой anti-Sybil вход для bot-added: кнопка «Добавить бота» сама создаёт короткоживущий одноразовый intent подтверждённого Telegram-владельца; первое добавление владельцем его погашает, а неподтверждённые массовые события отбрасываются без карточек, бонусов, рейтинга, публикаций и неограниченного хранения событий.
+- [ ] Добавить owner-only статистику бонусных GRAM: общая выданная сумма, получатели, причина, площадка, время, статус и детальная трассировка последующего расхода на листинг, ставку, покупку или остаток баланса — только по подтверждённым ledger-записям.
+- [ ] Добавить owner-only ручное начисление внутренних бонусных GRAM в админ-панели: проверка роли, получатель, сумма, обязательная причина, явное подтверждение, лимиты и неизменяемая audit-запись без заднего редактирования или автоматического вывода.
+- [ ] Для каждого модуля разгрузки проводить отдельный подробный gate: unit/regression tests, контроль запросов и нагрузки, безопасность Telegram/БД, mobile 390×844, desktop 1280px и ручной проверочный сценарий перед продолжением.
+- [x] Исправить действие «Перейти» в карточке сообщества: всегда открывать подтверждённую ссылку самого сообщества через WebApp-aware path и не показывать ошибочный toast «Открыта ваша персональная ссылка».
+- [ ] Подготовить и проверить recovery-процедуру TG TOP: versioned code checkpoints, отдельные резервные копии БД, обратимые миграции, documented restore sequence и health verification после восстановления; code rollback не должен ошибочно считаться восстановлением данных БД.
+- [ ] Провести security-аудит TG TOP: DDoS/rate-limit и queue strategy для сайта и обоих ботов, строгая server-side validation, проверка ORM/SQL-injection границ, XSS/URL/upload ограничения, безопасные error logs и regression coverage для критических API и финансовых маршрутов.
+- [ ] Проверить и устранить конфуз доменов `tgtop.me` и `tgtop.xyz`: canonical redirects, Telegram Login callback/origin, bot/Mini App links и privacy URL не должны вести на неверный домен или запускать лишнюю авторизацию.
+- [x] Устранить расхождение в Telegram Login: login start и callback должны использовать один canonical origin `https://tgtop.me`, совпадающий с nginx redirect и зарегистрированным Telegram URI; сохранить PKCE/state и safe returnTo проверки.
+- [x] Security quick wins: уменьшить общий request body limit, ввести точные route limits и bounded positive/negative cache для Telegram avatar/storage путей; добавить boundary/regression tests без изменения каталогов, Telegram onboarding и балансов.
+- [x] Разгрузить `Home.tsx` через первый независимый UI-модуль TOP/ранжирования без изменения верхней 1+2+4 сетки, нижних компактных строк или работающих action handlers.
+- [ ] Подготовить staged nginx/systemd hardening и off-host encrypted DB backup/restore drill как отдельные проверяемые изменения без изменения DNS, BotFather, балансов или финансовых операций.
+- [x] Применить и проверить staged nginx/systemd hardening: узкие limits для media/storage/login/CSP/tRPC, global 256 KB edge body cap и отдельные least-privilege systemd drop-ins для web, primary bot и reserve bot с rollback snapshots.
+- [ ] Выбрать off-host versioned encrypted backup destination и public encryption key, затем выполнить restore drill в новой тестовой БД с checksum, schema/ledger integrity и `/healthz` проверками.
+- [x] Вынести из `Home.tsx` shared community artwork и компактную list-card presentation, сохранив fallback avatar, image-error поведение, 68px catalog rows и все существующие handlers.
+- [x] Подготовить TOP-only CSS/SVG animated pyramid avatar с `prefers-reduced-motion` fallback; не показывать фирменный avatar случайным группам и не включать тяжёлое видео по всему каталогу.
+- [ ] Добавить защищённую owner/server-side настройку `topPyramidAvatar` для конкретной верифицированной площадки в занятом TOP-slot; до этого prepared avatar должен оставаться выключенным и не показываться случайным группам.
+- [x] После полностью проверенного anti-Sybil release вынести compact 68px catalog row из `Home.tsx` в отдельный presentation-компонент, сохранив плотность, данные, статичные preview и все open/settings handlers.
+- [x] Немедленно завершить прерванный staged release checkpoint `a5ba0f61`, проверить live bundle и дать пользователю конкретный сценарий просмотра; до этого не начинать новые архитектурные блоки.
+- [ ] Исправить production avatar flow: карточки и detail должны получать актуальный Telegram avatar либо надёжный статичный fallback; не оставлять дефис/букву из-за отсутствующего `avatarFileId`, stale negative cache или некорректного username URL.
+- [ ] В настройках листинга явно показать минимальную ставку `0.1 GRAM`, валидировать её на client и server и не позволять сохранить меньшую сумму.
+- [ ] Добавить в настройки листинга компактный slider/preview ставки, который по текущему выбранному board scope показывает прогнозируемое место для выбранной цены без изменения реального размещения до подтверждения.
+- [ ] Вернуть в настройки листинга optional category и geo controls: категория/подкатегория, страна и город должны настраиваться по необходимости и входить в тот же проверяемый listing payload.
+- [x] Исправить avatar proxy: принимать Telegram CDN `application/octet-stream` только после проверки безопасной image signature/расширения и сохранить size limit, allow-list и bounded cache; проверить реальные карточки production.
+- [x] После avatar hotfix обновить listing settings: минимум 0.1 GRAM, preview позиции по цене, optional category и geo controls с server validation.
+- [ ] После hotfix проверить mobile/web, сохранить checkpoint и выкатить только подтверждённые изменения.
+- [x] Исправить неполную загрузку верхних TOP-ячеек: для category/geo board корректно обрабатывать loading/error/empty, не терять занятые слоты и не подменять реальный контент дефисом; проверить 1+2+4 на mobile и web.
+- [x] Исправить регрессию: avatar канала в TOP-карточке не должен показывать дефис при наличии доступного Telegram avatar; проверить полный channel-specific proxy/request/response pipeline и fallback.
+- [x] После исправления avatar прогнать focused/full tests, проверить live и синхронизировать весь актуальный код проекта в выбранный приватный GitHub-репозиторий.
+- [ ] Диагностировать конкретный канал @F_I_N_E_G_O_L_D: сверить Telegram getChat identity, production chatId, title и avatarFileId; устранить расхождение в TOP/detail.
+- [ ] После repair @F_I_N_E_G_O_L_D проверить live карточку и detail, прогнать regression/full gate, сохранить checkpoint и синхронизировать GitHub.
+- [x] Сделать image-first avatar rendering в TOP/detail: MP4 не должен блокировать картинку, а при недоступности обоих источников показывать непустой branded fallback вместо пустого блока или дефиса.
+- [x] Добавить regression tests для channel video avatar fallback и проверить мобильную карточку перед release.
+- [x] Исправить lot flow: кнопка «+» в «Обновить лот» должна открывать выбор группы/добавление группы и показывать выбранную группу вместо пустой ячейки.
+- [x] Проверить и стабилизировать параметры публикации лота: visibility, announcement, manager, Google, sale и rewards должны быть привязаны к выбранному lot/group и корректно сохраняться.
+- [x] Добавить regression tests для lot group picker и publication settings, проверить мобильный сценарий, сохранить checkpoint и выпустить только после полного gate.
+- [x] Исправить сортировку строкового каталога: новые группы должны попадать в предусмотренную позицию по listing/listedAt и active board rules, а не всегда в конец из-за неправильного client/server order.
+- [x] Вынести быстрый выбор категории и гео наверх Global и сохранить полноценные варианты category/subcategory/country/city в фильтр-панели.
+- [x] Убрать native number-input spinners у GRAM цены и привести поле к текущему Liquid Glass дизайну.
+- [x] Полностью удалить «Показать контакт владельца» из listing UI/state/payload и вернуть согласованный блок выбора менеджера.
+- [x] Добавить regression tests для сортировки, верхних category/geo controls, цены и manager block; проверить mobile layout и сохранить checkpoint.
+
+- [x] Подготовить временный SSH-доступ для staged VPS release с ограниченным ключом и удалить доступ после завершения rollout.
+
+- [x] Исправить desktop Add Channel/Add Group: кнопка должна открывать Telegram WebApp-aware bot setup и показывать понятную ошибку, если Telegram bridge недоступен.
+- [x] Исправить ranking order: большая ставка выше; при одинаковой ставке 0.1 GRAM новая публикация выше старой, без вставки нового TG TOP чата в середину.
+- [x] Добавить явный вариант «Все» в каждом category/subcategory control, включая channel/chat filters и category sheets.
+- [x] Добавить regression tests для desktop add flow, ranking tie-break и всех «Все» controls; проверить desktop/mobile и выпустить только после полного gate. Live rollout подтверждён 2026-08-31.
+
+- [x] Полностью пересобрать окно параметров публикации: компактный порядок type/category → subcategory → country/region → city → ranking place, явный «Все» в каждом применимом выборе.
+- [x] Переделать price control под Liquid Glass с −/+ без native spinner и сохранить корректный preview/submit state.
+- [x] Покрыть новый listing flow regression-тестами, проверить мобильный экран и не выпускать до staged gate. Live rollout подтверждён 2026-08-31.
+
+- [x] Перестроить порядок listing form: убрать синюю action-кнопку из промежуточного блока и оставить её только после всех полей и preview в самом низу.
+
+- [x] Упростить финальные listing actions: не показывать две конкурирующие синие основные кнопки, явно разделить «сохранить настройки» и «разместить в рейтинге».
+- [x] Переработать блок закрытой ссылки в понятный flow: объяснить назначение, показать шаги создания, состояние готовой ссылки и действия открыть/скопировать.
+- [x] Добавить regression tests для финальных actions/link states и проверить мобильный экран до checkpoint.
+
+- [x] Уточнить и закрепить ranking rule во всех путях: цена лота DESC — главный критерий; свежесть DESC используется только при одинаковой цене, например 0.2 всегда выше 0.1, новый 0.1 выше старого 0.1.
+- [x] Добавить regression test с ценами 0.2 и 0.1 и тестом одинаковых ставок, затем проверить production preview до rollout. Production price-first rollout подтверждён 2026-08-31.
+
+- [x] Сохранить отдельный release SSH-ключ на VPS для последующих staged-релизов; документировать его назначение и не удалять автоматически после rollout.
+
+- [x] Исправить повторное сохранение уже listed группы: обновлять placement freshness и переставлять её первой среди равных ставок, не меняя цену и не списывая средства повторно.
+
+- [x] Исправить строковый каталог: listed-группы должны идти выше обычных групп; внутри listed — bid price DESC, затем свежесть DESC, без зависимости от старого ranking slot.
+
+- [ ] Декомпозировать Home.tsx по модулям: вынести типы/форматтеры, listing/publication settings, workspace/profile/admin UI и связанные хуки, сохранив поведение, дизайн и тестовое покрытие.
+
+- [x] Синхронизировать текущий проверенный код в DimaKonge/tgtop2 и выкатить его на VPS; отдельно проверить live health/services, не смешивая это с незавершённым checkpoint blocker.
+
+- [ ] Продолжить декомпозицию Home.tsx после domain-модуля, прогнать полный gate и отдельно проверить возможность VPS rollout без managed checkpoint.
+
+- [x] Подготовить официальный стартовый контент TG TOP: позиционирование канала, приветствие чата, объяснение листинга, правила, FAQ и тестовый контент-план; публиковать только после явного подтверждения владельца.
+
+- [x] Создать и выгрузить медиапакет TG TOP: вертикальные изображения для сторис/постов, короткое видео и фирменный аватар; проверить читаемость и не публиковать без подтверждения. Три сторис сгенерированы в `webdev-static-assets`, визуально проверены; аватар и видео подготовлены ранее.
+
+- [x] Подготовить рекламную серию TG TOP: отдельные посты для владельцев каналов/чатов, тестировщиков и пользователей, по 3–5 релевантных тегов и с понятным CTA; не публиковать без подтверждения.
+
+- [x] Добавить «Все страны/Весь мир» первым пунктом Geo, «＋ Предложить страну» и «＋ Предложить категорию» с переходом в https://t.me/c/4358714855/2 во всех соответствующих controls. Public-link rollout: https://t.me/TGTOP_Owner/2.
+
+- [x] Заменить все формулировки общего Geo-выбора на точное «Весь мир» и проверить, что выбор сбрасывает страну, регион и город во всех окнах.
+
+- [x] Вернуть «＋ Добавить категорию» в нижнюю часть каждого category Select и показать ясное сообщение для приватной topic-ссылки, если пользователь не состоит в чате.
+
+- [x] Заменить proposal link во всех Geo/category кнопках на https://t.me/TGTOP_Owner/2, проверить отсутствие старой приватной ссылки и исправить JSX regression. Live rollout confirmed 2026-09-01.
+
+- [x] Медиа-пакет: генерация сторис 01 launch — `/manus-storage/tgtop-story-01-launch_10d71957.png`. Визуально проверено.
+- [x] Медиа-пакет: генерация сторис 02 listing — `/manus-storage/tgtop-story-02-listing_29771868.png`. Визуально проверено.
+- [x] Медиа-пакет: генерация сторис 03 feedback — `/manus-storage/tgtop-story-03-feedback_93b5e591.png`. Визуально проверено.
+
+- [ ] Декомпозиция Home.tsx: вынести чистые owner-workspace/profile/admin секции в отдельные компоненты без изменения поведения и контрактов.
+- [x] Декомпозиция Home.tsx, подшаг: вынести чистый NftShowcase в `client/src/components/tgtop/NftShowcase.tsx`; сохранить вызовы в detail/profile без изменения поведения; targeted Vitest 3 passed, TypeScript passed.
+- [x] Декомпозиция Home.tsx, подшаг: вынести чистый NftCard в отдельный компонент без изменения NFT rental flow. Added `client/src/components/tgtop/NftCard.tsx` and regression test; targeted Vitest 4 passed, TypeScript passed.
+
+- [x] Создать жёлтую версию анимированной 7-cube заглушки TG TOP для аватара сообщества, проверить читаемость в карточке и подготовить файл к выгрузке. Экспортирован и проверен квадратный PNG.
+
+- [x] Создать квадратный жёлтый аватар по предоставленному референсу: 7 кубиков, та же пирамида, тёмный navy-фон и мягкое золотистое свечение; подготовить к выгрузке без изменения проекта. Готов `tgtop-yellow-pyramid-avatar-static.png` (1024×1024).
+
+- [x] Создать и выгрузить MP4-анимацию существующей жёлтой 1–2–4 пирамиды TG TOP: плавный glow, последовательное оживление кубиков, бесшовный loop, квадратный формат для аватара. MP4: 720×720, H.264, 8 секунд, 12 fps, 96 кадров; целостность подтверждена ffprobe.
+
+- [x] Пересобрать MP4-аватар по предоставленным реальному PNG и записи экрана: сохранить точные proportions, spacing, amber fill, glow и motion текущей заглушки; предыдущий static-like вариант не использовать. Новый MP4: 720×720, 7 секунд, H.264, 30 fps, 210 кадров, без аудио; проверены центрирование, одинаковые 7 сквиркл-кубиков и синхронная пульсация.
+
+- [x] Переделать yellow avatar animation без мерцания: первое место появляется первым, затем 2 средних и 4 нижних кубика; использовать плавные opacity/translate/scale transitions и спокойный loop. Проверены кадры перехода и полной сборки.
+
+- [x] Уточнение yellow avatar: вернуть полупрозрачные янтарные Liquid Glass ячейки с яркой тонкой рамкой, внутренним бликом, мягким glow и лёгкой глубиной; сохранить чистую сборку сверху вниз без мерцания. Проверена исправленная Liquid Glass версия.
+
+- [x] Обновить Liquid Glass avatar по новому референсу: ускорить и сгладить выезд ярусов снизу с коротким stagger, повысить контраст золотого fill/рамки/блика и сохранить отсутствие мерцания. MP4: 720×720, 6 секунд, 30 fps, 180 кадров; проверены переход и полная сборка.
+
+- [x] Смягчить появление Liquid Glass avatar: плавный fade-in + лёгкий подъём снизу с естественным замедлением, аккуратный stagger по ярусам и без мерцания. Проверены ранний, переходный и полный кадры; MP4 собран и проверен.
+
+- [x] Сделать видео-аватар по точной loading-анимации TG TOP: повторить порядок появления, motion и фирменный цвет кубиков без новых эффектов. Позиции, задержки, translateY/scale/rotate и easing взяты из `.tg-launch-cube`; экспорт проверен.
+
+- [x] Уточнение loading-avatar: повторить loading-анимацию приложения, но использовать золотую палитру кубиков вместо синей. Готов золотой MP4 `tgtop-loading-gold-avatar.mp4`.
+
+- [x] Сделать золотой loading-avatar бесшовным loop: собрать пирамиду, удержать, плавно свернуть в обратном порядке и повторить цикл без резкого стыка. MP4: 720×720, 6 секунд, 30 fps, 180 кадров; первый и последний кадры побитово идентичны.
+
+- [x] Исправить reverse timeline золотого loading-loop: сворачивать кубики строго в обратном порядке появления, один за другим, без перестановки ярусов. Порядок зафиксирован как cube-1 → cube-3 → cube-2 → cube-7 → cube-6 → cube-5 → cube-4 и визуально проверен.
+
+- [x] Убрать паузу в золотом loading-loop: после появления последнего кубика reverse-сворачивание должно начинаться сразу, без удержания полной пирамиды. Применено в sticker timeline.
+
+- [x] Подготовить золотые loading-кубики как Telegram video sticker: прозрачный фон/alpha, WebM VP9, 512×512, до 3 секунд, до 30 fps, без аудио и размером до 256 KB. WebM VP9 alpha_mode=1, 512×512, 2 секунды, 30 fps, 117,445 bytes; проверено в Chromium.
+
+- [x] Для прозрачного Telegram video sticker использовать именно безпаузы loop: непрерывная сборка и обратное сворачивание, без удержания полной пирамиды. Использован `tgtop-loading-gold-avatar-loop-no-pause.mp4` timeline.
+
+- [x] Подготовить детализированный квадратный видео-аватар: сохранить золотой безпаузы loading-loop, вернуть тёмный navy-фон с глубиной/атмосферным glow, усилить детализацию Liquid Glass и проверить MP4. MP4: 1024×1024, 2 секунды, 30 fps, H.264, без аудио, 208,086 bytes; визуально проверен.
+
+- [x] Исправить detailed avatar-video: сделать первый кадр полностью собранной золотой 1–2–4 пирамидой, сохранить предыдущий navy-фон и видео-стиль, чтобы Telegram не показывал пустое окно. Первый кадр проверен.
+
+- [x] Для выбранного detailed avatar-video сделать первый кадр полной пирамидой и убрать паузу между сборкой и обратным сворачиванием, сохранив текущий фон, цвет и детализацию. MP4: 1024×1024, 3 секунды, 30 fps, H.264, без аудио; проверены first frame и post-collapse transition.
+
+- [x] Исправить фон avatar-video: убрать полосы и заметные геометрические пятна, вернуть чистый тёмный navy/black фон TG TOP с мягким равномерным свечением; кубики и motion не менять. Проверены первый и переходный кадры; полосы отсутствуют.
+
+- [x] Подготовить обновлённый прозрачный Telegram video sticker: 512×512, полная золотая пирамида в первом кадре, затем безпаузы loop, WebM VP9 alpha, без аудио. 75,757 bytes, 2 секунды, 30 fps; alpha подтверждён Chromium preview.
+- [x] Подготовить прозрачный Telegram video emoji: ровно 100×100, та же золотая анимация, полная пирамида в первом кадре, WebM VP9 alpha, без аудио. 21,907 bytes, 2 секунды, 30 fps; масштаб и alpha проверены Chromium preview.
+
+- [ ] Readiness-аудит перед тестированием: проверить production smoke для сайта, Telegram Mini App, onboarding через @TGTOP_robot, My Groups и защищённой мутации; записать результаты.
+- [ ] Readiness-аудит: проверить наличие обязательных production auth/config настроек, HTTPS/Mini App origin и отсутствие блокирующих runtime/build ошибок.
+- [x] Readiness-аудит: классифицировать незакрытые задачи как blocker для тестирования, blocker для публичного трафика или post-MVP; исправить только подтверждённые критические дефекты. Результаты записаны в `READINESS_AUDIT_RU.md`; устаревшая проверка NftShowcase исправлена, полный gate восстановлен.
+
+- [ ] Подготовить BotFather description photo 640×360: фирменная золотая TG TOP пирамида на тёмном фоне и короткий читаемый текст для блока «What can this bot do?». Не загружать в Telegram без явного подтверждения пользователя.
+
+- [x] Подготовить BotFather GIF 640×360: тёмный TG TOP фон, золотая пирамида с полной пирамидой в первом кадре, плавный loop без паузы и короткий текст «TG TOP — Telegram groups & channels catalog». Не загружать в Telegram без явного подтверждения пользователя. GIF: 640×360, 60 кадров, 2.1 MB; визуально проверен.
+
+- [ ] Диагностировать discoverability `@TG_TOPBOT` в глобальном поиске Telegram по `tg top`: проверить username/display name/описание и отделить задержку индексации от ошибки конфигурации; не менять BotFather без явного подтверждения пользователя.
+
+- [x] Обновить welcome/start copy @TG_TOPBOT: «Добро пожаловать в TG TOP — рейтинг Telegram-сообществ и других активов. Откройте приложение, чтобы начать.» и кнопку «Открыть TG TOP»; сохранить существующую Mini App deep-link логику. Primary и reserve flow синхронизированы; 20 bot-тестов и TypeScript прошли.
+
+- [ ] Исправить верхний аватар TG TOP в Mini App: показывать фирменный брендовый ассет вместо буквенного `T`, сохранить безопасный fallback при недоступности ассета и добавить regression check.
+
+- [x] Исправить синхронизацию пользовательского Telegram-аватара: при каждом валидированном Mini App запуске обновлять `photo_url`, инвалидировать устаревший cache и показывать новый аватар в верхней панели/профиле. Свежий `initDataUnsafe.user.photo_url` теперь имеет приоритет над session avatar; regression test, TypeScript и build прошли.
+
+- [x] Убрать буквенный `T` из avatar fallback сайта: при отсутствии Telegram-фото показывать фирменную пирамиду TG TOP из кубиков с палитрой текущей темы, а не инициалы пользователя.
+
+- [x] Для подключённых групп и каналов вне листинга обновлять Telegram-аватар при каждом открытии My Groups/приложения; листинговые snapshots и платёжные операции не менять.
+
+- [x] Вернуть отображение динамических видеоаватаров подключённых групп/каналов на платформе: показывать сохранённый MP4 в карточках и деталях с lazy/muted/playsInline playback, не менять listing snapshot без нового листинга, использовать Telegram photo/фирменные кубики как fallback и добавить regression coverage.
+
+- [x] Автоматически получать доступные фото/видеоаватары подключённых групп через существующий User API, сохранять медиа в storage и показывать видео в TG TOP; для listing сохранять snapshot до смены места/повторного листинга, для unlisted обновлять при открытии, добавить лимиты и fallback.
+
+- [x] Add a guarded User API media sync helper for Telegram group/channel profile photo/video
+- [x] Persist animated media snapshots only for unlisted groups or explicit listing refreshes
+- [x] Expose owner-scoped group media refresh through tRPC with rate limiting and safe fallback behavior
+- [x] Enable animated video avatar rendering in community cards with static/fallback support
+- [x] Add Vitest coverage for media snapshot eligibility and refresh procedure guards
+
+- [x] Fix visible TG TOP header logo so the actual branded pyramid/asset appears instead of the old letter mark or missing symbol
+- [ ] Fix live Telegram user avatar refresh after re-login or avatar change by invalidating stale cached session data and proving the fresh photo_url path
+
+- [x] Put the TG TOP cube logo directly to the left of the `TG TOP` text in the top header, using the branded pyramid/cube asset at compact header size
+
+- [x] Keep the bottom home/navigation button unchanged; place the branded cube logo only in the upper header immediately before `TG TOP`
+
+- [x] Show the saved Telegram profile video in the second featured lot (`Market`) with muted loop playback and static/avatar fallback
+
+- [ ] Apply the header/logo, Telegram user-avatar refresh, and Market second-lot video fixes to the live `tgtop.me` deployment that contains the real listed catalog
+
+- [x] Remove the entire Telegram statistics history section from the Worker Telegram Account sheet; keep only connection status, owner DM binding, and disconnect controls
+- [x] Fix reconnect flow so a successful Telegram code/2FA confirmation persists the connected session and keeps the sheet on the Read-only state instead of returning to the connect form
+- [x] Fix light-theme upper TG TOP logo palette so the compact header mark uses the branded warm-gold cubes instead of blue/black blocks
+
+- [ ] Replace the stale live Telegram bundle/server deployment so the actual `tgtop.me` build removes Worker Account historical stats and renders the Market profile video instead of the old static image
+- [ ] Verify the live Telegram WebApp after cache-busting/restart, including top cube-logo, user avatar refresh, Worker Account sheet, and Market video
+
+- [x] Use the confirmed VPS deploy access to inspect the actual service/build/branch and prepare a safe rollout package for the stale live bundle without changing database or S3 data
+
+- [x] Add a dedicated read-only GitHub deploy key for VPS access without deleting or resetting the existing `/opt/tgtop` checkout
+- [x] Verify VPS can read `DimaKonge/tgtop2` before preparing any staged release
+
+- [x] Keep featured and My Groups media-overlay titles/meta readable in light theme with explicit overlay classes, while preserving the unchanged bottom navigation
+
+- [x] Identify the exact active and staging release paths on VPS and document one safe activation step without resetting `/opt/tgtop` or touching DB/S3
+
+- [x] Prepare a reviewed activation helper for `/opt/tgtop/releases/stage-22fdf3e` with backup, atomic file swap, service restart, and rollback checks; do not execute it automatically
+
+- [x] Copy the syntax-checked activation helper into the VPS `stage-22fdf3e` scripts directory without activating the release
+
+- [x] Rework light-theme brand mark so the TG TOP cubes use the same intentional light-theme accent palette instead of the current blue treatment
+- [x] Increase light-theme contrast for header balance, filter chips, icon buttons, and active navigation states without changing dark theme or lower-navigation structure
+- [x] Preserve readable light-theme media-card titles/meta with a tested overlay treatment across featured and Market cards
+
+- [x] Bind the upper TG TOP cube-logo and launch cubes to the selected accent token for blue, purple, rose, gold, green, and turquoise themes while leaving bottom navigation unchanged
+
+- [x] Finalize accent-aware light-theme cube logo and improve contrast for compact top tabs and geo/category/search controls
+
+- [x] Activate the verified light-theme release `stage-6d8ce547` on the VPS with rollback backup; confirm tgtop.me/www/tgtop.xyz HTTP 200, all four systemd services active, healthz OK, no stale PNG logo or historical-stats UI in the live bundle
+
+- [x] Bind splash launch glow and progress bar to the selected accent token across all six theme accents
+
+- [x] Fix dark-theme TG TOP pyramid orientation so the top cube is at the top and the four-cube base is at the bottom
+- [x] Improve light-theme button and active-state contrast across profile and owner surfaces
+- [x] Make the light-theme balance chart readable with light surfaces, dark labels, and accent-aware graph colors
+- [x] Reduce Settings appearance choices to exactly Dark and Light and remove the System option and unnecessary style selector
+
+- [x] Run read-only VPS preflight for /opt/tgtop, tgtop.service, firewall/DNS, and current release before changing production
+- [x] Synchronize /opt/tgtop with the selected GitHub main branch without overwriting .env, database, S3 metadata, or rollback backups
+- [x] Build the synchronized production checkout on the VPS and restart tgtop.service safely with rollback on failure
+- [x] Verify active systemd status, health endpoint, canonical site response, and upright dark-theme BrandMark after rollout
+
+- [x] Fix guest community CTA so a valid stored public Telegram link opens without blocking on owner/admin verification; keep admin verification for protected operations and add regression coverage
+
+- [x] Make the Telegram community CTA open valid public and private entry links reliably inside Telegram WebApp and in a normal browser, with explicit fallback/error handling
+- [x] Ensure a successful new listing captures and persists the current Telegram video avatar snapshot, then renders it in the featured/detail card without requiring a second listing
+
+- [x] Refresh and persist the current Telegram profile video for the TG TOP channel through the guarded User API media flow, then verify the live catalog card renders the saved MP4
+
+- [ ] Diagnose and fix TON Connect wallet onboarding for a new Telegram account: chooser opens but connection does not complete; verify manifest/origin/callback without signing or sending transactions
+
+- [x] Inline listing price, predicted placement, category/subcategory, country, and city controls inside the expanded publication-parameters panel and remove the separate price/geo/category window without changing listing validation
+
+- [x] Configure Google AI Studio automation to edit through a controlled branch/PR and deploy only after build, tests, health checks, and rollback-safe staging; preserve integration access while preventing broken direct production writes
+
+- [x] Switch GitHub Actions VPS deployment from SERVER_SSH_KEY to password-based SSH using the existing SERVER_HOST, SERVER_USER, and SERVER_PASSWORD secrets, then verify staged deploy and rollback health gates
+
+- [x] Restore production TG TOP after current blank/non-opening site and verify live HTTP, health, service, Nginx, assets, and browser runtime
+
+- [x] Make English the default TG TOP locale and expose a persistent Settings selector with exactly English and Russian options
+
+- [x] Add a selectable background palette beyond black/white, with persistent theme tokens that keep text, buttons, charts, logo cubes, and active states readable
+
+- [x] Replace NFT-wide deal and on-chain/off-chain toggle rows with a compact filter button and popover next to search while preserving all existing NFT filter states
+
+- [x] Let community cards inherit the selected global application palette by default (initially Black), and add a compact «Фон карточки» button in listing settings for a safe preset owner override with live preview, persistence and automatic readable text/action contrast in catalog and detail cards
+
+- [ ] Deploy the verified visible English/Russian Settings selector, dark background palette, and compact NFT filter release through the protected GitHub Actions staged pipeline; verify live Settings and NFT behavior after health checks
+
+- [x] Remove the Light/System appearance modes and replace them with the full dark Telegram-style background palette from the provided reference (black, blue, purple, rose, red, orange, gold, green, turquoise and steel shades); make selected palette tokens drive the TG TOP cube avatar, launch animation/progress, primary buttons, active filters, charts, and bottom navigation with readable contrast
+
+- [x] Design and implement idempotent referral rewards of +1 bonus GRAM only to the inviter when a new beta tester first opens the Mini App through that referral link and completes Telegram authorization; cap the lifetime reward at 2 GRAM per inviter, display referral-bonus progress as 0/2, 1/2, or 2/2, record over-limit referrals without payment, and prevent self-referral/duplicate-account abuse
+
+- [x] Add admin-only Bonus GRAM controls: configure referral reward/limit, manually credit a user by verified Telegram username with mandatory reason and audit record, and show referral-bonus progress without introducing balance freezing in this release
+
+- [x] Fix ranking checkout cardBackgroundPreset persistence: pass preset in Home.tsx submitPlacement and initialize in openStarsPayment, accept cardBackgroundPreset in server/routers.ts placeBid and map to payRankingBidWithGramCredit options, validate preset whitelist in server/db.ts, and add regression coverage
+
+- [x] Add idempotent production migration for groups_catalog.cardBackgroundPreset and referral reward tables, register in scripts/release-vps.sh, and add regression test
+
+- [ ] Future scope: add audited balance freeze/unfreeze controls that prevent frozen balances from being spent or withdrawn

@@ -1,0 +1,74 @@
+import { describe, expect, it } from "vitest";
+import { assignRankingEntriesToSlots, getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid, MAX_RANKING_BID_MILLITON, RANKING_BID_STEP_MILLITON, sortRankingEntriesByBid, VACANT_RANKING_MINIMUM_MILLITON } from "./rankingBidPolicy";
+
+describe("TG TOP paid ranking policy", () => {
+  it("requires a 0.1 GRAM minimum bid for every vacant placement", () => {
+    expect(VACANT_RANKING_MINIMUM_MILLITON).toBe(100);
+    expect(getMinimumRankingBidMilliTon(0, false)).toBe(100);
+    expect(isQualifyingRankingBid(99, 0, false)).toBe(false);
+    expect(isQualifyingRankingBid(100, 0, false)).toBe(true);
+  });
+
+  it("requires a 0.1 GRAM higher bid for an occupied placement", () => {
+    expect(RANKING_BID_STEP_MILLITON).toBe(100);
+    expect(getMinimumRankingBidMilliTon(200, true)).toBe(300);
+    expect(isQualifyingRankingBid(200, 200, true)).toBe(false);
+    expect(isQualifyingRankingBid(300, 200, true)).toBe(true);
+    expect(isQualifyingRankingBid(250, 200, true)).toBe(false);
+  });
+
+  it("caps every qualifying ranking bid at 1,000 GRAM", () => {
+    expect(MAX_RANKING_BID_MILLITON).toBe(1_000_000);
+    expect(isQualifyingRankingBid(MAX_RANKING_BID_MILLITON, 0, false)).toBe(true);
+    expect(isQualifyingRankingBid(MAX_RANKING_BID_MILLITON + RANKING_BID_STEP_MILLITON, 0, false)).toBe(false);
+  });
+
+  it("keeps the 0.1 GRAM minimum when a seeded occupied slot has no recorded bid yet", () => {
+    expect(getMinimumRankingBidMilliTon(0, true)).toBe(100);
+    expect(isQualifyingRankingBid(99, 0, true)).toBe(false);
+    expect(isQualifyingRankingBid(100, 0, true)).toBe(true);
+  });
+
+  it("uses the same 0.1 GRAM floor for every ranking cell", () => {
+    expect(getRankingFloorMilliTon(1)).toBe(100);
+    expect(getRankingFloorMilliTon(2)).toBe(100);
+    expect(getRankingFloorMilliTon(3)).toBe(100);
+    expect(getRankingFloorMilliTon(4)).toBe(100);
+  });
+
+  it("orders higher bids first and places a fresh equal bid above older equal bids", () => {
+    const ranked = sortRankingEntriesByBid([
+      { groupId: 1, bidAmount: 100, heldSince: new Date("2026-08-19T10:00:00Z") },
+      { groupId: 2, bidAmount: 300, heldSince: new Date("2026-08-19T10:03:00Z") },
+      { groupId: 3, bidAmount: 100, heldSince: new Date("2026-08-19T10:02:00Z") },
+    ]);
+    expect(ranked.map(entry => entry.groupId)).toEqual([2, 3, 1]);
+  });
+
+  it("always places 0.2 GRAM above every 0.1 GRAM listing", () => {
+    const ranked = sortRankingEntriesByBid([
+      { groupId: 10, bidAmount: 100, heldSince: new Date("2026-08-19T10:05:00Z") },
+      { groupId: 11, bidAmount: 200, heldSince: new Date("2026-08-19T09:00:00Z") },
+      { groupId: 12, bidAmount: 100, heldSince: new Date("2026-08-19T10:06:00Z") },
+    ]);
+    expect(ranked.map(entry => entry.groupId)).toEqual([11, 12, 10]);
+  });
+
+  it("puts a fresh 0.1 GRAM listing into the highest available equal-price position", () => {
+    const assigned = assignRankingEntriesToSlots([
+      { groupId: 1, bidAmount: 300, heldSince: new Date("2026-08-19T10:00:00Z") },
+      { groupId: 2, bidAmount: 100, heldSince: new Date("2026-08-19T10:01:00Z") },
+      { groupId: 3, bidAmount: 100, heldSince: new Date("2026-08-19T10:02:00Z") },
+    ], [{ slotNumber: 1 }, { slotNumber: 2 }, { slotNumber: 3 }, { slotNumber: 4 }]);
+    expect(assigned.map(entry => entry?.groupId ?? null)).toEqual([1, 3, 2, null]);
+  });
+
+  it("compacts every qualifying community upward without vacant slots above it", () => {
+    const assigned = assignRankingEntriesToSlots([
+      { groupId: 1, bidAmount: 100, heldSince: new Date("2026-08-19T10:00:00Z") },
+      { groupId: 2, bidAmount: 200, heldSince: new Date("2026-08-19T10:01:00Z") },
+      { groupId: 3, bidAmount: 300, heldSince: new Date("2026-08-19T10:02:00Z") },
+    ], [{ slotNumber: 1 }, { slotNumber: 2 }, { slotNumber: 3 }, { slotNumber: 4 }]);
+    expect(assigned.map(entry => entry?.groupId ?? null)).toEqual([3, 2, 1, null]);
+  });
+});

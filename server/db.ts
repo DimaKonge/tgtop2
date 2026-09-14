@@ -1,0 +1,3538 @@
+import { eq, and, or, asc, desc, gte, gt, lte, lt, inArray, like, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
+import { randomBytes } from "node:crypto";
+import { InsertUser, users, groupsCatalog, groupStatsSnapshots, creditTransactions, tonDeposits, tonWithdrawals, tonPayoutJobs, tonPayoutWalletLeases, rewardEvents, rewardInviteLinks, giveaways, giveawayParticipants, auctionSlots, rankingBidIntents, starsRankingPaymentIntents, nftUsernames, nftTransfers, deals, telegramEventReceipts, telegramOnboardingIntents, telegramUserAgentSessions, telegramUserAgentAuditEvents, telegramOwnerDmBindings, telegramOwnerDmWorkerStates, telegramOwnerDmJobs, telegramStatsTargets, telegramStatsSnapshots, telegramOperationLogDestinations, telegramOperationsOwnerBindings, moderationEvents, groupEntryLinkAudits, catalogCountries, catalogCities, catalogTopics, botListings, miniAppLaunchEvents, telegramSupportMessages, referralBonusGrants, referralRewardConfigs, bonusCreditAudits, InsertGroupCatalog, InsertNftUsername } from "../drizzle/schema";
+import { ENV } from './_core/env';
+import { GROUP_CONNECTION_BONUS, getGroupConnectionBonusIdentity } from "./groupBonusPolicy";
+import { GROUP_TRANSFER_WINDOW_MS, INSUFFICIENT_GRAM_BALANCE_MESSAGE, canBuyerCancel, canBuyerConfirmTransfer, getTransferDeadline, hasSufficientGramBalance } from "./protectedDeals";
+import { getNftTransferRequirements, getNftTransferReference, normalizeTelegramRecipient } from "./nftTransferPolicy";
+import { assignRankingEntriesToSlots, getMinimumRankingBidMilliTon, getRankingFloorMilliTon, isQualifyingRankingBid } from "./rankingBidPolicy";
+import { canEnterTopRanking } from "./rankingListingPolicy";
+import { getModeratedGroupLifecycle } from "./moderationApprovalPolicy";
+import { canPublishNftListing } from "./nftOwnershipPublicationPolicy";
+import { planVacantRankingAssignments } from "./autoPlacementPolicy";
+import { formatTonAmount } from "./tonFormatting";
+import { canCreateRewardPersonalInviteLink, DEFAULT_MANUAL_ADD_REWARD, getRewardAmount, isRewardCampaignActive, type RewardEventType, validateRewardCampaignConfig } from "./rewardCampaignPolicy";
+import { canExposeOwnerProfile } from "./ownerVisibilityPolicy";
+import { isGiveawayOpen, isValidGiveawayEnd } from "./giveawayPolicy";
+import { getTelegramChatIdFromOpenId, verifyTelegramUserChatBoost } from "./telegramNotifications";
+import { getSearchIndexingError } from "./seoPolicy";
+import { buildTonDepositPayload, createTonDepositReference, decodeTonComment, findMatchingTonDepositTransaction, findRejectedTonDepositTransaction, formatNanoTon, getRecentTonDepositTransactions, normalizeTonAddress, parseTonToNano, toFriendlyTonAddress, TON_DEPOSIT_TTL_MS } from "./tonDeposits";
+import { getTonPayoutTransactionByMessageHash } from "./tonPayoutNetwork";
+import { getConfiguredTonPayoutWalletAddress } from "./tonPayoutConfig";
+import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, getTonWithdrawalRiskLabel, quoteTonWithdrawal as getTonWithdrawalQuote, TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS, TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO } from "./tonWithdrawalPolicy";
+import { canCancelNftRental, canConfirmNftRental, rentalTotalUnits, validateRentalDays, NFT_RENTAL_MAX_DAYS as POLICY_NFT_RENTAL_MAX_DAYS } from "./nftRentalPolicy";
+import { normalizeTelegramBotLink } from "./botListingPolicy";
+import { canIssueOnboardingIntent, getOnboardingIntentWindow, isPendingOnboardingIntent, ONBOARDING_INTENT_TTL_MS, ONBOARDING_INTENT_WINDOW_MS, type TelegramOnboardingKind } from "./onboardingIntentPolicy";
+import { CARD_BACKGROUND_PRESET_IDS, type CardBackgroundPreset } from "../shared/card-background-presets";
+
+export { GROUP_CONNECTION_BONUS } from "./groupBonusPolicy";
+
+export const STARS_PER_MINIMUM_RANKING_BID = 10;
+const STARS_RANKING_PAYMENT_TTL_MS = 20 * 60 * 1000;
+
+export function getStarsAmountForRankingBid(bidAmount: number) {
+  return Math.max(STARS_PER_MINIMUM_RANKING_BID, Math.ceil(bidAmount / 10));
+}
+
+function toPublicGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {
+  const active = isRewardCampaignActive(group);
+  const rewardAmount = active
+    ? getRewardAmount(group, group.category === "Чаты" ? "manual_add" : "subscription")
+    : 0;
+  const {
+    monthlyEntryInviteLink: _monthlyEntryInviteLink,
+    rewardActive: _rewardActive,
+    rewardBudget: _rewardBudget,
+    rewardPerSubscription: _rewardPerSubscription,
+    rewardPerInvite: _rewardPerInvite,
+    rewardPerManualAdd: _rewardPerManualAdd,
+    ...publicGroup
+  } = group;
+  return {
+    ...publicGroup,
+    ...(group.managerPublic ? {} : { managerTelegramUserId: null, managerUsername: null, managerName: null, managerAvatarUrl: null }),
+    rewardActive: active,
+    rewardAmount,
+  };
+}
+
+function toDetailGroup<T extends typeof groupsCatalog.$inferSelect>(group: T) {
+  const publicGroup = toPublicGroup(group);
+  const active = isRewardCampaignActive(group);
+  return {
+    ...publicGroup,
+    reward: active
+      ? {
+          subscriptionAmount: getRewardAmount(group, "subscription"),
+          inviteAmount: getRewardAmount(group, "invite_referral"),
+          manualAddAmount: getRewardAmount(group, "manual_add"),
+        }
+      : undefined,
+  };
+}
+
+let _db: ReturnType<typeof drizzle> | null = null;
+
+export async function getDb() {
+  if (!_db && process.env.DATABASE_URL) {
+    try {
+      _db = drizzle(process.env.DATABASE_URL);
+    } catch (error) {
+      console.warn("[Database] Failed to connect:", error);
+      _db = null;
+    }
+  }
+  return _db;
+}
+
+export function isDuplicateTelegramEventError(error: unknown): boolean {
+  const visited = new Set<unknown>();
+  let current: unknown = error;
+  while (current && typeof current === "object" && !visited.has(current)) {
+    visited.add(current);
+    const databaseError = current as { code?: unknown; errno?: unknown; cause?: unknown };
+    if (databaseError.code === "ER_DUP_ENTRY" || databaseError.errno === 1062) return true;
+    current = databaseError.cause;
+  }
+  return false;
+}
+
+export async function claimTelegramEvent(eventKey: string, firstBot: string) {
+  const db = await getDb();
+  if (!db) return true;
+  try {
+    const result = await db.insert(telegramEventReceipts).values({ eventKey, firstBot }).onDuplicateKeyUpdate({
+      set: { eventKey: sql`${telegramEventReceipts.eventKey}` },
+    });
+    return Number(result[0]?.affectedRows ?? 0) === 1;
+  } catch (error) {
+    if (isDuplicateTelegramEventError(error)) return false;
+    throw error;
+  }
+}
+
+type OnboardingIntentResult =
+  | { status: "ready"; token: string; expiresAt: Date }
+  | { status: "rate_limited"; retryAt: Date };
+
+function makeOnboardingIntentToken() {
+  return randomBytes(18).toString("base64url");
+}
+
+export async function getActiveTelegramOnboardingIntent(input: {
+  ownerTelegramId: string;
+  kind: TelegramOnboardingKind;
+  now?: Date;
+}) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const now = input.now ?? new Date();
+  const [intent] = await db.select().from(telegramOnboardingIntents).where(and(
+    eq(telegramOnboardingIntents.ownerTelegramId, input.ownerTelegramId),
+    eq(telegramOnboardingIntents.kind, input.kind),
+  )).limit(1);
+  return intent && isPendingOnboardingIntent({ status: intent.status, expiresAt: intent.expiresAt, now }) ? intent : undefined;
+}
+
+export async function createTelegramOnboardingIntent(input: {
+  ownerTelegramId: string;
+  kind: TelegramOnboardingKind;
+  now?: Date;
+}): Promise<OnboardingIntentResult> {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище onboarding временно недоступно");
+  const now = input.now ?? new Date();
+  try {
+    return await db.transaction(async tx => {
+      const [previous] = await tx.select().from(telegramOnboardingIntents).where(and(
+        eq(telegramOnboardingIntents.ownerTelegramId, input.ownerTelegramId),
+        eq(telegramOnboardingIntents.kind, input.kind),
+      )).limit(1).for("update");
+      if (previous && isPendingOnboardingIntent({ status: previous.status, expiresAt: previous.expiresAt, now })) {
+        return { status: "ready", token: previous.token, expiresAt: previous.expiresAt };
+      }
+
+      const window = getOnboardingIntentWindow({ now, windowStartedAt: previous?.windowStartedAt, issuedInWindow: previous?.issuedInWindow });
+      if (!canIssueOnboardingIntent({ now, windowStartedAt: window.windowStartedAt, issuedInWindow: window.issuedInWindow })) {
+        return { status: "rate_limited", retryAt: new Date(window.windowStartedAt.getTime() + ONBOARDING_INTENT_WINDOW_MS) };
+      }
+
+      const token = makeOnboardingIntentToken();
+      const expiresAt = new Date(now.getTime() + ONBOARDING_INTENT_TTL_MS);
+      const nextValues = {
+        token,
+        status: "pending" as const,
+        expiresAt,
+        windowStartedAt: window.windowStartedAt,
+        issuedInWindow: window.issuedInWindow + 1,
+        consumedChatId: null,
+        consumedAt: null,
+      };
+      if (previous) {
+        await tx.update(telegramOnboardingIntents).set(nextValues).where(eq(telegramOnboardingIntents.id, previous.id));
+      } else {
+        await tx.insert(telegramOnboardingIntents).values({ ownerTelegramId: input.ownerTelegramId, kind: input.kind, ...nextValues });
+      }
+      return { status: "ready", token, expiresAt };
+    });
+  } catch (error) {
+    if (!isDuplicateTelegramEventError(error)) throw error;
+    const racedIntent = await getActiveTelegramOnboardingIntent({ ...input, now });
+    if (racedIntent) return { status: "ready", token: racedIntent.token, expiresAt: racedIntent.expiresAt };
+    throw error;
+  }
+}
+
+export async function consumeTelegramOnboardingIntent(input: {
+  ownerTelegramId: string;
+  kind: TelegramOnboardingKind;
+  chatId: string;
+  now?: Date;
+}): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const now = input.now ?? new Date();
+  const result = await db.update(telegramOnboardingIntents).set({
+    status: "consumed",
+    consumedChatId: input.chatId,
+    consumedAt: now,
+  }).where(and(
+    eq(telegramOnboardingIntents.ownerTelegramId, input.ownerTelegramId),
+    eq(telegramOnboardingIntents.kind, input.kind),
+    eq(telegramOnboardingIntents.status, "pending"),
+    gt(telegramOnboardingIntents.expiresAt, now),
+  ));
+  return Number(result[0]?.affectedRows ?? 0) === 1;
+}
+
+export async function getTelegramUserAgentSession() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [session] = await db.select().from(telegramUserAgentSessions).where(eq(telegramUserAgentSessions.scope, "primary")).limit(1);
+  return session;
+}
+
+export async function saveTelegramUserAgentSession(input: {
+  status: "disconnected" | "code_pending" | "password_pending" | "connected" | "error";
+  encryptedSession?: string | null;
+  encryptedPhone?: string | null;
+  encryptedPhoneCodeHash?: string | null;
+  accountTelegramId?: string | null;
+  accountUsername?: string | null;
+  expiresAt?: Date | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище состояния рабочего Telegram-аккаунта временно недоступно");
+  const values = { scope: "primary", ...input };
+  await db.insert(telegramUserAgentSessions).values(values).onDuplicateKeyUpdate({ set: input });
+}
+
+export async function recordTelegramUserAgentAuditEvent(input: { action: string; actorOpenId: string; details?: string | null }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(telegramUserAgentAuditEvents).values({
+    action: input.action.slice(0, 64),
+    actorOpenId: input.actorOpenId,
+    details: input.details?.slice(0, 255) ?? null,
+  });
+}
+
+export async function getTelegramOwnerDmBinding() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [binding] = await db.select().from(telegramOwnerDmBindings).where(eq(telegramOwnerDmBindings.scope, "primary")).limit(1);
+  return binding;
+}
+
+export async function saveTelegramOwnerDmBinding(input: { ownerTelegramId: string; expectedUsername: string; boundByOpenId: string; greetingSentAt: Date }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  const [existing] = await db.select().from(telegramOwnerDmBindings).where(eq(telegramOwnerDmBindings.scope, "primary")).limit(1);
+  if (existing) throw new Error("Owner-диалог уже привязан. Изменение получателя требует отдельного безопасного сброса.");
+  await db.insert(telegramOwnerDmBindings).values({ scope: "primary", ...input });
+  return await getTelegramOwnerDmBinding();
+}
+
+const OWNER_DM_JOB_LEASE_MS = 30_000;
+
+export async function getTelegramOwnerDmWorkerState() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [state] = await db.select().from(telegramOwnerDmWorkerStates).where(eq(telegramOwnerDmWorkerStates.scope, "primary")).limit(1);
+  return state;
+}
+
+export async function ensureTelegramOwnerDmWorkerState() {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await db.insert(telegramOwnerDmWorkerStates).values({ scope: "primary" }).onDuplicateKeyUpdate({ set: { scope: sql`${telegramOwnerDmWorkerStates.scope}` } });
+  return await getTelegramOwnerDmWorkerState();
+}
+
+export async function updateTelegramOwnerDmWorkerState(input: Partial<{ enabled: boolean; manusTaskId: string | null; activationSentAt: Date | null; lastError: string | null }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await ensureTelegramOwnerDmWorkerState();
+  await db.update(telegramOwnerDmWorkerStates).set({ ...input, lastError: input.lastError?.slice(0, 255) ?? input.lastError }).where(eq(telegramOwnerDmWorkerStates.scope, "primary"));
+  return await getTelegramOwnerDmWorkerState();
+}
+
+export async function enqueueTelegramOwnerDmJob(input: { telegramMessageId: string; ownerTelegramId: string; encryptedInput: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  try {
+    await db.insert(telegramOwnerDmJobs).values(input);
+    return true;
+  } catch (error) {
+    if (isDuplicateTelegramEventError(error)) return false;
+    throw error;
+  }
+}
+
+export async function getTelegramOwnerDmJobStatus(input: { telegramMessageId: string; ownerTelegramId: string }) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [job] = await db.select({ id: telegramOwnerDmJobs.id, status: telegramOwnerDmJobs.status, attempts: telegramOwnerDmJobs.attempts })
+    .from(telegramOwnerDmJobs)
+    .where(and(eq(telegramOwnerDmJobs.telegramMessageId, input.telegramMessageId), eq(telegramOwnerDmJobs.ownerTelegramId, input.ownerTelegramId)))
+    .limit(1);
+  return job;
+}
+
+export async function claimNextTelegramOwnerDmJob(workerId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  const now = new Date();
+  await db.update(telegramOwnerDmJobs).set({ status: "queued", leaseToken: null, leaseExpiresAt: null, lastError: "Lease восстановлен после остановки worker" })
+    .where(and(eq(telegramOwnerDmJobs.status, "leased"), lte(telegramOwnerDmJobs.leaseExpiresAt, now)));
+  const [pending] = await db.select({ id: telegramOwnerDmJobs.id }).from(telegramOwnerDmJobs).where(inArray(telegramOwnerDmJobs.status, ["leased", "waiting_agent"])).limit(1);
+  if (pending) return null;
+  const candidate = (await db.select().from(telegramOwnerDmJobs).where(and(eq(telegramOwnerDmJobs.status, "queued"), lte(telegramOwnerDmJobs.availableAt, now))).orderBy(asc(telegramOwnerDmJobs.availableAt), asc(telegramOwnerDmJobs.id)).limit(1))[0];
+  if (!candidate) return null;
+  const leaseToken = randomBytes(24).toString("hex");
+  const leaseExpiresAt = new Date(now.getTime() + OWNER_DM_JOB_LEASE_MS);
+  const claimed = await db.update(telegramOwnerDmJobs).set({ status: "leased", leaseToken, leaseExpiresAt, attempts: sql`${telegramOwnerDmJobs.attempts} + 1`, lastError: null }).where(and(eq(telegramOwnerDmJobs.id, candidate.id), eq(telegramOwnerDmJobs.status, "queued")));
+  if (Number(claimed[0]?.affectedRows ?? 0) !== 1) return null;
+  return { ...candidate, status: "leased" as const, leaseToken, leaseExpiresAt, attempts: candidate.attempts + 1, workerId };
+}
+
+export async function markTelegramOwnerDmJobWaiting(input: { id: number; leaseToken: string; manusTaskId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await db.update(telegramOwnerDmJobs).set({ status: "waiting_agent", manusTaskId: input.manusTaskId, dispatchedAt: new Date(), availableAt: new Date(Date.now() + 2_000), leaseToken: null, leaseExpiresAt: null }).where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "leased"), eq(telegramOwnerDmJobs.leaseToken, input.leaseToken)));
+}
+
+export async function retryTelegramOwnerDmClaim(input: { id: number; leaseToken: string; delayMs: number; reason: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await db.update(telegramOwnerDmJobs).set({ status: "queued", availableAt: new Date(Date.now() + input.delayMs), leaseToken: null, leaseExpiresAt: null, lastError: input.reason.slice(0, 255) })
+    .where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "leased"), eq(telegramOwnerDmJobs.leaseToken, input.leaseToken)));
+}
+
+export async function reviewTelegramOwnerDmClaim(input: { id: number; leaseToken: string; reason: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await db.update(telegramOwnerDmJobs).set({ status: "manual_review", completedAt: new Date(), leaseToken: null, leaseExpiresAt: null, lastError: input.reason.slice(0, 255) })
+    .where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "leased"), eq(telegramOwnerDmJobs.leaseToken, input.leaseToken)));
+}
+
+export async function getWaitingTelegramOwnerDmJob() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [job] = await db.select().from(telegramOwnerDmJobs).where(eq(telegramOwnerDmJobs.status, "waiting_agent")).orderBy(asc(telegramOwnerDmJobs.id)).limit(1);
+  return job;
+}
+
+export async function completeTelegramOwnerDmJob(input: { id: number; deliveredEventId?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await db.update(telegramOwnerDmJobs).set({ status: "completed", deliveredEventId: input.deliveredEventId ?? null, completedAt: new Date(), lastError: null }).where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "waiting_agent")));
+}
+
+export async function deferTelegramOwnerDmJob(input: { id: number; delayMs: number; reason: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await db.update(telegramOwnerDmJobs).set({ availableAt: new Date(Date.now() + input.delayMs), lastError: input.reason.slice(0, 255) }).where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "waiting_agent")));
+}
+
+export async function reviewTelegramOwnerDmJob(input: { id: number; reason: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await db.update(telegramOwnerDmJobs).set({ status: "manual_review", completedAt: new Date(), lastError: input.reason.slice(0, 255) }).where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "waiting_agent")));
+}
+
+export async function restartTelegramOwnerDmJobForMissingTask(input: { id: number; reason: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-диалога временно недоступно");
+  await db.update(telegramOwnerDmJobs).set({ status: "queued", availableAt: new Date(), manusTaskId: null, dispatchedAt: null, leaseToken: null, leaseExpiresAt: null, lastError: input.reason.slice(0, 255) })
+    .where(and(eq(telegramOwnerDmJobs.id, input.id), eq(telegramOwnerDmJobs.status, "waiting_agent")));
+}
+
+export async function getTelegramStatsTargetByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [target] = await db.select().from(telegramStatsTargets).where(eq(telegramStatsTargets.username, username)).limit(1);
+  return target;
+}
+
+export async function listTelegramStatsTargets() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(telegramStatsTargets).where(eq(telegramStatsTargets.enabled, true)).orderBy(asc(telegramStatsTargets.title));
+}
+
+export async function saveTelegramStatsTarget(input: { username: string; chatId: string; title: string; kind: "channel" | "supergroup"; addedByOpenId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище статистики временно недоступно");
+  await db.insert(telegramStatsTargets).values({ ...input, enabled: true, lastAvailability: "pending", lastError: null }).onDuplicateKeyUpdate({
+    set: { chatId: input.chatId, title: input.title, kind: input.kind, addedByOpenId: input.addedByOpenId, enabled: true, lastAvailability: "pending", lastError: null },
+  });
+  return await getTelegramStatsTargetByUsername(input.username);
+}
+
+export async function saveTelegramStatsSnapshot(input: { targetId: number; periodStart: Date | null; periodEnd: Date | null; memberCount: number | null; viewsPerPost: number | null; sharesPerPost: number | null; reactionsPerPost: number | null; historyJson: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище статистики временно недоступно");
+  await db.insert(telegramStatsSnapshots).values(input);
+  await db.update(telegramStatsTargets).set({ lastRefreshedAt: new Date(), lastAvailability: "ready", lastError: null }).where(eq(telegramStatsTargets.id, input.targetId));
+}
+
+export async function markTelegramStatsTargetUnavailable(input: { targetId: number; reason: string }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(telegramStatsTargets).set({ lastRefreshedAt: new Date(), lastAvailability: "unavailable", lastError: input.reason.slice(0, 255) }).where(eq(telegramStatsTargets.id, input.targetId));
+}
+
+export async function getLatestTelegramStatsSnapshot(targetId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [snapshot] = await db.select().from(telegramStatsSnapshots).where(eq(telegramStatsSnapshots.targetId, targetId)).orderBy(desc(telegramStatsSnapshots.collectedAt)).limit(1);
+  return snapshot;
+}
+
+export async function getTelegramOperationLogDestination(kind: "top_activity" | "finance" | "support" | "launches" | "additions") {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [destination] = await db.select().from(telegramOperationLogDestinations).where(eq(telegramOperationLogDestinations.kind, kind)).limit(1);
+  return destination;
+}
+
+export async function saveTelegramOperationLogDestination(input: {
+  kind: "top_activity" | "finance" | "support" | "launches" | "additions";
+  chatId: string;
+  messageThreadId?: number | null;
+  chatTitle?: string | null;
+  configuredByOpenId: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище настроек private-логов временно недоступно");
+  await db.insert(telegramOperationLogDestinations).values(input).onDuplicateKeyUpdate({
+    set: {
+      chatId: input.chatId,
+      messageThreadId: input.messageThreadId ?? null,
+      chatTitle: input.chatTitle ?? null,
+      configuredByOpenId: input.configuredByOpenId,
+    },
+  });
+}
+
+export async function getTelegramOperationsOwnerBinding() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [binding] = await db.select().from(telegramOperationsOwnerBindings).where(eq(telegramOperationsOwnerBindings.scope, "primary")).limit(1);
+  return binding;
+}
+
+export async function saveTelegramOperationsOwnerBinding(input: { chatId: string; ownerTelegramId: string; ownerUsername?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Хранилище owner-привязки private-логов временно недоступно");
+  const existing = await getTelegramOperationsOwnerBinding();
+  if (existing && (existing.chatId !== input.chatId || existing.ownerTelegramId !== input.ownerTelegramId)) {
+    throw new Error("Private log-группа уже привязана к другому владельцу. Изменение требует отдельного безопасного сброса.");
+  }
+  if (existing) return existing;
+  await db.insert(telegramOperationsOwnerBindings).values({ scope: "primary", ...input });
+  return await getTelegramOperationsOwnerBinding();
+}
+
+export async function upsertUser(user: InsertUser): Promise<void> {
+  if (!user.openId) throw new Error("User openId is required for upsert");
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    const values: InsertUser = { openId: user.openId };
+    const updateSet: Record<string, unknown> = {};
+
+    const textFields = ["name", "email", "avatarUrl", "telegramUsername", "loginMethod"] as const;
+    textFields.forEach((field) => {
+      const val = user[field];
+      if (val !== undefined) {
+        values[field] = val ?? null;
+        updateSet[field] = val ?? null;
+      }
+    });
+
+    if (user.lastSignedIn !== undefined) {
+      values.lastSignedIn = user.lastSignedIn;
+      updateSet.lastSignedIn = user.lastSignedIn;
+    }
+    if (user.role !== undefined) {
+      values.role = user.role;
+      updateSet.role = user.role;
+    } else if (user.openId === ENV.ownerOpenId) {
+      values.role = 'admin';
+      updateSet.role = 'admin';
+    }
+
+    if (!values.lastSignedIn) values.lastSignedIn = new Date();
+
+    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  } catch (error) {
+    console.error("[Database] Failed to upsert user:", error);
+    throw error;
+  }
+}
+
+export async function getUserByOpenId(openId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return result[0];
+}
+
+export async function setPublicProfile(openId: string, publicProfile: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ publicProfile }).where(eq(users.openId, openId));
+}
+
+export async function getAccountLedger(openId: string) {
+  const db = await getDb();
+  if (!db) return { user: undefined, transactions: [], referral: undefined };
+  const user = await getUserByOpenId(openId);
+  const transactions = await db.select({
+    id: creditTransactions.id,
+    amount: creditTransactions.amount,
+    kind: creditTransactions.kind,
+    createdAt: creditTransactions.createdAt,
+    groupId: creditTransactions.groupId,
+    groupTitle: groupsCatalog.title,
+    groupUsername: groupsCatalog.username,
+  }).from(creditTransactions)
+    .leftJoin(groupsCatalog, eq(creditTransactions.groupId, groupsCatalog.id))
+    .where(eq(creditTransactions.userOpenId, openId))
+    .orderBy(desc(creditTransactions.createdAt), desc(creditTransactions.id));
+  const referral = user ? await getReferralOverview(openId) : undefined;
+  return { user, transactions, referral };
+}
+
+function getTonDepositWalletAddress() {
+  const address = process.env.TON_DEPOSIT_WALLET_ADDRESS;
+  if (!address) throw new Error("Кошелёк для пополнений TON не настроен");
+  return normalizeTonAddress(address);
+}
+
+export async function getTonDeposits(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    id: tonDeposits.id,
+    requestedAmountNano: tonDeposits.requestedAmountNano,
+    creditedAmountTon: tonDeposits.creditedAmountTon,
+    reference: tonDeposits.reference,
+    status: tonDeposits.status,
+    failureReason: tonDeposits.failureReason,
+    expiresAt: tonDeposits.expiresAt,
+    submittedAt: tonDeposits.submittedAt,
+    confirmedAt: tonDeposits.confirmedAt,
+    createdAt: tonDeposits.createdAt,
+  }).from(tonDeposits).where(eq(tonDeposits.userOpenId, openId)).orderBy(desc(tonDeposits.createdAt), desc(tonDeposits.id)).limit(20);
+}
+
+export async function getTonWithdrawalDefaultRecipient(openId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const row = (await db.select({ senderWalletAddress: tonDeposits.senderWalletAddress })
+    .from(tonDeposits)
+    .where(and(eq(tonDeposits.userOpenId, openId), eq(tonDeposits.status, "confirmed")))
+    .orderBy(desc(tonDeposits.confirmedAt), desc(tonDeposits.id))
+    .limit(1))[0];
+  return row ? { destinationWalletAddress: toFriendlyTonAddress(row.senderWalletAddress) } : null;
+}
+
+export async function createTonDeposit(input: { userOpenId: string; senderWalletAddress: string; amountTon: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const requestedAmountNano = parseTonToNano(input.amountTon);
+  const senderWalletAddress = normalizeTonAddress(input.senderWalletAddress);
+  const recipientWalletAddress = getTonDepositWalletAddress();
+  const reference = createTonDepositReference();
+  const expiresAt = new Date(Date.now() + TON_DEPOSIT_TTL_MS);
+  const result = await db.insert(tonDeposits).values({
+    userOpenId: input.userOpenId,
+    senderWalletAddress,
+    recipientWalletAddress,
+    requestedAmountNano: requestedAmountNano.toString(),
+    reference,
+    expiresAt,
+  });
+  return {
+    id: Number(result[0].insertId),
+    recipientWalletAddress: toFriendlyTonAddress(recipientWalletAddress),
+    amountNano: requestedAmountNano.toString(),
+    amountTon: formatNanoTon(requestedAmountNano),
+    reference,
+    payload: buildTonDepositPayload(reference),
+    validUntil: Math.floor(expiresAt.getTime() / 1_000),
+  };
+}
+
+export async function markTonDepositSubmitted(input: { userOpenId: string; depositId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const deposit = (await db.select().from(tonDeposits).where(and(eq(tonDeposits.id, input.depositId), eq(tonDeposits.userOpenId, input.userOpenId))).limit(1))[0];
+  if (!deposit) throw new Error("Пополнение не найдено");
+  if (deposit.status === "confirmed") return { status: "confirmed" as const, newlyConfirmed: false, amountTon: deposit.creditedAmountTon ?? "0" };
+  if (deposit.status === "expired" || deposit.status === "rejected") throw new Error("Срок этого пополнения истёк. Создайте новое.");
+  if (deposit.expiresAt.getTime() <= Date.now()) {
+    await db.update(tonDeposits).set({ status: "expired", failureReason: "Срок подтверждения истёк" }).where(eq(tonDeposits.id, deposit.id));
+    throw new Error("Срок этого пополнения истёк. Создайте новое.");
+  }
+  await db.update(tonDeposits).set({ status: "submitted", submittedAt: new Date() }).where(and(eq(tonDeposits.id, deposit.id), eq(tonDeposits.status, "created")));
+  return { status: "submitted" as const, newlyConfirmed: false, amountTon: "0" };
+}
+
+export async function verifyTonDeposit(input: { userOpenId: string; depositId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const deposit = (await db.select().from(tonDeposits).where(and(eq(tonDeposits.id, input.depositId), eq(tonDeposits.userOpenId, input.userOpenId))).limit(1))[0];
+  if (!deposit) throw new Error("Пополнение не найдено");
+  if (deposit.status === "confirmed") return { status: "confirmed" as const, newlyConfirmed: false, amountTon: deposit.creditedAmountTon ?? "0", transactionHash: deposit.transactionHash };
+  if (deposit.status === "expired" || deposit.status === "rejected") return { status: deposit.status, newlyConfirmed: false, amountTon: "0", transactionHash: null };
+  if (deposit.expiresAt.getTime() <= Date.now()) {
+    await db.update(tonDeposits).set({ status: "expired", failureReason: "Срок подтверждения истёк" }).where(eq(tonDeposits.id, deposit.id));
+    return { status: "expired" as const, newlyConfirmed: false, amountTon: "0", transactionHash: null };
+  }
+
+  const transactions = await getRecentTonDepositTransactions(deposit.recipientWalletAddress);
+  const match = findMatchingTonDepositTransaction({
+    transactions,
+    senderWalletAddress: deposit.senderWalletAddress,
+    recipientWalletAddress: deposit.recipientWalletAddress,
+    requestedAmountNano: BigInt(deposit.requestedAmountNano),
+    reference: deposit.reference,
+  });
+  if (!match) {
+    const rejection = findRejectedTonDepositTransaction({
+      transactions,
+      senderWalletAddress: deposit.senderWalletAddress,
+      recipientWalletAddress: deposit.recipientWalletAddress,
+      reference: deposit.reference,
+    });
+    if (rejection) {
+      await db.update(tonDeposits).set({
+        status: "rejected",
+        transactionHash: rejection.transactionHash,
+        transactionLt: rejection.transactionLt,
+        failureReason: rejection.reason,
+      }).where(and(eq(tonDeposits.id, deposit.id), inArray(tonDeposits.status, ["created", "submitted"])));
+      return { status: "rejected" as const, newlyConfirmed: false, amountTon: "0", transactionHash: null };
+    }
+    await db.update(tonDeposits).set({ status: "submitted", submittedAt: deposit.submittedAt ?? new Date() }).where(and(eq(tonDeposits.id, deposit.id), eq(tonDeposits.status, "created")));
+    return { status: "submitted" as const, newlyConfirmed: false, amountTon: "0", transactionHash: null };
+  }
+
+  const creditedAmountTon = formatNanoTon(match.receivedNano);
+  try {
+    let newlyConfirmed = false;
+    await db.transaction(async tx => {
+      const duplicate = (await tx.select({ id: tonDeposits.id }).from(tonDeposits).where(eq(tonDeposits.transactionHash, match.transactionHash)).limit(1))[0];
+      if (duplicate && duplicate.id !== deposit.id) throw new Error("Эта TON-транзакция уже была зачислена");
+      const update = await tx.update(tonDeposits).set({
+        status: "confirmed",
+        transactionHash: match.transactionHash,
+        transactionLt: match.transactionLt,
+        creditedAmountTon,
+        confirmedAt: new Date(),
+        failureReason: null,
+      }).where(and(eq(tonDeposits.id, deposit.id), inArray(tonDeposits.status, ["created", "submitted"])));
+      if (Number(update[0]?.affectedRows ?? 0) !== 1) return;
+      await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${creditedAmountTon}` }).where(eq(users.openId, input.userOpenId));
+      newlyConfirmed = true;
+    });
+    return { status: "confirmed" as const, newlyConfirmed, amountTon: creditedAmountTon, transactionHash: match.transactionHash };
+  } catch (error) {
+    if (isDuplicateTelegramEventError(error)) throw new Error("Эта TON-транзакция уже была зачислена");
+    throw error;
+  }
+}
+
+type TonWithdrawalStatus = "queued" | "manual_review" | "broadcast_pending" | "sent" | "confirmed" | "failed_refunded" | "cancelled";
+type TonPayoutJobKind = "broadcast" | "reconcile";
+const PAYOUT_JOB_LEASE_MS = 30_000;
+const PAYOUT_WALLET_LEASE_MS = 45_000;
+
+function isTonWithdrawalAutomationEnabled() {
+  return process.env.TON_WITHDRAWALS_ENABLED === "true"
+    && process.env.TON_WITHDRAWALS_PAUSED !== "true"
+    && process.env.TON_PAYOUT_QUEUE_ENABLED === "true"
+    && process.env.TON_PAYOUT_WORKER_BROADCAST_ENABLED === "true";
+}
+
+function toTonWithdrawalView(row: typeof tonWithdrawals.$inferSelect) {
+  return {
+    id: row.id,
+    grossAmountNano: String(row.grossAmountNano),
+    feeReserveNano: String(row.feeReserveNano),
+    actualFeeNano: row.actualFeeNano === null ? null : String(row.actualFeeNano),
+    netAmountNano: String(row.netAmountNano),
+    destinationWalletAddress: toFriendlyTonAddress(row.destinationWalletAddress),
+    reference: row.reference,
+    status: row.status as TonWithdrawalStatus,
+    riskReasons: row.riskReasons,
+    transactionHash: row.transactionHash,
+    transactionLt: row.transactionLt,
+    failureReason: row.failureReason,
+    createdAt: row.createdAt,
+    confirmedAt: row.confirmedAt,
+  };
+}
+
+export async function getTonWithdrawals(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.userOpenId, openId)).orderBy(desc(tonWithdrawals.createdAt), desc(tonWithdrawals.id)).limit(20);
+  return rows.map(toTonWithdrawalView);
+}
+
+export async function enqueueTonWithdrawalReconciliation(input: { userOpenId: string; withdrawalId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.transaction(async tx => {
+    const withdrawal = (await tx.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.id, input.withdrawalId), eq(tonWithdrawals.userOpenId, input.userOpenId))).limit(1))[0];
+    if (!withdrawal) throw new Error("Заявка на вывод не найдена");
+    if (withdrawal.status !== "broadcast_pending" && withdrawal.status !== "sent") return;
+    await tx.insert(tonPayoutJobs).values({ withdrawalId: withdrawal.id, kind: "reconcile" }).onDuplicateKeyUpdate({
+      set: { status: "queued", availableAt: new Date(), leaseToken: null, leaseExpiresAt: null, lastError: null },
+    });
+  });
+  const withdrawal = (await db.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.id, input.withdrawalId), eq(tonWithdrawals.userOpenId, input.userOpenId))).limit(1))[0];
+  if (!withdrawal) throw new Error("Заявка на вывод не найдена");
+  return toTonWithdrawalView(withdrawal);
+}
+
+export async function enqueueTonPayoutJob(withdrawalId: number, kind: TonPayoutJobKind) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(tonPayoutJobs).values({ withdrawalId, kind }).onDuplicateKeyUpdate({
+    set: { status: "queued", availableAt: new Date(), leaseToken: null, leaseExpiresAt: null, lastError: null },
+  });
+}
+
+export async function claimNextTonPayoutJob(workerId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const now = new Date();
+  await db.update(tonPayoutJobs).set({ status: "queued", leaseToken: null, leaseExpiresAt: null, lastError: "Lease восстановлен после остановки worker" })
+    .where(and(eq(tonPayoutJobs.status, "leased"), lte(tonPayoutJobs.leaseExpiresAt, now)));
+  const candidate = (await db.select().from(tonPayoutJobs)
+    .where(and(eq(tonPayoutJobs.status, "queued"), lte(tonPayoutJobs.availableAt, now)))
+    .orderBy(asc(tonPayoutJobs.availableAt), asc(tonPayoutJobs.id)).limit(1))[0];
+  if (!candidate) return null;
+  const leaseToken = randomBytes(24).toString("hex");
+  const leaseExpiresAt = new Date(now.getTime() + PAYOUT_JOB_LEASE_MS);
+  const claimed = await db.update(tonPayoutJobs).set({ status: "leased", leaseToken, leaseExpiresAt, attempts: sql`${tonPayoutJobs.attempts} + 1`, lastError: null })
+    .where(and(eq(tonPayoutJobs.id, candidate.id), eq(tonPayoutJobs.status, "queued"), lte(tonPayoutJobs.availableAt, now)));
+  if (Number(claimed[0]?.affectedRows ?? 0) !== 1) return null;
+  return { ...candidate, status: "leased" as const, leaseToken, leaseExpiresAt, attempts: candidate.attempts + 1, workerId };
+}
+
+export async function completeTonPayoutJob(jobId: number, leaseToken: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(tonPayoutJobs).set({ status: "completed", completedAt: new Date(), leaseToken: null, leaseExpiresAt: null, lastError: null })
+    .where(and(eq(tonPayoutJobs.id, jobId), eq(tonPayoutJobs.status, "leased"), eq(tonPayoutJobs.leaseToken, leaseToken)));
+}
+
+export async function deferTonPayoutJob(jobId: number, leaseToken: string, delayMs: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(tonPayoutJobs).set({ status: "queued", availableAt: new Date(Date.now() + delayMs), leaseToken: null, leaseExpiresAt: null, lastError: reason.slice(0, 255) })
+    .where(and(eq(tonPayoutJobs.id, jobId), eq(tonPayoutJobs.status, "leased"), eq(tonPayoutJobs.leaseToken, leaseToken)));
+}
+
+export async function sendTonPayoutJobToManualReview(jobId: number, leaseToken: string, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(tonPayoutJobs).set({ status: "manual_review", leaseToken: null, leaseExpiresAt: null, lastError: reason.slice(0, 255) })
+    .where(and(eq(tonPayoutJobs.id, jobId), eq(tonPayoutJobs.status, "leased"), eq(tonPayoutJobs.leaseToken, leaseToken)));
+}
+
+export async function acquireTonPayoutWalletLease(input: { payoutWalletAddress: string; workerId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const now = new Date();
+  const leaseToken = randomBytes(24).toString("hex");
+  const leaseExpiresAt = new Date(now.getTime() + PAYOUT_WALLET_LEASE_MS);
+  try {
+    await db.insert(tonPayoutWalletLeases).values({ payoutWalletAddress: input.payoutWalletAddress, leaseToken, holderId: input.workerId, leaseExpiresAt });
+    return { leaseToken, leaseExpiresAt };
+  } catch (error) {
+    if (!isDuplicateTelegramEventError(error)) throw error;
+  }
+  const claimed = await db.update(tonPayoutWalletLeases).set({ leaseToken, holderId: input.workerId, leaseExpiresAt })
+    .where(and(eq(tonPayoutWalletLeases.payoutWalletAddress, input.payoutWalletAddress), lt(tonPayoutWalletLeases.leaseExpiresAt, now)));
+  return Number(claimed[0]?.affectedRows ?? 0) === 1 ? { leaseToken, leaseExpiresAt } : null;
+}
+
+export async function releaseTonPayoutWalletLease(input: { payoutWalletAddress: string; leaseToken: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(tonPayoutWalletLeases).where(and(eq(tonPayoutWalletLeases.payoutWalletAddress, input.payoutWalletAddress), eq(tonPayoutWalletLeases.leaseToken, input.leaseToken)));
+}
+
+export async function quoteTonWithdrawal(input: { amountTon: string; destinationWalletAddress: string }) {
+  const quote = getTonWithdrawalQuote(input.amountTon);
+  const destinationWalletAddress = normalizeTonAddress(input.destinationWalletAddress);
+  return {
+    grossAmountNano: quote.grossAmountNano.toString(),
+    feeReserveNano: quote.feeReserveNano.toString(),
+    netAmountNano: quote.netAmountNano.toString(),
+    grossAmountTon: formatWithdrawalNanoTon(quote.grossAmountNano),
+    feeReserveTon: formatWithdrawalNanoTon(quote.feeReserveNano),
+    netAmountTon: formatWithdrawalNanoTon(quote.netAmountNano),
+    destinationWalletAddress: toFriendlyTonAddress(destinationWalletAddress),
+  };
+}
+
+export async function createTonWithdrawal(input: { userOpenId: string; amountTon: string; destinationWalletAddress: string; idempotencyKey: string }) {
+  // if (!isTonWithdrawalAutomationEnabled()) throw new Error("Вывод временно приостановлен до завершения проверки защищённой очереди");
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const quote = getTonWithdrawalQuote(input.amountTon);
+  const destinationWalletAddress = normalizeTonAddress(input.destinationWalletAddress);
+  const payoutWalletAddress = await getConfiguredTonPayoutWalletAddress();
+  if (destinationWalletAddress === payoutWalletAddress) throw new Error("Адрес получателя не может совпадать с горячим кошельком выплат");
+  const existing = (await db.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), eq(tonWithdrawals.idempotencyKey, input.idempotencyKey))).limit(1))[0];
+  if (existing) return { ...toTonWithdrawalView(existing), newlyCreated: false };
+  const active = (await db.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), inArray(tonWithdrawals.status, ["queued", "manual_review", "broadcast_pending", "sent"]))).orderBy(desc(tonWithdrawals.createdAt), desc(tonWithdrawals.id)).limit(1))[0];
+  if (active) return { ...toTonWithdrawalView(active), newlyCreated: false };
+
+  const now = new Date();
+  const [priorDestination, userHour, addressRecent, userDay, globalMinute] = await Promise.all([
+    db.select({ id: tonWithdrawals.id }).from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), eq(tonWithdrawals.destinationWalletAddress, destinationWalletAddress), eq(tonWithdrawals.status, "confirmed"))).limit(1),
+    db.select({ total: sql<number>`count(*)`, lastAt: sql<Date | null>`max(${tonWithdrawals.createdAt})` }).from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), gte(tonWithdrawals.createdAt, new Date(now.getTime() - 60 * 60_000)))),
+    db.select({ lastAt: sql<Date | null>`max(${tonWithdrawals.createdAt})` }).from(tonWithdrawals).where(and(eq(tonWithdrawals.destinationWalletAddress, destinationWalletAddress), gte(tonWithdrawals.createdAt, new Date(now.getTime() - TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS)))),
+    db.select({ totalNano: sql<string>`coalesce(sum(${tonWithdrawals.grossAmountNano}), 0)` }).from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), gte(tonWithdrawals.createdAt, new Date(now.getTime() - 24 * 60 * 60_000)))),
+    db.select({ total: sql<number>`count(*)` }).from(tonWithdrawals).where(gte(tonWithdrawals.createdAt, new Date(now.getTime() - 60_000))),
+  ]);
+  const risk = classifyTonWithdrawalRisk({
+    nowMs: now.getTime(),
+    hasPriorConfirmedDestination: priorDestination.length > 0,
+    userRequestsLastHour: Number(userHour[0]?.total ?? 0),
+    userGrossTodayNano: BigInt(userDay[0]?.totalNano ?? "0"),
+    lastUserRequestAtMs: userHour[0]?.lastAt ? new Date(userHour[0].lastAt).getTime() : null,
+    lastAddressRequestAtMs: addressRecent[0]?.lastAt ? new Date(addressRecent[0].lastAt).getTime() : null,
+    globalRequestsLastMinute: Number(globalMinute[0]?.total ?? 0),
+    emergencyPaused: process.env.TON_WITHDRAWALS_PAUSED === "true",
+  }, quote);
+  const grossTon = formatWithdrawalNanoTon(quote.grossAmountNano);
+  const reference = `TGTOP-WD-${randomBytes(16).toString("hex").toUpperCase()}`;
+  let created: typeof tonWithdrawals.$inferSelect | undefined;
+  let newlyCreated = false;
+  await db.transaction(async tx => {
+    const duplicate = (await tx.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), eq(tonWithdrawals.idempotencyKey, input.idempotencyKey))).limit(1))[0];
+    if (duplicate) {
+      created = duplicate;
+      return;
+    }
+    const activeInTransaction = (await tx.select().from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), inArray(tonWithdrawals.status, ["queued", "manual_review", "broadcast_pending", "sent"]))).orderBy(desc(tonWithdrawals.createdAt), desc(tonWithdrawals.id)).limit(1))[0];
+    if (activeInTransaction) {
+      created = activeInTransaction;
+      return;
+    }
+    const debit = await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} - ${grossTon}` }).where(and(eq(users.openId, input.userOpenId), gte(users.mainBalanceTon, grossTon)));
+    if (Number(debit[0]?.affectedRows ?? 0) !== 1) throw new Error("Недостаточно основного GRAM-баланса для вывода");
+    const result = await tx.insert(tonWithdrawals).values({
+      userOpenId: input.userOpenId,
+      payoutWalletAddress,
+      destinationWalletAddress,
+      grossAmountNano: quote.grossAmountNano.toString(),
+      feeReserveNano: quote.feeReserveNano.toString(),
+      netAmountNano: quote.netAmountNano.toString(),
+      idempotencyKey: input.idempotencyKey,
+      reference,
+      status: risk.status,
+      riskReasons: risk.reasons.join(",") || null,
+    });
+    created = (await tx.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, Number(result[0]?.insertId ?? 0))).limit(1))[0];
+    newlyCreated = Boolean(created);
+    if (created?.status === "queued") {
+      await tx.insert(tonPayoutJobs).values({ withdrawalId: created.id, kind: "broadcast" });
+    }
+  });
+  if (!created) throw new Error("Не удалось создать заявку на вывод");
+  return { ...toTonWithdrawalView(created), newlyCreated };
+}
+
+export async function reconcileTonWithdrawal(input: { withdrawalId: number; userOpenId?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const ownership = input.userOpenId ? and(eq(tonWithdrawals.id, input.withdrawalId), eq(tonWithdrawals.userOpenId, input.userOpenId)) : eq(tonWithdrawals.id, input.withdrawalId);
+  const withdrawal = (await db.select().from(tonWithdrawals).where(ownership).limit(1))[0];
+  if (!withdrawal) throw new Error("Заявка на вывод не найдена");
+  if (withdrawal.status !== "broadcast_pending" && withdrawal.status !== "sent") return { ...toTonWithdrawalView(withdrawal), newlyConfirmed: false };
+  const transactions = await getRecentTonDepositTransactions(withdrawal.payoutWalletAddress);
+  const trackedTransaction = withdrawal.externalMessageHash
+    ? await getTonPayoutTransactionByMessageHash(withdrawal.externalMessageHash)
+    : null;
+  const confirmedWithoutOutgoingPayout = Boolean(
+    trackedTransaction?.success &&
+    Array.isArray(trackedTransaction.out_msgs) &&
+    trackedTransaction.out_msgs.length === 0,
+  );
+  if (confirmedWithoutOutgoingPayout) {
+    const grossTon = formatWithdrawalNanoTon(BigInt(withdrawal.grossAmountNano));
+    await db.transaction(async tx => {
+      const cancelled = await tx.update(tonWithdrawals).set({
+        status: "cancelled",
+        actualFeeNano: "0",
+        failureReason: "Отмена: сеть обработала внешнее сообщение без исходящей выплаты; GRAM возвращён на основной баланс",
+      }).where(and(
+        eq(tonWithdrawals.id, withdrawal.id),
+        inArray(tonWithdrawals.status, ["broadcast_pending", "sent"]),
+        sql`${tonWithdrawals.transactionHash} IS NULL`,
+      ));
+      if (Number(cancelled[0]?.affectedRows ?? 0) === 1) {
+        await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${grossTon}` }).where(eq(users.openId, withdrawal.userOpenId));
+      }
+    });
+    const final = (await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, withdrawal.id)).limit(1))[0];
+    return { ...toTonWithdrawalView(final!), newlyConfirmed: false };
+  }
+  const candidates = trackedTransaction ? [trackedTransaction, ...transactions] : transactions;
+  const matched = candidates.find(transaction => transaction.success && transaction.hash && transaction.lt !== null && transaction.lt !== undefined && (transaction.out_msgs ?? []).some(message => {
+    try {
+      return normalizeTonAddress(message?.destination?.address ?? "") === withdrawal.destinationWalletAddress && BigInt(message?.value ?? "0") === BigInt(withdrawal.netAmountNano) && decodeTonComment(message?.raw_body) === withdrawal.reference;
+    } catch {
+      return false;
+    }
+  }));
+  if (!matched || !matched.hash || matched.lt === null || matched.lt === undefined) return { ...toTonWithdrawalView(withdrawal), newlyConfirmed: false };
+  const actualFeeNano = BigInt(matched.total_fees ?? "0");
+  const refundNano = actualFeeNano < BigInt(withdrawal.feeReserveNano) ? BigInt(withdrawal.feeReserveNano) - actualFeeNano : BigInt(0);
+  let newlyConfirmed = false;
+  await db.transaction(async tx => {
+    const update = await tx.update(tonWithdrawals).set({ status: "confirmed", actualFeeNano: actualFeeNano.toString(), transactionHash: matched.hash!, transactionLt: String(matched.lt), sentAt: new Date(), confirmedAt: new Date(), failureReason: null }).where(and(eq(tonWithdrawals.id, withdrawal.id), inArray(tonWithdrawals.status, ["broadcast_pending", "sent"])));
+    if (Number(update[0]?.affectedRows ?? 0) !== 1) return;
+    if (refundNano > BigInt(0)) await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${formatWithdrawalNanoTon(refundNano)}` }).where(eq(users.openId, withdrawal.userOpenId));
+    newlyConfirmed = true;
+  });
+  const final = (await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, withdrawal.id)).limit(1))[0];
+  return { ...toTonWithdrawalView(final!), newlyConfirmed };
+}
+
+export async function reviewTonWithdrawal(input: { withdrawalId: number; reviewerOpenId: string; action: "approve" | "reject"; reason?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (false) {
+    throw new Error("Вывод временно приостановлен до включения проверенной payout-очереди");
+  }
+  let result: typeof tonWithdrawals.$inferSelect | undefined;
+  await db.transaction(async tx => {
+    const withdrawal = (await tx.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, input.withdrawalId)).limit(1))[0];
+    if (!withdrawal || withdrawal.status !== "manual_review") throw new Error("Заявка недоступна для ручной проверки");
+    if (input.action === "reject") {
+      await tx.update(users).set({ mainBalanceTon: sql`${users.mainBalanceTon} + ${formatWithdrawalNanoTon(BigInt(withdrawal.grossAmountNano))}` }).where(eq(users.openId, withdrawal.userOpenId));
+      await tx.update(tonWithdrawals).set({ status: "cancelled", reviewedAt: new Date(), reviewedByOpenId: input.reviewerOpenId, failureReason: input.reason?.trim() || "Операция отклонена при ручной проверке" }).where(eq(tonWithdrawals.id, withdrawal.id));
+    } else {
+      await tx.update(tonWithdrawals).set({ status: "queued", reviewedAt: new Date(), reviewedByOpenId: input.reviewerOpenId, failureReason: null }).where(eq(tonWithdrawals.id, withdrawal.id));
+      await tx.insert(tonPayoutJobs).values({ withdrawalId: withdrawal.id, kind: "broadcast" }).onDuplicateKeyUpdate({
+        set: { status: "queued", availableAt: new Date(), leaseToken: null, leaseExpiresAt: null, lastError: null },
+      });
+    }
+    result = (await tx.select().from(tonWithdrawals).where(eq(tonWithdrawals.id, withdrawal.id)).limit(1))[0];
+  });
+  if (!result) throw new Error("Не удалось обработать заявку");
+  return toTonWithdrawalView(result);
+}
+
+export async function getTonWithdrawalsForManualReview() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select().from(tonWithdrawals).where(eq(tonWithdrawals.status, "manual_review")).orderBy(asc(tonWithdrawals.createdAt)).limit(100);
+  return rows.map(row => ({ ...toTonWithdrawalView(row), userOpenId: row.userOpenId, riskLabels: (row.riskReasons ?? "").split(",").filter(Boolean).map(reason => getTonWithdrawalRiskLabel(reason as Parameters<typeof getTonWithdrawalRiskLabel>[0])) }));
+}
+
+export async function getAccountActivity(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const [credits, starsPayments, bids, userDeals, transfers, deposits, withdrawals] = await Promise.all([
+    db.select({
+      id: creditTransactions.id,
+      amount: creditTransactions.amount,
+      kind: creditTransactions.kind,
+      createdAt: creditTransactions.createdAt,
+      groupTitle: groupsCatalog.title,
+      groupUsername: groupsCatalog.username,
+    }).from(creditTransactions).leftJoin(groupsCatalog, eq(creditTransactions.groupId, groupsCatalog.id))
+      .where(eq(creditTransactions.userOpenId, openId)),
+    db.select({
+      id: starsRankingPaymentIntents.id,
+      starsAmount: starsRankingPaymentIntents.starsAmount,
+      status: starsRankingPaymentIntents.status,
+      createdAt: starsRankingPaymentIntents.createdAt,
+      paidAt: starsRankingPaymentIntents.paidAt,
+      groupTitle: groupsCatalog.title,
+      groupUsername: groupsCatalog.username,
+    }).from(starsRankingPaymentIntents).leftJoin(groupsCatalog, eq(starsRankingPaymentIntents.groupId, groupsCatalog.id))
+      .where(eq(starsRankingPaymentIntents.userOpenId, openId)),
+    db.select({
+      id: rankingBidIntents.id,
+      bidAmount: rankingBidIntents.bidAmount,
+      status: rankingBidIntents.status,
+      createdAt: rankingBidIntents.createdAt,
+      groupTitle: groupsCatalog.title,
+      groupUsername: groupsCatalog.username,
+    }).from(rankingBidIntents).leftJoin(groupsCatalog, eq(rankingBidIntents.groupId, groupsCatalog.id))
+      .where(eq(rankingBidIntents.bidderOpenId, openId)),
+    getUserDeals(openId),
+    getNftTransferHistory(openId),
+    db.select({
+      id: tonDeposits.id,
+      requestedAmountNano: tonDeposits.requestedAmountNano,
+      creditedAmountTon: tonDeposits.creditedAmountTon,
+      status: tonDeposits.status,
+      createdAt: tonDeposits.createdAt,
+      submittedAt: tonDeposits.submittedAt,
+      confirmedAt: tonDeposits.confirmedAt,
+    }).from(tonDeposits).where(eq(tonDeposits.userOpenId, openId)),
+    db.select({
+      id: tonWithdrawals.id,
+      grossAmountNano: tonWithdrawals.grossAmountNano,
+      status: tonWithdrawals.status,
+      transactionHash: tonWithdrawals.transactionHash,
+      createdAt: tonWithdrawals.createdAt,
+      broadcastAt: tonWithdrawals.broadcastAt,
+      sentAt: tonWithdrawals.sentAt,
+      confirmedAt: tonWithdrawals.confirmedAt,
+    }).from(tonWithdrawals).where(eq(tonWithdrawals.userOpenId, openId)),
+  ]);
+  const namedGroup = (groupTitle: string | null, groupUsername: string | null) => groupUsername ? `@${groupUsername}` : (groupTitle ?? "TG TOP");
+  const normalizedCredits = credits.map(item => ({
+    sourceId: item.id,
+    id: `credit:${item.id}`,
+    type: "credit" as const,
+    status: item.kind,
+    createdAt: item.createdAt,
+    title: item.kind === "group_connection_bonus"
+      ? "connection_bonus"
+      : item.kind === "manual_bonus"
+        ? "manual_bonus"
+        : item.kind === "reward_campaign_reserve"
+          ? "reward_campaign_reserve"
+          : item.kind === "reward_campaign_release"
+            ? "reward_campaign_release"
+            : item.kind === "reward_subscription"
+              ? "reward_subscription"
+              : item.kind === "reward_invite_referral"
+                ? "reward_invite_referral"
+                  : item.kind === "reward_manual_add"
+                  ? "reward_manual_add"
+                  : item.kind === "ranking_spend"
+                    ? "ranking_spend"
+                    : item.kind === "ranking_refund"
+                      ? "ranking_refund"
+                      : "catalog_listing",
+    subject: namedGroup(item.groupTitle, item.groupUsername),
+    amount: item.amount / 100,
+    currency: "GRAM" as const,
+    direction: item.amount >= 0 ? "in" as const : "out" as const,
+  }));
+  const pairedRankingSpendRefunds = new Map<number, typeof normalizedCredits[number]>();
+  const consumedRankingRefunds = new Set<number>();
+  for (const refund of normalizedCredits.filter(item => item.title === "ranking_refund")) {
+    const spend = normalizedCredits
+      .filter(item => item.title === "ranking_spend" && !pairedRankingSpendRefunds.has(item.sourceId) && item.subject === refund.subject && Math.abs(item.amount) === Math.abs(refund.amount) && item.createdAt <= refund.createdAt)
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0];
+    if (!spend) continue;
+    pairedRankingSpendRefunds.set(spend.sourceId, refund);
+    consumedRankingRefunds.add(refund.sourceId);
+  }
+  const creditActivity: Array<{
+    id: string;
+    type: "credit";
+    status: string;
+    createdAt: Date;
+    title: string;
+    subject: string;
+    amount: number;
+    currency: "GRAM";
+    direction: "in" | "out" | "neutral";
+  }> = [];
+  for (const item of normalizedCredits) {
+    const refund = pairedRankingSpendRefunds.get(item.sourceId);
+    if (refund) {
+      creditActivity.push({
+        id: `ranking-refund-pair:${item.sourceId}:${refund.sourceId}`,
+        type: "credit",
+        status: "refunded",
+        createdAt: refund.createdAt,
+        title: "ranking_refund_pair",
+        subject: item.subject,
+        amount: 0,
+        currency: "GRAM",
+        direction: "neutral",
+      });
+      continue;
+    }
+    if (consumedRankingRefunds.has(item.sourceId)) continue;
+    const { sourceId: _sourceId, ...activity } = item;
+    creditActivity.push(activity);
+  }
+  return [
+    ...creditActivity,
+    ...starsPayments.map(item => ({ id: `stars:${item.id}`, type: "stars" as const, status: item.status, createdAt: item.paidAt ?? item.createdAt, title: "ranking_stars", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.starsAmount, currency: "Stars", direction: "out" as const })),
+    ...bids.map(item => ({ id: `bid:${item.id}`, type: "bid" as const, status: item.status, createdAt: item.createdAt, title: "ranking_bid", subject: namedGroup(item.groupTitle, item.groupUsername), amount: item.bidAmount / 1000, currency: "GRAM", direction: "neutral" as const })),
+    ...userDeals.map(item => ({ id: `deal:${item.id}`, type: "deal" as const, status: item.status, createdAt: item.createdAt, title: item.dealType, subject: namedGroup(item.groupTitle, item.groupUsername), amount: Number(item.price), currency: "TON", direction: item.buyerOpenId === openId ? "out" as const : "in" as const })),
+    ...transfers.map(item => ({ id: `nft:${item.id}`, type: "nft_transfer" as const, status: item.status, createdAt: item.confirmedAt ?? item.createdAt, title: "nft_transfer", subject: item.username ? `@${item.username}` : "NFT", amount: null, currency: null, direction: item.senderOpenId === openId ? "out" as const : "in" as const })),
+    ...deposits.map(item => ({
+      id: `deposit:${item.id}`,
+      type: "deposit" as const,
+      status: item.status,
+      createdAt: item.confirmedAt ?? item.submittedAt ?? item.createdAt,
+      title: "gram_deposit",
+      subject: "GRAM wallet",
+      amount: item.creditedAmountTon === null ? Number(item.requestedAmountNano) / 1_000_000_000 : Number(item.creditedAmountTon),
+      currency: "GRAM" as const,
+      direction: item.status === "confirmed" ? "in" as const : "neutral" as const,
+    })),
+    ...withdrawals.map(item => ({
+      id: `withdrawal:${item.id}`,
+      type: "withdrawal" as const,
+      status: item.status,
+      createdAt: item.confirmedAt ?? item.sentAt ?? item.broadcastAt ?? item.createdAt,
+      title: "gram_withdrawal",
+      subject: "GRAM wallet",
+      amount: Number(item.grossAmountNano) / 1_000_000_000,
+      currency: "GRAM" as const,
+      direction: item.status === "confirmed" ? "out" as const : "neutral" as const,
+      transactionHash: item.status === "confirmed" ? item.transactionHash : null,
+    })),
+  ].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime()).slice(0, 100);
+}
+
+function createReferralCode() {
+  return `TG${randomBytes(5).toString("hex").toUpperCase()}`;
+}
+
+const DEFAULT_REFERRAL_REWARD_UNITS = 100;
+const DEFAULT_REFERRAL_LIFETIME_LIMIT = 2;
+
+async function ensureReferralRewardConfig(db: any) {
+  await db.insert(referralRewardConfigs).values({ id: 1 }).onDuplicateKeyUpdate({ set: { id: 1 } });
+  const [config] = await db.select().from(referralRewardConfigs).where(eq(referralRewardConfigs.id, 1)).limit(1);
+  return config ?? {
+    id: 1,
+    rewardAmount: DEFAULT_REFERRAL_REWARD_UNITS,
+    lifetimeLimit: DEFAULT_REFERRAL_LIFETIME_LIMIT,
+    enabled: true,
+    updatedByOpenId: null,
+    updatedAt: new Date(),
+  };
+}
+
+export async function getReferralOverview(openId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const user = await getUserByOpenId(openId);
+  if (!user) return undefined;
+  let referralCode = user.referralCode;
+  if (!referralCode) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const candidate = createReferralCode();
+      try {
+        await db.update(users).set({ referralCode: candidate }).where(eq(users.openId, openId));
+        referralCode = candidate;
+        break;
+      } catch (error) {
+        if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+      }
+    }
+  }
+  if (!referralCode) throw new Error("Не удалось создать реферальный код");
+  const config = await ensureReferralRewardConfig(db);
+  const grants = await db.select({ id: referralBonusGrants.id }).from(referralBonusGrants).where(eq(referralBonusGrants.inviterOpenId, openId));
+  const referrals = await db.select({ id: users.id }).from(users).where(eq(users.referredBy, referralCode));
+  const freshUser = await getUserByOpenId(openId);
+  return {
+    referralCode,
+    referralLink: `https://t.me/TG_TOPBOT?start=ref_${referralCode}`,
+    referralsCount: referrals.length,
+    awardedCount: grants.length,
+    lifetimeLimit: config.lifetimeLimit,
+    rewardAmount: config.rewardAmount,
+    enabled: config.enabled,
+    progressLabel: `${Math.min(grants.length, config.lifetimeLimit)}/${config.lifetimeLimit}`,
+    earnings: freshUser?.referralEarnings ?? user.referralEarnings,
+  };
+}
+
+export type ReferralRewardClaimResult =
+  | { status: "awarded"; inviterOpenId: string; inviteeOpenId: string; amount: number; awardedCount: number; lifetimeLimit: number }
+  | { status: "already_awarded" | "not_attributed" | "self_referral" | "disabled" | "limit_reached"; awardedCount: number; lifetimeLimit: number };
+
+export async function claimBetaReferralReward(inviteeOpenId: string): Promise<ReferralRewardClaimResult> {
+  const db = await getDb();
+  if (!db) return { status: "not_attributed", awardedCount: 0, lifetimeLimit: DEFAULT_REFERRAL_LIFETIME_LIMIT };
+  try {
+    return await db.transaction(async tx => {
+      const [invitee] = await tx.select().from(users).where(eq(users.openId, inviteeOpenId)).limit(1).for("update");
+      const config = await ensureReferralRewardConfig(tx);
+      if (!invitee?.referredBy) return { status: "not_attributed", awardedCount: 0, lifetimeLimit: config.lifetimeLimit };
+      const [inviter] = await tx.select().from(users).where(eq(users.referralCode, invitee.referredBy)).limit(1).for("update");
+      if (!inviter || inviter.openId === inviteeOpenId) return { status: "self_referral", awardedCount: 0, lifetimeLimit: config.lifetimeLimit };
+      const existing = await tx.select({ id: referralBonusGrants.id }).from(referralBonusGrants).where(eq(referralBonusGrants.inviteeOpenId, inviteeOpenId)).limit(1);
+      const grants = await tx.select({ id: referralBonusGrants.id }).from(referralBonusGrants).where(eq(referralBonusGrants.inviterOpenId, inviter.openId)).limit(Math.max(1, config.lifetimeLimit));
+      if (existing.length) return { status: "already_awarded", awardedCount: grants.length, lifetimeLimit: config.lifetimeLimit };
+      if (!config.enabled) return { status: "disabled", awardedCount: grants.length, lifetimeLimit: config.lifetimeLimit };
+      if (grants.length >= config.lifetimeLimit) return { status: "limit_reached", awardedCount: grants.length, lifetimeLimit: config.lifetimeLimit };
+      await tx.insert(referralBonusGrants).values({ inviterOpenId: inviter.openId, inviteeOpenId, amount: config.rewardAmount });
+      await tx.insert(creditTransactions).values({ userOpenId: inviter.openId, telegramChatId: inviteeOpenId, amount: config.rewardAmount, kind: "reward_invite_referral" });
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${config.rewardAmount}` }).where(eq(users.openId, inviter.openId));
+      return { status: "awarded", inviterOpenId: inviter.openId, inviteeOpenId, amount: config.rewardAmount, awardedCount: grants.length + 1, lifetimeLimit: config.lifetimeLimit };
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === "ER_DUP_ENTRY") {
+      const config = await ensureReferralRewardConfig(db);
+      const [invitee] = await db.select({ referredBy: users.referredBy }).from(users).where(eq(users.openId, inviteeOpenId)).limit(1);
+      const [inviter] = invitee?.referredBy ? await db.select({ openId: users.openId }).from(users).where(eq(users.referralCode, invitee.referredBy)).limit(1) : [];
+      const grants = inviter ? await db.select({ id: referralBonusGrants.id }).from(referralBonusGrants).where(eq(referralBonusGrants.inviterOpenId, inviter.openId)) : [];
+      return { status: "already_awarded", awardedCount: grants.length, lifetimeLimit: config.lifetimeLimit };
+    }
+    throw error;
+  }
+}
+
+export async function getReferralAdminOverview(actorOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const access = await getModerationAccess(actorOpenId);
+  if (!access.canManageModerators) throw new Error("Недостаточно прав для управления реферальными бонусами");
+  const config = await ensureReferralRewardConfig(db);
+  const grants = await db.select({ grant: referralBonusGrants, inviterName: users.name, inviterUsername: users.telegramUsername }).from(referralBonusGrants).leftJoin(users, eq(referralBonusGrants.inviterOpenId, users.openId)).orderBy(desc(referralBonusGrants.createdAt)).limit(100);
+  return { config, grants };
+}
+
+export async function updateReferralRewardConfig(actorOpenId: string, input: { rewardAmount: number; lifetimeLimit: number; enabled: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const access = await getModerationAccess(actorOpenId);
+  if (!access.canManageModerators) throw new Error("Недостаточно прав для управления реферальными бонусами");
+  if (!Number.isInteger(input.rewardAmount) || input.rewardAmount < 0 || input.rewardAmount > 100_000) throw new Error("Некорректный размер реферального бонуса");
+  if (!Number.isInteger(input.lifetimeLimit) || input.lifetimeLimit < 0 || input.lifetimeLimit > 100) throw new Error("Некорректный lifetime limit");
+  await db.insert(referralRewardConfigs).values({ id: 1, rewardAmount: input.rewardAmount, lifetimeLimit: input.lifetimeLimit, enabled: input.enabled, updatedByOpenId: actorOpenId }).onDuplicateKeyUpdate({ set: { rewardAmount: input.rewardAmount, lifetimeLimit: input.lifetimeLimit, enabled: input.enabled, updatedByOpenId: actorOpenId } });
+  return await ensureReferralRewardConfig(db);
+}
+
+export async function creditBonusByTelegramUsername(actorOpenId: string, telegramUsername: string, amount: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const access = await getModerationAccess(actorOpenId);
+  if (!access.canManageModerators) throw new Error("Недостаточно прав для ручного начисления бонуса");
+  const username = telegramUsername.replace(/^@/, "").trim().toLowerCase();
+  if (!/^[a-z0-9_]{2,128}$/.test(username)) throw new Error("Укажите корректный Telegram username");
+  const cleanReason = reason.trim();
+  if (cleanReason.length < 3) throw new Error("Укажите причину начисления");
+  if (!Number.isInteger(amount) || amount <= 0 || amount > 100_000) throw new Error("Некорректная сумма бонуса");
+  const [target] = await db.select().from(users).where(sql`LOWER(${users.telegramUsername}) = ${username}`).limit(1);
+  if (!target) throw new Error("Пользователь ещё не входил в TG TOP через Telegram");
+  await db.transaction(async tx => {
+    await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${amount}` }).where(eq(users.openId, target.openId));
+    await tx.insert(creditTransactions).values({ userOpenId: target.openId, amount, kind: "manual_bonus" });
+    await tx.insert(bonusCreditAudits).values({ actorOpenId, targetOpenId: target.openId, targetTelegramUsername: target.telegramUsername, amount, reason: cleanReason });
+  });
+  return { targetOpenId: target.openId, telegramUsername: target.telegramUsername, amount, reason: cleanReason };
+}
+
+export async function attributeTelegramReferral(telegramUserId: number, referralCode: string) {
+  const db = await getDb();
+  if (!db) return false;
+  const cleanCode = referralCode.trim().toUpperCase();
+  const referrer = await db.select().from(users).where(eq(users.referralCode, cleanCode)).limit(1);
+  const referredOpenId = `telegram:${telegramUserId}`;
+  const referredUser = await getUserByOpenId(referredOpenId);
+  if (!referrer[0] || !referredUser || referredUser.referredBy || referrer[0].openId === referredOpenId) return false;
+  await db.update(users).set({ referredBy: cleanCode }).where(eq(users.openId, referredOpenId));
+  return true;
+}
+
+export async function getTelegramReferralReferrer(telegramUserId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const referredOpenId = `telegram:${telegramUserId}`;
+  const [referredUser] = await db.select({ referredBy: users.referredBy }).from(users).where(eq(users.openId, referredOpenId)).limit(1);
+  if (!referredUser?.referredBy) return null;
+  const [referrer] = await db.select({ name: users.name, username: users.telegramUsername }).from(users).where(eq(users.referralCode, referredUser.referredBy)).limit(1);
+  return referrer ?? null;
+}
+
+const RANKING_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+
+async function ensureAuctionBoard(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, category: "Все" | "Каналы" | "Чаты", subcategory: string, country: string) {
+  await db.insert(auctionSlots).values(RANKING_SLOT_NUMBERS.map(slotNumber => ({
+    slotNumber,
+    category,
+    subcategory,
+    country,
+    title: "Свободное место",
+    subtitle: "Ждет листинга",
+    currentBid: "0 GRAM",
+    bidAmount: 0,
+    leaderUsername: "-",
+  }))).onDuplicateKeyUpdate({ set: { updatedAt: sql`${auctionSlots.updatedAt}` } });
+}
+
+// TG TOP specific queries
+export async function getAuctionSlots(category?: string, country?: string, subcategory?: string, city?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const requestedCategory = category === "Каналы" || category === "Чаты" ? category : "Все";
+  const requestedSubcategory = subcategory && subcategory !== "Все" ? subcategory : "Все";
+  const boardCategory = "Все";
+  const boardSubcategory = "Все";
+  const boardCountry = country && country !== "Все" ? country : "Global";
+
+  const slots = await db.select().from(auctionSlots).where(and(
+    eq(auctionSlots.category, boardCategory),
+    eq(auctionSlots.subcategory, boardSubcategory),
+    eq(auctionSlots.country, boardCountry)
+  )).orderBy(asc(auctionSlots.slotNumber));
+  const uniqueUserIds = new Set<string>();
+  const slotsWithUniqueGroups = slots.map(slot => {
+     if (slot.groupId === null || slot.leaderUserId === null) return slot;
+     // Deduplicate by the user ID (leaderUserId) to prevent one person from taking multiple slots
+     if (uniqueUserIds.has(slot.leaderUserId)) {
+        return { ...slot, groupId: null, leaderUserId: null, leaderUsername: "-", currentBid: "0 GRAM", bidAmount: 0 };
+     }
+     uniqueUserIds.add(slot.leaderUserId);
+     return slot;
+  });
+
+  const groupIds = slotsWithUniqueGroups.map(slot => slot.groupId).filter((id): id is number => id !== null);
+  if (groupIds.length === 0) return slotsWithUniqueGroups.map(slot => ({ ...slot, isOccupied: false, group: null }));
+  const groupConditions = [inArray(groupsCatalog.id, groupIds)];
+  if (requestedCategory !== "Все") groupConditions.push(eq(groupsCatalog.category, requestedCategory));
+  if (country && country !== "Все" && country !== "Global") groupConditions.push(eq(groupsCatalog.country, country));
+  if (requestedSubcategory !== "Все") groupConditions.push(eq(groupsCatalog.subcategory, requestedSubcategory));
+  if (city && city !== "Все") groupConditions.push(eq(groupsCatalog.city, city));
+  const groups = await db.select({
+    group: groupsCatalog,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+    ownerAvatarUrl: users.avatarUrl,
+    ownerPublicProfile: users.publicProfile,
+  }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
+    .where(and(...groupConditions));
+  const groupMap = new Map(groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl, ownerPublicProfile }) => {
+    const publicGroup = toPublicGroup(group);
+    return [
+    group.id,
+    {
+      ...publicGroup,
+      owner: canExposeOwnerProfile(ownerPublicProfile) ? {
+        openId: group.ownerOpenId,
+        name: ownerName,
+        telegramUsername: ownerTelegramUsername,
+        avatarUrl: ownerAvatarUrl,
+      } : undefined,
+    },
+  ];
+  }));
+  return slotsWithUniqueGroups.map(slot => {
+    const isOccupied = slot.groupId !== null;
+    const group = slot.groupId ? groupMap.get(slot.groupId) ?? null : null;
+    return group
+      ? { ...slot, isOccupied: true, group }
+      : { ...slot, bidAmount: 0, currentBid: "0 GRAM", leaderUsername: "-", leaderUserId: null, groupId: null, title: "Свободное место", subtitle: "Ждет листинга", isOccupied: false, group: null };
+  });
+}
+
+export type RankingLotOptions = {
+  anonymousListing?: boolean;
+  showOwnerContact?: boolean;
+  managerPublic?: boolean;
+  listingAnnouncementEnabled?: boolean;
+  searchIndexable?: boolean;
+  country?: string;
+  city?: string;
+  subcategory?: string;
+  salePriceTon?: string | null;
+  cardBackgroundPreset?: CardBackgroundPreset | null;
+  rewardActive?: boolean;
+  rewardBudget?: number;
+  rewardPerSubscription?: number;
+  rewardPerManualAdd?: number;
+};
+
+function getRankingRewardBudgetAdjustment(group: typeof groupsCatalog.$inferSelect, options?: RankingLotOptions) {
+  const includesRewardCampaign = [options?.rewardActive, options?.rewardBudget, options?.rewardPerSubscription, options?.rewardPerManualAdd]
+    .some(value => value !== undefined);
+  if (!includesRewardCampaign) return { reservedRewardBudget: 0, releasedRewardBudget: 0 };
+  const config = {
+    category: group.category,
+    rewardActive: options?.rewardActive ?? group.rewardActive,
+    rewardBudget: options?.rewardActive === false ? 0 : (options?.rewardBudget ?? group.rewardBudget),
+    rewardPerSubscription: options?.rewardPerSubscription ?? group.rewardPerSubscription,
+    rewardPerInvite: group.rewardPerInvite,
+    rewardPerManualAdd: options?.rewardPerManualAdd ?? group.rewardPerManualAdd,
+  };
+  const validationError = validateRewardCampaignConfig(config);
+  if (validationError) throw new Error(validationError);
+  return {
+    reservedRewardBudget: Math.max(0, config.rewardBudget - group.rewardBudget),
+    releasedRewardBudget: Math.max(0, group.rewardBudget - config.rewardBudget),
+  };
+}
+
+type RankingCreditDebit = {
+  spendUnits: number;
+  reservedRewardBudget: number;
+  releasedRewardBudget: number;
+};
+
+export async function placeBid(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, options?: RankingLotOptions, creditDebit?: RankingCreditDebit) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const group = groupId ? await getGroupById(groupId) : undefined;
+  if (!groupId || !group) throw new Error("Группа недоступна для размещения");
+  if (!canEnterTopRanking(group.status)) throw new Error("Сообщество недоступно для размещения до завершения модерации");
+  if (options?.subcategory && options.subcategory !== "General") {
+    const [topic] = await db.select({ id: catalogTopics.id }).from(catalogTopics).where(and(eq(catalogTopics.category, group.category), eq(catalogTopics.code, options.subcategory))).limit(1);
+    if (!topic) throw new Error("Выберите подкатегорию из доступного списка");
+  }
+  const selectedCountry = options?.country === "Global" ? undefined : options?.country;
+  const effectiveCountry = selectedCountry ?? group.country;
+  if (selectedCountry) {
+    const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, selectedCountry)).limit(1);
+    if (!country) throw new Error("Выберите страну из доступного списка");
+  }
+  if (options?.city) {
+    const [city] = await db.select({ id: catalogCities.id }).from(catalogCities).where(and(eq(catalogCities.countryCode, effectiveCountry), eq(catalogCities.code, options.city))).limit(1);
+    if (!city) throw new Error("Выберите город из доступного списка");
+  }
+  if (options?.cardBackgroundPreset && !(CARD_BACKGROUND_PRESET_IDS as readonly string[]).includes(options.cardBackgroundPreset)) {
+    throw new Error("Выберите фон карточки из доступного списка");
+  }
+  const requestedTarget = (await db.select().from(auctionSlots).where(eq(auctionSlots.id, slotId)).limit(1))[0];
+  if (!requestedTarget) throw new Error("Позиция рейтинга не найдена");
+  const target = requestedTarget.category === "Все" && requestedTarget.subcategory === "Все"
+    ? requestedTarget
+    : (await db.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, "Все"),
+      eq(auctionSlots.subcategory, "Все"),
+      eq(auctionSlots.country, requestedTarget.country),
+      eq(auctionSlots.slotNumber, requestedTarget.slotNumber)
+    )).limit(1))[0];
+  if (!target) throw new Error("Общая позиция рейтинга не найдена");
+  const slotFloor = getRankingFloorMilliTon(target.slotNumber);
+  const targetIsHeldByAnotherGroup = target.groupId !== null && target.groupId !== groupId;
+  if (!isQualifyingRankingBid(bidAmount, targetIsHeldByAnotherGroup ? target.bidAmount : 0, targetIsHeldByAnotherGroup, slotFloor)) {
+    const requiredMilliTon = targetIsHeldByAnotherGroup
+      ? getMinimumRankingBidMilliTon(target.bidAmount, true, slotFloor)
+      : slotFloor;
+    throw new Error(`Минимальная ставка для этой позиции — ${formatTonAmount(requiredMilliTon / 1000)} GRAM`);
+  }
+  let outbid: { openId: string; groupTitle: string; slotId: number; slotNumber: number; competitorBidAmount: number; restoreMinimumBidAmount: number } | undefined;
+  const rankingCategories = ["Все"] as const;
+  await Promise.all(rankingCategories.map(category => ensureAuctionBoard(db, category, target.subcategory, target.country)));
+
+  let rankingIntentId = 0;
+  await db.transaction(async tx => {
+    // A no-op update deliberately takes an exclusive lock for every canonical board row.
+    // Re-reading only after this lock makes concurrent bids serialize on one source of truth.
+    for (const category of rankingCategories) {
+      await tx.update(auctionSlots).set({ updatedAt: sql`${auctionSlots.updatedAt}` }).where(and(
+        eq(auctionSlots.category, category),
+        eq(auctionSlots.subcategory, target.subcategory),
+        eq(auctionSlots.country, target.country)
+      ));
+    }
+    const boards = await Promise.all(rankingCategories.map(category =>
+      tx.select().from(auctionSlots).where(and(
+        eq(auctionSlots.category, category),
+        eq(auctionSlots.subcategory, target.subcategory),
+        eq(auctionSlots.country, target.country)
+      )).orderBy(asc(auctionSlots.slotNumber))
+    ));
+    const lockedTarget = boards[0]?.find(slot => slot.id === target.id);
+    if (!lockedTarget) throw new Error("Позиция рейтинга изменилась. Обновите рейтинг и повторите попытку.");
+    const lockedSlotFloor = getRankingFloorMilliTon(lockedTarget.slotNumber);
+    const lockedByAnotherGroup = lockedTarget.groupId !== null && lockedTarget.groupId !== groupId;
+    if (!isQualifyingRankingBid(bidAmount, lockedByAnotherGroup ? lockedTarget.bidAmount : 0, lockedByAnotherGroup, lockedSlotFloor)) {
+      const requiredMilliTon = lockedByAnotherGroup
+        ? getMinimumRankingBidMilliTon(lockedTarget.bidAmount, true, lockedSlotFloor)
+        : lockedSlotFloor;
+      throw new Error(`Ставка уже изменилась. Минимальная ставка сейчас — ${formatTonAmount(requiredMilliTon / 1000)} GRAM`);
+    }
+    outbid = lockedTarget.groupId && lockedTarget.groupId !== groupId && lockedTarget.leaderUserId
+      ? {
+          openId: lockedTarget.leaderUserId,
+          groupTitle: lockedTarget.title,
+          slotId: lockedTarget.id,
+          slotNumber: lockedTarget.slotNumber,
+          competitorBidAmount: bidAmount,
+          restoreMinimumBidAmount: getMinimumRankingBidMilliTon(bidAmount, true, lockedSlotFloor),
+        }
+      : undefined;
+    if (creditDebit) {
+      const totalDebit = creditDebit.spendUnits + creditDebit.reservedRewardBudget - creditDebit.releasedRewardBudget;
+      const user = (await tx.select({ bonusBalance: users.bonusBalance, mainBalanceTon: users.mainBalanceTon }).from(users).where(eq(users.openId, leaderUserId)).limit(1))[0];
+      if (!user) throw new Error("Пользователь не найден");
+      
+      let bonusDebit = 0;
+      let mainDebit = 0;
+      if (totalDebit > 0) {
+        bonusDebit = Math.min(user.bonusBalance, totalDebit);
+        const mainDebitUnits = totalDebit - bonusDebit;
+        if (mainDebitUnits > 0) {
+           mainDebit = mainDebitUnits / 100;
+           if (Number(user.mainBalanceTon) < mainDebit) {
+              throw new Error(`Недостаточно GRAM на балансе. Нужно ${formatTonAmount(Math.max(0, totalDebit) / 100)} GRAM`);
+           }
+        }
+      } else if (totalDebit < 0) {
+         bonusDebit = totalDebit;
+      }
+      
+      await tx.update(users).set({
+        bonusBalance: sql`${users.bonusBalance} - ${bonusDebit}`,
+        ...(mainDebit > 0 ? { mainBalanceTon: sql`${users.mainBalanceTon} - ${mainDebit}` } : {})
+      }).where(eq(users.openId, leaderUserId));
+
+      if (creditDebit.spendUnits) await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -creditDebit.spendUnits, kind: "ranking_spend" });
+      if (creditDebit.reservedRewardBudget) await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: -creditDebit.reservedRewardBudget, kind: "reward_campaign_reserve" });
+      if (creditDebit.releasedRewardBudget) await tx.insert(creditTransactions).values({ userOpenId: leaderUserId, groupId: groupId ?? null, amount: creditDebit.releasedRewardBudget, kind: "reward_campaign_release" });
+    }
+    const now = new Date();
+    const incoming = {
+      bidAmount,
+      currentBid: `${formatTonAmount(bidAmount / 1000)} GRAM`,
+      leaderUsername,
+      leaderUserId,
+      groupId,
+      title: group.title,
+      subtitle: group.username ? `@${group.username}` : group.category,
+      heldSince: now,
+    };
+    for (const board of boards) {
+      const strictOrder = assignRankingEntriesToSlots([
+        ...board.filter(slot => slot.groupId !== null && slot.leaderUserId !== leaderUserId).map(slot => ({ ...slot, heldSince: slot.updatedAt })),
+        incoming,
+      ], board);
+
+      for (let index = 0; index < board.length; index += 1) {
+        const slot = board[index];
+        const source = strictOrder[index];
+        const groupChanged = slot.groupId !== (source?.groupId ?? null);
+        const bidChanged = slot.bidAmount !== (source?.bidAmount ?? 0);
+        if (!groupChanged && !bidChanged) continue;
+        await tx.update(auctionSlots).set(source ? {
+          bidAmount: source.bidAmount,
+          currentBid: source.currentBid,
+          leaderUsername: source.leaderUsername,
+          leaderUserId: source.leaderUserId,
+          groupId: source.groupId,
+          title: source.title,
+          subtitle: source.subtitle,
+          updatedAt: groupChanged ? now : slot.updatedAt,
+        } : {
+          bidAmount: 0,
+          currentBid: "0 GRAM",
+          leaderUsername: "-",
+          leaderUserId: null,
+          groupId: null,
+          title: "Свободное место",
+          subtitle: "Ждет листинга",
+          updatedAt: now,
+        }).where(eq(auctionSlots.id, slot.id));
+      }
+    }
+    const salePriceTon = options?.salePriceTon === undefined ? group.salePriceTon : (options.salePriceTon?.trim() || null);
+    if (options) {
+      const searchIndexingError = getSearchIndexingError({ username: group.username, searchIndexable: options.searchIndexable });
+      if (searchIndexingError) throw new Error(searchIndexingError);
+    }
+    await tx.update(groupsCatalog).set({
+      status: "listed",
+      // A paid placement is a fresh listing event; keep the catalog order aligned with the ranking reorder.
+      listedAt: now,
+      ...(options?.anonymousListing !== undefined ? { anonymousListing: options.anonymousListing } : {}),
+      ...(options?.showOwnerContact !== undefined ? { showOwnerContact: options.showOwnerContact } : {}),
+      ...(options?.managerPublic !== undefined ? { managerPublic: options.managerPublic } : {}),
+      ...(options?.listingAnnouncementEnabled !== undefined ? { listingAnnouncementEnabled: options.listingAnnouncementEnabled } : {}),
+      ...(options?.searchIndexable !== undefined ? { searchIndexable: options.searchIndexable } : {}),
+      ...(options?.country ? { country: options.country } : {}),
+      ...(options?.city !== undefined ? { city: options.city || null } : {}),
+      ...(options?.subcategory ? { subcategory: options.subcategory } : {}),
+      ...(options?.salePriceTon !== undefined ? { salePriceTon, listingType: salePriceTon ? "sale" : "catalog" } : {}),
+      ...(options?.cardBackgroundPreset !== undefined ? { cardBackgroundPreset: options.cardBackgroundPreset } : {}),
+      ...(options?.rewardActive !== undefined ? { rewardActive: options.rewardActive } : {}),
+      ...(options?.rewardBudget !== undefined ? { rewardBudget: options.rewardBudget } : {}),
+      ...(options?.rewardPerSubscription !== undefined ? { rewardPerSubscription: options.rewardPerSubscription } : {}),
+      ...(options?.rewardPerManualAdd !== undefined ? { rewardPerManualAdd: options.rewardPerManualAdd } : {}),
+    }).where(eq(groupsCatalog.id, group.id));
+
+    const inserted = await tx.insert(rankingBidIntents).values({
+      slotId: target.id,
+      groupId,
+      bidderOpenId: leaderUserId,
+      bidAmount,
+      status: "recorded",
+    });
+    rankingIntentId = Number(inserted[0]?.insertId ?? 0);
+  });
+
+  return { id: rankingIntentId, slotNumber: target.slotNumber, bidAmount, groupTitle: group.title, outbid };
+}
+
+export async function payRankingBidWithGramCredit(slotId: number, bidAmount: number, currentBidStr: string, leaderUsername: string, leaderUserId: string, groupId?: number, options?: RankingLotOptions) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const spendUnits = Math.round((bidAmount / 1000) * 100);
+  const group = groupId ? await getGroupById(groupId) : undefined;
+  if (!group || group.ownerOpenId !== leaderUserId) throw new Error("Выберите свою группу из личной папки");
+  if (!canEnterTopRanking(group.status)) throw new Error("Сообщество недоступно для размещения до завершения модерации");
+  const { reservedRewardBudget, releasedRewardBudget } = getRankingRewardBudgetAdjustment(group, options);
+  return await placeBid(slotId, bidAmount, currentBidStr, leaderUsername, leaderUserId, groupId, options, {
+    spendUnits,
+    reservedRewardBudget,
+    releasedRewardBudget,
+  });
+}
+
+export async function createStarsRankingPaymentIntent(input: { userOpenId: string; slotId: number; groupId: number; bidAmount: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const group = await getGroupById(input.groupId);
+  if (!group || group.ownerOpenId !== input.userOpenId) throw new Error("Выберите свою группу из личной папки");
+  if (!canEnterTopRanking(group.status)) throw new Error("Сообщество недоступно для размещения до завершения модерации");
+  const [slot] = await db.select().from(auctionSlots).where(eq(auctionSlots.id, input.slotId)).limit(1);
+  if (!slot || !isQualifyingRankingBid(input.bidAmount, slot.bidAmount, slot.groupId !== null, getRankingFloorMilliTon(slot.slotNumber))) {
+    throw new Error("Ставка больше недействительна. Обновите рейтинг и повторите попытку.");
+  }
+  if (slot.category !== "Все" && group.category !== slot.category) throw new Error("Выберите группу из той же категории рейтинга");
+  if (slot.subcategory !== "Все" && group.subcategory !== slot.subcategory) throw new Error("Выберите группу из той же подкатегории рейтинга");
+  const payload = `tg_top_rank_${randomBytes(18).toString("hex")}`;
+  const expiresAt = new Date(Date.now() + STARS_RANKING_PAYMENT_TTL_MS);
+  const starsAmount = getStarsAmountForRankingBid(input.bidAmount);
+  const result = await db.insert(starsRankingPaymentIntents).values({
+    payload,
+    userOpenId: input.userOpenId,
+    slotId: input.slotId,
+    groupId: input.groupId,
+    bidAmount: input.bidAmount,
+    starsAmount,
+    expiresAt,
+  });
+  return { id: Number(result[0]?.insertId ?? 0), payload, starsAmount, expiresAt, groupTitle: group.title, slotNumber: slot.slotNumber };
+}
+
+export async function setStarsRankingInvoiceMessage(intentId: number, invoiceMessageId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(starsRankingPaymentIntents).set({ invoiceMessageId }).where(eq(starsRankingPaymentIntents.id, intentId));
+}
+
+export async function approveStarsRankingPayment(input: { payload: string; telegramUserId: number; starsAmount: number }) {
+  const db = await getDb();
+  if (!db) return { approved: false, reason: "Сервис оплаты временно недоступен" };
+  const [intent] = await db.select().from(starsRankingPaymentIntents).where(eq(starsRankingPaymentIntents.payload, input.payload)).limit(1);
+  if (!intent || intent.status !== "pending" || intent.expiresAt.getTime() < Date.now()) return { approved: false, reason: "Счёт истёк или уже обработан" };
+  if (intent.userOpenId !== `telegram:${input.telegramUserId}` || intent.starsAmount !== input.starsAmount) return { approved: false, reason: "Параметры счёта не совпадают" };
+  const group = await getGroupById(intent.groupId);
+  const [slot] = await db.select().from(auctionSlots).where(eq(auctionSlots.id, intent.slotId)).limit(1);
+  if (!group || group.ownerOpenId !== intent.userOpenId || !slot || !isQualifyingRankingBid(intent.bidAmount, slot.bidAmount, slot.groupId !== null, getRankingFloorMilliTon(slot.slotNumber))) {
+    return { approved: false, reason: "Позиция изменилась. Обновите рейтинг и создайте новый счёт." };
+  }
+  await db.update(starsRankingPaymentIntents).set({ status: "pre_checkout_approved", telegramUserId: String(input.telegramUserId) }).where(eq(starsRankingPaymentIntents.id, intent.id));
+  return { approved: true };
+}
+
+export async function settleStarsRankingPayment(input: { payload: string; telegramUserId: number; starsAmount: number; telegramPaymentChargeId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [alreadyRecorded] = await db.select().from(starsRankingPaymentIntents)
+    .where(eq(starsRankingPaymentIntents.telegramPaymentChargeId, input.telegramPaymentChargeId)).limit(1);
+  if (alreadyRecorded?.status === "paid") return { status: "paid" as const, idempotent: true };
+  const [intent] = await db.select().from(starsRankingPaymentIntents).where(eq(starsRankingPaymentIntents.payload, input.payload)).limit(1);
+  if (!intent || intent.userOpenId !== `telegram:${input.telegramUserId}` || intent.starsAmount !== input.starsAmount) {
+    throw new Error("Не удалось сопоставить подтверждённую Stars-оплату со ставкой");
+  }
+  if (intent.status === "paid") return { status: "paid" as const, idempotent: true };
+  if (intent.status !== "pre_checkout_approved") {
+    await db.update(starsRankingPaymentIntents).set({
+      status: "refund_required",
+      telegramPaymentChargeId: input.telegramPaymentChargeId,
+      telegramUserId: String(input.telegramUserId),
+      failureReason: "Оплата не получила предварительное подтверждение",
+    }).where(eq(starsRankingPaymentIntents.id, intent.id));
+    return { status: "refund_required" as const, idempotent: false };
+  }
+  const group = await getGroupById(intent.groupId);
+  if (!group) throw new Error("Группа для подтверждённой ставки больше недоступна");
+  try {
+    const placement = await placeBid(intent.slotId, intent.bidAmount, `${formatTonAmount(intent.bidAmount / 1000)} GRAM`, group.username ?? group.title, intent.userOpenId, intent.groupId);
+    await db.update(starsRankingPaymentIntents).set({
+      status: "paid",
+      telegramPaymentChargeId: input.telegramPaymentChargeId,
+      telegramUserId: String(input.telegramUserId),
+      paidAt: new Date(),
+    }).where(eq(starsRankingPaymentIntents.id, intent.id));
+    return { status: "paid" as const, idempotent: false, outbid: placement.outbid };
+  } catch (error) {
+    await db.update(starsRankingPaymentIntents).set({
+      status: "refund_required",
+      telegramPaymentChargeId: input.telegramPaymentChargeId,
+      telegramUserId: String(input.telegramUserId),
+      failureReason: error instanceof Error ? error.message.slice(0, 255) : "Не удалось активировать ставку",
+    }).where(eq(starsRankingPaymentIntents.id, intent.id));
+    return { status: "refund_required" as const, idempotent: false };
+  }
+}
+
+export async function getGroupsCatalog(category?: string, country?: string, subcategory?: string, city?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(groupsCatalog.status, "listed")];
+  if (category && category !== "Все") conditions.push(eq(groupsCatalog.category, category as "Каналы" | "Чаты"));
+  if (subcategory && subcategory !== "Все") conditions.push(eq(groupsCatalog.subcategory, subcategory));
+  if (country && country !== "Все" && country !== "Global") conditions.push(eq(groupsCatalog.country, country));
+  if (city && city !== "Все") conditions.push(eq(groupsCatalog.city, city));
+  const groups = await db.select({
+    group: groupsCatalog,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+    ownerAvatarUrl: users.avatarUrl,
+    ownerPublicProfile: users.publicProfile,
+  }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
+    .where(and(...conditions))
+    .orderBy(desc(groupsCatalog.listedAt), desc(groupsCatalog.createdAt));
+  return groups.map(({ group, ownerName, ownerTelegramUsername, ownerAvatarUrl, ownerPublicProfile }) => {
+    const publicGroup = toPublicGroup(group);
+    return {
+      ...publicGroup,
+      owner: canExposeOwnerProfile(ownerPublicProfile) ? {
+        openId: group.ownerOpenId,
+        name: ownerName,
+        telegramUsername: ownerTelegramUsername,
+        avatarUrl: ownerAvatarUrl,
+      } : undefined,
+    };
+  });
+}
+
+export async function getPublicOwnerProfile(openId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const groups = await db.select().from(groupsCatalog).where(and(
+    eq(groupsCatalog.ownerOpenId, openId),
+    eq(groupsCatalog.status, "listed")
+  )).orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
+  if (!groups.length) return undefined;
+  const [owner] = await db.select({
+    openId: users.openId,
+    name: users.name,
+    telegramUsername: users.telegramUsername,
+    avatarUrl: users.avatarUrl,
+    publicProfile: users.publicProfile,
+  }).from(users).where(eq(users.openId, openId)).limit(1);
+  if (!owner || !owner.publicProfile) return undefined;
+  const nfts = await db.select({
+    id: nftUsernames.id,
+    username: nftUsernames.username,
+    price: nftUsernames.price,
+    rentalPricePerDay: nftUsernames.rentalPricePerDay,
+    assetClass: nftUsernames.assetClass,
+    listingType: nftUsernames.listingType,
+  }).from(nftUsernames).where(and(
+    eq(nftUsernames.ownerOpenId, openId),
+    eq(nftUsernames.status, "available"),
+    eq(nftUsernames.showcaseProfile, true)
+  )).orderBy(desc(nftUsernames.createdAt));
+  return {
+    owner,
+    groups: groups.map(group => {
+      const publicGroup = toPublicGroup(group);
+      return { ...publicGroup, owner };
+    }),
+    nfts,
+  };
+}
+
+export async function getOwnerLeaderboard(limit = 25) {
+  const db = await getDb();
+  if (!db) return [];
+  const totalMembers = sql<number>`COALESCE(SUM(${groupsCatalog.membersCount}), 0)`;
+  const activeListings = sql<number>`COUNT(${groupsCatalog.id})`;
+  const rows = await db.select({
+    openId: groupsCatalog.ownerOpenId,
+    name: users.name,
+    telegramUsername: users.telegramUsername,
+    avatarUrl: users.avatarUrl,
+    activeListings,
+    totalMembers,
+  }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
+    .where(and(inArray(groupsCatalog.status, ["listed", "pending"]), eq(users.publicProfile, true)))
+    .groupBy(groupsCatalog.ownerOpenId, users.name, users.telegramUsername, users.avatarUrl)
+    .orderBy(desc(totalMembers), desc(activeListings), asc(groupsCatalog.ownerOpenId))
+    .limit(Math.min(Math.max(limit, 1), 100));
+  return rows.map((row, index) => ({
+    rank: index + 1,
+    owner: {
+      openId: row.openId,
+      name: row.name,
+      telegramUsername: row.telegramUsername,
+      avatarUrl: row.avatarUrl,
+    },
+    activeListings: Number(row.activeListings),
+    totalMembers: Number(row.totalMembers),
+  }));
+}
+
+export async function upsertTelegramGroup(data: InsertGroupCatalog): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(groupsCatalog).values(data).onDuplicateKeyUpdate({
+    set: {
+      title: data.title,
+      username: data.username,
+      description: data.description,
+      avatarFileId: data.avatarFileId,
+      membersCount: data.membersCount,
+      ownerOpenId: data.ownerOpenId,
+      category: data.category,
+      country: data.country,
+      lastStatsAt: data.lastStatsAt,
+    },
+  });
+}
+
+export async function getGroupById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(groupsCatalog).where(eq(groupsCatalog.id, id)).limit(1);
+  return result[0];
+}
+
+export async function flagGroupForModeration(chatId: string, reason: string, evidence?: string) {
+  const db = await getDb();
+  if (!db) return false;
+  const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.chatId, chatId)).limit(1);
+  if (!group || group.moderationStatus === "blocked" || group.moderationStatus === "review") return false;
+  await db.transaction(async tx => {
+    await tx.update(groupsCatalog).set({
+      status: "review",
+      moderationStatus: "review",
+      moderationReason: reason,
+      moderationReviewedAt: new Date(),
+      listedAt: null,
+    }).where(eq(groupsCatalog.id, group.id));
+    await tx.update(auctionSlots).set({
+      groupId: null,
+      leaderUserId: null,
+      leaderUsername: "-",
+      currentBid: "0 TON",
+      bidAmount: 0,
+      title: "Свободное место",
+      subtitle: "Ждет листинга",
+    }).where(eq(auctionSlots.groupId, group.id));
+    await tx.insert(moderationEvents).values({
+      groupId: group.id,
+      action: "auto_review",
+      reason,
+      evidenceSummary: evidence?.slice(0, 255),
+    });
+  });
+  return true;
+}
+
+/**
+ * Rebind a public Telegram username only after the caller has proved the
+ * numeric chat ID through Telegram's getChat response. This deliberately
+ * leaves listing, moderation and ranking slots untouched.
+ */
+export async function recordVerifiedPublicUsername(input: { chatId: string; verifiedUsername: string }) {
+  const db = await getDb();
+  if (!db) return false;
+  const verifiedUsername = input.verifiedUsername.trim().replace(/^@/, "");
+  if (!verifiedUsername) return false;
+
+  return await db.transaction(async tx => {
+    const [group] = await tx.select().from(groupsCatalog).where(eq(groupsCatalog.chatId, input.chatId)).limit(1);
+    if (!group) return false;
+    if (group.username === verifiedUsername) return false;
+
+    await tx.update(groupsCatalog).set({ username: verifiedUsername }).where(and(
+      eq(groupsCatalog.id, group.id),
+      eq(groupsCatalog.chatId, input.chatId),
+    ));
+    await tx.insert(groupEntryLinkAudits).values({
+      groupId: group.id,
+      chatId: input.chatId,
+      previousUsername: group.username,
+      verifiedUsername,
+    });
+    return true;
+  });
+}
+
+export async function getRankedEntryLinkTargets() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({
+    id: groupsCatalog.id,
+    chatId: groupsCatalog.chatId,
+    title: groupsCatalog.title,
+    ownerOpenId: groupsCatalog.ownerOpenId,
+    username: groupsCatalog.username,
+    inviteLink: groupsCatalog.inviteLink,
+    monthlyEntryInviteLink: groupsCatalog.monthlyEntryInviteLink,
+    status: groupsCatalog.status,
+  }).from(auctionSlots)
+    .innerJoin(groupsCatalog, eq(auctionSlots.groupId, groupsCatalog.id))
+    .where(eq(groupsCatalog.status, "listed"));
+  return Array.from(new Map(rows.map(row => [row.id, row])).values());
+}
+
+export async function getModerationQueue() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(groupsCatalog)
+    .where(inArray(groupsCatalog.moderationStatus, ["review", "blocked"]))
+    .orderBy(desc(groupsCatalog.moderationReviewedAt));
+}
+
+export async function submitBotListing(ownerOpenId: string, rawTelegramLink: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const normalized = normalizeTelegramBotLink(rawTelegramLink);
+  const [existing] = await db.select().from(botListings).where(eq(botListings.username, normalized.username)).limit(1);
+
+  if (existing && existing.ownerOpenId !== ownerOpenId) {
+    throw new Error("Этот бот уже отправлен в каталог другим пользователем");
+  }
+
+  if (existing?.moderationStatus === "approved") {
+    throw new Error("Этот бот уже одобрен и опубликован в каталоге");
+  }
+
+  if (existing) {
+    await db.update(botListings).set({
+      telegramLink: normalized.telegramLink,
+      moderationStatus: "pending",
+      moderationReason: null,
+      moderationReviewedBy: null,
+      moderationReviewedAt: null,
+    }).where(eq(botListings.id, existing.id));
+    const [resubmitted] = await db.select().from(botListings).where(eq(botListings.id, existing.id)).limit(1);
+    return resubmitted!;
+  }
+
+  await db.insert(botListings).values({
+    ownerOpenId,
+    username: normalized.username,
+    telegramLink: normalized.telegramLink,
+    category: "General",
+    moderationStatus: "pending",
+  });
+  const [created] = await db.select().from(botListings).where(eq(botListings.username, normalized.username)).limit(1);
+  return created!;
+}
+
+export async function getApprovedBotListings(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(botListings.moderationStatus, "approved")];
+  if (category && category !== "Все") conditions.push(eq(botListings.category, category));
+  return await db.select({
+    id: botListings.id,
+    username: botListings.username,
+    telegramLink: botListings.telegramLink,
+    category: botListings.category,
+    createdAt: botListings.createdAt,
+    moderationReviewedAt: botListings.moderationReviewedAt,
+  }).from(botListings).where(and(...conditions)).orderBy(desc(botListings.moderationReviewedAt), desc(botListings.createdAt));
+}
+
+export async function getMyBotListings(ownerOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(botListings).where(eq(botListings.ownerOpenId, ownerOpenId)).orderBy(desc(botListings.createdAt));
+}
+
+export async function getBotModerationQueue() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({
+    bot: botListings,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+  }).from(botListings)
+    .leftJoin(users, eq(botListings.ownerOpenId, users.openId))
+    .where(eq(botListings.moderationStatus, "pending"))
+    .orderBy(asc(botListings.createdAt));
+  return rows.map(({ bot, ownerName, ownerTelegramUsername }) => ({ ...bot, ownerName, ownerTelegramUsername }));
+}
+
+export async function getAllBotListings() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({
+    bot: botListings,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+  }).from(botListings)
+    .leftJoin(users, eq(botListings.ownerOpenId, users.openId))
+    .orderBy(desc(botListings.createdAt));
+  return rows.map(({ bot, ownerName, ownerTelegramUsername }) => ({ ...bot, ownerName, ownerTelegramUsername }));
+}
+
+export async function deleteBotListing(actorOpenId: string, botListingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(actorOpenId);
+  const [bot] = await db.select({ id: botListings.id, username: botListings.username })
+    .from(botListings).where(eq(botListings.id, botListingId)).limit(1);
+  if (!bot) throw new Error("Бот не найден в каталоге");
+  await db.delete(botListings).where(eq(botListings.id, bot.id));
+  return bot;
+}
+
+export async function moderateBotListing(input: {
+  reviewerOpenId: string;
+  botListingId: number;
+  action: "approve" | "reject";
+  category?: string;
+  reason?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [bot] = await db.select().from(botListings).where(eq(botListings.id, input.botListingId)).limit(1);
+  if (!bot) throw new Error("Заявка на бота не найдена");
+  if (bot.moderationStatus !== "pending") throw new Error("Эта заявка уже обработана");
+
+  const approved = input.action === "approve";
+  const selectedCategory = approved && input.category?.trim() ? input.category.trim() : bot.category;
+  if (approved && selectedCategory !== "General") {
+    const [topic] = await db.select({ id: catalogTopics.id }).from(catalogTopics).where(and(
+      eq(catalogTopics.category, "Боты"),
+      eq(catalogTopics.code, selectedCategory)
+    )).limit(1);
+    if (!topic) throw new Error("Выберите существующую рубрику для бота");
+  }
+  await db.update(botListings).set({
+    moderationStatus: approved ? "approved" : "rejected",
+    category: selectedCategory,
+    moderationReason: approved ? null : input.reason?.trim() ?? null,
+    moderationReviewedBy: input.reviewerOpenId,
+    moderationReviewedAt: new Date(),
+  }).where(eq(botListings.id, bot.id));
+
+  const [reviewed] = await db.select().from(botListings).where(eq(botListings.id, bot.id)).limit(1);
+  return reviewed!;
+}
+
+export async function getActiveModerationListings() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ group: groupsCatalog, ownerName: users.name }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
+    .where(eq(groupsCatalog.status, "listed"))
+    .orderBy(desc(groupsCatalog.listedAt), desc(groupsCatalog.createdAt));
+  return rows.map(({ group, ownerName }) => ({ ...group, ownerName }));
+}
+
+export async function moderateGroup(actorOpenId: string, groupId: number, action: "review" | "block" | "approve", reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.transaction(async tx => {
+    const [group] = await tx.select({ id: groupsCatalog.id, ownerOpenId: groupsCatalog.ownerOpenId, title: groupsCatalog.title, status: groupsCatalog.status, listedAt: groupsCatalog.listedAt })
+      .from(groupsCatalog).where(eq(groupsCatalog.id, groupId)).limit(1);
+    if (!group) throw new Error("Площадка не найдена");
+    const lifecycle = getModeratedGroupLifecycle(group.status, action);
+    await tx.update(groupsCatalog).set({
+      status: lifecycle.status,
+      moderationStatus: lifecycle.moderationStatus,
+      moderationReason: reason,
+      moderationReviewedBy: actorOpenId,
+      moderationReviewedAt: new Date(),
+      listedAt: lifecycle.keepsListedAt ? group.listedAt : null,
+    }).where(eq(groupsCatalog.id, groupId));
+    if (action !== "approve") {
+      await tx.update(auctionSlots).set({
+        groupId: null,
+        leaderUserId: null,
+        leaderUsername: "-",
+        currentBid: "0 TON",
+        bidAmount: 0,
+        title: "Свободное место",
+        subtitle: "Ждет листинга",
+      }).where(eq(auctionSlots.groupId, groupId));
+    }
+    await tx.insert(moderationEvents).values({
+      groupId,
+      actorOpenId,
+      action: action === "approve" ? "manual_approve" : action === "block" ? "manual_block" : "manual_review",
+      reason,
+    });
+    return group;
+  });
+}
+
+export async function getModerationAccess(openId: string) {
+  const db = await getDb();
+  if (!db) return { canModerate: false, canManageModerators: false, role: "user" as const };
+  const [user] = await db.select({ role: users.role }).from(users).where(eq(users.openId, openId)).limit(1);
+  const role = user?.role ?? "user";
+  return { role, canModerate: role === "admin" || role === "moderator", canManageModerators: role === "admin" };
+}
+
+export async function recordMiniAppLaunch(input: { userOpenId: string; source: string; startParam?: string; sessionKey: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [existing] = await db.select({ id: miniAppLaunchEvents.id }).from(miniAppLaunchEvents).where(eq(miniAppLaunchEvents.sessionKey, input.sessionKey)).limit(1);
+  if (existing) return { recorded: true, isNew: false } as const;
+  try {
+    await db.insert(miniAppLaunchEvents).values(input);
+    return { recorded: true, isNew: true } as const;
+  } catch (error) {
+    if (isDuplicateTelegramEventError(error)) return { recorded: true, isNew: false } as const;
+    throw error;
+  }
+}
+
+export async function getMiniAppLaunches(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    id: miniAppLaunchEvents.id,
+    userOpenId: miniAppLaunchEvents.userOpenId,
+    telegramUsername: users.telegramUsername,
+    userName: users.name,
+    source: miniAppLaunchEvents.source,
+    startParam: miniAppLaunchEvents.startParam,
+    createdAt: miniAppLaunchEvents.createdAt,
+  }).from(miniAppLaunchEvents)
+    .leftJoin(users, eq(users.openId, miniAppLaunchEvents.userOpenId))
+    .orderBy(desc(miniAppLaunchEvents.createdAt))
+    .limit(limit);
+}
+
+export async function getUniqueMiniAppLaunchMembers() {
+  const db = await getDb();
+  if (!db) return [];
+  const launches = await db.select({
+    userOpenId: miniAppLaunchEvents.userOpenId,
+    telegramUsername: users.telegramUsername,
+  }).from(miniAppLaunchEvents)
+    .leftJoin(users, eq(users.openId, miniAppLaunchEvents.userOpenId))
+    .orderBy(desc(miniAppLaunchEvents.createdAt));
+  const uniqueMembers = new Map<string, { userOpenId: string; telegramUsername: string | null }>();
+  for (const launch of launches) {
+    if (!uniqueMembers.has(launch.userOpenId)) uniqueMembers.set(launch.userOpenId, launch);
+  }
+  return Array.from(uniqueMembers.values());
+}
+
+export async function getAllKnownTelegramMembers() {
+  const db = await getDb();
+  if (!db) return [];
+  const [launches, historicalUsers] = await Promise.all([
+    db.select({
+      userOpenId: miniAppLaunchEvents.userOpenId,
+      telegramUsername: users.telegramUsername,
+      lastActivity: miniAppLaunchEvents.createdAt,
+      source: sql<"confirmed_start">`'confirmed_start'`,
+    }).from(miniAppLaunchEvents)
+      .leftJoin(users, eq(users.openId, miniAppLaunchEvents.userOpenId))
+      .orderBy(desc(miniAppLaunchEvents.createdAt)),
+    db.select({
+      userOpenId: users.openId,
+      telegramUsername: users.telegramUsername,
+      lastActivity: users.lastSignedIn,
+      source: sql<"historical_profile">`'historical_profile'`,
+    }).from(users).where(like(users.openId, "telegram:%")),
+  ]);
+  const members = new Map<string, { userOpenId: string; telegramUsername: string | null; lastActivity: Date; source: "confirmed_start" | "historical_profile" }>();
+  for (const member of [...launches, ...historicalUsers]) {
+    const current = members.get(member.userOpenId);
+    if (!current || member.lastActivity > current.lastActivity) {
+      members.set(member.userOpenId, member);
+    }
+  }
+  return Array.from(members.values()).sort((left, right) => right.lastActivity.getTime() - left.lastActivity.getTime());
+}
+
+export async function recordTelegramSupportInbound(input: { telegramUserId: string; telegramUsername?: string | null; text: string; telegramMessageId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(telegramSupportMessages).values({ ...input, direction: "inbound" }).onDuplicateKeyUpdate({
+    set: { telegramMessageId: sql`${telegramSupportMessages.telegramMessageId}` },
+  });
+  const [row] = await db.select({ id: telegramSupportMessages.id }).from(telegramSupportMessages).where(and(
+    eq(telegramSupportMessages.telegramUserId, input.telegramUserId),
+    eq(telegramSupportMessages.telegramMessageId, input.telegramMessageId),
+    eq(telegramSupportMessages.direction, "inbound"),
+  )).limit(1);
+  if (!row) throw new Error("Support message was not persisted");
+  return row.id;
+}
+
+export async function linkTelegramSupportOwnerNotification(messageId: number, ownerNotificationMessageId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(telegramSupportMessages).set({ ownerNotificationMessageId }).where(eq(telegramSupportMessages.id, messageId));
+}
+
+export async function getTelegramSupportMessageByOwnerNotification(ownerNotificationMessageId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [row] = await db.select().from(telegramSupportMessages).where(eq(telegramSupportMessages.ownerNotificationMessageId, ownerNotificationMessageId)).limit(1);
+  return row;
+}
+
+export async function recordTelegramSupportOutbound(input: { telegramUserId: string; telegramUsername?: string | null; text: string; telegramMessageId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(telegramSupportMessages).values({ ...input, direction: "outbound" }).onDuplicateKeyUpdate({
+    set: { telegramMessageId: sql`${telegramSupportMessages.telegramMessageId}` },
+  });
+}
+
+export async function getTelegramSupportInbox(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(telegramSupportMessages).orderBy(desc(telegramSupportMessages.createdAt)).limit(limit);
+}
+
+export async function getCatalogTaxonomy() {
+  const db = await getDb();
+  if (!db) return { countries: [], cities: [], topics: [] };
+  const [countries, cities, topics] = await Promise.all([
+    db.select().from(catalogCountries).orderBy(asc(catalogCountries.sortOrder), asc(catalogCountries.label)),
+    db.select().from(catalogCities).orderBy(asc(catalogCities.countryCode), asc(catalogCities.sortOrder), asc(catalogCities.label)),
+    db.select().from(catalogTopics).orderBy(asc(catalogTopics.category), asc(catalogTopics.sortOrder), asc(catalogTopics.label)),
+  ]);
+  return { countries, cities, topics };
+}
+
+async function requireCatalogAdmin(openId: string) {
+  const access = await getModerationAccess(openId);
+  if (!access.canModerate) throw new Error("Недостаточно прав для управления справочниками");
+}
+
+export async function addCatalogCountry(adminOpenId: string, input: { code: string; label: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const code = input.code.trim().toUpperCase();
+  const label = input.label.trim();
+  await db.insert(catalogCountries).values({ code, label, sortOrder: 10_000 });
+  return { code, label };
+}
+
+export async function deleteCatalogCountry(adminOpenId: string, countryCode: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const code = countryCode.trim();
+  if (code === "Global") throw new Error("Системную страну «Весь мир» нельзя удалить");
+  const [usedByGroup, configuredCity] = await Promise.all([
+    db.select({ id: groupsCatalog.id }).from(groupsCatalog).where(eq(groupsCatalog.country, code)).limit(1),
+    db.select({ id: catalogCities.id }).from(catalogCities).where(eq(catalogCities.countryCode, code)).limit(1),
+  ]);
+  if (usedByGroup[0]) throw new Error("Нельзя удалить страну: она используется в размещённом сообществе");
+  if (configuredCity[0]) throw new Error("Сначала удалите города этой страны");
+  await db.delete(catalogCountries).where(eq(catalogCountries.code, code));
+}
+
+export async function addCatalogCity(adminOpenId: string, input: { countryCode: string; code: string; label: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const countryCode = input.countryCode.trim();
+  const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, countryCode)).limit(1);
+  if (!country) throw new Error("Сначала добавьте страну для этого города");
+  const code = input.code.trim();
+  const label = input.label.trim();
+  await db.insert(catalogCities).values({ countryCode, code, label, sortOrder: 10_000 });
+  return { countryCode, code, label };
+}
+
+export async function deleteCatalogCity(adminOpenId: string, cityId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const [city] = await db.select().from(catalogCities).where(eq(catalogCities.id, cityId)).limit(1);
+  if (!city) throw new Error("Город не найден");
+  const [usedByGroup] = await db.select({ id: groupsCatalog.id }).from(groupsCatalog).where(and(eq(groupsCatalog.country, city.countryCode), eq(groupsCatalog.city, city.code))).limit(1);
+  if (usedByGroup) throw new Error("Нельзя удалить город: он используется в размещённом сообществе");
+  await db.delete(catalogCities).where(eq(catalogCities.id, cityId));
+}
+
+export async function addCatalogTopic(adminOpenId: string, input: { category: "Каналы" | "Чаты" | "Боты"; code: string; label: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const code = input.code.trim();
+  const label = input.label.trim();
+  await db.insert(catalogTopics).values({ category: input.category, code, label, sortOrder: 10_000 });
+  return { category: input.category, code, label };
+}
+
+export async function deleteCatalogTopic(adminOpenId: string, topicId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await requireCatalogAdmin(adminOpenId);
+  const [topic] = await db.select().from(catalogTopics).where(eq(catalogTopics.id, topicId)).limit(1);
+  if (!topic) throw new Error("Рубрика не найдена");
+  const [usedByGroup] = topic.category === "Боты"
+    ? []
+    : await db.select({ id: groupsCatalog.id }).from(groupsCatalog).where(and(eq(groupsCatalog.category, topic.category), eq(groupsCatalog.subcategory, topic.code))).limit(1);
+  if (usedByGroup) throw new Error("Нельзя удалить рубрику: она используется в размещённом сообществе");
+  await db.delete(catalogTopics).where(eq(catalogTopics.id, topicId));
+}
+
+export async function getModerators() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ openId: users.openId, name: users.name, telegramUsername: users.telegramUsername, avatarUrl: users.avatarUrl, role: users.role })
+    .from(users).where(inArray(users.role, ["admin", "moderator"])).orderBy(asc(users.role), asc(users.telegramUsername));
+}
+
+export async function setModeratorRole(adminOpenId: string, telegramUsername: string, role: "moderator" | "user") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const access = await getModerationAccess(adminOpenId);
+  if (!access.canManageModerators) throw new Error("Недостаточно прав для управления модераторами");
+  const username = telegramUsername.replace(/^@/, "").trim();
+  const [target] = await db.select().from(users).where(eq(users.telegramUsername, username)).limit(1);
+  if (!target) throw new Error("Пользователь ещё не входил в TG TOP через Telegram");
+  if (target.role === "admin") throw new Error("Главного администратора нельзя изменить этой операцией");
+  await db.update(users).set({ role }).where(eq(users.openId, target.openId));
+  return { openId: target.openId, role };
+}
+
+export async function setGroupManager(ownerOpenId: string, groupId: number, manager: { telegramUserId: string; username: string | null; name: string; avatarUrl?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.update(groupsCatalog).set({
+    managerTelegramUserId: manager.telegramUserId,
+    managerUsername: manager.username,
+    managerName: manager.name,
+    managerAvatarUrl: manager.avatarUrl ?? null,
+  }).where(and(eq(groupsCatalog.id, groupId), eq(groupsCatalog.ownerOpenId, ownerOpenId)));
+  if (!result[0]?.affectedRows) throw new Error("Сообщество недоступно для настройки менеджера");
+}
+
+export async function getGroupByChatId(chatId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(groupsCatalog).where(eq(groupsCatalog.chatId, chatId)).limit(1);
+  return result[0];
+}
+
+export async function updateGroupAnimatedAvatarSnapshot(groupId: number, media: {
+  animatedAvatarKey: string | null;
+  animatedAvatarUrl: string | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.update(groupsCatalog).set({
+    animatedAvatarKey: media.animatedAvatarKey,
+    animatedAvatarUrl: media.animatedAvatarUrl,
+    animatedAvatarUpdatedAt: new Date(),
+  }).where(eq(groupsCatalog.id, groupId));
+  if (!result[0]?.affectedRows) throw new Error("Сообщество не найдено");
+  return await getGroupById(groupId);
+}
+
+export async function getMyGroups(ownerOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const groups = await db.select().from(groupsCatalog)
+    .where(eq(groupsCatalog.ownerOpenId, ownerOpenId))
+    .orderBy(desc(groupsCatalog.ownerPinned), asc(groupsCatalog.ownerSortOrder), desc(groupsCatalog.createdAt));
+  for (const group of groups) await grantGroupConnectionBonus(ownerOpenId, group.id);
+  return groups;
+}
+
+export async function getOpenGiveaways() {
+  const db = await getDb();
+  if (!db) return [];
+  const participantCount = sql<number>`COUNT(${giveawayParticipants.id})`;
+  const rows = await db.select({
+    giveaway: giveaways,
+    groupTitle: groupsCatalog.title,
+    groupUsername: groupsCatalog.username,
+    groupAvatarFileId: groupsCatalog.avatarFileId,
+    participantCount,
+  }).from(giveaways)
+    .leftJoin(groupsCatalog, eq(giveaways.groupId, groupsCatalog.id))
+    .leftJoin(giveawayParticipants, eq(giveawayParticipants.giveawayId, giveaways.id))
+    .where(and(eq(giveaways.status, "open"), gt(giveaways.endsAt, new Date())))
+    .groupBy(giveaways.id, groupsCatalog.title, groupsCatalog.username, groupsCatalog.avatarFileId)
+    .orderBy(asc(giveaways.endsAt), desc(giveaways.createdAt));
+  return rows.map(row => ({
+    ...row.giveaway,
+    group: row.groupTitle ? { title: row.groupTitle, username: row.groupUsername, avatarFileId: row.groupAvatarFileId } : null,
+    participantCount: Number(row.participantCount),
+  }));
+}
+
+export async function createGiveaway(ownerOpenId: string, input: { groupId: number; title: string; prizeTitle: string; rules?: string; boostOnly?: boolean; endsAt: Date }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const group = await getGroupById(input.groupId);
+  if (!group || group.ownerOpenId !== ownerOpenId) throw new Error("Выберите свою группу из личного кабинета");
+  if (!isValidGiveawayEnd(input.endsAt)) throw new Error("Укажите завершение минимум через 5 минут");
+  const inserted = await db.insert(giveaways).values({
+    groupId: group.id,
+    ownerOpenId,
+    title: input.title.trim(),
+    prizeTitle: input.prizeTitle.trim(),
+    rules: input.rules?.trim() || null,
+    boostOnly: input.boostOnly ?? false,
+    endsAt: input.endsAt,
+  });
+  return { id: Number(inserted[0]?.insertId ?? 0) };
+}
+
+export async function joinGiveaway(giveawayId: number, userOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [giveaway] = await db.select().from(giveaways).where(eq(giveaways.id, giveawayId)).limit(1);
+  if (!giveaway || !isGiveawayOpen(giveaway.status, giveaway.endsAt)) throw new Error("Розыгрыш уже завершён или недоступен");
+  if (giveaway.ownerOpenId === userOpenId) throw new Error("Владелец не может участвовать в своём розыгрыше");
+  if (giveaway.boostOnly) {
+    const telegramUserId = getTelegramChatIdFromOpenId(userOpenId);
+    const [group] = await db.select({ chatId: groupsCatalog.chatId }).from(groupsCatalog).where(eq(groupsCatalog.id, giveaway.groupId)).limit(1);
+    const verified = telegramUserId && group?.chatId && await verifyTelegramUserChatBoost({ chatId: group.chatId, telegramUserId });
+    if (!verified) throw new Error("Для участия нужен активный буст этого сообщества и права администратора у @TG_TOPBOT");
+  }
+  try {
+    await db.insert(giveawayParticipants).values({ giveawayId, userOpenId });
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+  }
+  return { success: true };
+}
+
+export async function saveMyGroupsLayout(ownerOpenId: string, orderedGroupIds: number[], pinnedGroupIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const uniqueOrderedIds = Array.from(new Set(orderedGroupIds));
+  const uniquePinnedIds = Array.from(new Set(pinnedGroupIds));
+  if (uniqueOrderedIds.length !== orderedGroupIds.length || uniquePinnedIds.length !== pinnedGroupIds.length) {
+    throw new Error("Порядок групп содержит повторяющиеся записи");
+  }
+
+  const orderedSet = new Set(uniqueOrderedIds);
+  if (uniquePinnedIds.some(id => !orderedSet.has(id))) {
+    throw new Error("Закрепить можно только группу из личного списка");
+  }
+
+  const ownedGroups = await db.select({ id: groupsCatalog.id }).from(groupsCatalog)
+    .where(eq(groupsCatalog.ownerOpenId, ownerOpenId));
+  if (ownedGroups.length !== uniqueOrderedIds.length || ownedGroups.some(group => !orderedSet.has(group.id))) {
+    throw new Error("Порядок должен включать все ваши группы");
+  }
+
+  const pinnedSet = new Set(uniquePinnedIds);
+  await db.transaction(async tx => {
+    for (let index = 0; index < uniqueOrderedIds.length; index += 1) {
+      const groupId = uniqueOrderedIds[index];
+      await tx.update(groupsCatalog).set({
+        ownerPinned: pinnedSet.has(groupId),
+        ownerSortOrder: index,
+      }).where(and(eq(groupsCatalog.id, groupId), eq(groupsCatalog.ownerOpenId, ownerOpenId)));
+    }
+  });
+}
+
+export async function getGroupDetail(id: number, viewerOpenId?: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [detailRow] = await db.select({
+    group: groupsCatalog,
+    ownerName: users.name,
+    ownerTelegramUsername: users.telegramUsername,
+    ownerAvatarUrl: users.avatarUrl,
+    ownerPublicProfile: users.publicProfile,
+  }).from(groupsCatalog)
+    .leftJoin(users, eq(groupsCatalog.ownerOpenId, users.openId))
+    .where(eq(groupsCatalog.id, id))
+    .limit(1);
+  if (!detailRow) return undefined;
+  const { group, ownerName, ownerTelegramUsername, ownerAvatarUrl, ownerPublicProfile } = detailRow;
+  const snapshots = await db.select().from(groupStatsSnapshots).where(eq(groupStatsSnapshots.groupId, id)).orderBy(desc(groupStatsSnapshots.recordedAt)).limit(30);
+  const ownerNfts = await db.select().from(nftUsernames)
+    .where(and(eq(nftUsernames.showcaseGroupId, group.id), eq(nftUsernames.status, "available")))
+    .orderBy(desc(nftUsernames.createdAt));
+  const detailGroup = toDetailGroup(group);
+  const groupForViewer = group.managerPublic || group.ownerOpenId === viewerOpenId
+    ? detailGroup
+    : { ...detailGroup, managerTelegramUserId: null, managerUsername: null, managerName: null };
+  return {
+    group: groupForViewer,
+    owner: canExposeOwnerProfile(ownerPublicProfile) ? {
+      openId: group.ownerOpenId,
+      name: ownerName,
+      telegramUsername: ownerTelegramUsername,
+      avatarUrl: ownerAvatarUrl,
+    } : undefined,
+    ownerContact: group.showOwnerContact && ownerTelegramUsername ? {
+      telegramUsername: ownerTelegramUsername,
+    } : undefined,
+    snapshots: snapshots.reverse(),
+    ownerNfts,
+    analytics: { source: "tgtop_bot_observed" as const, observedSince: group.createdAt },
+  };
+}
+
+export async function getPublicSearchGroupByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [group] = await db.select().from(groupsCatalog).where(and(
+    eq(groupsCatalog.username, username),
+    eq(groupsCatalog.status, "listed"),
+    eq(groupsCatalog.searchIndexable, true),
+  )).limit(1);
+  if (!group?.username) return undefined;
+  const snapshots = await db.select({
+    membersCount: groupStatsSnapshots.membersCount,
+    recordedAt: groupStatsSnapshots.recordedAt,
+  }).from(groupStatsSnapshots).where(eq(groupStatsSnapshots.groupId, group.id)).orderBy(desc(groupStatsSnapshots.recordedAt)).limit(12);
+  return {
+    id: group.id,
+    chatId: group.chatId,
+    title: group.title,
+    username: group.username,
+    description: group.description,
+    avatarFileId: group.avatarFileId,
+    animatedAvatarUrl: group.animatedAvatarUrl,
+    cardBackgroundPreset: group.cardBackgroundPreset,
+    membersCount: group.membersCount,
+    category: group.category,
+    country: group.country,
+    subcategory: group.subcategory,
+    managerName: group.managerPublic ? group.managerName : null,
+    managerUsername: group.managerPublic ? group.managerUsername : null,
+    managerAvatarUrl: group.managerPublic ? group.managerAvatarUrl : null,
+    lastStatsAt: group.lastStatsAt,
+    snapshots: snapshots.reverse(),
+  };
+}
+
+export async function getSearchIndexableGroups() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    username: groupsCatalog.username,
+    lastStatsAt: groupsCatalog.lastStatsAt,
+    listedAt: groupsCatalog.listedAt,
+  }).from(groupsCatalog).where(and(
+    eq(groupsCatalog.status, "listed"),
+    eq(groupsCatalog.searchIndexable, true),
+    sql`${groupsCatalog.username} IS NOT NULL`,
+  )).orderBy(desc(groupsCatalog.lastStatsAt));
+}
+
+export async function recordGroupSnapshot(groupId: number, membersCount: number, messagesCount: number, joinedCount: number, leavesCount = 0, invitedCount = 0) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(groupStatsSnapshots).values({ groupId, membersCount, messagesCount, joinedCount, leavesCount, invitedCount });
+}
+
+export async function recordGroupActivity(chatId: string, views = 0) {
+  const db = await getDb();
+  if (!db) return;
+  const group = await getGroupByChatId(chatId);
+  if (!group) return;
+  const nextMessages = group.messagesCount + 1;
+  await db.update(groupsCatalog).set({
+    messagesCount: nextMessages,
+    lastPostViews: views,
+    lastPostAt: new Date(),
+    lastStatsAt: new Date(),
+  }).where(eq(groupsCatalog.id, group.id));
+  await recordGroupSnapshot(group.id, group.membersCount, nextMessages, group.joinedCount, group.leavesCount, group.invitedCount);
+}
+
+export function isTrackedChatInvitation(category: "Каналы" | "Чаты", joined: boolean, viaInviteLink: boolean, addedByAnotherMember: boolean): boolean {
+  return category === "Чаты" && joined && (viaInviteLink || addedByAnotherMember);
+}
+
+export async function recordGroupMembership(chatId: string, joined: boolean, left: boolean, viaInviteLink: boolean, addedByAnotherMember = false) {
+  const db = await getDb();
+  if (!db) return;
+  const group = await getGroupByChatId(chatId);
+  if (!group) return;
+  const nextJoined = group.joinedCount + (joined ? 1 : 0);
+  const nextLeaves = group.leavesCount + (left ? 1 : 0);
+  const nextInvited = group.invitedCount + (isTrackedChatInvitation(group.category, joined, viaInviteLink, addedByAnotherMember) ? 1 : 0);
+  await db.update(groupsCatalog).set({
+    joinedCount: nextJoined,
+    leavesCount: nextLeaves,
+    invitedCount: nextInvited,
+    lastStatsAt: new Date(),
+  }).where(eq(groupsCatalog.id, group.id));
+  await recordGroupSnapshot(group.id, group.membersCount, group.messagesCount, nextJoined, nextLeaves, nextInvited);
+}
+
+export type TelegramRewardInput = {
+  chatId: string;
+  eventType: RewardEventType;
+  beneficiaryTelegramId: number;
+  memberTelegramId: number;
+  beneficiaryName?: string;
+  beneficiaryUsername?: string;
+  inviterTelegramId?: number;
+};
+
+export async function awardTelegramReward(input: TelegramRewardInput) {
+  const db = await getDb();
+  if (!db) return { awarded: false as const, reason: "database_unavailable" as const };
+  const group = await getGroupByChatId(input.chatId);
+  if (!group || group.status !== "listed") return { awarded: false as const, reason: "group_unavailable" as const };
+  const amount = getRewardAmount(group, input.eventType);
+  const beneficiaryOpenId = `telegram:${input.beneficiaryTelegramId}`;
+  if (!isRewardCampaignActive(group) || amount < 1 || group.rewardBudget < amount || beneficiaryOpenId === group.ownerOpenId) {
+    return { awarded: false as const, reason: "campaign_inactive" as const };
+  }
+  try {
+    await db.transaction(async tx => {
+      await tx.insert(rewardEvents).values({
+        groupId: group.id,
+        beneficiaryOpenId,
+        memberTelegramId: String(input.memberTelegramId),
+        inviterOpenId: input.inviterTelegramId ? `telegram:${input.inviterTelegramId}` : null,
+        eventType: input.eventType,
+        amount,
+      });
+      const updated = await tx.update(groupsCatalog).set({
+        rewardBudget: sql`${groupsCatalog.rewardBudget} - ${amount}`,
+      }).where(and(
+        eq(groupsCatalog.id, group.id),
+        eq(groupsCatalog.rewardActive, true),
+        gte(groupsCatalog.rewardBudget, amount)
+      ));
+      const affectedRows = Number((updated as unknown as Array<{ affectedRows?: number }>)[0]?.affectedRows ?? 0);
+      if (affectedRows !== 1) throw new Error("reward_budget_unavailable");
+      await tx.insert(users).values({
+        openId: beneficiaryOpenId,
+        name: input.beneficiaryName ?? "Telegram user",
+        telegramUsername: input.beneficiaryUsername ?? null,
+        loginMethod: "telegram-bot",
+        lastSignedIn: new Date(),
+      }).onDuplicateKeyUpdate({
+        set: {
+          ...(input.beneficiaryName ? { name: input.beneficiaryName } : {}),
+          ...(input.beneficiaryUsername ? { telegramUsername: input.beneficiaryUsername } : {}),
+          lastSignedIn: new Date(),
+        },
+      });
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${amount}` }).where(eq(users.openId, beneficiaryOpenId));
+      await tx.insert(creditTransactions).values({
+        userOpenId: beneficiaryOpenId,
+        groupId: group.id,
+        telegramChatId: group.chatId,
+        amount,
+        kind: input.eventType === "subscription"
+          ? "reward_subscription"
+          : input.eventType === "invite_referral"
+            ? "reward_invite_referral"
+            : "reward_manual_add",
+      });
+      const [afterSpend] = await tx.select().from(groupsCatalog).where(eq(groupsCatalog.id, group.id)).limit(1);
+      if (afterSpend && !isRewardCampaignActive(afterSpend)) {
+        await tx.update(groupsCatalog).set({ rewardActive: false }).where(eq(groupsCatalog.id, group.id));
+      }
+    });
+    return {
+      awarded: true as const,
+      amount,
+      groupId: group.id,
+      beneficiaryTelegramId: input.beneficiaryTelegramId,
+      groupTitle: group.title,
+    };
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "ER_DUP_ENTRY") return { awarded: false as const, reason: "duplicate" as const };
+    if (error instanceof Error && error.message === "reward_budget_unavailable") return { awarded: false as const, reason: "budget_exhausted" as const };
+    throw error;
+  }
+}
+
+export async function getOrCreateRewardInviteLink(groupId: number, beneficiaryOpenId: string, createInviteLink: () => Promise<string>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.id, groupId)).limit(1);
+  if (!group || group.status !== "listed" || !canCreateRewardPersonalInviteLink(group)) {
+    throw new Error("Кампания вознаграждений недоступна для персональной ссылки");
+  }
+  const [existing] = await db.select().from(rewardInviteLinks).where(and(
+    eq(rewardInviteLinks.groupId, groupId),
+    eq(rewardInviteLinks.beneficiaryOpenId, beneficiaryOpenId)
+  )).limit(1);
+  if (existing) return { inviteLink: existing.inviteLink, existing: true };
+  const inviteLink = await createInviteLink();
+  try {
+    await db.insert(rewardInviteLinks).values({ groupId, beneficiaryOpenId, inviteLink });
+    return { inviteLink, existing: false };
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+    const [concurrent] = await db.select().from(rewardInviteLinks).where(and(
+      eq(rewardInviteLinks.groupId, groupId),
+      eq(rewardInviteLinks.beneficiaryOpenId, beneficiaryOpenId)
+    )).limit(1);
+    if (!concurrent) throw error;
+    return { inviteLink: concurrent.inviteLink, existing: true };
+  }
+}
+
+export async function getRewardInviteBeneficiary(chatId: string, inviteLink: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.chatId, chatId)).limit(1);
+  if (!group) return undefined;
+  const [link] = await db.select().from(rewardInviteLinks).where(and(
+    eq(rewardInviteLinks.groupId, group.id),
+    eq(rewardInviteLinks.inviteLink, inviteLink)
+  )).limit(1);
+  return link ? { beneficiaryOpenId: link.beneficiaryOpenId, groupId: group.id } : undefined;
+}
+
+export async function getRewardCampaignStats(ownerOpenId: string, groupId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(and(
+    eq(groupsCatalog.id, groupId),
+    eq(groupsCatalog.ownerOpenId, ownerOpenId),
+  )).limit(1);
+  if (!group) throw new Error("Кампания недоступна");
+
+  const [ledgerRows, events, links] = await Promise.all([
+    db.select({ kind: creditTransactions.kind, amount: creditTransactions.amount })
+      .from(creditTransactions)
+      .where(and(eq(creditTransactions.groupId, groupId), eq(creditTransactions.userOpenId, ownerOpenId))),
+    db.select({
+      id: rewardEvents.id,
+      amount: rewardEvents.amount,
+      eventType: rewardEvents.eventType,
+      createdAt: rewardEvents.createdAt,
+      beneficiaryOpenId: rewardEvents.beneficiaryOpenId,
+      beneficiaryName: users.name,
+      beneficiaryUsername: users.telegramUsername,
+    }).from(rewardEvents)
+      .leftJoin(users, eq(users.openId, rewardEvents.beneficiaryOpenId))
+      .where(eq(rewardEvents.groupId, groupId))
+      .orderBy(desc(rewardEvents.createdAt)),
+    db.select({ id: rewardInviteLinks.id }).from(rewardInviteLinks).where(eq(rewardInviteLinks.groupId, groupId)),
+  ]);
+  const reservedUnits = Math.abs(ledgerRows.filter(row => row.kind === "reward_campaign_reserve").reduce((total, row) => total + row.amount, 0));
+  const releasedUnits = ledgerRows.filter(row => row.kind === "reward_campaign_release").reduce((total, row) => total + row.amount, 0);
+  const paidUnits = events.reduce((total, event) => total + event.amount, 0);
+  return {
+    campaignActive: isRewardCampaignActive(group),
+    budgetReserved: reservedUnits,
+    paidOut: paidUnits,
+    refundableRemainder: Math.max(0, group.rewardBudget),
+    previouslyReleased: releasedUnits,
+    personalLinks: links.length,
+    confirmedParticipants: events.length,
+    participants: events.slice(0, 30).map(event => ({
+      id: event.id,
+      amount: event.amount,
+      eventType: event.eventType,
+      createdAt: event.createdAt,
+      name: event.beneficiaryName ?? "Пользователь Telegram",
+      username: event.beneficiaryUsername,
+    })),
+  };
+}
+
+export async function grantGroupConnectionBonus(ownerOpenId: string, groupId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const group = await getGroupById(groupId);
+  if (!group) return false;
+  const telegramChatId = getGroupConnectionBonusIdentity(group.chatId);
+  const existing = await db.select().from(creditTransactions).where(and(
+    eq(creditTransactions.telegramChatId, telegramChatId),
+    eq(creditTransactions.kind, "group_connection_bonus")
+  )).limit(1);
+  if (existing.length > 0) return false;
+  try {
+    await db.transaction(async tx => {
+      await tx.insert(creditTransactions).values({
+        userOpenId: ownerOpenId,
+        groupId,
+        telegramChatId,
+        amount: GROUP_CONNECTION_BONUS,
+        kind: "group_connection_bonus",
+      });
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${GROUP_CONNECTION_BONUS}` }).where(eq(users.openId, ownerOpenId));
+    });
+    return true;
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "ER_DUP_ENTRY") return false;
+    throw error;
+  }
+}
+
+export type GroupListingOptions = {
+  salePriceTon?: string | null;
+  cardBackgroundPreset?: CardBackgroundPreset | null;
+  country?: string;
+  city?: string;
+  subcategory?: string;
+  anonymousListing?: boolean;
+  showOwnerContact?: boolean;
+  managerPublic?: boolean;
+  listingAnnouncementEnabled?: boolean;
+  searchIndexable?: boolean;
+  monthlyEntryEnabled?: boolean;
+  monthlyEntryStars?: number;
+  monthlyEntryLinkName?: string;
+  rewardActive?: boolean;
+  rewardBudget?: number;
+  rewardPerSubscription?: number;
+  rewardPerInvite?: number;
+  rewardPerManualAdd?: number;
+};
+
+export function normalizeGroupListingOptions(listing?: GroupListingOptions | string) {
+  const options = typeof listing === "string" ? { salePriceTon: listing } : (listing ?? {});
+  const salePriceTon = options.salePriceTon?.trim() || null;
+  const listingType: "catalog" | "sale" = salePriceTon ? "sale" : "catalog";
+  return {
+    listingType,
+    salePriceTon,
+    cardBackgroundPreset: options.cardBackgroundPreset ?? null,
+    rentalPriceTon: null,
+    minRentalDays: null,
+    maxRentalDays: null,
+    country: options.country,
+    city: options.city,
+    subcategory: options.subcategory,
+    anonymousListing: options.anonymousListing ?? true,
+    showOwnerContact: options.showOwnerContact ?? false,
+    managerPublic: options.managerPublic ?? true,
+    listingAnnouncementEnabled: options.listingAnnouncementEnabled,
+    searchIndexable: options.searchIndexable,
+    monthlyEntryEnabled: options.monthlyEntryEnabled,
+    monthlyEntryStars: options.monthlyEntryStars,
+    monthlyEntryLinkName: options.monthlyEntryLinkName?.trim() || null,
+    rewardActive: options.rewardActive,
+    rewardBudget: options.rewardBudget,
+    rewardPerSubscription: options.rewardPerSubscription,
+    rewardPerInvite: options.rewardPerInvite,
+    rewardPerManualAdd: options.rewardPerManualAdd,
+  };
+}
+
+export async function listGroupsWithCredits(ownerOpenId: string, groupIds: number[], listing?: GroupListingOptions | string, cost = GROUP_CONNECTION_BONUS) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const uniqueGroupIds = Array.from(new Set(groupIds));
+  if (!uniqueGroupIds.length) throw new Error("Выберите хотя бы одну группу");
+  const listingOptions = normalizeGroupListingOptions(listing);
+  const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
+  if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) throw new Error("Группа недоступна для размещения");
+  const selectedCountry = listingOptions.country === "Global" ? undefined : listingOptions.country;
+  const effectiveCountry = selectedCountry ?? groups[0]?.country;
+  if (selectedCountry) {
+    const [country] = await db.select({ id: catalogCountries.id }).from(catalogCountries).where(eq(catalogCountries.code, selectedCountry)).limit(1);
+    if (!country) throw new Error("Выберите страну из доступного списка");
+  }
+  if (listingOptions.city) {
+    const [city] = await db.select({ id: catalogCities.id }).from(catalogCities).where(and(eq(catalogCities.countryCode, effectiveCountry), eq(catalogCities.code, listingOptions.city))).limit(1);
+    if (!city) throw new Error("Выберите город из доступного списка");
+  }
+  if (listingOptions.subcategory && listingOptions.subcategory !== "General") {
+    const categories = Array.from(new Set(groups.map(group => group.category)));
+    const category = categories.length === 1 ? categories[0] : undefined;
+    const [topic] = category
+      ? await db.select({ id: catalogTopics.id }).from(catalogTopics).where(and(eq(catalogTopics.category, category), eq(catalogTopics.code, listingOptions.subcategory))).limit(1)
+      : [];
+    if (!topic) {
+      throw new Error("Подкатегория не соответствует выбранным группам");
+    }
+  }
+  const searchIndexingError = groups.map(group => getSearchIndexingError({ username: group.username, searchIndexable: listingOptions.searchIndexable })).find(Boolean);
+  if (searchIndexingError) throw new Error(searchIndexingError);
+  if (listingOptions.monthlyEntryEnabled) {
+    if (groups.length !== 1 || groups[0].category !== "Каналы" || groups[0].username) {
+      throw new Error("Ежемесячный вход в Stars доступен только для одного приватного канала");
+    }
+    if (!Number.isInteger(listingOptions.monthlyEntryStars) || (listingOptions.monthlyEntryStars ?? 0) < 1 || (listingOptions.monthlyEntryStars ?? 0) > 10000) {
+      throw new Error("Укажите цену от 1 до 10000 Stars в месяц");
+    }
+  }
+  const includesRewardCampaign = [
+    listingOptions.rewardActive,
+    listingOptions.rewardBudget,
+    listingOptions.rewardPerSubscription,
+    listingOptions.rewardPerInvite,
+    listingOptions.rewardPerManualAdd,
+  ].some(value => value !== undefined);
+  if (includesRewardCampaign && groups.length !== 1) {
+    throw new Error("Кампанию вознаграждений можно настроить для одной группы за раз");
+  }
+  const rewardGroup = groups[0];
+  const rewardConfig = includesRewardCampaign && rewardGroup
+    ? {
+        category: rewardGroup.category,
+        rewardActive: listingOptions.rewardActive ?? rewardGroup.rewardActive,
+        rewardBudget: listingOptions.rewardActive === false ? 0 : (listingOptions.rewardBudget ?? rewardGroup.rewardBudget),
+        rewardPerSubscription: listingOptions.rewardPerSubscription ?? rewardGroup.rewardPerSubscription,
+        rewardPerInvite: listingOptions.rewardPerInvite ?? rewardGroup.rewardPerInvite,
+        rewardPerManualAdd: listingOptions.rewardPerManualAdd ?? rewardGroup.rewardPerManualAdd,
+      }
+    : undefined;
+  const rewardValidationError = rewardConfig ? validateRewardCampaignConfig(rewardConfig) : undefined;
+  if (rewardValidationError) throw new Error(rewardValidationError);
+  const groupsNeedingListing = groups.filter(group => group.status !== "listed");
+  const targetGroupsForAnnouncement = groupsNeedingListing;
+  const totalCost = groupsNeedingListing.length * cost;
+  const reservedRewardBudget = rewardConfig && rewardGroup ? Math.max(0, rewardConfig.rewardBudget - rewardGroup.rewardBudget) : 0;
+  const releasedRewardBudget = rewardConfig && rewardGroup ? Math.max(0, rewardGroup.rewardBudget - rewardConfig.rewardBudget) : 0;
+  const debitUnits = totalCost + reservedRewardBudget - releasedRewardBudget;
+  await db.transaction(async tx => {
+    const user = (await tx.select({ bonusBalance: users.bonusBalance, mainBalanceTon: users.mainBalanceTon }).from(users).where(eq(users.openId, ownerOpenId)).limit(1))[0];
+    if (!user) throw new Error("Пользователь не найден");
+
+    let bonusDebit = 0;
+    let mainDebit = 0;
+    if (debitUnits > 0) {
+      bonusDebit = Math.min(user.bonusBalance, debitUnits);
+      const mainDebitUnits = debitUnits - bonusDebit;
+      if (mainDebitUnits > 0) {
+         mainDebit = mainDebitUnits / 100;
+         if (Number(user.mainBalanceTon) < mainDebit) {
+            throw new Error(`Недостаточно GRAM на балансе. Нужно ${formatTonAmount(debitUnits / 100)} GRAM`);
+         }
+      }
+    } else if (debitUnits < 0) {
+      bonusDebit = debitUnits;
+    }
+
+    await tx.update(users).set({
+      bonusBalance: sql`${users.bonusBalance} - ${bonusDebit}`,
+      ...(mainDebit > 0 ? { mainBalanceTon: sql`${users.mainBalanceTon} - ${mainDebit}` } : {})
+    }).where(eq(users.openId, ownerOpenId));
+    if (totalCost) {
+      await tx.insert(creditTransactions).values(groupsNeedingListing.map(group => ({ userOpenId: ownerOpenId, groupId: group.id, amount: -cost, kind: "listing_spend" as const })));
+    } else {
+      await tx.insert(creditTransactions).values(groups.map(group => ({ userOpenId: ownerOpenId, groupId: group.id, amount: 0, kind: "listing_spend" as const })).filter((v, i, a) => a.findIndex(t => t.groupId === v.groupId) === i));
+    }
+    if (rewardGroup && reservedRewardBudget) {
+      await tx.insert(creditTransactions).values({ userOpenId: ownerOpenId, groupId: rewardGroup.id, amount: -reservedRewardBudget, kind: "reward_campaign_reserve" });
+    }
+    if (rewardGroup && releasedRewardBudget) {
+      await tx.insert(creditTransactions).values({ userOpenId: ownerOpenId, groupId: rewardGroup.id, amount: releasedRewardBudget, kind: "reward_campaign_release" });
+    }
+    await Promise.all(uniqueGroupIds.map(groupId => tx.update(groupsCatalog).set({
+      status: "listed",
+      listedAt: new Date(),
+      listingType: listingOptions.listingType,
+      salePriceTon: listingOptions.salePriceTon,
+      ...(listingOptions.cardBackgroundPreset !== undefined ? { cardBackgroundPreset: listingOptions.cardBackgroundPreset } : {}),
+      ...(listingOptions.country ? { country: listingOptions.country } : {}),
+      ...(listingOptions.city !== undefined ? { city: listingOptions.city || null } : {}),
+      ...(listingOptions.subcategory ? { subcategory: listingOptions.subcategory } : {}),
+      ...(listingOptions.anonymousListing !== undefined ? { anonymousListing: listingOptions.anonymousListing } : {}),
+      ...(listingOptions.showOwnerContact !== undefined ? { showOwnerContact: listingOptions.showOwnerContact } : {}),
+      ...(listingOptions.managerPublic !== undefined ? { managerPublic: listingOptions.managerPublic } : {}),
+      ...(listingOptions.listingAnnouncementEnabled !== undefined ? { listingAnnouncementEnabled: listingOptions.listingAnnouncementEnabled } : {}),
+      ...(listingOptions.searchIndexable !== undefined ? { searchIndexable: listingOptions.searchIndexable } : {}),
+      ...(listingOptions.monthlyEntryEnabled !== undefined ? {
+        monthlyEntryEnabled: listingOptions.monthlyEntryEnabled,
+        monthlyEntryStars: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryStars ?? null : null,
+        monthlyEntryLinkName: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryLinkName : null,
+        monthlyEntryInviteLink: null,
+        monthlyEntryUpdatedAt: null,
+      } : {}),
+      ...(rewardConfig && rewardGroup?.id === groupId ? {
+        rewardActive: isRewardCampaignActive(rewardConfig),
+        rewardBudget: rewardConfig.rewardBudget,
+        rewardPerSubscription: rewardConfig.rewardPerSubscription,
+        rewardPerInvite: rewardConfig.rewardPerInvite,
+        rewardPerManualAdd: rewardConfig.rewardPerManualAdd,
+      } : {}),
+    }).where(eq(groupsCatalog.id, groupId))));
+
+    const board = await tx.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, "Все"),
+      eq(auctionSlots.country, "Global")
+    )).orderBy(asc(auctionSlots.slotNumber));
+    const now = new Date();
+    // Saving listing settings is also a fresh placement event for the selected groups.
+    // Otherwise an already-listed group keeps its old slot timestamp and remains in the middle.
+    const incomingIds = new Set(groups.map(group => group.id));
+    const groupById = new Map(groups.map(group => [group.id, group]));
+    const boardEntries = board.filter(slot => slot.groupId !== null).map(slot => {
+      const group = slot.groupId ? groupById.get(slot.groupId) : undefined;
+      return {
+        ...slot,
+        groupId: slot.groupId,
+        bidAmount: slot.bidAmount || 100,
+        currentBid: slot.currentBid || "0.1 GRAM",
+        leaderUsername: slot.leaderUsername || group?.username || group?.title || "-",
+        leaderUserId: slot.leaderUserId || group?.ownerOpenId || null,
+        title: slot.title || group?.title || "Сообщество",
+        subtitle: slot.subtitle || (group?.username ? `@${group.username}` : group?.category || "Сообщество"),
+        heldSince: slot.groupId !== null && incomingIds.has(slot.groupId) ? now : slot.updatedAt,
+      };
+    });
+    const incomingEntries = groups.map(group => ({
+      groupId: group.id,
+      bidAmount: 100,
+      currentBid: "0.1 GRAM",
+      leaderUsername: group.username ?? group.title,
+      leaderUserId: group.ownerOpenId,
+      title: group.title,
+      subtitle: group.username ? `@${group.username}` : group.category,
+      heldSince: now,
+    }));
+    const rankedEntries = assignRankingEntriesToSlots([...boardEntries, ...incomingEntries], board);
+    for (let index = 0; index < board.length; index += 1) {
+      const slot = board[index];
+      const source = rankedEntries[index];
+      if (!source && slot.groupId === null) continue;
+      await tx.update(auctionSlots).set(source ? {
+        groupId: source.groupId,
+        title: source.title,
+        subtitle: source.subtitle,
+        leaderUsername: source.leaderUsername,
+        leaderUserId: source.leaderUserId,
+        bidAmount: source.bidAmount,
+        currentBid: source.currentBid,
+        updatedAt: slot.groupId !== source.groupId ? now : slot.updatedAt,
+      } : {
+        groupId: null,
+        title: "Свободное место",
+        subtitle: "Ждет листинга",
+        leaderUsername: "-",
+        leaderUserId: null,
+        bidAmount: 0,
+        currentBid: "0 GRAM",
+        updatedAt: now,
+      }).where(eq(auctionSlots.id, slot.id));
+    }
+  });
+  return targetGroupsForAnnouncement.map(group => ({
+    id: group.id,
+    chatId: group.chatId,
+    title: group.title,
+    listingType: listingOptions.listingType,
+    salePriceTon: listingOptions.salePriceTon ?? null,
+    listingAnnouncementEnabled: listingOptions.listingAnnouncementEnabled ?? group.listingAnnouncementEnabled,
+    monthlyEntryEnabled: listingOptions.monthlyEntryEnabled ?? false,
+    monthlyEntryStars: listingOptions.monthlyEntryEnabled ? listingOptions.monthlyEntryStars ?? null : null,
+  }));
+}
+
+export async function saveMonthlyEntryInviteLink(ownerOpenId: string, groupId: number, inviteLink: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(and(eq(groupsCatalog.id, groupId), eq(groupsCatalog.ownerOpenId, ownerOpenId))).limit(1);
+  if (!group) throw new Error("Канал недоступен для настройки");
+  if (!group.monthlyEntryEnabled || group.category !== "Каналы" || group.username || !group.monthlyEntryStars) {
+    throw new Error("Ежемесячный вход доступен только для приватного канала с указанной ценой");
+  }
+  await db.update(groupsCatalog).set({ monthlyEntryInviteLink: inviteLink, monthlyEntryUpdatedAt: new Date() }).where(eq(groupsCatalog.id, groupId));
+}
+
+export async function savePrivateEntryInviteLink(ownerOpenId: string, groupId: number, inviteLink: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(and(eq(groupsCatalog.id, groupId), eq(groupsCatalog.ownerOpenId, ownerOpenId))).limit(1);
+  if (!group) throw new Error("Сообщество недоступно для настройки");
+  if (group.username) throw new Error("Закрытая ссылка нужна только приватному сообществу без @username");
+  await db.update(groupsCatalog).set({ inviteLink }).where(eq(groupsCatalog.id, groupId));
+}
+
+export async function listGroupWithCredits(ownerOpenId: string, groupId: number, listing?: GroupListingOptions | string, cost = GROUP_CONNECTION_BONUS) {
+  return listGroupsWithCredits(ownerOpenId, [groupId], listing, cost);
+}
+
+export async function deleteGroups(ownerOpenId: string, groupIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const uniqueGroupIds = Array.from(new Set(groupIds));
+  if (!uniqueGroupIds.length) throw new Error("Выберите хотя бы одну группу");
+  const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
+  if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) {
+    throw new Error("Группа недоступна для удаления");
+  }
+  await db.transaction(async tx => {
+    await tx.update(auctionSlots).set({
+      groupId: null,
+      leaderUserId: null,
+      leaderUsername: "-",
+      currentBid: "0 TON",
+      bidAmount: 0,
+      title: "Свободное место",
+      subtitle: "Ждет листинга",
+      updatedAt: new Date(),
+    }).where(inArray(auctionSlots.groupId, uniqueGroupIds));
+    await tx.delete(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
+  });
+}
+
+export async function toggleServiceMessages(ownerOpenId: string, groupId: number, deleteServiceMessages: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [group] = await db.select().from(groupsCatalog).where(eq(groupsCatalog.id, groupId));
+  if (!group || group.ownerOpenId !== ownerOpenId) throw new Error("Группа не найдена");
+  if (group.category !== "Чаты") throw new Error("Автоочистка доступна только для чатов");
+  await db.update(groupsCatalog).set({ deleteServiceMessages }).where(eq(groupsCatalog.id, groupId));
+}
+
+export async function unlistGroups(ownerOpenId: string, groupIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const uniqueGroupIds = Array.from(new Set(groupIds));
+  if (!uniqueGroupIds.length) throw new Error("Выберите хотя бы одну группу");
+  const groups = await db.select().from(groupsCatalog).where(inArray(groupsCatalog.id, uniqueGroupIds));
+  if (groups.length !== uniqueGroupIds.length || groups.some(group => group.ownerOpenId !== ownerOpenId)) {
+    throw new Error("Группа недоступна для управления");
+  }
+  await db.transaction(async tx => {
+    await tx.update(auctionSlots).set({
+      groupId: null,
+      leaderUserId: null,
+      leaderUsername: "-",
+      currentBid: "0 TON",
+      bidAmount: 0,
+      title: "Свободное место",
+      subtitle: "Ждет листинга",
+    }).where(inArray(auctionSlots.groupId, uniqueGroupIds));
+    await tx.update(groupsCatalog).set({
+      status: "pending",
+      listedAt: null,
+      listingType: "catalog",
+      salePriceTon: null,
+      rewardActive: false,
+      rewardBudget: 0,
+    }).where(inArray(groupsCatalog.id, uniqueGroupIds));
+
+    for (const group of groups) {
+      const refundableRemainder = Math.max(0, group.rewardBudget);
+      if (!refundableRemainder) continue;
+      await tx.update(users).set({ bonusBalance: sql`${users.bonusBalance} + ${refundableRemainder}` }).where(eq(users.openId, ownerOpenId));
+      await tx.insert(creditTransactions).values({
+        userOpenId: ownerOpenId,
+        groupId: group.id,
+        amount: refundableRemainder,
+        kind: "reward_campaign_release",
+      });
+    }
+
+    const board = await tx.select().from(auctionSlots).where(and(
+      eq(auctionSlots.category, "Все"),
+      eq(auctionSlots.country, "Global")
+    )).orderBy(asc(auctionSlots.slotNumber));
+    const listedCandidates = await tx.select().from(groupsCatalog).where(eq(groupsCatalog.status, "listed"))
+      .orderBy(asc(groupsCatalog.listedAt), asc(groupsCatalog.createdAt));
+    const assignments = planVacantRankingAssignments(board, listedCandidates.map(group => group.id));
+    const candidatesById = new Map(listedCandidates.map(group => [group.id, group]));
+    for (const assignment of assignments) {
+      const group = candidatesById.get(assignment.groupId);
+      if (!group) continue;
+      await tx.update(auctionSlots).set({
+        groupId: group.id,
+        title: group.title,
+        subtitle: group.username ? `@${group.username}` : group.category,
+        leaderUsername: group.username ?? group.title,
+        leaderUserId: group.ownerOpenId,
+        bidAmount: 100,
+        currentBid: "0.1 GRAM",
+        updatedAt: new Date(),
+      }).where(and(eq(auctionSlots.id, assignment.slotId), sql`${auctionSlots.groupId} IS NULL`));
+    }
+  });
+}
+
+export async function getNftUsernames(ownerOpenId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (ownerOpenId) {
+    return await db.select().from(nftUsernames).where(eq(nftUsernames.ownerOpenId, ownerOpenId)).orderBy(desc(nftUsernames.createdAt));
+  }
+  const rows = await db.select().from(nftUsernames).where(eq(nftUsernames.status, "available")).orderBy(desc(nftUsernames.createdAt));
+  return rows.filter(nft => canPublishNftListing({ assetClass: nft.assetClass, ownershipVerifiedAt: nft.ownershipVerifiedAt }));
+}
+
+export async function createNftListing(data: InsertNftUsername) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // If already listed by this item address, update it!
+  if (data.nftItemAddress) {
+    const [existingByAddress] = await db.select().from(nftUsernames)
+      .where(eq(nftUsernames.nftItemAddress, data.nftItemAddress)).limit(1);
+    if (existingByAddress) {
+      if (existingByAddress.ownerOpenId === data.ownerOpenId) {
+        await db.update(nftUsernames).set({
+          price: data.price,
+          priceAmount: data.priceAmount,
+          rentalPricePerDay: data.rentalPricePerDay,
+          rentalAmountPerDay: data.rentalAmountPerDay,
+          minRentalDays: data.minRentalDays,
+          maxRentalDays: data.maxRentalDays,
+          listingType: data.listingType,
+          status: "available",
+          ownershipVerifiedAt: data.ownershipVerifiedAt,
+          ownershipVerification: data.ownershipVerification,
+          ownerWalletAddress: data.ownerWalletAddress,
+        }).where(eq(nftUsernames.id, existingByAddress.id));
+        return;
+      } else {
+        throw new Error("Этот NFT уже размещён другим владельцем");
+      }
+    }
+  }
+
+  // Ensure unique username in table
+  let finalUsername = data.username;
+  const [existingByName] = await db.select({ id: nftUsernames.id }).from(nftUsernames)
+    .where(eq(nftUsernames.username, finalUsername)).limit(1);
+  if (existingByName) {
+    const suffix = data.nftItemAddress ? data.nftItemAddress.slice(-4) : Math.floor(1000 + Math.random() * 9000);
+    finalUsername = `${finalUsername} #${suffix}`.slice(0, 128);
+  }
+
+  await db.insert(nftUsernames).values({
+    ...data,
+    username: finalUsername,
+  });
+}
+
+export async function setNftShowcaseGroup(nftId: number, ownerOpenId: string, groupId: number | null) {
+  return setNftShowcaseTarget(nftId, ownerOpenId, groupId === null ? { target: "hidden" } : { target: "group", groupId });
+}
+
+export async function setNftShowcaseTarget(nftId: number, ownerOpenId: string, input: { target: "profile" | "group" | "hidden"; groupId?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [nft] = await db.select().from(nftUsernames).where(and(
+    eq(nftUsernames.id, nftId),
+    eq(nftUsernames.ownerOpenId, ownerOpenId)
+  )).limit(1);
+  if (!nft) throw new Error("NFT недоступен для управления");
+  if (input.target === "group") {
+    if (!input.groupId) throw new Error("Выберите подключенную площадку для витрины");
+    const group = await getGroupById(input.groupId);
+    if (!group || group.ownerOpenId !== ownerOpenId) {
+      throw new Error("Выберите свою подключенную площадку");
+    }
+  }
+  const showcase = input.target === "profile"
+    ? { showcaseProfile: true, showcaseGroupId: null }
+    : input.target === "group"
+      ? { showcaseProfile: false, showcaseGroupId: input.groupId! }
+      : { showcaseProfile: false, showcaseGroupId: null };
+  await db.update(nftUsernames).set(showcase).where(and(
+    eq(nftUsernames.id, nftId),
+    eq(nftUsernames.ownerOpenId, ownerOpenId)
+  ));
+}
+
+export async function resolveNftTransferRecipient(recipientInput: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const normalized = normalizeTelegramRecipient(recipientInput);
+  const [recipient] = await db.select({
+    openId: users.openId,
+    name: users.name,
+    telegramUsername: users.telegramUsername,
+    avatarUrl: users.avatarUrl,
+  }).from(users).where(
+    normalized.kind === "openId"
+      ? eq(users.openId, normalized.value)
+      : eq(users.telegramUsername, normalized.value)
+  ).limit(1);
+
+  if (!recipient) throw new Error("Получатель не найден в TG TOP. Попросите его открыть приложение через @TG_TOPBOT.");
+  return recipient;
+}
+
+export async function prepareNftTransfer(nftId: number, senderOpenId: string, recipientInput: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [nft] = await db.select().from(nftUsernames).where(and(
+    eq(nftUsernames.id, nftId),
+    eq(nftUsernames.ownerOpenId, senderOpenId),
+    eq(nftUsernames.status, "available")
+  )).limit(1);
+  if (!nft) throw new Error("NFT недоступен для передачи");
+
+  const recipient = await resolveNftTransferRecipient(recipientInput);
+  if (recipient.openId === senderOpenId) throw new Error("Нельзя передать NFT самому себе");
+
+  const requirements = getNftTransferRequirements(nft.assetClass);
+  if (nft.assetClass === "onchain" && !nft.nftItemAddress) {
+    throw new Error("Для On-chain NFT нужен подтвержденный адрес NFT-элемента");
+  }
+
+  const reference = `${getNftTransferReference()}_${randomBytes(5).toString("hex")}`;
+  await db.insert(nftTransfers).values({
+    nftId: nft.id,
+    assetClass: nft.assetClass,
+    status: nft.assetClass === "onchain" ? "awaiting_signature" : "draft",
+    senderOpenId,
+    recipientOpenId: recipient.openId,
+    recipientInput: recipientInput.trim(),
+    sourceWalletAddress: nft.ownerWalletAddress,
+    transferReference: reference,
+    expiresAt: nft.assetClass === "onchain" ? new Date(Date.now() + 10 * 60 * 1000) : null,
+  });
+
+  const [transfer] = await db.select().from(nftTransfers).where(eq(nftTransfers.transferReference, reference)).limit(1);
+  if (!transfer) throw new Error("Не удалось создать передачу NFT");
+  return { transfer, nft, recipient, requirements };
+}
+
+export async function getNftTransferHistory(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    id: nftTransfers.id,
+    nftId: nftTransfers.nftId,
+    assetClass: nftTransfers.assetClass,
+    status: nftTransfers.status,
+    senderOpenId: nftTransfers.senderOpenId,
+    recipientOpenId: nftTransfers.recipientOpenId,
+    recipientInput: nftTransfers.recipientInput,
+    transferReference: nftTransfers.transferReference,
+    expiresAt: nftTransfers.expiresAt,
+    createdAt: nftTransfers.createdAt,
+    confirmedAt: nftTransfers.confirmedAt,
+    username: nftUsernames.username,
+  }).from(nftTransfers)
+    .leftJoin(nftUsernames, eq(nftTransfers.nftId, nftUsernames.id))
+    .where(or(eq(nftTransfers.senderOpenId, openId), eq(nftTransfers.recipientOpenId, openId)))
+    .orderBy(desc(nftTransfers.createdAt));
+}
+
+export async function getUserDeals(openId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    id: deals.id,
+    groupId: deals.groupId,
+    buyerOpenId: deals.buyerOpenId,
+    sellerOpenId: deals.sellerOpenId,
+    price: deals.price,
+    dealType: deals.dealType,
+    status: deals.status,
+    fundedAt: deals.fundedAt,
+    transferObservedAt: deals.transferObservedAt,
+    buyerConfirmedAt: deals.buyerConfirmedAt,
+    expiresAt: deals.expiresAt,
+    cancelledAt: deals.cancelledAt,
+    createdAt: deals.createdAt,
+    groupTitle: groupsCatalog.title,
+    groupUsername: groupsCatalog.username,
+  }).from(deals)
+    .leftJoin(groupsCatalog, eq(deals.groupId, groupsCatalog.id))
+    .where(or(eq(deals.buyerOpenId, openId), eq(deals.sellerOpenId, openId)))
+    .orderBy(desc(deals.createdAt));
+}
+
+export async function createProtectedGroupDeal(groupId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const group = await getGroupById(groupId);
+  if (!group || group.status !== "listed" || group.listingType !== "sale" || !group.salePriceTon || !Number.isFinite(Number(group.salePriceTon)) || Number(group.salePriceTon) <= 0) {
+    throw new Error("Группа недоступна для безопасной покупки");
+  }
+  if (group.ownerOpenId === buyerOpenId) throw new Error("Нельзя купить собственную группу");
+  const priceUnits = Math.round(Number(group.salePriceTon) * 100);
+  const buyer = await getUserByOpenId(buyerOpenId);
+  if (!hasSufficientGramBalance(buyer?.bonusBalance ?? 0, priceUnits)) {
+    throw new Error(INSUFFICIENT_GRAM_BALANCE_MESSAGE);
+  }
+  const [existing] = await db.select().from(deals).where(and(
+    eq(deals.groupId, groupId),
+    eq(deals.buyerOpenId, buyerOpenId),
+    eq(deals.status, "open")
+  )).limit(1);
+  if (existing) return existing;
+  await db.insert(deals).values({
+    groupId,
+    buyerOpenId,
+    sellerOpenId: group.ownerOpenId,
+    price: group.salePriceTon,
+    dealType: "group_buy",
+    status: "open",
+  });
+  const [created] = await db.select().from(deals).where(and(
+    eq(deals.groupId, groupId),
+    eq(deals.buyerOpenId, buyerOpenId),
+    eq(deals.status, "open")
+  )).orderBy(desc(deals.id)).limit(1);
+  return created;
+}
+
+/** Internal-only: call only after independent on-chain escrow funding verification. */
+export async function markProtectedDealFunded(dealId: number, fundingReference: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const fundedAt = new Date();
+  const expiresAt = getTransferDeadline(fundedAt);
+  await db.update(deals).set({
+    status: "escrow_funded",
+    fundedAt,
+    expiresAt,
+    fundingReference,
+  }).where(and(eq(deals.id, dealId), eq(deals.status, "open")));
+}
+
+export async function observeProtectedGroupTransfer(chatId: string, newOwnerOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const group = await getGroupByChatId(chatId);
+  if (!group) return [];
+  const now = new Date();
+  const eligible = await db.select().from(deals).where(and(
+    eq(deals.groupId, group.id),
+    eq(deals.buyerOpenId, newOwnerOpenId),
+    eq(deals.status, "escrow_funded")
+  ));
+  for (const deal of eligible) {
+    if (!deal.expiresAt || deal.expiresAt.getTime() < now.getTime()) continue;
+    await db.update(deals).set({
+      status: "active",
+      transferObservedAt: now,
+      transferEvidence: `telegram_owner:${newOwnerOpenId}`,
+    }).where(and(eq(deals.id, deal.id), eq(deals.status, "escrow_funded")));
+  }
+  return eligible;
+}
+
+export async function cancelProtectedGroupDeal(dealId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId))).limit(1);
+  if (!deal || deal.dealType !== "group_buy" || !canBuyerCancel(deal.status)) {
+    throw new Error("Эту сделку уже нельзя отменить");
+  }
+  await db.update(deals).set({ status: "cancelled", cancelledAt: new Date() }).where(and(
+    eq(deals.id, dealId),
+    eq(deals.buyerOpenId, buyerOpenId),
+    eq(deals.status, deal.status)
+  ));
+  return { requiresEscrowRefund: deal.status === "escrow_funded", transferWindowMs: GROUP_TRANSFER_WINDOW_MS };
+}
+
+/** Records buyer acknowledgement after bot-observed owner transfer. Settlement remains locked until on-chain verification exists. */
+export async function confirmProtectedGroupTransfer(dealId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId))).limit(1);
+  if (!deal || deal.dealType !== "group_buy" || !canBuyerConfirmTransfer(deal.status) || !deal.transferObservedAt) {
+    throw new Error("Подтверждение передачи пока недоступно");
+  }
+  if (deal.buyerConfirmedAt) return { settlementLocked: true, alreadyConfirmed: true };
+  await db.update(deals).set({ buyerConfirmedAt: new Date() }).where(and(
+    eq(deals.id, dealId),
+    eq(deals.buyerOpenId, buyerOpenId),
+    eq(deals.status, "active")
+  ));
+  return { settlementLocked: true, alreadyConfirmed: false };
+}
+
+const NFT_RENTAL_WINDOW_MS = 24 * 60 * 60 * 1000;
+const NFT_RENTAL_MAX_DAYS = POLICY_NFT_RENTAL_MAX_DAYS;
+
+function nftRentalReference() {
+  return `nft_rent_${Date.now()}_${randomBytes(6).toString("hex")}`;
+}
+
+/** Creates an idempotent rental intent. It never debits a balance and never assigns a Telegram username. */
+export async function createNftRentalDeal(nftId: number, buyerOpenId: string, rentalDays: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (!Number.isInteger(rentalDays) || rentalDays < 1 || rentalDays > NFT_RENTAL_MAX_DAYS) throw new Error("Укажите корректный срок аренды");
+  const [nft] = await db.select().from(nftUsernames).where(eq(nftUsernames.id, nftId)).limit(1);
+  if (!nft || nft.status !== "available" || (nft.listingType !== "rent" && nft.listingType !== "both")) throw new Error("Collectible-юзернейм недоступен для аренды");
+  if (nft.ownerOpenId === buyerOpenId) throw new Error("Нельзя арендовать собственный юзернейм");
+  if (!validateRentalDays(rentalDays, nft.minRentalDays, nft.maxRentalDays)) throw new Error(`Срок аренды должен быть от ${nft.minRentalDays} до ${nft.maxRentalDays} дней`);
+  const [existing] = await db.select().from(deals).where(and(eq(deals.nftId, nftId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.dealType, "nft_rent"), eq(deals.status, "open"))).limit(1);
+  if (existing) return { deal: existing, nft, requiresExternalAssignment: true };
+  await db.insert(deals).values({ nftId, buyerOpenId, sellerOpenId: nft.ownerOpenId, price: String(rentalTotalUnits(nft.rentalAmountPerDay, rentalDays)), dealType: "nft_rent", rentalDays, status: "open", fundingReference: nftRentalReference() });
+  const [deal] = await db.select().from(deals).where(and(eq(deals.nftId, nftId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.dealType, "nft_rent"), eq(deals.status, "open"))).orderBy(desc(deals.id)).limit(1);
+  return { deal, nft, requiresExternalAssignment: true };
+}
+
+/** Internal-only: call after independent payment/escrow verification. */
+export async function markNftRentalFunded(dealId: number, fundingReference: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (!fundingReference.trim()) throw new Error("Нужна ссылка подтверждённого escrow-платежа");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.dealType, "nft_rent"))).limit(1);
+  if (!deal) throw new Error("Аренда не найдена");
+  if (deal.status === "escrow_funded" || deal.status === "active") return deal;
+  if (deal.status !== "open") throw new Error("Эту аренду нельзя профинансировать");
+  const fundedAt = new Date();
+  await db.update(deals).set({ status: "escrow_funded", fundingReference: fundingReference.trim(), fundedAt, expiresAt: new Date(fundedAt.getTime() + NFT_RENTAL_WINDOW_MS) }).where(and(eq(deals.id, dealId), eq(deals.status, "open")));
+  const [updated] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+  return updated;
+}
+
+/** Internal-only: records an externally verified Telegram/Fragment assignment. */
+export async function observeNftRentalAssignment(dealId: number, evidence: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.dealType, "nft_rent"))).limit(1);
+  if (!deal || deal.status !== "escrow_funded") throw new Error("Сначала нужен подтверждённый escrow-платёж");
+  if (!evidence.trim()) throw new Error("Нужна подтверждённая ссылка назначения Telegram/Fragment");
+  if (deal.expiresAt && deal.expiresAt.getTime() < Date.now()) throw new Error("Окно назначения аренды истекло");
+  await db.update(deals).set({ status: "active", transferObservedAt: new Date(), transferEvidence: evidence.trim().slice(0, 512) }).where(and(eq(deals.id, dealId), eq(deals.status, "escrow_funded")));
+  const [updated] = await db.select().from(deals).where(eq(deals.id, dealId)).limit(1);
+  return updated;
+}
+
+export async function confirmNftRental(dealId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.dealType, "nft_rent"))).limit(1);
+  if (!deal || !canConfirmNftRental(deal.status, Boolean(deal.transferObservedAt))) throw new Error("Подтверждение аренды пока недоступно");
+  if (deal.buyerConfirmedAt) return { settlementLocked: true, alreadyConfirmed: true };
+  await db.update(deals).set({ buyerConfirmedAt: new Date() }).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.status, "active")));
+  return { settlementLocked: true, alreadyConfirmed: false };
+}
+
+export async function cancelNftRental(dealId: number, buyerOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [deal] = await db.select().from(deals).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.dealType, "nft_rent"))).limit(1);
+  if (!deal || !canCancelNftRental(deal.status)) throw new Error("Эту аренду уже нельзя отменить");
+  await db.update(deals).set({ status: "cancelled", cancelledAt: new Date() }).where(and(eq(deals.id, dealId), eq(deals.buyerOpenId, buyerOpenId), eq(deals.status, deal.status)));
+  return { requiresEscrowRefund: deal.status === "escrow_funded", noAssetTransfer: true };
+}

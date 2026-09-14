@@ -1,0 +1,1 @@
+ALTER TABLE `groups_catalog` ADD `managerPublic` boolean DEFAULT true NOT NULL;

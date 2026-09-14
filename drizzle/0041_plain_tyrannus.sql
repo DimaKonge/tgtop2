@@ -1,0 +1,2 @@
+ALTER TABLE `groups_catalog` ADD `searchIndexable` boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE INDEX `groups_catalog_search_index_idx` ON `groups_catalog` (`searchIndexable`,`status`,`username`);

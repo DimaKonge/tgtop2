@@ -1,0 +1,1 @@
+ALTER TABLE `groups_catalog` ADD `deleteServiceMessages` boolean DEFAULT false NOT NULL;
