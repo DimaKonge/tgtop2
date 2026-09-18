@@ -5,11 +5,7 @@ export const TON_WITHDRAWAL_MINIMUM_NANO = BigInt("100000000");
 // Заполняется фактической комиссией после TonAPI-эмуляции непосредственно перед broadcast.
 export const TON_WITHDRAWAL_FEE_RESERVE_NANO = BigInt(0);
 export const TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO = BigInt(0);
-export const TON_WITHDRAWAL_USER_COOLDOWN_MS = 60_000;
-export const TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS = 5 * 60_000;
-export const TON_WITHDRAWAL_LARGE_NANO = BigInt(5) * TON_NANO;
-export const TON_WITHDRAWAL_DAILY_LIMIT_NANO = BigInt(20) * TON_NANO;
-export const TON_WITHDRAWAL_MAX_PER_HOUR = 2;
+export const TON_WITHDRAWAL_MAX_PER_HOUR = 10;
 export const TON_WITHDRAWAL_GLOBAL_MAX_PER_MINUTE = 120;
 
 export type TonWithdrawalRiskReason =
@@ -61,12 +57,7 @@ export function quoteTonWithdrawal(amountTon: string): TonWithdrawalQuote {
 
 export function classifyTonWithdrawalRisk(snapshot: TonWithdrawalRiskSnapshot, quote: TonWithdrawalQuote): TonWithdrawalRiskDecision {
   const reasons: TonWithdrawalRiskReason[] = [];
-  if (!snapshot.hasPriorConfirmedDestination) reasons.push("new_destination");
-  if (quote.grossAmountNano >= TON_WITHDRAWAL_LARGE_NANO) reasons.push("large_amount");
   if (snapshot.userRequestsLastHour >= TON_WITHDRAWAL_MAX_PER_HOUR) reasons.push("user_hourly_limit");
-  if (snapshot.userGrossTodayNano + quote.grossAmountNano > TON_WITHDRAWAL_DAILY_LIMIT_NANO) reasons.push("daily_limit");
-  if (snapshot.lastUserRequestAtMs !== null && snapshot.nowMs - snapshot.lastUserRequestAtMs < TON_WITHDRAWAL_USER_COOLDOWN_MS) reasons.push("user_cooldown");
-  if (snapshot.lastAddressRequestAtMs !== null && snapshot.nowMs - snapshot.lastAddressRequestAtMs < TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS) reasons.push("address_cooldown");
   if (snapshot.globalRequestsLastMinute >= TON_WITHDRAWAL_GLOBAL_MAX_PER_MINUTE) reasons.push("global_velocity");
   if (snapshot.emergencyPaused) throw new Error("Автоматический вывод временно приостановлен");
   return { status: reasons.length > 0 ? "manual_review" : "queued", reasons };

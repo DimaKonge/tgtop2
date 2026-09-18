@@ -1371,3 +1371,18 @@
 - [x] Add admin-only Bonus GRAM controls: configure referral reward/limit, manually credit a user by verified Telegram username with mandatory reason and audit record, and show referral-bonus progress without introducing balance freezing in this release
 
 - [ ] Future scope: add audited balance freeze/unfreeze controls that prevent frozen balances from being spent or withdrawn
+- [ ] Fix ranking checkout so the selected owner card background preset is included in the paid placement mutation and persists after successful payment
+- [x] Push the latest verified referral/dark-only checkpoint to a protected GitHub release branch and open/update the PR without merging the known card-background checkout blocker
+- [x] Resolve PR #10 merge conflicts against the current GitHub main without reverting the newer decomposed frontend or protected deployment workflow
+- [x] Update the stale Telegram bot welcome-copy regression contract so Verify source matches current main behavior without reintroducing referral disclosure
+- [x] Fix protected VPS deployment when project-local pnpm is unavailable, using a deterministic package-manager bootstrap/fallback without exposing secrets or changing runtime data
+- [ ] Diagnose and fix missing authenticated user and community avatar rendering across profile, catalog, and listing cards after the latest Google update; add regression coverage for media URL propagation and fallback behavior
+- [ ] Diagnose and fix live Telegram profile and community avatar rendering remaining empty after the latest Google/VPS update, preserving current Telegram user proxy and SafeAvatar fallback work
+- [ ] Audit both newly attached test/audit files, classify each reported failure as confirmed, stale, unproven, or missing coverage, and include the result in the release go/no-go verdict
+- [ ] Replace listing/ranking spend paths that currently debit bonusBalance with an explicit real mainBalanceTon transaction model, preserving referral bonus credits as promotional-only and adding atomic debit/refund/audit regression coverage
+- [ ] Verify and fix public ranking/catalog ordering so bid price is primary, fresh listing wins equal-price ties, and every rendered card has a unique groupId/chatId without duplicate placements
+- [ ] Publish and verify the current SafeAvatar/user-media fix across profile, owner, manager, recipient, and community cards on the live VPS
+- [ ] Add an explicit NSFW/18+ moderation decision: schema flag, admin control, and age-confirmation gate, or a documented beta policy that rejects adult listings before public traffic
+- [ ] Diagnose failed TON withdrawal read-only: identify payout status, ledger hold/refund state, policy rejection, worker/network error, and safe recovery without retrying or mutating balances
+- [ ] Audit the live 0.10 GRAM withdrawal stuck in Processing from the Telegram profile screen; do not retry, refund, approve, or mutate payout state during diagnosis
+- [ ] Diagnose why the Withdraw button produces no visible reaction at 0.10 GRAM: inspect disabled guards, prepare handler, quote/create mutation errors, and user-facing toast rendering without changing payout state

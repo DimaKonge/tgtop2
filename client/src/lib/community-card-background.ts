@@ -5,6 +5,7 @@ export function getCommunityCardBackgroundStyle(preset?: string | null): CSSProp
   const palette = THEME_BACKGROUND_OPTIONS.find(item => item.value === preset);
   if (!palette) return undefined;
   return {
+    backgroundColor: palette.color,
     "--tg-community-card-bg": palette.color,
     "--tg-community-card-accent": palette.accent,
   } as CSSProperties;

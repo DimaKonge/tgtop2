@@ -32,15 +32,16 @@ describe("TON withdrawal policy", () => {
     expect(() => quoteTonWithdrawal("0.099999999")).toThrow("0.1 GRAM");
   });
 
-  it("routes a new destination or velocity signal into fail-closed manual review", () => {
+  it("keeps new destinations automatic and only blocks the hourly velocity limit", () => {
     const quote = quoteTonWithdrawal("0.1");
-    expect(classifyTonWithdrawalRisk({ ...ordinary, hasPriorConfirmedDestination: false }, quote)).toMatchObject({ status: "manual_review", reasons: ["new_destination"] });
-    expect(classifyTonWithdrawalRisk({ ...ordinary, userRequestsLastHour: 2 }, quote)).toMatchObject({ status: "manual_review", reasons: ["user_hourly_limit"] });
+    expect(classifyTonWithdrawalRisk({ ...ordinary, hasPriorConfirmedDestination: false }, quote)).toMatchObject({ status: "queued", reasons: [] });
+    expect(classifyTonWithdrawalRisk({ ...ordinary, userRequestsLastHour: 10 }, quote)).toMatchObject({ status: "manual_review", reasons: ["user_hourly_limit"] });
   });
 
-  it("routes a large or daily-limit request into manual review", () => {
-    expect(classifyTonWithdrawalRisk(ordinary, quoteTonWithdrawal("5"))).toMatchObject({ status: "manual_review", reasons: ["large_amount"] });
-    expect(classifyTonWithdrawalRisk({ ...ordinary, userGrossTodayNano: BigInt(20) * TON_NANO }, quoteTonWithdrawal("0.1"))).toMatchObject({ status: "manual_review", reasons: ["daily_limit"] });
+  it("keeps large requests automatic without a daily cap", () => {
+    expect(classifyTonWithdrawalRisk(ordinary, quoteTonWithdrawal("5"))).toMatchObject({ status: "queued", reasons: [] });
+    expect(classifyTonWithdrawalRisk({ ...ordinary, userGrossTodayNano: BigInt(2000) * TON_NANO }, quoteTonWithdrawal("0.1"))).toMatchObject({ status: "queued", reasons: [] });
+    expect(classifyTonWithdrawalRisk({ ...ordinary, lastUserRequestAtMs: 999_999, lastAddressRequestAtMs: 999_999 }, quoteTonWithdrawal("0.1"))).toMatchObject({ status: "queued", reasons: [] });
   });
 
   it("uses the emergency pause as a hard stop", () => {

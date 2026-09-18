@@ -69,6 +69,7 @@ import lottie from "lottie-web";
 import { CATEGORY_SUBCATEGORIES, CITY_OPTIONS, COUNTRY_LABELS, COUNTRY_OPTIONS, SUBCATEGORY_LABELS, type Audience, type DetailStatsPeriod, type GlobalDirection, type Group, type Language, type ListingCountry, type ListingType, type MyGroupsViewMode, type Nft, type NftDealCategory, type NftMarketCategory, type Page, type PreparedNftTransfer, type ShowcaseNft, type Slot, type TopSection, type WalletNft, type WalletNftFilter, type WorkspaceSection, getRussianLanguage, hasConfiguredRewardCampaign, setLanguagePreference } from "@/lib/tgTop-domain";
 import { NftShowcase } from "@/components/tgtop/NftShowcase";
 import { NftCard } from "@/components/tgtop/NftCard";
+import { getCommunityCardBackgroundStyle } from "@/lib/community-card-background";
 const formatTon = (value: number | string | null | undefined) => {
   const amount = typeof value === "number" ? value : Number(value);
   return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
@@ -805,7 +806,10 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   });
   const tonWithdrawalsQuery = trpc.tgTop.getTonWithdrawals.useQuery(undefined, {
     enabled: isAuthenticated && page === "profile",
-    refetchInterval: activeTonWithdrawalId ? 10_000 : false,
+    // Keep the withdrawal history fresh even after Telegram restores the app
+    // without the previous active withdrawal id. The worker may confirm a
+    // queued payout while this sheet is closed.
+    refetchInterval: 5_000,
     refetchIntervalInBackground: false,
   });
   const tonDeposits = (tonDepositsQuery.data ?? []) as Array<{
@@ -1657,12 +1661,24 @@ export default function Home({ onReady }: { onReady?: () => void }) {
   const mainTon = mainBalanceTonValue.toFixed(2);
   const canWithdrawMinimum = mainBalanceTonValue >= 0.1;
   const activeTonWithdrawal = activeTonWithdrawalId ? tonWithdrawals.find(item => item.id === activeTonWithdrawalId) ?? null : null;
-  const withdrawalProcessingTitle = activeTonWithdrawal?.status === "sent"
-    ? tx("Средства отправлены", "Funds sent")
-    : tx("Отправляем средства", "Sending funds");
-  const withdrawalProcessingNote = activeTonWithdrawal?.status === "sent"
-    ? tx("Ожидаем сетевое подтверждение перевода.", "Waiting for network confirmation.")
-    : tx("Статус обновится автоматически.", "The status updates automatically.");
+  const withdrawalProcessingTitle = activeTonWithdrawal?.status === "queued"
+    ? tx("Заявка в очереди", "Queued for payout")
+    : activeTonWithdrawal?.status === "manual_review"
+      ? tx("Проверяем заявку", "Reviewing payout")
+      : activeTonWithdrawal?.status === "broadcast_pending"
+        ? tx("Отправляем в TON", "Broadcasting to TON")
+        : activeTonWithdrawal?.status === "sent"
+          ? tx("Ждём подтверждение TON", "Confirming on TON")
+          : tx("Готовим вывод", "Preparing payout");
+  const withdrawalProcessingNote = activeTonWithdrawal?.status === "queued"
+    ? tx("Worker заберёт заявку автоматически. Обычно это занимает несколько секунд.", "The payout worker will pick this up automatically, usually within a few seconds.")
+    : activeTonWithdrawal?.status === "manual_review"
+      ? tx("Заявка ожидает дополнительной проверки политики вывода.", "The payout is waiting for an additional policy check.")
+      : activeTonWithdrawal?.status === "broadcast_pending"
+        ? tx("Транзакция отправляется. Повторной отправки не будет.", "The transaction is being sent. It will not be broadcast twice.")
+        : activeTonWithdrawal?.status === "sent"
+          ? tx("Сверяем транзакцию с сетью автоматически.", "The transaction is being reconciled with the network.")
+          : tx("Статус обновляется автоматически.", "The status updates automatically.");
   const totalBalanceLabel = `${(Number(mainTon) + bonusBalanceUnits / 100).toFixed(2)} GRAM`;
   const transactions = account?.transactions ?? [];
   const accountActivity = (accountActivityQuery.data ?? []) as Array<{
@@ -3539,9 +3555,9 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                     </div>
                   )}
                   {placementSlot && (
-                    <section className="mt-3 rounded-xl border border-[#31435f] bg-[#17212b] p-3">
+                    <section style={getCommunityCardBackgroundStyle(detail?.group.cardBackgroundPreset)} className="mt-3 rounded-2xl border border-white/10 bg-[#111720] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.16)]">
                       <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-sm font-bold text-slate-100">{selectedSlot ? (ownsDetail ? "Обновить лот" : "Перебить лот") : "Вывести в ТОП"}</h2>
+                        <h2 className="text-[15px] font-semibold tracking-tight text-white">{selectedSlot ? (ownsDetail ? "Обновить лот" : "Перебить лот") : "Вывести в ТОП"}</h2>
                         {(ownsDetail || moderationAccess?.canModerate) && detail.group.status === "listed" && <button
                           type="button"
                           onClick={() => {
@@ -3549,7 +3565,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                             else setPendingModerationGroup({ id: detail.group.id, title: detail.group.title });
                           }}
                           disabled={ownsDetail && unlistGroups.isPending}
-                          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-rose-300/25 bg-rose-300/[0.07] px-2 text-[9px] font-semibold text-rose-100 transition-colors hover:bg-rose-300/[0.13] disabled:opacity-50"
+                          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-rose-300/20 bg-rose-300/[0.06] px-3 text-[10px] font-medium text-rose-100 transition-colors hover:bg-rose-300/[0.13] disabled:opacity-50"
                         ><X className="h-3.5 w-3.5" />{tx("Снять лот", "Remove lot")}</button>}
                       </div>
 
@@ -3879,7 +3895,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
         {page === "profile" && (
           <section className="space-y-4">
             <h1 className="px-1 text-sm font-semibold text-slate-300">{tx("Личный кабинет", "Account")}</h1>
-            <div className="tg-clean-surface rounded-2xl border border-white/8 bg-[#111720] p-5 shadow-[0_10px_28px_rgba(2,8,16,0.14)]">
+            <div className="tg-clean-surface rounded-2xl border border-t-0 border-white/8 bg-[#111720] p-5 shadow-[0_10px_28px_rgba(2,8,16,0.14)]">
               <div className="flex items-center gap-3">
                 <span className="grid h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-[#1b2430] text-sm font-semibold">
                   {displayUserAvatar ? (
@@ -3938,7 +3954,7 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                       }
                       if (open) {
                       setTonWithdrawalAddress(current => safeWalletAddress ? current || tonWithdrawalDefaultRecipient : "");
-                      const pending = tonWithdrawals.find(item => item.status === "broadcast_pending" || item.status === "sent");
+                      const pending = tonWithdrawals.find(item => item.status === "queued" || item.status === "manual_review" || item.status === "broadcast_pending" || item.status === "sent");
                       if (pending) {
                         setActiveTonWithdrawalId(pending.id);
                         setTonWithdrawalFlow("processing");
@@ -3962,8 +3978,8 @@ export default function Home({ onReady }: { onReady?: () => void }) {
                           <button type="button" disabled={!canWithdrawMinimum || quoteTonWithdrawalMutation.isPending || createTonWithdrawalMutation.isPending || !tonWithdrawalAddress || !tonWithdrawalAmount} onClick={() => void prepareTonWithdrawal()} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-base font-semibold text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"><Send className="h-4 w-4" />{quoteTonWithdrawalMutation.isPending || createTonWithdrawalMutation.isPending ? tx("Отправляем…", "Sending…") : tx("Вывести", "Withdraw")}</button>
                         </>)}
 
-                        {tonWithdrawalFlow === "processing" && <div className="py-4 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-sky-300/25 bg-sky-300/[0.1]"><Send className="h-5 w-5 text-sky-200" /></span><h3 className="mt-3 text-base font-semibold">{withdrawalProcessingTitle}</h3><p className="mx-auto mt-1 max-w-[260px] text-xs leading-5 text-slate-500">{withdrawalProcessingNote}</p>{activeTonWithdrawal?.failureReason && <p className="mt-3 text-[11px] text-amber-200">{activeTonWithdrawal.failureReason}</p>}</div>}
-                        {tonWithdrawals.slice(0, 3).length > 0 && <section className="border-t border-white/8 pt-3"><div className="mb-2 flex items-center justify-between"><b className="text-[11px] text-slate-200">{tx("История выводов", "Withdrawal history")}</b><span className="text-[9px] text-slate-500">GRAM</span></div><div className="space-y-2">{tonWithdrawals.slice(0, 3).map(withdrawal => <div key={withdrawal.id} className="rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5"><div className="flex items-center justify-between gap-2"><b className="text-sm text-slate-100">{formatFinancialGram(Number(withdrawal.grossAmountNano) / 1_000_000_000)} GRAM</b><span className={withdrawal.status === "confirmed" ? "text-[10px] font-medium text-emerald-300" : withdrawal.status === "cancelled" ? "text-[10px] font-medium text-rose-300" : "text-[10px] font-medium text-sky-200"}>{withdrawal.status === "confirmed" ? tx("Отправлено", "Sent") : withdrawal.status === "cancelled" ? tx("Отмена", "Cancelled") : tx("В обработке", "Processing")}</span></div></div>)}</div></section>}
+                        {tonWithdrawalFlow === "processing" && <div className="py-4 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-sky-300/25 bg-sky-300/[0.1]"><Send className="h-5 w-5 animate-pulse text-sky-200" /></span><h3 className="mt-3 text-base font-semibold">{withdrawalProcessingTitle}</h3><p className="mx-auto mt-1 max-w-[280px] text-xs leading-5 text-slate-500">{withdrawalProcessingNote}</p>{activeTonWithdrawal?.failureReason && <p className="mt-3 text-[11px] text-amber-200">{activeTonWithdrawal.failureReason}</p>}</div>}
+                        {tonWithdrawals.slice(0, 3).length > 0 && <section className="border-t border-white/8 pt-3"><div className="mb-2 flex items-center justify-between"><b className="text-[11px] text-slate-200">{tx("История выводов", "Withdrawal history")}</b><span className="text-[9px] text-slate-500">GRAM</span></div><div className="space-y-2">{tonWithdrawals.slice(0, 3).map(withdrawal => <div key={withdrawal.id} className="rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2.5"><div className="flex items-center justify-between gap-2"><b className="text-sm text-slate-100">{formatFinancialGram(Number(withdrawal.grossAmountNano) / 1_000_000_000)} GRAM</b><span className={withdrawal.status === "confirmed" ? "text-[10px] font-medium text-emerald-300" : withdrawal.status === "cancelled" || withdrawal.status === "failed_refunded" ? "text-[10px] font-medium text-rose-300" : withdrawal.status === "queued" ? "text-[10px] font-medium text-amber-200" : withdrawal.status === "broadcast_pending" ? "text-[10px] font-medium text-sky-200" : withdrawal.status === "sent" ? "text-[10px] font-medium text-cyan-200" : "text-[10px] font-medium text-violet-200"}>{withdrawal.status === "confirmed" ? tx("Отправлено", "Sent") : withdrawal.status === "cancelled" ? tx("Отмена", "Cancelled") : withdrawal.status === "failed_refunded" ? tx("Возвращено", "Refunded") : withdrawal.status === "queued" ? tx("В очереди", "Queued") : withdrawal.status === "broadcast_pending" ? tx("Отправляется", "Broadcasting") : withdrawal.status === "sent" ? tx("Подтверждается", "Confirming") : tx("Проверка", "Review")}</span></div></div>)}</div></section>}
                       </div>
                     </SheetContent>
                   </Sheet>

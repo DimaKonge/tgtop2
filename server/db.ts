@@ -20,7 +20,7 @@ import { getSearchIndexingError } from "./seoPolicy";
 import { buildTonDepositPayload, createTonDepositReference, decodeTonComment, findMatchingTonDepositTransaction, findRejectedTonDepositTransaction, formatNanoTon, getRecentTonDepositTransactions, normalizeTonAddress, parseTonToNano, toFriendlyTonAddress, TON_DEPOSIT_TTL_MS } from "./tonDeposits";
 import { getTonPayoutTransactionByMessageHash } from "./tonPayoutNetwork";
 import { getConfiguredTonPayoutWalletAddress } from "./tonPayoutConfig";
-import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, getTonWithdrawalRiskLabel, quoteTonWithdrawal as getTonWithdrawalQuote, TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS, TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO } from "./tonWithdrawalPolicy";
+import { classifyTonWithdrawalRisk, formatNanoTon as formatWithdrawalNanoTon, getTonWithdrawalRiskLabel, quoteTonWithdrawal as getTonWithdrawalQuote, TON_WITHDRAWAL_FEE_SAFETY_MARGIN_NANO } from "./tonWithdrawalPolicy";
 import { canCancelNftRental, canConfirmNftRental, rentalTotalUnits, validateRentalDays, NFT_RENTAL_MAX_DAYS as POLICY_NFT_RENTAL_MAX_DAYS } from "./nftRentalPolicy";
 import { normalizeTelegramBotLink } from "./botListingPolicy";
 import { canIssueOnboardingIntent, getOnboardingIntentWindow, isPendingOnboardingIntent, ONBOARDING_INTENT_TTL_MS, ONBOARDING_INTENT_WINDOW_MS, type TelegramOnboardingKind } from "./onboardingIntentPolicy";
@@ -821,10 +821,9 @@ export async function createTonWithdrawal(input: { userOpenId: string; amountTon
   if (active) return { ...toTonWithdrawalView(active), newlyCreated: false };
 
   const now = new Date();
-  const [priorDestination, userHour, addressRecent, userDay, globalMinute] = await Promise.all([
+  const [priorDestination, userHour, userDay, globalMinute] = await Promise.all([
     db.select({ id: tonWithdrawals.id }).from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), eq(tonWithdrawals.destinationWalletAddress, destinationWalletAddress), eq(tonWithdrawals.status, "confirmed"))).limit(1),
     db.select({ total: sql<number>`count(*)`, lastAt: sql<Date | null>`max(${tonWithdrawals.createdAt})` }).from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), gte(tonWithdrawals.createdAt, new Date(now.getTime() - 60 * 60_000)))),
-    db.select({ lastAt: sql<Date | null>`max(${tonWithdrawals.createdAt})` }).from(tonWithdrawals).where(and(eq(tonWithdrawals.destinationWalletAddress, destinationWalletAddress), gte(tonWithdrawals.createdAt, new Date(now.getTime() - TON_WITHDRAWAL_ADDRESS_COOLDOWN_MS)))),
     db.select({ totalNano: sql<string>`coalesce(sum(${tonWithdrawals.grossAmountNano}), 0)` }).from(tonWithdrawals).where(and(eq(tonWithdrawals.userOpenId, input.userOpenId), gte(tonWithdrawals.createdAt, new Date(now.getTime() - 24 * 60 * 60_000)))),
     db.select({ total: sql<number>`count(*)` }).from(tonWithdrawals).where(gte(tonWithdrawals.createdAt, new Date(now.getTime() - 60_000))),
   ]);
@@ -834,7 +833,7 @@ export async function createTonWithdrawal(input: { userOpenId: string; amountTon
     userRequestsLastHour: Number(userHour[0]?.total ?? 0),
     userGrossTodayNano: BigInt(userDay[0]?.totalNano ?? "0"),
     lastUserRequestAtMs: userHour[0]?.lastAt ? new Date(userHour[0].lastAt).getTime() : null,
-    lastAddressRequestAtMs: addressRecent[0]?.lastAt ? new Date(addressRecent[0].lastAt).getTime() : null,
+    lastAddressRequestAtMs: null,
     globalRequestsLastMinute: Number(globalMinute[0]?.total ?? 0),
     emergencyPaused: process.env.TON_WITHDRAWALS_PAUSED === "true",
   }, quote);
